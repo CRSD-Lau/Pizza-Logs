@@ -3,39 +3,38 @@ import { db } from "@/lib/db";
 import { ParseResultSchema, UploadRequestSchema } from "@/lib/schema";
 import { computeMilestones } from "@/lib/actions/milestones";
 
-export const maxDuration = 300; // 5 min timeout for large files
+export const maxDuration = 300;
 
 export async function POST(req: NextRequest): Promise<NextResponse> {
   try {
-    const formData = await req.formData();
-    const file = formData.get("file") as File | null;
-    if (!file) {
-      return NextResponse.json({ error: "No file provided" }, { status: 400 });
-    }
+    // ── Read metadata from query params (avoids buffering the file body) ──
+    const { searchParams } = new URL(req.url);
+    const filename = searchParams.get("filename") ?? "WoWCombatLog.txt";
+    const fileSize = parseInt(searchParams.get("fileSize") ?? "0", 10);
 
-    // Parse metadata fields
     const meta = UploadRequestSchema.safeParse({
-      guildName: formData.get("guildName") ?? undefined,
-      realmName: formData.get("realmName") ?? "Lordaeron",
-      realmHost: formData.get("realmHost") ?? "warmane",
-      expansion: formData.get("expansion") ?? "wotlk",
+      guildName: searchParams.get("guildName") ?? undefined,
+      realmName: searchParams.get("realmName") ?? "Lordaeron",
+      realmHost: searchParams.get("realmHost") ?? "warmane",
+      expansion: searchParams.get("expansion") ?? "wotlk",
     });
     if (!meta.success) {
       return NextResponse.json({ error: meta.error.message }, { status: 400 });
     }
     const { guildName, realmName, realmHost, expansion } = meta.data;
 
-    // ── Forward file to Python parser ─────────────────────────────
+    // ── Stream body directly to Python parser (no buffering in Next.js) ──
     const parserUrl = process.env.PARSER_SERVICE_URL ?? "http://localhost:8000";
-    const parserForm = new FormData();
-    parserForm.append("file", file, file.name);
-    parserForm.append("year_hint", String(new Date().getFullYear()));
+    const contentType = req.headers.get("content-type") ?? "";
 
     let parseResult;
     try {
       const parserRes = await fetch(`${parserUrl}/parse`, {
         method: "POST",
-        body: parserForm,
+        headers: { "content-type": contentType },
+        // @ts-expect-error duplex is required for streaming request bodies
+        body: req.body,
+        duplex: "half",
         signal: AbortSignal.timeout(240_000),
       });
       if (!parserRes.ok) {
@@ -88,12 +87,12 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     // ── Create upload record ──────────────────────────────────────
     const upload = await db.upload.create({
       data: {
-        filename:  file.name,
-        fileHash:  parseResult.fileHash,
-        fileSize:  file.size,
-        status:    "PARSING",
-        realmId:   realm.id,
-        guildId:   guildId ?? null,
+        filename:     filename,
+        fileHash:     parseResult.fileHash,
+        fileSize:     fileSize || 0,
+        status:       "PARSING",
+        realmId:      realm.id,
+        guildId:      guildId ?? null,
         rawLineCount: parseResult.rawLineCount,
       },
     });
@@ -104,7 +103,6 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
 
     // ── Persist each encounter ────────────────────────────────────
     for (const enc of parseResult.encounters) {
-      // Find or validate boss
       const boss = await db.boss.findFirst({
         where: {
           OR: [
@@ -118,7 +116,6 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
         continue;
       }
 
-      // Encounter dedup by fingerprint
       const existing = await db.encounter.findUnique({
         where: { fingerprint: enc.fingerprint },
         select: { id: true },
@@ -128,7 +125,6 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
         continue;
       }
 
-      // Persist encounter
       const encounter = await db.encounter.create({
         data: {
           uploadId:         upload.id,
@@ -146,7 +142,6 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
         },
       });
 
-      // Persist participants
       for (const p of enc.participants) {
         const player = await db.player.upsert({
           where: { name_realmId: { name: p.name, realmId: realm.id } },
@@ -159,32 +154,31 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
         await db.participant.upsert({
           where: { encounterId_playerId: { encounterId: encounter.id, playerId: player.id } },
           update: {
-            totalDamage:   p.totalDamage,
-            totalHealing:  p.totalHealing,
-            damageTaken:   p.damageTaken,
-            dps:           p.dps,
-            hps:           p.hps,
-            deaths:        p.deaths,
-            critPct:       p.critPct,
+            totalDamage:    p.totalDamage,
+            totalHealing:   p.totalHealing,
+            damageTaken:    p.damageTaken,
+            dps:            p.dps,
+            hps:            p.hps,
+            deaths:         p.deaths,
+            critPct:        p.critPct,
             role,
             spellBreakdown: p.spellBreakdown ?? {},
           },
           create: {
-            encounterId:   encounter.id,
-            playerId:      player.id,
+            encounterId:    encounter.id,
+            playerId:       player.id,
             role,
-            totalDamage:   p.totalDamage,
-            totalHealing:  p.totalHealing,
-            damageTaken:   p.damageTaken,
-            dps:           p.dps,
-            hps:           p.hps,
-            deaths:        p.deaths,
-            critPct:       p.critPct,
+            totalDamage:    p.totalDamage,
+            totalHealing:   p.totalHealing,
+            damageTaken:    p.damageTaken,
+            dps:            p.dps,
+            hps:            p.hps,
+            deaths:         p.deaths,
+            critPct:        p.critPct,
             spellBreakdown: p.spellBreakdown ?? {},
           },
         });
 
-        // Queue milestone checks
         if (p.dps > 0) {
           milestoneChecks.push({
             playerId:    player.id,
@@ -214,16 +208,11 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
       encountersInserted++;
     }
 
-    // ── Compute milestones ────────────────────────────────────────
     const milestones = await computeMilestones(milestoneChecks);
 
-    // ── Finalise upload ───────────────────────────────────────────
     await db.upload.update({
       where: { id: upload.id },
-      data: {
-        status:   encountersInserted > 0 ? "DONE" : "DONE",
-        parsedAt: new Date(),
-      },
+      data: { status: "DONE", parsedAt: new Date() },
     });
 
     return NextResponse.json({
@@ -247,6 +236,6 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
 function inferRole(p: { totalDamage: number; totalHealing: number }): "DPS" | "HEALER" | "TANK" | "UNKNOWN" {
   const ratio = p.totalHealing / Math.max(1, p.totalDamage + p.totalHealing);
   if (ratio > 0.6) return "HEALER";
-  if (ratio > 0.3) return "UNKNOWN"; // mixed — could be tank
+  if (ratio > 0.3) return "UNKNOWN";
   return "DPS";
 }

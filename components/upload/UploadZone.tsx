@@ -35,16 +35,21 @@ export function UploadZone({ onComplete }: UploadZoneProps) {
   const processFile = useCallback(async (file: File) => {
     setState({ stage: "uploading", progress: 10, message: "Reading file…" });
 
+    const params = new URLSearchParams({
+      realmName,
+      realmHost,
+      filename: file.name,
+      fileSize: String(file.size),
+    });
+    if (guildName.trim()) params.set("guildName", guildName.trim());
+
     const form = new FormData();
-    form.append("file",      file);
-    form.append("realmName", realmName);
-    form.append("realmHost", realmHost);
-    if (guildName.trim()) form.append("guildName", guildName.trim());
+    form.append("file", file);
 
     setState(s => ({ ...s, progress: 20, message: "Sending to parser…" }));
 
     try {
-      const res = await fetch("/api/upload", { method: "POST", body: form });
+      const res = await fetch(`/api/upload?${params}`, { method: "POST", body: form });
 
       setState(s => ({ ...s, progress: 80, message: "Processing encounters…" }));
 
