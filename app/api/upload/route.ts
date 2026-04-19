@@ -7,7 +7,7 @@ export const maxDuration = 300;
 
 export async function POST(req: NextRequest): Promise<NextResponse> {
   try {
-    // ── Read metadata from query params (avoids buffering the file body) ──
+    // ── Read metadata from query params ──────────────────────────
     const { searchParams } = new URL(req.url);
     const filename = searchParams.get("filename") ?? "WoWCombatLog.txt";
     const fileSize = parseInt(searchParams.get("fileSize") ?? "0", 10);
@@ -23,7 +23,7 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     }
     const { guildName, realmName, realmHost, expansion } = meta.data;
 
-    // ── Stream body directly to Python parser (no buffering in Next.js) ──
+    // ── Stream body directly to Python parser ─────────────────────
     const parserUrl = process.env.PARSER_SERVICE_URL ?? "http://localhost:8000";
     const contentType = req.headers.get("content-type") ?? "";
 
@@ -96,76 +96,96 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
       },
     });
 
+    // ── Batch pre-fetch: bosses + existing fingerprints ───────────
+    const bossNames = [...new Set(parseResult.encounters.map(e => e.bossName))];
+    const fingerprints = parseResult.encounters.map(e => e.fingerprint);
+
+    const [dbBosses, existingEncounters] = await Promise.all([
+      db.boss.findMany({ where: { name: { in: bossNames } } }),
+      db.encounter.findMany({
+        where:  { fingerprint: { in: fingerprints } },
+        select: { fingerprint: true },
+      }),
+    ]);
+
+    const bossMap = new Map(dbBosses.map(b => [b.name, b]));
+    const existingFps = new Set(existingEncounters.map(e => e.fingerprint));
+
+    // ── Batch upsert all players mentioned in new encounters ──────
+    const newEncounters = parseResult.encounters.filter(
+      enc => bossMap.has(enc.bossName) && !existingFps.has(enc.fingerprint)
+    );
+
+    const allPlayerNames = [...new Set(
+      newEncounters.flatMap(enc => enc.participants.map(p => p.name))
+    )];
+
+    // Upsert players in parallel chunks of 20
+    const playerClassMap = new Map(
+      newEncounters.flatMap(enc =>
+        enc.participants
+          .filter(p => p.class)
+          .map(p => [p.name, p.class!] as [string, string])
+      )
+    );
+
+    // Prisma doesn't support bulk upsert, so we batch parallel upserts
+    // in chunks of 20 to avoid overwhelming the connection pool
+    const BATCH = 20;
+    for (let i = 0; i < allPlayerNames.length; i += BATCH) {
+      await Promise.all(
+        allPlayerNames.slice(i, i + BATCH).map(name =>
+          db.player.upsert({
+            where:  { name_realmId: { name, realmId: realm.id } },
+            update: { class: playerClassMap.get(name) ?? undefined },
+            create: { name, class: playerClassMap.get(name) ?? null, realmId: realm.id },
+          })
+        )
+      );
+    }
+
+    // Fetch all players in one query for ID lookup
+    const dbPlayers = await db.player.findMany({
+      where: { name: { in: allPlayerNames }, realmId: realm.id },
+      select: { id: true, name: true },
+    });
+    const playerMap = new Map(dbPlayers.map(p => [p.name, p.id]));
+
+    // ── Create encounters + participants in parallel ───────────────
     let encountersInserted = 0;
-    let encountersDuplicate = 0;
+    const encountersDuplicate = parseResult.encounters.length - newEncounters.length;
     const milestoneChecks: Parameters<typeof computeMilestones>[0] = [];
 
-    // ── Persist each encounter ────────────────────────────────────
-    for (const enc of parseResult.encounters) {
-      const boss = await db.boss.findFirst({
-        where: {
-          OR: [
-            { name: enc.bossName },
-            enc.bossId ? { wowBossId: enc.bossId } : {},
-          ].filter(c => Object.keys(c).length > 0),
-        },
-      });
-      if (!boss) {
-        console.warn(`[upload] Unknown boss: ${enc.bossName} — skipping`);
-        continue;
-      }
+    await Promise.all(
+      newEncounters.map(async enc => {
+        const boss = bossMap.get(enc.bossName);
+        if (!boss) return;
 
-      const existing = await db.encounter.findUnique({
-        where: { fingerprint: enc.fingerprint },
-        select: { id: true },
-      });
-      if (existing) {
-        encountersDuplicate++;
-        continue;
-      }
-
-      const encounter = await db.encounter.create({
-        data: {
-          uploadId:         upload.id,
-          bossId:           boss.id,
-          fingerprint:      enc.fingerprint,
-          outcome:          enc.outcome as "KILL" | "WIPE" | "UNKNOWN",
-          difficulty:       enc.difficulty,
-          groupSize:        enc.groupSize,
-          durationSeconds:  enc.durationSeconds,
-          startedAt:        new Date(enc.startedAt),
-          endedAt:          new Date(enc.endedAt),
-          totalDamage:      enc.totalDamage,
-          totalHealing:     enc.totalHealing,
-          totalDamageTaken: enc.totalDamageTaken,
-        },
-      });
-
-      for (const p of enc.participants) {
-        const player = await db.player.upsert({
-          where: { name_realmId: { name: p.name, realmId: realm.id } },
-          update: { class: p.class ?? undefined },
-          create: { name: p.name, class: p.class ?? null, realmId: realm.id },
+        const encounter = await db.encounter.create({
+          data: {
+            uploadId:         upload.id,
+            bossId:           boss.id,
+            fingerprint:      enc.fingerprint,
+            outcome:          enc.outcome as "KILL" | "WIPE" | "UNKNOWN",
+            difficulty:       enc.difficulty,
+            groupSize:        enc.groupSize,
+            durationSeconds:  enc.durationSeconds,
+            startedAt:        new Date(enc.startedAt),
+            endedAt:          new Date(enc.endedAt),
+            totalDamage:      enc.totalDamage,
+            totalHealing:     enc.totalHealing,
+            totalDamageTaken: enc.totalDamageTaken,
+          },
         });
 
-        const role = inferRole(p);
-
-        await db.participant.upsert({
-          where: { encounterId_playerId: { encounterId: encounter.id, playerId: player.id } },
-          update: {
-            totalDamage:    p.totalDamage,
-            totalHealing:   p.totalHealing,
-            damageTaken:    p.damageTaken,
-            dps:            p.dps,
-            hps:            p.hps,
-            deaths:         p.deaths,
-            critPct:        p.critPct,
-            role,
-            spellBreakdown: p.spellBreakdown ?? {},
-          },
-          create: {
+        // Participants: build all at once then createMany
+        const participantData = enc.participants.flatMap(p => {
+          const playerId = playerMap.get(p.name);
+          if (!playerId) return [];
+          const role = inferRole(p);
+          return [{
             encounterId:    encounter.id,
-            playerId:       player.id,
+            playerId,
             role,
             totalDamage:    p.totalDamage,
             totalHealing:   p.totalHealing,
@@ -174,44 +194,48 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
             hps:            p.hps,
             deaths:         p.deaths,
             critPct:        p.critPct,
-            spellBreakdown: p.spellBreakdown ?? {},
-          },
+            spellBreakdown: (p.spellBreakdown ?? {}) as object,
+          }];
         });
 
-        if (p.dps > 0) {
-          milestoneChecks.push({
-            playerId:    player.id,
-            playerName:  p.name,
-            encounterId: encounter.id,
-            bossId:      boss.id,
-            bossName:    boss.name,
-            difficulty:  enc.difficulty,
-            metric:      "DPS",
-            value:       p.dps,
-          });
-        }
-        if (p.hps > 100) {
-          milestoneChecks.push({
-            playerId:    player.id,
-            playerName:  p.name,
-            encounterId: encounter.id,
-            bossId:      boss.id,
-            bossName:    boss.name,
-            difficulty:  enc.difficulty,
-            metric:      "HPS",
-            value:       p.hps,
-          });
-        }
-      }
+        await db.participant.createMany({
+          data: participantData,
+          skipDuplicates: true,
+        });
 
-      encountersInserted++;
-    }
+        // Collect milestone checks
+        for (const p of enc.participants) {
+          const playerId = playerMap.get(p.name);
+          if (!playerId) continue;
+          if (p.dps > 0) {
+            milestoneChecks.push({
+              playerId, playerName: p.name,
+              encounterId: encounter.id,
+              bossId: boss.id, bossName: boss.name,
+              difficulty: enc.difficulty,
+              metric: "DPS", value: p.dps,
+            });
+          }
+          if (p.hps > 100) {
+            milestoneChecks.push({
+              playerId, playerName: p.name,
+              encounterId: encounter.id,
+              bossId: boss.id, bossName: boss.name,
+              difficulty: enc.difficulty,
+              metric: "HPS", value: p.hps,
+            });
+          }
+        }
+
+        encountersInserted++;
+      })
+    );
 
     const milestones = await computeMilestones(milestoneChecks);
 
     await db.upload.update({
       where: { id: upload.id },
-      data: { status: "DONE", parsedAt: new Date() },
+      data:  { status: "DONE", parsedAt: new Date() },
     });
 
     return NextResponse.json({

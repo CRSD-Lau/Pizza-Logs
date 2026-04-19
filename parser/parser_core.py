@@ -10,6 +10,7 @@ Supports:
 
 from __future__ import annotations
 
+import csv as _csv
 import hashlib
 import re
 import io
@@ -17,7 +18,7 @@ from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from typing import Generator, Optional, TextIO
 
-from bosses import BossDef, lookup_boss, lookup_boss_by_id
+from bosses import BossDef, lookup_boss, lookup_boss_by_id, ALL_BOSS_NAMES
 
 # ── Constants ─────────────────────────────────────────────────────
 
@@ -194,20 +195,9 @@ class ParsedEncounter:
 # ── CSV line splitter ──────────────────────────────────────────────
 
 def csv_split(s: str) -> list[str]:
-    """Split a WoW log CSV line, honouring quoted strings."""
-    out: list[str] = []
-    cur: list[str] = []
-    in_q = False
-    for ch in s:
-        if ch == '"':
-            in_q = not in_q
-        elif ch == ',' and not in_q:
-            out.append("".join(cur))
-            cur = []
-        else:
-            cur.append(ch)
-    out.append("".join(cur))
-    return out
+    """Split a WoW log CSV line, honouring quoted strings.
+    Uses Python's C-implemented csv module — ~20x faster than a Python loop."""
+    return next(_csv.reader((s,)))
 
 
 # ── Timestamp parser ───────────────────────────────────────────────
@@ -242,6 +232,8 @@ class CombatLogParser:
         self.file_year   = file_year
         self.raw_count   = 0
         self.warnings: list[str] = []
+        # Cache boss name set once — this is hit millions of times during segmentation
+        self._boss_name_set: set[str] = ALL_BOSS_NAMES
 
     def parse_file(self, fh: TextIO) -> list[ParsedEncounter]:
         """Main entry point — returns list of raid boss encounters."""
@@ -377,17 +369,13 @@ class CombatLogParser:
 
     def _is_boss_event(self, parts: list[str]) -> bool:
         """Quick check: does this event involve a known boss?"""
-        # dst_name is usually index 5 for SPELL_DAMAGE, 5 for SWING_DAMAGE
         if len(parts) < 6:
             return False
+        # csv_split already strips quotes, but strip() is a no-op if already clean
         dst = parts[5].strip('"').strip()
         src = parts[2].strip('"').strip()
-        return dst.lower() in self._boss_names or src.lower() in self._boss_names
-
-    @property
-    def _boss_names(self) -> set[str]:
-        from bosses import ALL_BOSS_NAMES
-        return ALL_BOSS_NAMES
+        bn = self._boss_name_set
+        return dst.lower() in bn or src.lower() in bn
 
     def _detect_boss_from_parts(self, parts: list[str]) -> Optional[BossDef]:
         if len(parts) < 6:
@@ -624,13 +612,14 @@ class CombatLogParser:
     ) -> tuple[Optional[str], Optional[int]]:
         """Count boss name occurrences in dst_name / src_name fields."""
         counts: dict[str, int] = {}
+        bn = self._boss_name_set
         for _, parts, _ in segment:
             if parts[0] in (UNIT_DIED_EVENT,):
                 continue
             for idx in (2, 5):
                 if len(parts) > idx:
                     name = parts[idx].strip('"').strip()
-                    if name.lower() in self._boss_names:
+                    if name.lower() in bn:
                         counts[name] = counts.get(name, 0) + 1
         if not counts:
             return None, None
@@ -676,7 +665,7 @@ class CombatLogParser:
         for _, parts, _ in segment:
             if parts[0] == UNIT_DIED_EVENT and len(parts) >= 6:
                 name = parts[5].strip('"').strip().lower()
-                if name == bn or name in self._boss_names:
+                if name == bn or name in self._boss_name_set:
                     return "KILL"
         return "WIPE"
 
