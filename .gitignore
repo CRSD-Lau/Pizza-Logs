@@ -1,0 +1,30 @@
+# deps
+node_modules/
+.pnp
+.pnp.js
+
+# build
+.next/
+out/
+dist/
+.seed-build/
+
+# env
+.env
+.env.local
+.env*.local
+
+# uploads
+uploads/
+
+# debug
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# OS
+.DS_Store
+Thumbs.db
+
+# prisma
+prisma/migrations/

@@ -1,0 +1,231 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ─────────────────────────────────────────────
+//  REALM & GUILD
+// ─────────────────────────────────────────────
+
+model Realm {
+  id        String   @id @default(cuid())
+  name      String   // "Lordaeron", "Icecrown", "Retail"
+  host      String   // "warmane", "blizzard", "kronos"
+  expansion String   @default("wotlk") // wotlk | cata | mop | retail
+  guilds    Guild[]
+  uploads   Upload[]
+  players   Player[]
+  createdAt DateTime @default(now())
+
+  @@unique([name, host])
+  @@map("realms")
+}
+
+model Guild {
+  id        String     @id @default(cuid())
+  name      String
+  realmId   String
+  realm     Realm      @relation(fields: [realmId], references: [id])
+  uploads   Upload[]
+  createdAt DateTime   @default(now())
+
+  @@unique([name, realmId])
+  @@map("guilds")
+}
+
+// ─────────────────────────────────────────────
+//  BOSS CONFIG  (seeded from constants)
+// ─────────────────────────────────────────────
+
+model Boss {
+  id         String      @id @default(cuid())
+  name       String
+  slug       String      @unique // url-safe slug
+  raid       String      // "Icecrown Citadel"
+  raidSlug   String      // "icecrown-citadel"
+  wowBossId  Int?        // numeric encounter ID from ENCOUNTER_START
+  sortOrder  Int         @default(0)
+  encounters Encounter[]
+
+  @@map("bosses")
+}
+
+// ─────────────────────────────────────────────
+//  UPLOAD / FILE
+// ─────────────────────────────────────────────
+
+model Upload {
+  id           String       @id @default(cuid())
+  filename     String
+  fileHash     String       @unique // SHA-256 hex — prevents exact duplicate uploads
+  fileSize     Int          // bytes
+  status       UploadStatus @default(PENDING)
+  guildId      String?
+  guild        Guild?       @relation(fields: [guildId], references: [id])
+  realmId      String?
+  realm        Realm?       @relation(fields: [realmId], references: [id])
+  encounters   Encounter[]
+  errorMessage String?
+  parsedAt     DateTime?
+  rawLineCount Int?
+  createdAt    DateTime     @default(now())
+  updatedAt    DateTime     @updatedAt
+
+  @@map("uploads")
+}
+
+enum UploadStatus {
+  PENDING
+  PARSING
+  DONE
+  FAILED
+  DUPLICATE
+}
+
+// ─────────────────────────────────────────────
+//  ENCOUNTER
+// ─────────────────────────────────────────────
+
+model Encounter {
+  id              String        @id @default(cuid())
+  uploadId        String
+  upload          Upload        @relation(fields: [uploadId], references: [id], onDelete: Cascade)
+  bossId          String
+  boss            Boss          @relation(fields: [bossId], references: [id])
+  fingerprint     String        @unique // deterministic dedup hash
+  outcome         Outcome       @default(UNKNOWN)
+  difficulty      String        // "10N" | "10H" | "25N" | "25H"
+  groupSize       Int           @default(10)
+  durationSeconds Int
+  startedAt       DateTime
+  endedAt         DateTime
+  totalDamage     Float         @default(0)
+  totalHealing    Float         @default(0)
+  totalDamageTaken Float        @default(0)
+  participants    Participant[]
+  milestones      Milestone[]
+  createdAt       DateTime      @default(now())
+
+  @@index([bossId])
+  @@index([startedAt])
+  @@map("encounters")
+}
+
+enum Outcome {
+  KILL
+  WIPE
+  UNKNOWN
+}
+
+// ─────────────────────────────────────────────
+//  PLAYER
+// ─────────────────────────────────────────────
+
+model Player {
+  id           String        @id @default(cuid())
+  name         String
+  class        String?       // normalized WoW class name
+  realmId      String?
+  realm        Realm?        @relation(fields: [realmId], references: [id])
+  participants Participant[]
+  milestones   Milestone[]
+  createdAt    DateTime      @default(now())
+
+  @@unique([name, realmId])
+  @@map("players")
+}
+
+// ─────────────────────────────────────────────
+//  PARTICIPANT (player stats within one encounter)
+// ─────────────────────────────────────────────
+
+model Participant {
+  id             String    @id @default(cuid())
+  encounterId    String
+  encounter      Encounter @relation(fields: [encounterId], references: [id], onDelete: Cascade)
+  playerId       String
+  player         Player    @relation(fields: [playerId], references: [id])
+  role           Role      @default(UNKNOWN)
+  totalDamage    Float     @default(0)
+  totalHealing   Float     @default(0)
+  damageTaken    Float     @default(0)
+  dps            Float     @default(0)
+  hps            Float     @default(0)
+  deaths         Int       @default(0)
+  critPct        Float     @default(0) // 0-100
+  spellBreakdown Json?     // Record<spellName, { damage, healing, hits, crits, school }>
+  createdAt      DateTime  @default(now())
+
+  @@unique([encounterId, playerId])
+  @@index([playerId])
+  @@map("participants")
+}
+
+enum Role {
+  DPS
+  HEALER
+  TANK
+  UNKNOWN
+}
+
+// ─────────────────────────────────────────────
+//  MILESTONE
+// ─────────────────────────────────────────────
+
+model Milestone {
+  id            String        @id @default(cuid())
+  type          MilestoneType
+  rank          Int           // actual numeric rank (1, 2, 3 …)
+  playerId      String
+  player        Player        @relation(fields: [playerId], references: [id])
+  encounterId   String
+  encounter     Encounter     @relation(fields: [encounterId], references: [id], onDelete: Cascade)
+  bossId        String
+  difficulty    String
+  metric        MilestoneMetric // DPS | HPS
+  value         Float
+  achievedAt    DateTime      @default(now())
+  supersededAt  DateTime?     // set when rank is beaten
+
+  @@index([bossId, difficulty, metric])
+  @@index([playerId])
+  @@map("milestones")
+}
+
+enum MilestoneType {
+  ALL_TIME_RANK
+  WEEKLY_BEST
+  PERSONAL_BEST
+}
+
+enum MilestoneMetric {
+  DPS
+  HPS
+}
+
+// ─────────────────────────────────────────────
+//  WEEKLY SUMMARY  (materialised for fast reads)
+// ─────────────────────────────────────────────
+
+model WeeklySummary {
+  id           String   @id @default(cuid())
+  weekStart    DateTime
+  weekEnd      DateTime
+  realmId      String?
+  guildId      String?
+  totalKills   Int      @default(0)
+  totalWipes   Int      @default(0)
+  totalUploads Int      @default(0)
+  topDps       Json     // { playerName, bossName, difficulty, dps }[]
+  topHps       Json     // { playerName, bossName, difficulty, hps }[]
+  bossKills    Json     // { bossName, kills, wipes, bestTimeMs }[]
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@unique([weekStart, realmId, guildId])
+  @@map("weekly_summaries")
+}

@@ -1,0 +1,58 @@
+version: "3.9"
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER:     pizzalogs
+      POSTGRES_PASSWORD: pizzalogs
+      POSTGRES_DB:       pizzalogs
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U pizzalogs"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  parser:
+    build:
+      context: ./parser
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    environment:
+      PORT: 8000
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:8000/health || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  web:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      DATABASE_URL:        postgresql://pizzalogs:pizzalogs@postgres:5432/pizzalogs?schema=public
+      PARSER_SERVICE_URL:  http://parser:8000
+      UPLOAD_DIR:          /app/uploads
+      NODE_ENV:            production
+    volumes:
+      - uploads_data:/app/uploads
+    depends_on:
+      postgres:
+        condition: service_healthy
+      parser:
+        condition: service_healthy
+
+volumes:
+  postgres_data:
+  uploads_data:

@@ -1,0 +1,156 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --font-cinzel:   'Cinzel', serif;
+    --font-rajdhani: 'Rajdhani', sans-serif;
+  }
+
+  * {
+    box-sizing: border-box;
+  }
+
+  html {
+    scroll-behavior: smooth;
+  }
+
+  body {
+    background-color: #0a0c10;
+    color: #e8dfc8;
+    font-family: var(--font-rajdhani), sans-serif;
+    font-weight: 400;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  /* Scrollbar */
+  ::-webkit-scrollbar { width: 5px; height: 5px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: rgba(180,140,60,0.25); border-radius: 3px; }
+  ::-webkit-scrollbar-thumb:hover { background: rgba(180,140,60,0.45); }
+
+  /* Selection */
+  ::selection { background: rgba(200,168,75,0.25); color: #f0d080; }
+
+  /* Number rendering */
+  .tabular-nums { font-variant-numeric: tabular-nums; }
+}
+
+@layer components {
+  /* ── Gold border utility ── */
+  .border-gold-dim  { border-color: rgba(180,140,60,0.2); }
+  .border-gold-mid  { border-color: rgba(180,140,60,0.4); }
+  .border-gold-full { border-color: rgba(180,140,60,0.7); }
+
+  /* ── Panel / Card ── */
+  .panel {
+    @apply bg-bg-panel border border-gold-dim rounded;
+  }
+  .card {
+    @apply bg-bg-card border border-gold-dim rounded;
+  }
+
+  /* ── Page background glow ── */
+  .page-glow::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background:
+      radial-gradient(ellipse 80% 50% at 50% -10%, rgba(180,140,60,0.07) 0%, transparent 60%),
+      radial-gradient(ellipse 50% 80% at -10% 50%, rgba(80,40,120,0.04) 0%, transparent 60%);
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  /* ── Meter bar row ── */
+  .meter-row {
+    @apply relative overflow-hidden rounded cursor-pointer;
+    @apply border border-transparent transition-colors duration-150;
+  }
+  .meter-row:hover  { border-color: rgba(180,140,60,0.2); }
+  .meter-row.active { border-color: rgba(180,140,60,0.45); }
+
+  /* ── Cinzel heading ── */
+  .heading-cinzel {
+    font-family: var(--font-cinzel), serif;
+    letter-spacing: 0.04em;
+  }
+
+  /* ── Glow text ── */
+  .text-glow-gold {
+    text-shadow: 0 0 20px rgba(200,168,75,0.5);
+  }
+
+  /* ── Rank badge ── */
+  .rank-badge {
+    @apply inline-flex items-center justify-center w-7 h-7 rounded text-xs font-bold;
+    background: rgba(180,140,60,0.12);
+    border: 1px solid rgba(180,140,60,0.25);
+    color: #c8a84b;
+  }
+  .rank-badge.rank-1 {
+    background: rgba(240,192,64,0.18);
+    border-color: rgba(240,192,64,0.5);
+    color: #f0d080;
+  }
+  .rank-badge.rank-2 {
+    background: rgba(192,200,216,0.15);
+    border-color: rgba(192,200,216,0.4);
+    color: #c0c8d8;
+  }
+  .rank-badge.rank-3 {
+    background: rgba(200,144,64,0.15);
+    border-color: rgba(200,144,64,0.4);
+    color: #c89040;
+  }
+
+  /* ── Difficulty badge ── */
+  .diff-badge {
+    @apply inline-block text-xs font-bold px-1.5 py-0.5 rounded-sm;
+    letter-spacing: 0.06em;
+  }
+  .diff-badge.heroic {
+    background: rgba(224,96,48,0.15);
+    border: 1px solid rgba(224,96,48,0.3);
+    color: #e06030;
+  }
+  .diff-badge.normal {
+    background: rgba(154,143,120,0.12);
+    border: 1px solid rgba(154,143,120,0.25);
+    color: #9a8f78;
+  }
+
+  /* ── Outcome badge ── */
+  .outcome-kill {
+    @apply inline-block text-xs font-bold px-2 py-0.5 rounded-sm;
+    background: rgba(80,160,80,0.15);
+    border: 1px solid rgba(80,160,80,0.3);
+    color: #50a050;
+  }
+  .outcome-wipe {
+    @apply inline-block text-xs font-bold px-2 py-0.5 rounded-sm;
+    background: rgba(200,64,64,0.12);
+    border: 1px solid rgba(200,64,64,0.25);
+    color: #c84040;
+  }
+  .outcome-unknown {
+    @apply inline-block text-xs font-bold px-2 py-0.5 rounded-sm;
+    background: rgba(90,85,72,0.15);
+    border: 1px solid rgba(90,85,72,0.3);
+    color: #5a5548;
+  }
+
+  /* ── Milestone banner ── */
+  .milestone-banner {
+    background: linear-gradient(90deg, rgba(200,168,75,0.08) 0%, rgba(200,168,75,0.03) 100%);
+    border: 1px solid rgba(200,168,75,0.3);
+    @apply rounded px-4 py-3;
+  }
+}
+
+@layer utilities {
+  .animate-delay-100 { animation-delay: 0.1s; }
+  .animate-delay-200 { animation-delay: 0.2s; }
+  .animate-delay-300 { animation-delay: 0.3s; }
+}
