@@ -23,7 +23,7 @@ export const SpellBreakdownSchema = z.record(
 
 export const ParticipantResultSchema = z.object({
   name:           z.string(),
-  class:          z.string().optional(),
+  class:          z.string().nullable().optional(),
   totalDamage:    z.number(),
   totalHealing:   z.number(),
   damageTaken:    z.number(),
