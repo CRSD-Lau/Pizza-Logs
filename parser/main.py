@@ -6,7 +6,6 @@ FastAPI app that accepts WoW combat log files and returns structured encounter d
 from __future__ import annotations
 
 import hashlib
-import io
 import os
 import tempfile
 from datetime import datetime, timezone
@@ -101,39 +100,49 @@ async def parse_log(
     """
     Parse a WoW combat log file.
     Accepts multipart/form-data with 'file' field.
-    Optional 'year_hint' for accurate timestamp parsing.
+    Streams to disk to avoid loading the entire file into memory.
     """
     if file.filename and not file.filename.lower().endswith((".txt", ".log")):
         raise HTTPException(400, "Only .txt and .log files are supported")
 
-    # Read content into memory (for hashing) then into a StringIO for parsing
+    # Stream upload to a temp file while computing SHA-256 in chunks
+    sha256 = hashlib.sha256()
+    tmp_path: str | None = None
     try:
-        content_bytes = await file.read()
+        with tempfile.NamedTemporaryFile(
+            mode="wb", suffix=".txt", delete=False
+        ) as tmp:
+            tmp_path = tmp.name
+            first_chunk: bytes = b""
+            chunk_size = 8 * 1024 * 1024  # 8 MB chunks
+            while True:
+                chunk = await file.read(chunk_size)
+                if not chunk:
+                    break
+                sha256.update(chunk)
+                if not first_chunk:
+                    first_chunk = chunk[:4096]
+                tmp.write(chunk)
     except Exception as exc:
+        if tmp_path:
+            os.unlink(tmp_path)
         raise HTTPException(500, f"Failed to read uploaded file: {exc}") from exc
 
-    file_hash = hashlib.sha256(content_bytes).hexdigest()
-
-    # Detect file year from content if not provided
-    file_year = year_hint if year_hint > 2000 else _infer_year(content_bytes)
+    file_hash = sha256.hexdigest()
+    file_year = year_hint if year_hint > 2000 else _infer_year(first_chunk)
 
     warnings: list[str] = []
-
     try:
-        text = content_bytes.decode("utf-8", errors="replace")
-    except Exception as exc:
-        raise HTTPException(400, f"Could not decode file as text: {exc}") from exc
-
-    parser = CombatLogParser(file_year=file_year)
-    try:
-        fh = io.StringIO(text)
-        encounters_raw = parser.parse_file(fh)
+        parser = CombatLogParser(file_year=file_year)
+        with open(tmp_path, "r", encoding="utf-8", errors="replace") as fh:
+            encounters_raw = parser.parse_file(fh)
     except Exception as exc:
         raise HTTPException(500, f"Parse error: {exc}") from exc
+    finally:
+        os.unlink(tmp_path)
 
     if parser.warnings:
         warnings.extend(parser.warnings)
-
     if not encounters_raw:
         warnings.append("No raid boss encounters were detected in this log.")
 
