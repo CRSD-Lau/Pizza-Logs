@@ -235,9 +235,20 @@ class CombatLogParser:
         # Cache boss name set once — this is hit millions of times during segmentation
         self._boss_name_set: set[str] = ALL_BOSS_NAMES
 
-    def parse_file(self, fh: TextIO) -> list[ParsedEncounter]:
-        """Main entry point — returns list of raid boss encounters."""
-        lines = self._iter_lines(fh)
+    def parse_file(
+        self,
+        fh: TextIO,
+        total_lines: int = 0,
+        progress_cb: Optional[object] = None,
+    ) -> list[ParsedEncounter]:
+        """Main entry point — returns list of raid boss encounters.
+
+        Args:
+            fh:           open file handle
+            total_lines:  pre-counted line total (for progress %). 0 = unknown
+            progress_cb:  callable(lines_done: int, total: int) — called every 50k lines
+        """
+        lines = self._iter_lines(fh, total_lines, progress_cb)
         segments = self._segment_encounters(lines)
         encounters: list[ParsedEncounter] = []
         for seg in segments:
@@ -248,10 +259,18 @@ class CombatLogParser:
 
     # ── Internal: line iteration ─────────────────────────────────
 
-    def _iter_lines(self, fh: TextIO) -> Generator[tuple[str, list[str], float], None, None]:
+    def _iter_lines(
+        self,
+        fh: TextIO,
+        total_lines: int = 0,
+        progress_cb=None,
+    ) -> Generator[tuple[str, list[str], float], None, None]:
         """Yield (raw_ts_str, parts, ts_float) for every parseable line."""
+        _REPORT_EVERY = 50_000
         for raw_line in fh:
             self.raw_count += 1
+            if progress_cb and self.raw_count % _REPORT_EVERY == 0:
+                progress_cb(self.raw_count, total_lines)
             line = raw_line.strip()
             if not line:
                 continue

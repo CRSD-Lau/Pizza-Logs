@@ -5,16 +5,20 @@ FastAPI app that accepts WoW combat log files and returns structured encounter d
 
 from __future__ import annotations
 
+import asyncio
 import hashlib
+import io
+import json
 import os
 import tempfile
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Optional
+from typing import AsyncGenerator, Optional
 
 import uvicorn
 from fastapi import FastAPI, File, Form, HTTPException, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 
 from parser_core import CombatLogParser, ParsedEncounter
@@ -219,6 +223,154 @@ async def parse_log_by_path(body: dict) -> ParseResponse:
         rawLineCount = parser.raw_count,
         encounters   = encounters_out,
         warnings     = parser.warnings,
+    )
+
+
+# ── SSE streaming parse endpoint ─────────────────────────────────
+
+def _sse(data: dict) -> str:
+    return f"data: {json.dumps(data)}\n\n"
+
+def _parse_msg(pct: int) -> str:
+    if pct < 38: return "Parser reading combat events…"
+    if pct < 52: return "Detecting boss encounters…"
+    if pct < 68: return "Aggregating DPS and HPS…"
+    if pct < 82: return "Building encounter data…"
+    return "Finalising…"
+
+def _enc_to_dict(enc: ParsedEncounter) -> dict:
+    return dict(
+        bossName         = enc.boss_name,
+        bossId           = enc.boss_id,
+        difficulty       = enc.difficulty,
+        groupSize        = enc.group_size,
+        outcome          = enc.outcome,
+        durationSeconds  = enc.duration_seconds,
+        startedAt        = enc.started_at,
+        endedAt          = enc.ended_at,
+        totalDamage      = enc.total_damage,
+        totalHealing     = enc.total_healing,
+        totalDamageTaken = enc.total_damage_taken,
+        fingerprint      = enc.fingerprint,
+        participants     = enc.participants,
+    )
+
+
+@app.post("/parse-stream")
+async def parse_log_stream(
+    file: UploadFile = File(...),
+    year_hint: int   = Form(default=0),
+) -> StreamingResponse:
+    """
+    Like /parse but streams SSE progress events while processing.
+    Final event: {"type":"done","data":{...ParseResponse fields...}}
+    """
+    loop = asyncio.get_running_loop()
+    queue: asyncio.Queue[Optional[dict]] = asyncio.Queue()
+
+    async def event_stream() -> AsyncGenerator[str, None]:
+        sha256   = hashlib.sha256()
+        tmp_path: Optional[str] = None
+
+        # ── Phase 1: receive file ─────────────────────────────────
+        yield _sse({"type": "progress", "pct": 5, "msg": "Receiving file…"})
+        try:
+            with tempfile.NamedTemporaryFile(mode="wb", suffix=".txt", delete=False) as tmp:
+                tmp_path = tmp.name
+                first_chunk = b""
+                while True:
+                    chunk = await file.read(8 * 1024 * 1024)
+                    if not chunk:
+                        break
+                    sha256.update(chunk)
+                    if not first_chunk:
+                        first_chunk = chunk[:4096]
+                    tmp.write(chunk)
+        except Exception as exc:
+            if tmp_path and os.path.exists(tmp_path):
+                os.unlink(tmp_path)
+            yield _sse({"type": "error", "msg": f"Failed to receive file: {exc}"})
+            return
+
+        file_hash = sha256.hexdigest()
+        file_year = year_hint if year_hint > 2000 else _infer_year(first_chunk)
+
+        # ── Phase 2: count lines (fast sequential scan) ───────────
+        yield _sse({"type": "progress", "pct": 28, "msg": "Counting lines…"})
+        try:
+            with open(tmp_path, "r", encoding="utf-8", errors="replace") as fh:
+                total_lines = sum(1 for _ in fh)
+        except Exception as exc:
+            os.unlink(tmp_path)
+            yield _sse({"type": "error", "msg": f"Line count failed: {exc}"})
+            return
+
+        yield _sse({"type": "progress", "pct": 33, "msg": "Parser reading combat events…"})
+
+        # ── Phase 3: parse in thread executor ─────────────────────
+        def do_parse() -> tuple[CombatLogParser, list[ParsedEncounter]]:
+            def on_progress(lines_done: int, total: int) -> None:
+                pct = 33 + int((lines_done / total) * 55) if total else 60
+                asyncio.run_coroutine_threadsafe(
+                    queue.put({"type": "progress", "pct": min(pct, 88), "msg": _parse_msg(pct)}),
+                    loop,
+                )
+            parser = CombatLogParser(file_year=file_year)
+            with open(tmp_path, "r", encoding="utf-8", errors="replace") as fh:  # type: ignore[arg-type]
+                encounters = parser.parse_file(fh, total_lines=total_lines, progress_cb=on_progress)
+            return parser, encounters
+
+        parse_task = asyncio.ensure_future(loop.run_in_executor(None, do_parse))
+
+        # Drain progress queue while task runs
+        while not parse_task.done():
+            await asyncio.sleep(0.15)
+            while not queue.empty():
+                yield _sse(queue.get_nowait())
+
+        # Drain any remaining events
+        while not queue.empty():
+            yield _sse(queue.get_nowait())
+
+        # Clean up temp file
+        try:
+            os.unlink(tmp_path)
+        except OSError:
+            pass
+
+        # Get result (raises if parser threw)
+        try:
+            parser, encounters_raw = await parse_task
+        except Exception as exc:
+            yield _sse({"type": "error", "msg": f"Parse error: {exc}"})
+            return
+
+        yield _sse({"type": "progress", "pct": 90, "msg": "Building encounters…"})
+
+        # ── Serialize ─────────────────────────────────────────────
+        encounters_out = [_enc_to_dict(e) for e in encounters_raw]
+        warnings: list[str] = list(parser.warnings)
+        if not encounters_raw:
+            warnings.append("No raid boss encounters were detected in this log.")
+
+        yield _sse({
+            "type": "done",
+            "data": {
+                "filename":     file.filename or "WoWCombatLog.txt",
+                "fileHash":     file_hash,
+                "rawLineCount": parser.raw_count,
+                "encounters":   encounters_out,
+                "warnings":     warnings,
+            },
+        })
+
+    return StreamingResponse(
+        event_stream(),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control":    "no-cache, no-transform",
+            "X-Accel-Buffering":"no",   # disable nginx / Railway proxy buffering
+        },
     )
 
 

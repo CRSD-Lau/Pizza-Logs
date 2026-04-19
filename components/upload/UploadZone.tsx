@@ -53,33 +53,18 @@ export function UploadZone({ onComplete }: UploadZoneProps) {
   const processFile = useCallback(async (file: File) => {
     void requestNotificationPermission();
     const startTime = Date.now();
-    // Estimate total duration: ~80 KB/s end-to-end throughput on Railway free tier
-    const estimatedMs = Math.max(30_000, (file.size / (80 * 1024)) * 1000);
 
-    const getProgress = () => {
-      const elapsed = Date.now() - startTime;
-      // Asymptotic curve: approaches 92% but never reaches it until server responds
-      return Math.min(92, Math.round(3 + 89 * (1 - Math.exp(-elapsed / estimatedMs))));
-    };
-
-    const getElapsed = () => {
-      const s = Math.floor((Date.now() - startTime) / 1000);
-      return s < 60 ? `${s}s` : `${Math.floor(s / 60)}m ${s % 60}s`;
-    };
-
-    const getMessage = (pct: number) => {
-      if (pct < 15) return "Streaming file to parser…";
-      if (pct < 30) return "Parser reading combat events…";
-      if (pct < 50) return "Detecting boss encounters…";
-      if (pct < 65) return "Aggregating DPS and HPS…";
-      if (pct < 80) return "Building encounter fingerprints…";
-      return "Finalising — almost done…";
-    };
-
-    setState({ stage: "uploading", progress: 3, message: "Streaming file to parser…", elapsed: 0 });
+    setState({ stage: "uploading", progress: 2, message: "Uploading file…", elapsed: 0 });
 
     const onBeforeUnload = (e: BeforeUnloadEvent) => { e.preventDefault(); e.returnValue = ""; };
     window.addEventListener("beforeunload", onBeforeUnload);
+
+    // Elapsed-only ticker — progress % now comes from real SSE events
+    const ticker = setInterval(() => {
+      setState(s => s.stage === "uploading"
+        ? { ...s, elapsed: Math.floor((Date.now() - startTime) / 1000) }
+        : s);
+    }, 1000);
 
     const params = new URLSearchParams({
       realmName, realmHost, filename: file.name, fileSize: String(file.size),
@@ -89,40 +74,62 @@ export function UploadZone({ onComplete }: UploadZoneProps) {
     const form = new FormData();
     form.append("file", file);
 
-    const ticker = setInterval(() => {
-      const pct = getProgress();
-      const elapsed = Math.floor((Date.now() - startTime) / 1000);
-      setState(s => s.stage === "uploading"
-        ? { ...s, progress: pct, message: getMessage(pct), elapsed }
-        : s);
-    }, 500);
-
     try {
       const res = await fetch(`/api/upload?${params}`, { method: "POST", body: form });
-      clearInterval(ticker);
-      const elapsed = Math.floor((Date.now() - startTime) / 1000);
-      setState(s => ({ ...s, progress: 95, message: "Saving to database…", elapsed }));
+      if (!res.body) throw new Error("No response body");
 
-      const data = await res.json() as UploadResponse;
-      if (!res.ok) throw new Error((data as { error?: string }).error ?? `HTTP ${res.status}`);
+      const reader  = res.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer    = "";
 
-      const result = { ...data, filename: file.name };
-      setState({ stage: "done", progress: 100, message: "Done", elapsed, result });
-      onComplete?.(result);
-      // Browser notification — fires even if the tab is in the background
-      const stored = result.encountersInserted;
-      sendNotification(
-        "✅ Upload complete",
-        stored > 0
-          ? `${stored} encounter${stored !== 1 ? "s" : ""} stored from ${file.name}`
-          : `${file.name} processed — no new encounters`,
-      );
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+
+        buffer += decoder.decode(value, { stream: true });
+        const chunks = buffer.split("\n\n");
+        buffer = chunks.pop() ?? "";
+
+        for (const chunk of chunks) {
+          for (const line of chunk.split("\n")) {
+            if (!line.startsWith("data: ")) continue;
+            let event: { type: string; pct?: number; msg?: string; result?: UploadResponse; };
+            try { event = JSON.parse(line.slice(6)); }
+            catch { continue; }
+
+            const elapsed = Math.floor((Date.now() - startTime) / 1000);
+
+            if (event.type === "progress" && event.pct !== undefined) {
+              setState(s => s.stage === "uploading"
+                ? { ...s, progress: event.pct!, message: event.msg ?? "", elapsed }
+                : s);
+
+            } else if (event.type === "complete" && event.result) {
+              clearInterval(ticker);
+              const result = { ...event.result, filename: file.name };
+              setState({ stage: "done", progress: 100, message: "Done", elapsed, result });
+              onComplete?.(result);
+              const stored = result.encountersInserted;
+              sendNotification(
+                "✅ Upload complete",
+                stored > 0
+                  ? `${stored} encounter${stored !== 1 ? "s" : ""} stored from ${file.name}`
+                  : `${file.name} processed — no new encounters`,
+              );
+
+            } else if (event.type === "error") {
+              throw new Error((event as { msg?: string }).msg ?? "Upload failed");
+            }
+          }
+        }
+      }
     } catch (err) {
       clearInterval(ticker);
       const msg = String(err instanceof Error ? err.message : err);
       setState({ stage: "error", progress: 0, message: "", elapsed: 0, error: msg });
       sendNotification("❌ Upload failed", msg);
     } finally {
+      clearInterval(ticker);
       window.removeEventListener("beforeunload", onBeforeUnload);
     }
   }, [realmName, realmHost, guildName, onComplete, requestNotificationPermission, sendNotification]);
