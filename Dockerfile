@@ -31,8 +31,10 @@ COPY --from=builder /app/public ./public
 COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
 COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
 COPY --from=builder /app/prisma ./prisma
-# Copy prisma CLI + all companion wasm/bin files + engines
-COPY --from=builder /app/node_modules/.bin/prisma*         ./node_modules/.bin/
+# Copy prisma CLI source + engines for startup db push
+# We run via the source entry point (node_modules/prisma/...) rather than
+# the .bin/ bundled binary, so the wasm is loaded from @prisma packages
+# instead of hardcoded .bin/__dirname — no companion file issues.
 COPY --from=builder /app/node_modules/prisma               ./node_modules/prisma
 COPY --from=builder /app/node_modules/@prisma              ./node_modules/@prisma
 
