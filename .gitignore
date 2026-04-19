@@ -28,3 +28,9 @@ Thumbs.db
 
 # prisma
 prisma/migrations/
+
+# python
+__pycache__/
+*.pyc
+*.pyo
+.pytest_cache/
