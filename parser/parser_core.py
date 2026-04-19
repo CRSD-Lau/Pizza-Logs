@@ -144,6 +144,14 @@ class SpellStats:
 
 
 @dataclass
+class TargetStats:
+    """Damage dealt by one player to one specific mob/target."""
+    damage: float = 0.0
+    hits:   int   = 0
+    crits:  int   = 0
+
+
+@dataclass
 class ActorStats:
     name:         str
     guids:        set[str]  = field(default_factory=set)
@@ -154,7 +162,8 @@ class ActorStats:
     deaths:       int   = 0
     hit_count:    int   = 0
     crit_count:   int   = 0
-    spells:       dict[str, SpellStats] = field(default_factory=dict)
+    spells:       dict[str, SpellStats]  = field(default_factory=dict)
+    targets:      dict[str, TargetStats] = field(default_factory=dict)  # mob → stats
 
 
 @dataclass
@@ -542,6 +551,12 @@ class CombatLogParser:
                 a.total_damage += amount
                 ss.damage += amount
                 targets_hit.add(dst_name)
+                # Track damage by target mob for drill-down
+                if dst_name:
+                    ts = a.targets.setdefault(dst_name, TargetStats())
+                    ts.damage += amount
+                    ts.hits   += 1
+                    ts.crits  += int(is_crit)
 
             ss.hits  += 1
             ss.crits += int(is_crit)
@@ -576,17 +591,23 @@ class CombatLogParser:
                 }
                 for name, s in actor.spells.items()
             }
+            target_breakdown = {
+                name: {"damage": t.damage, "hits": t.hits, "crits": t.crits}
+                for name, t in actor.targets.items()
+                if t.damage > 0
+            }
             participants.append({
-                "name":           actor.name,
-                "class":          actor.wow_class,
-                "totalDamage":    actor.total_damage,
-                "totalHealing":   actor.total_healing,
-                "damageTaken":    actor.damage_taken,
-                "dps":            round(dps, 2),
-                "hps":            round(hps, 2),
-                "deaths":         actor.deaths,
-                "critPct":        round(crit_pct, 1),
-                "spellBreakdown": spell_breakdown,
+                "name":            actor.name,
+                "class":           actor.wow_class,
+                "totalDamage":     actor.total_damage,
+                "totalHealing":    actor.total_healing,
+                "damageTaken":     actor.damage_taken,
+                "dps":             round(dps, 2),
+                "hps":             round(hps, 2),
+                "deaths":          actor.deaths,
+                "critPct":         round(crit_pct, 1),
+                "spellBreakdown":  spell_breakdown,
+                "targetBreakdown": target_breakdown,
             })
 
         total_damage  = sum(a.total_damage  for a in actors.values())

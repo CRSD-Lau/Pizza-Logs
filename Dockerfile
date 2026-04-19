@@ -31,6 +31,13 @@ COPY --from=builder /app/public ./public
 COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
 COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
 COPY --from=builder /app/prisma ./prisma
+# Copy prisma CLI + engines so we can run db push on startup
+COPY --from=builder /app/node_modules/.bin/prisma          ./node_modules/.bin/prisma
+COPY --from=builder /app/node_modules/prisma               ./node_modules/prisma
+COPY --from=builder /app/node_modules/@prisma              ./node_modules/@prisma
+
+COPY start.sh ./start.sh
+RUN chmod +x ./start.sh
 
 RUN mkdir -p /app/uploads && chown nextjs:nodejs /app/uploads
 
@@ -38,4 +45,4 @@ USER nextjs
 EXPOSE 3000
 ENV PORT=3000
 
-CMD ["node", "server.js"]
+CMD ["./start.sh"]

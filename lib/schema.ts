@@ -21,17 +21,28 @@ export const SpellBreakdownSchema = z.record(
   })
 );
 
+export const TargetBreakdownSchema = z.record(
+  z.string(),
+  z.object({
+    damage: z.number(),
+    hits:   z.number(),
+    crits:  z.number(),
+  })
+);
+export type TargetBreakdown = z.infer<typeof TargetBreakdownSchema>;
+
 export const ParticipantResultSchema = z.object({
-  name:           z.string(),
-  class:          z.string().nullable().optional(),
-  totalDamage:    z.number(),
-  totalHealing:   z.number(),
-  damageTaken:    z.number(),
-  dps:            z.number(),
-  hps:            z.number(),
-  deaths:         z.number(),
-  critPct:        z.number(),
-  spellBreakdown: SpellBreakdownSchema.optional(),
+  name:            z.string(),
+  class:           z.string().nullable().optional(),
+  totalDamage:     z.number(),
+  totalHealing:    z.number(),
+  damageTaken:     z.number(),
+  dps:             z.number(),
+  hps:             z.number(),
+  deaths:          z.number(),
+  critPct:         z.number(),
+  spellBreakdown:  SpellBreakdownSchema.optional(),
+  targetBreakdown: TargetBreakdownSchema.optional(),
 });
 export type ParticipantResult = z.infer<typeof ParticipantResultSchema>;
 
@@ -64,12 +75,12 @@ export type ParseResult = z.infer<typeof ParseResultSchema>;
 // ── Upload API response ────────────────────────────────────────
 
 export const UploadResponseSchema = z.object({
-  uploadId:          z.string(),
-  status:            z.enum(["DONE", "FAILED", "DUPLICATE", "PARTIAL"]),
-  encountersFound:   z.number(),
-  encountersInserted:z.number(),
+  uploadId:           z.string(),
+  status:             z.enum(["DONE", "FAILED", "DUPLICATE", "PARTIAL"]),
+  encountersFound:    z.number(),
+  encountersInserted: z.number(),
   encountersDuplicate:z.number(),
-  milestones:        z.array(z.object({
+  milestones:         z.array(z.object({
     playerName: z.string(),
     bossName:   z.string(),
     difficulty: z.string(),
@@ -78,7 +89,7 @@ export const UploadResponseSchema = z.object({
     rank:       z.number(),
     type:       z.string(),
   })).optional(),
-  warnings:          z.array(z.string()).optional(),
-  errorMessage:      z.string().optional(),
+  warnings:           z.array(z.string()).optional(),
+  errorMessage:       z.string().optional(),
 });
 export type UploadResponse = z.infer<typeof UploadResponseSchema>;

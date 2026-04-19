@@ -158,8 +158,9 @@ model Participant {
   hps            Float     @default(0)
   deaths         Int       @default(0)
   critPct        Float     @default(0) // 0-100
-  spellBreakdown Json?     // Record<spellName, { damage, healing, hits, crits, school }>
-  createdAt      DateTime  @default(now())
+  spellBreakdown  Json?     // Record<spellName, { damage, healing, hits, crits, school }>
+  targetBreakdown Json?    // Record<mobName,   { damage, hits, crits }>
+  createdAt       DateTime @default(now())
 
   @@unique([encounterId, playerId])
   @@index([playerId])

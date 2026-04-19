@@ -245,7 +245,8 @@ export async function POST(req: NextRequest) {
                   hps:            p.hps,
                   deaths:         p.deaths,
                   critPct:        p.critPct,
-                  spellBreakdown: (p.spellBreakdown ?? {}) as object,
+                  spellBreakdown:  (p.spellBreakdown  ?? {}) as object,
+                  targetBreakdown: (p.targetBreakdown ?? {}) as object,
                 }];
               }),
               skipDuplicates: true,

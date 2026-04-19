@@ -3,6 +3,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { db } from "@/lib/db";
 import { DamageMeter } from "@/components/meter/DamageMeter";
+import { MobBreakdown, type MobEntry } from "@/components/meter/MobBreakdown";
 import { StatCard } from "@/components/ui/StatCard";
 import { SectionHeader } from "@/components/ui/SectionHeader";
 import { Badge } from "@/components/ui/Badge";
@@ -25,6 +26,7 @@ export default async function EncounterPage({ params }: Props) {
       boss: true,
       upload: {
         select: {
+          id:       true,
           filename: true,
           guild:    { select: { name: true } },
           realm:    { select: { name: true, host: true } },
@@ -48,10 +50,52 @@ export default async function EncounterPage({ params }: Props) {
   const totalDps  = Math.round(encounter.totalDamage / Math.max(1, encounter.durationSeconds));
   const totalHps  = Math.round(encounter.totalHealing / Math.max(1, encounter.durationSeconds));
 
+  // ── Aggregate target breakdown across all participants ────────
+  const mobMap = new Map<string, {
+    totalDamage: number; hits: number; crits: number;
+    byPlayer: Map<string, { damage: number; hits: number; crits: number; playerClass?: string | null }>;
+  }>();
+  for (const p of encounter.participants) {
+    if (!p.targetBreakdown) continue;
+    const td = p.targetBreakdown as Record<string, { damage: number; hits: number; crits: number }>;
+    for (const [mob, stats] of Object.entries(td)) {
+      if (!stats || stats.damage <= 0) continue;
+      const entry = mobMap.get(mob) ?? { totalDamage: 0, hits: 0, crits: 0, byPlayer: new Map() };
+      entry.totalDamage += stats.damage;
+      entry.hits        += stats.hits;
+      entry.crits       += stats.crits;
+      const prev = entry.byPlayer.get(p.player.name) ?? { damage: 0, hits: 0, crits: 0, playerClass: p.player.class };
+      prev.damage += stats.damage;
+      prev.hits   += stats.hits;
+      prev.crits  += stats.crits;
+      entry.byPlayer.set(p.player.name, prev);
+      mobMap.set(mob, entry);
+    }
+  }
+  const mobEntries: MobEntry[] = Array.from(mobMap.entries())
+    .sort((a, b) => b[1].totalDamage - a[1].totalDamage)
+    .map(([name, data]) => ({
+      name,
+      totalDamage: data.totalDamage,
+      hits:        data.hits,
+      crits:       data.crits,
+      byPlayer:    Array.from(data.byPlayer.entries()).map(([pName, pd]) => ({
+        name:        pName,
+        playerClass: pd.playerClass,
+        damage:      pd.damage,
+        hits:        pd.hits,
+        crits:       pd.crits,
+      })),
+    }));
+
   return (
     <div className="pt-10 space-y-8">
       {/* Breadcrumb */}
       <div className="text-xs text-text-dim">
+        <Link href="/uploads" className="hover:text-gold">Uploads</Link>
+        <span className="mx-2">›</span>
+        <Link href={`/uploads/${encounter.upload.id}`} className="hover:text-gold">Raid</Link>
+        <span className="mx-2">›</span>
         <Link href="/bosses" className="hover:text-gold">Bosses</Link>
         <span className="mx-2">›</span>
         <Link href={`/bosses/${encounter.boss.slug}`} className="hover:text-gold">{encounter.boss.name}</Link>
@@ -130,6 +174,19 @@ export default async function EncounterPage({ params }: Props) {
           <SectionHeader title="Healing Breakdown" />
           <div className="bg-bg-panel border border-gold-dim rounded overflow-hidden">
             <DamageMeter participants={healParts} metric="hps" />
+          </div>
+        </section>
+      )}
+
+      {/* Mob / Target Breakdown */}
+      {mobEntries.length > 0 && (
+        <section>
+          <SectionHeader
+            title="Target Breakdown"
+            sub="Damage dealt to each mob — click a row to see per-player split"
+          />
+          <div className="bg-bg-panel border border-gold-dim rounded overflow-hidden">
+            <MobBreakdown mobs={mobEntries} />
           </div>
         </section>
       )}

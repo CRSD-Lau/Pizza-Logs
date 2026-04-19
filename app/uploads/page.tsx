@@ -61,7 +61,12 @@ export default async function UploadsPage() {
                 <div className="flex items-start justify-between gap-3 flex-wrap">
                   <div>
                     <div className="flex items-center gap-2 flex-wrap">
-                      <span className="text-sm font-semibold text-text-primary">{u.filename}</span>
+                      <Link
+                        href={`/uploads/${u.id}`}
+                        className="text-sm font-semibold text-text-primary hover:text-gold transition-colors"
+                      >
+                        {u.filename}
+                      </Link>
                       <Badge variant={statusVariant as Parameters<typeof Badge>[0]["variant"]}>
                         {u.status}
                       </Badge>
@@ -112,6 +117,17 @@ export default async function UploadsPage() {
 
                 {u.errorMessage && (
                   <p className="text-xs text-danger">{u.errorMessage}</p>
+                )}
+
+                {u.status === "DONE" && (
+                  <div>
+                    <Link
+                      href={`/uploads/${u.id}`}
+                      className="text-xs text-gold hover:text-gold-light transition-colors"
+                    >
+                      View raid detail →
+                    </Link>
+                  </div>
                 )}
               </div>
             );
