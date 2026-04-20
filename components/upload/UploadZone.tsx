@@ -84,6 +84,8 @@ export function UploadZone({ onComplete }: UploadZoneProps) {
     const form = new FormData();
     form.append("file", file);
 
+    let succeeded = false;
+
     try {
       const res = await fetch(`/api/upload?${params}`, { method: "POST", body: form });
       if (!res.body) throw new Error("No response body");
@@ -116,6 +118,7 @@ export function UploadZone({ onComplete }: UploadZoneProps) {
                 : s);
 
             } else if (event.type === "complete" && event.result) {
+              succeeded = true;
               clearInterval(ticker);
               const result = { ...event.result, filename: file.name };
               setState({ stage: "done", progress: 100, message: "Done", elapsed, stalled: false, result });
@@ -135,6 +138,8 @@ export function UploadZone({ onComplete }: UploadZoneProps) {
         }
       }
     } catch (err) {
+      // Ignore stream close errors that arrive after a successful complete event
+      if (succeeded) return;
       clearInterval(ticker);
       const msg = String(err instanceof Error ? err.message : err);
       setState({ stage: "error", progress: 0, message: "", elapsed: 0, stalled: false, error: msg });
@@ -212,25 +217,27 @@ export function UploadZone({ onComplete }: UploadZoneProps) {
         <div
           {...getRootProps()}
           className={cn(
-            "relative border border-dashed rounded-sm px-10 py-16 text-center cursor-pointer transition-all duration-200",
-            "bg-[rgba(180,140,60,0.02)] overflow-hidden",
-            isDragActive
-              ? "border-gold bg-[rgba(180,140,60,0.06)] shadow-gold-glow"
-              : "border-gold/40 hover:border-gold hover:bg-[rgba(180,140,60,0.04)]"
+            "relative border border-dashed rounded-sm px-10 py-16 text-center transition-all duration-200 overflow-hidden",
+            !characterName.trim()
+              ? "cursor-not-allowed opacity-40 border-gold/20 bg-[rgba(180,140,60,0.01)]"
+              : isDragActive
+                ? "cursor-pointer border-gold bg-[rgba(180,140,60,0.06)] shadow-gold-glow"
+                : "cursor-pointer border-gold/40 bg-[rgba(180,140,60,0.02)] hover:border-gold hover:bg-[rgba(180,140,60,0.04)]"
           )}
         >
           <input {...getInputProps()} />
-          {/* Glow overlay */}
           <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_60%_40%_at_50%_50%,rgba(180,140,60,0.05)_0%,transparent_70%)]" />
           <div className="relative">
             <UploadIcon className="mx-auto mb-4 text-gold/60" />
             <p className="heading-cinzel text-lg text-gold-light mb-2">
-              {isDragActive ? "Release to upload" : "Drop your WoWCombatLog.txt"}
+              {!characterName.trim()
+                ? "Enter your character name above to upload"
+                : isDragActive ? "Release to upload" : "Drop your WoWCombatLog.txt"}
             </p>
             <p className="text-sm text-text-secondary mb-6">
               WotLK · Naxxramas through Ruby Sanctum · All processing server-side
             </p>
-            <Button variant="gold" size="md" onClick={e => e.stopPropagation()}>
+            <Button variant="gold" size="md" onClick={e => e.stopPropagation()} disabled={!characterName.trim()}>
               Choose File
             </Button>
             <p className="text-xs text-text-dim mt-3">Supports files up to 1 GB</p>
