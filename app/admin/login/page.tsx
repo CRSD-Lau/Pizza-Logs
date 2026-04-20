@@ -20,7 +20,7 @@ export default function AdminLoginPage() {
 
     if (valid) {
       document.cookie = `x-admin-secret=${secret.trim()}; path=/; SameSite=Strict`;
-      router.push("/admin");
+      window.location.href = "/admin";
     } else {
       setError(true);
       setSecret("");
