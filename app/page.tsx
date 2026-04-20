@@ -1,7 +1,7 @@
 import { Suspense } from "react";
 import Link from "next/link";
 import { db } from "@/lib/db";
-import { UploadZone } from "@/components/upload/UploadZone";
+import { UploadZoneWithRefresh } from "@/components/upload/UploadZoneWithRefresh";
 import { StatCard } from "@/components/ui/StatCard";
 import { SectionHeader } from "@/components/ui/SectionHeader";
 import { Badge } from "@/components/ui/Badge";
@@ -70,7 +70,7 @@ export default async function HomePage() {
       {/* Upload zone */}
       <section>
         <SectionHeader title="Upload Combat Log" sub="Drag and drop your WoWCombatLog.txt" />
-        <UploadZone />
+        <UploadZoneWithRefresh />
       </section>
 
       {/* Recent milestones */}
