@@ -566,9 +566,6 @@ class CombatLogParser:
                 school   = _safe_int(parts[9]) or 1
                 is_crit  = parts[13] == "1"
                 spell_name = "Auto Attack"
-                # Subtract overkill: amount includes hits past the target's 0 HP point.
-                # UWU/WarcraftLogs use effective_damage = amount - overkill.
-                amount = max(0.0, amount - overkill)
             elif is_heal:
                 # SPELL_HEAL format: event,srcGUID,srcName,srcFlags,dstGUID,dstName,dstFlags,
                 #   spellID,spellName,spellSchool,amount,overhealing,absorbed,critical
@@ -593,8 +590,6 @@ class CombatLogParser:
                 amount     = _safe_float(parts[10])
                 overkill   = _safe_float(parts[11])
                 is_crit    = len(parts) > 17 and parts[17] == "1"
-                # Subtract overkill — same rationale as SWING_DAMAGE above.
-                amount = max(0.0, amount - overkill)
 
             if amount <= 0:
                 continue
