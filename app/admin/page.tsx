@@ -16,7 +16,7 @@ export default async function AdminPage() {
     milestonesTotal,
     recentErrors,
     recentUploads,
-    topPlayers,
+    topUploaders,
     parserHealth,
     bossCount,
   ] = await Promise.all([
@@ -36,10 +36,13 @@ export default async function AdminPage() {
       take:    10,
       select:  { id: true, filename: true, fileSize: true, rawLineCount: true, createdAt: true, parsedAt: true },
     }),
-    db.player.findMany({
+    db.upload.groupBy({
+      by:      ["uploaderName"],
+      where:   { uploaderName: { not: null } },
+      _count:  { uploaderName: true },
+      orderBy: { _count: { uploaderName: "desc" } },
       take:    10,
-      include: { _count: { select: { participants: true } } },
-    }).then(ps => ps.sort((a, b) => b._count.participants - a._count.participants).slice(0, 10)),
+    }),
     fetch(`${process.env.PARSER_SERVICE_URL ?? "http://localhost:8000"}/health`, {
       cache: "no-store",
     }).then(r => r.json()).catch(() => ({ status: "unreachable" })),
@@ -88,19 +91,18 @@ export default async function AdminPage() {
         </div>
       </section>
 
-      {/* Top active players */}
+      {/* Top uploaders */}
       <section>
-        <SectionHeader title="Most Active Players" sub="By encounter count" />
+        <SectionHeader title="Most Active Uploaders" sub="By logs submitted" />
         <div className="bg-bg-panel border border-gold-dim rounded divide-y divide-gold-dim">
-          {topPlayers.map((p, i) => (
-            <div key={p.id} className="flex items-center justify-between px-4 py-2.5">
+          {topUploaders.map((u, i) => (
+            <div key={u.uploaderName} className="flex items-center justify-between px-4 py-2.5">
               <div className="flex items-center gap-3">
                 <span className="text-text-dim text-sm w-5">{i + 1}</span>
-                <span className="text-sm font-medium text-text-primary">{p.name}</span>
-                {p.class && <span className="text-xs text-text-dim">{p.class}</span>}
+                <span className="text-sm font-medium text-text-primary">{u.uploaderName}</span>
               </div>
               <span className="text-sm tabular-nums text-text-secondary">
-                {p._count.participants} encounters
+                {u._count.uploaderName} {u._count.uploaderName === 1 ? "upload" : "uploads"}
               </span>
             </div>
           ))}
