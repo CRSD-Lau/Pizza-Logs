@@ -1,12 +1,10 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { verifyAdminSecret } from "./actions";
 
 export default function AdminLoginPage() {
-  const router = useRouter();
   const [secret, setSecret] = useState("");
   const [error, setError] = useState(false);
   const [loading, setLoading] = useState(false);
