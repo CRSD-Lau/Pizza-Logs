@@ -3,6 +3,7 @@ import { db } from "@/lib/db";
 import { SectionHeader } from "@/components/ui/SectionHeader";
 import { StatCard } from "@/components/ui/StatCard";
 import { formatBytes, formatDuration } from "@/lib/utils";
+import { ClearDatabaseButton } from "./ClearDatabaseButton";
 
 export const metadata: Metadata = { title: "Admin / Diagnostics" };
 export const dynamic = "force-dynamic";
@@ -47,11 +48,14 @@ export default async function AdminPage() {
 
   return (
     <div className="pt-10 space-y-10">
-      <div>
-        <h1 className="heading-cinzel text-2xl font-bold text-gold-light text-glow-gold">
-          Admin / Diagnostics
-        </h1>
-        <p className="text-text-secondary text-sm mt-1">System health and database statistics</p>
+      <div className="flex items-start justify-between gap-4 flex-wrap">
+        <div>
+          <h1 className="heading-cinzel text-2xl font-bold text-gold-light text-glow-gold">
+            Admin / Diagnostics
+          </h1>
+          <p className="text-text-secondary text-sm mt-1">System health and database statistics</p>
+        </div>
+        <ClearDatabaseButton />
       </div>
 
       {/* Global stats */}

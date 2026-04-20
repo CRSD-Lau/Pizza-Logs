@@ -6,8 +6,8 @@
 
 | Item | Status | Notes |
 |---|---|---|
-| Admin page auth | ❌ None | `/admin` is public — fix this |
-| Reset-DB endpoint | ✅ Protected | Secret header + temp-only deploy pattern |
+| Admin page auth | ✅ Done | `middleware.ts` + `ADMIN_SECRET` env var + `/admin/login` page |
+| Reset-DB endpoint | ✅ Built-in | `ClearDatabaseButton` on `/admin` — server action re-verifies secret |
 | File upload validation | ⚠️ Partial | Accepts only .txt/.log, no server-side MIME check |
 | SQL injection | ✅ Safe | Prisma parameterizes all queries |
 | XSS | ✅ Safe | React escapes by default; no dangerouslySetInnerHTML |
