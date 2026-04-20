@@ -35,7 +35,7 @@ export function UploadZone({ onComplete }: UploadZoneProps) {
 
   // Form metadata state
   const [characterName, setCharacterName] = useState("");
-  const [realmName, setRealmName]         = useState("Icecrown");
+  const [realmName, setRealmName]         = useState("Lordaeron");
   const [realmHost, setRealmHost]         = useState("warmane");
   const [guildName, setGuildName]         = useState("");
 
