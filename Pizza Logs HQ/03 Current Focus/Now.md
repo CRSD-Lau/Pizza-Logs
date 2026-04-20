@@ -1,7 +1,8 @@
 # Now
 
 ## Active
-- Clear DB and re-upload a log to test: target breakdown + raid detail page
+- Re-upload log → verify session splitting (expect 2 sessions: ICC night + VoA)
+- Verify "X boss" sub-label appears on Marrowgar DPS meter
 
 ## Next
 - Investigate Marrowgar DPS over-count vs uwu-logs reference
@@ -9,17 +10,17 @@
 - Admin page auth (simple secret middleware — medium priority)
 - Boss HP threshold heroic detection (25N vs 25H total damage ratio ~1.45x)
 
-## Recently Shipped (2026-04-19)
-- feat: per-mob target breakdown + raid detail page
-  - parser: TargetStats per actor, serialized to targetBreakdown JSON
-  - Participant model: targetBreakdown Json? field
-  - /encounters/[id]: Target Breakdown section (interactive mob table)
-  - /uploads/[id]: NEW raid detail page — encounter list + full raid mob damage aggregation
-  - /uploads: filename links to raid page, "View raid detail →" per upload
-  - Dockerfile: prisma db push runs at container startup so schema migrations auto-apply
+## Recently Shipped (2026-04-20)
+- Layer 1: per-mob target breakdown in encounter detail
+- Layer 2: raid session splitting (>60 min gap = new session)
+  - /uploads/[id] → session list cards
+  - /uploads/[id]/sessions/[idx] → standalone session page
+- Layer 3: boss-only DPS sub-label in DamageMeter (excludes add padding)
+- Fixed Dockerfile startup: prisma db push works correctly
+- Fixed ERR_INVALID_STATE crash in upload route
 
 ## Not Working On
-- Heroic detection (impossible)
+- Heroic detection (impossible without ENCOUNTER_START)
 - Gunship Battle detection (impossible)
 - Monetization
 - Major redesigns
