@@ -60,6 +60,7 @@ export const EncounterResultSchema = z.object({
   totalDamageTaken:z.number(),
   fingerprint:     z.string(),
   participants:    z.array(ParticipantResultSchema),
+  sessionIndex:    z.number().int().default(0),
 });
 export type EncounterResult = z.infer<typeof EncounterResultSchema>;
 

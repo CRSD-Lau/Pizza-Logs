@@ -253,6 +253,7 @@ def _enc_to_dict(enc: ParsedEncounter) -> dict:
         totalDamageTaken = enc.total_damage_taken,
         fingerprint      = enc.fingerprint,
         participants     = enc.participants,
+        sessionIndex     = enc.session_index,
     )
 
 

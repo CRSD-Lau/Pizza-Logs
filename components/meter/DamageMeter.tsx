@@ -24,6 +24,8 @@ interface Participant {
   // Prisma returns JsonValue for Json fields — we cast at usage
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   spellBreakdown?: any;
+  /** Boss-only damage (pre-computed from targetBreakdown filtered to boss mob) */
+  bossDmg?: number;
 }
 
 interface DamageMeterProps {
@@ -97,6 +99,12 @@ export function DamageMeter({ participants, metric = "dps" }: DamageMeterProps) 
                   <div className="text-sm font-semibold tabular-nums text-text-primary">
                     {formatNumber(rawVal)}
                   </div>
+                  {/* Boss-only damage sub-label — shown when adds inflated the total */}
+                  {p.bossDmg !== undefined && p.bossDmg < rawVal * 0.98 && (
+                    <div className="text-[10px] tabular-nums text-text-dim leading-tight">
+                      {formatNumber(p.bossDmg)} boss
+                    </div>
+                  )}
                 </div>
 
                 {/* DPS/HPS */}

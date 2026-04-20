@@ -199,6 +199,7 @@ class ParsedEncounter:
     fingerprint:       str
     participants:      list[dict]
     raw_event_count:   int
+    session_index:     int = 0   # 0-based index; increments on >60 min gap
 
 
 # ── CSV line splitter ──────────────────────────────────────────────
@@ -264,7 +265,34 @@ class CombatLogParser:
             enc = self._aggregate_segment(seg)
             if enc:
                 encounters.append(enc)
+        self._assign_session_indices(encounters)
         return encounters
+
+    @staticmethod
+    def _assign_session_indices(
+        encounters: list["ParsedEncounter"],
+        gap_seconds: int = 3600,   # >60 min gap → new raid session
+    ) -> None:
+        """Tag each encounter with a 0-based session_index.
+        Encounters within the same raid night share an index;
+        a gap larger than gap_seconds bumps the index."""
+        if not encounters:
+            return
+        session_idx = 0
+        prev_end_dt: Optional[datetime] = None
+        for enc in encounters:
+            try:
+                start_dt = datetime.fromisoformat(enc.started_at.replace("Z", "+00:00"))
+                end_dt   = datetime.fromisoformat(enc.ended_at.replace("Z", "+00:00"))
+            except ValueError:
+                enc.session_index = session_idx
+                continue
+            if prev_end_dt is not None:
+                gap = (start_dt - prev_end_dt).total_seconds()
+                if gap > gap_seconds:
+                    session_idx += 1
+            enc.session_index = session_idx
+            prev_end_dt = end_dt
 
     # ── Internal: line iteration ─────────────────────────────────
 

@@ -125,7 +125,7 @@ export default async function UploadsPage() {
                       href={`/uploads/${u.id}`}
                       className="text-xs text-gold hover:text-gold-light transition-colors"
                     >
-                      View raid detail →
+                      View sessions →
                     </Link>
                   </div>
                 )}

@@ -45,8 +45,17 @@ export default async function EncounterPage({ params }: Props) {
 
   if (!encounter) notFound();
 
-  const dpsParts  = encounter.participants.filter(p => p.dps > 0);
-  const healParts = encounter.participants.filter(p => p.hps > 100);
+  // ── Boss-only damage (Layer 3: exclude add padding) ──────────────
+  // targetBreakdown keys are mob names from the log — boss.name should match
+  const bossName = encounter.boss.name;
+  const participantsWithBossDmg = encounter.participants.map(p => {
+    const td = p.targetBreakdown as Record<string, { damage: number }> | null;
+    const bossDmg = td?.[bossName]?.damage ?? undefined;
+    return { ...p, bossDmg };
+  });
+
+  const dpsParts  = participantsWithBossDmg.filter(p => p.dps > 0);
+  const healParts = participantsWithBossDmg.filter(p => p.hps > 100);
   const totalDps  = Math.round(encounter.totalDamage / Math.max(1, encounter.durationSeconds));
   const totalHps  = Math.round(encounter.totalHealing / Math.max(1, encounter.durationSeconds));
 

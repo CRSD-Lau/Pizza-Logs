@@ -2,7 +2,6 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { db } from "@/lib/db";
-import { MobBreakdown, type MobEntry } from "@/components/meter/MobBreakdown";
 import { StatCard } from "@/components/ui/StatCard";
 import { SectionHeader } from "@/components/ui/SectionHeader";
 import { Badge } from "@/components/ui/Badge";
@@ -14,24 +13,29 @@ interface Props { params: Promise<{ id: string }> }
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { id } = await params;
   const upload = await db.upload.findUnique({ where: { id }, select: { filename: true } });
-  return { title: upload ? `Raid: ${upload.filename}` : "Raid Detail" };
+  return { title: upload ? `Upload: ${upload.filename}` : "Upload" };
 }
 
-export default async function RaidDetailPage({ params }: Props) {
+export default async function UploadDetailPage({ params }: Props) {
   const { id } = await params;
 
   const upload = await db.upload.findUnique({
     where: { id },
     include: {
-      realm: { select: { name: true, host: true } },
-      guild: { select: { name: true } },
+      realm:    { select: { name: true, host: true } },
+      guild:    { select: { name: true } },
       encounters: {
         orderBy: { startedAt: "asc" },
-        include: {
+        select: {
+          id:           true,
+          sessionIndex: true,
+          outcome:      true,
+          difficulty:   true,
+          durationSeconds: true,
+          totalDamage:  true,
+          startedAt:    true,
+          endedAt:      true,
           boss: { select: { name: true, slug: true, raid: true } },
-          participants: {
-            include: { player: { select: { name: true, class: true } } },
-          },
         },
       },
     },
@@ -39,75 +43,19 @@ export default async function RaidDetailPage({ params }: Props) {
 
   if (!upload) notFound();
 
-  // ── Raid-level aggregates ─────────────────────────────────────
-  const kills     = upload.encounters.filter(e => e.outcome === "KILL").length;
-  const wipes     = upload.encounters.filter(e => e.outcome === "WIPE").length;
-  const totalDmg  = upload.encounters.reduce((s, e) => s + e.totalDamage, 0);
-  const totalHeal = upload.encounters.reduce((s, e) => s + e.totalHealing, 0);
-  const totalSecs = upload.encounters.reduce((s, e) => s + e.durationSeconds, 0);
-
-  // ── Unique players ────────────────────────────────────────────
-  const playerSet = new Map<string, string | null>();
+  // ── Group encounters into sessions ────────────────────────────────
+  const sessionMap = new Map<number, typeof upload.encounters>();
   for (const enc of upload.encounters) {
-    for (const p of enc.participants) {
-      if (!playerSet.has(p.player.name)) {
-        playerSet.set(p.player.name, p.player.class ?? null);
-      }
-    }
-  }
-
-  // ── Raid-wide mob damage (aggregate targetBreakdown across all encounters) ──
-  const mobMap = new Map<string, {
-    totalDamage: number; hits: number; crits: number;
-    byPlayer: Map<string, { damage: number; hits: number; crits: number; playerClass: string | null }>;
-  }>();
-
-  for (const enc of upload.encounters) {
-    for (const p of enc.participants) {
-      if (!p.targetBreakdown) continue;
-      const td = p.targetBreakdown as Record<string, { damage: number; hits: number; crits: number }>;
-      for (const [mob, stats] of Object.entries(td)) {
-        if (!stats || stats.damage <= 0) continue;
-        const entry = mobMap.get(mob) ?? { totalDamage: 0, hits: 0, crits: 0, byPlayer: new Map() };
-        entry.totalDamage += stats.damage;
-        entry.hits        += stats.hits;
-        entry.crits       += stats.crits;
-        const prev = entry.byPlayer.get(p.player.name) ?? {
-          damage: 0, hits: 0, crits: 0, playerClass: p.player.class ?? null,
-        };
-        prev.damage += stats.damage;
-        prev.hits   += stats.hits;
-        prev.crits  += stats.crits;
-        entry.byPlayer.set(p.player.name, prev);
-        mobMap.set(mob, entry);
-      }
-    }
-  }
-
-  const mobEntries: MobEntry[] = Array.from(mobMap.entries())
-    .sort((a, b) => b[1].totalDamage - a[1].totalDamage)
-    .map(([name, data]) => ({
-      name,
-      totalDamage: data.totalDamage,
-      hits:        data.hits,
-      crits:       data.crits,
-      byPlayer:    Array.from(data.byPlayer.entries()).map(([pName, pd]) => ({
-        name:        pName,
-        playerClass: pd.playerClass,
-        damage:      pd.damage,
-        hits:        pd.hits,
-        crits:       pd.crits,
-      })),
-    }));
-
-  // ── Group encounters by raid ──────────────────────────────────
-  const raidGroups = new Map<string, typeof upload.encounters>();
-  for (const enc of upload.encounters) {
-    const raid = enc.boss.raid;
-    const arr  = raidGroups.get(raid) ?? [];
+    const arr = sessionMap.get(enc.sessionIndex) ?? [];
     arr.push(enc);
-    raidGroups.set(raid, arr);
+    sessionMap.set(enc.sessionIndex, arr);
   }
+  const sessions = Array.from(sessionMap.entries()).sort((a, b) => a[0] - b[0]);
+
+  const totalKills  = upload.encounters.filter(e => e.outcome === "KILL").length;
+  const totalWipes  = upload.encounters.filter(e => e.outcome === "WIPE").length;
+  const totalDmg    = upload.encounters.reduce((s, e) => s + e.totalDamage, 0);
+  const totalSecs   = upload.encounters.reduce((s, e) => s + e.durationSeconds, 0);
 
   return (
     <div className="pt-10 space-y-8">
@@ -115,14 +63,14 @@ export default async function RaidDetailPage({ params }: Props) {
       <div className="text-xs text-text-dim">
         <Link href="/uploads" className="hover:text-gold">Upload History</Link>
         <span className="mx-2">›</span>
-        <span className="text-text-secondary">Raid Detail</span>
+        <span className="text-text-secondary truncate">{upload.filename}</span>
       </div>
 
       {/* Header */}
       <div className="flex items-start justify-between flex-wrap gap-4">
         <div>
           <h1 className="heading-cinzel text-2xl font-bold text-gold-light text-glow-gold">
-            Raid: {upload.filename}
+            {upload.filename}
           </h1>
           <div className="flex items-center gap-2 mt-2 flex-wrap text-xs text-text-dim">
             <span>{upload.realm?.name ?? "Unknown realm"}</span>
@@ -136,120 +84,116 @@ export default async function RaidDetailPage({ params }: Props) {
           </div>
         </div>
         <div className="text-xs text-text-dim text-right">
-          <div>{new Date(upload.createdAt).toLocaleString("en-US", {
+          {new Date(upload.createdAt).toLocaleString("en-US", {
             month: "short", day: "numeric", year: "numeric",
             hour: "2-digit", minute: "2-digit",
-          })}</div>
-          {upload.parsedAt && (
-            <div className="mt-0.5 text-text-dim">
-              Parsed {new Date(upload.parsedAt).toLocaleString("en-US", {
-                hour: "2-digit", minute: "2-digit",
-              })}
-            </div>
-          )}
+          })}
         </div>
       </div>
 
-      {/* Raid Summary stats */}
+      {/* File-level stats */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-        <StatCard label="Encounters"   value={`${kills}K / ${wipes}W`} highlight />
-        <StatCard label="Total Damage" value={formatNumber(totalDmg)} />
-        <StatCard label="Total Healing" value={formatNumber(totalHeal)} />
+        <StatCard label="Sessions"     value={String(sessions.length)} highlight />
+        <StatCard label="Kills / Wipes" value={`${totalKills} / ${totalWipes}`} />
+        <StatCard label="Total Damage"  value={formatNumber(totalDmg)} />
         <StatCard label="Active Time"   value={formatDuration(totalSecs)} sub="sum of all pulls" />
       </div>
 
-      {/* Encounter list — grouped by raid */}
-      {upload.encounters.length > 0 && (
-        <section className="space-y-6">
+      {/* Session cards */}
+      {sessions.length === 0 ? (
+        <p className="text-text-dim text-sm">No encounters found in this upload.</p>
+      ) : (
+        <section className="space-y-4">
           <SectionHeader
-            title="Encounters"
-            sub={`${upload.encounters.length} pulls`}
+            title={sessions.length === 1 ? "Raid Session" : "Raid Sessions"}
+            sub={`${sessions.length} session${sessions.length !== 1 ? "s" : ""} detected in this log`}
           />
-          {Array.from(raidGroups.entries()).map(([raidName, encs]) => (
-            <div key={raidName} className="space-y-1">
-              <p className="text-xs font-semibold text-text-dim uppercase tracking-widest px-1">
-                {raidName}
-              </p>
-              <div className="bg-bg-panel border border-gold-dim rounded divide-y divide-gold-dim overflow-hidden">
-                {encs.map(enc => {
-                  const raidDps = enc.durationSeconds > 0
-                    ? Math.round(enc.totalDamage / enc.durationSeconds)
-                    : 0;
-                  return (
-                    <Link
-                      key={enc.id}
-                      href={`/encounters/${enc.id}`}
-                      className="flex items-center justify-between px-4 py-2.5 hover:bg-bg-hover transition-colors group"
-                    >
-                      <div className="flex items-center gap-3">
-                        <span className={cn(
-                          "text-[11px] font-bold px-1.5 py-0.5 rounded",
-                          enc.outcome === "KILL"
-                            ? "text-success bg-success/10"
-                            : enc.outcome === "WIPE"
-                            ? "text-danger bg-danger/10"
-                            : "text-text-dim bg-bg-hover"
-                        )}>
-                          {enc.outcome}
-                        </span>
-                        <span className="text-sm font-semibold text-text-primary group-hover:text-gold transition-colors">
-                          {enc.boss.name}
-                        </span>
-                        <span className={`diff-badge ${enc.difficulty.endsWith("H") ? "heroic" : "normal"}`}>
-                          {enc.difficulty}
-                        </span>
-                      </div>
-                      <div className="flex items-center gap-6 text-xs tabular-nums text-text-secondary">
-                        <span>{formatDuration(enc.durationSeconds)}</span>
-                        <span>{formatNumber(enc.totalDamage)} dmg</span>
-                        <span>{raidDps.toLocaleString()} rdps</span>
-                        <span className="text-text-dim">
-                          {new Date(enc.startedAt).toLocaleTimeString("en-US", {
-                            hour: "2-digit", minute: "2-digit",
-                          })}
-                        </span>
-                      </div>
-                    </Link>
-                  );
-                })}
-              </div>
-            </div>
-          ))}
-        </section>
-      )}
+          {sessions.map(([sessionIdx, encs]) => {
+            const kills   = encs.filter(e => e.outcome === "KILL").length;
+            const wipes   = encs.filter(e => e.outcome === "WIPE").length;
+            const dmg     = encs.reduce((s, e) => s + e.totalDamage, 0);
+            const secs    = encs.reduce((s, e) => s + e.durationSeconds, 0);
+            const start   = encs[0]?.startedAt;
+            const end     = encs[encs.length - 1]?.endedAt;
+            const raids   = [...new Set(encs.map(e => e.boss.raid))];
 
-      {/* Raid-wide mob damage */}
-      {mobEntries.length > 0 && (
-        <section>
-          <SectionHeader
-            title="Mob Damage (Entire Raid)"
-            sub="Aggregate damage dealt to every target across all encounters — click to drill down by player"
-          />
-          <div className="bg-bg-panel border border-gold-dim rounded overflow-hidden">
-            <MobBreakdown mobs={mobEntries} />
-          </div>
-        </section>
-      )}
-
-      {/* Roster */}
-      {playerSet.size > 0 && (
-        <section>
-          <SectionHeader
-            title="Raid Roster"
-            sub={`${playerSet.size} unique players`}
-          />
-          <div className="bg-bg-panel border border-gold-dim rounded p-4 flex flex-wrap gap-2">
-            {Array.from(playerSet.entries()).map(([name, cls]) => (
+            return (
               <Link
-                key={name}
-                href={`/players/${encodeURIComponent(name)}`}
-                className="text-xs px-2 py-1 rounded border border-gold-dim bg-bg-card hover:border-gold transition-colors"
+                key={sessionIdx}
+                href={`/uploads/${id}/sessions/${sessionIdx}`}
+                className="block bg-bg-panel border border-gold-dim rounded p-5 hover:border-gold transition-colors group space-y-4"
               >
-                <span className="text-text-primary font-medium">{name}</span>
-                {cls && <span className="text-text-dim ml-1.5">{cls}</span>}
+                {/* Session header */}
+                <div className="flex items-start justify-between gap-4 flex-wrap">
+                  <div>
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className="heading-cinzel text-base font-bold text-gold-light group-hover:text-gold transition-colors">
+                        {sessions.length === 1 ? "Raid Session" : `Session ${sessionIdx + 1}`}
+                      </span>
+                      {raids.map(r => (
+                        <span key={r} className="text-[11px] text-text-dim bg-bg-card border border-gold-dim rounded px-1.5 py-0.5">
+                          {r}
+                        </span>
+                      ))}
+                    </div>
+                    {start && (
+                      <div className="text-xs text-text-dim mt-1">
+                        {new Date(start).toLocaleString("en-US", {
+                          weekday: "short", month: "short", day: "numeric",
+                          hour: "2-digit", minute: "2-digit",
+                        })}
+                        {end && ` → ${new Date(end).toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" })}`}
+                      </div>
+                    )}
+                  </div>
+                  <span className="text-xs text-gold group-hover:text-gold-light transition-colors">
+                    View session →
+                  </span>
+                </div>
+
+                {/* Mini stats */}
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs">
+                  <div className="bg-bg-card rounded p-2 text-center">
+                    <div className="text-text-dim uppercase tracking-wide text-[10px]">Pulls</div>
+                    <div className="font-semibold mt-0.5">
+                      <span className="text-success">{kills}K</span>
+                      {" / "}
+                      <span className="text-danger">{wipes}W</span>
+                    </div>
+                  </div>
+                  <div className="bg-bg-card rounded p-2 text-center">
+                    <div className="text-text-dim uppercase tracking-wide text-[10px]">Damage</div>
+                    <div className="font-semibold mt-0.5 text-text-primary">{formatNumber(dmg)}</div>
+                  </div>
+                  <div className="bg-bg-card rounded p-2 text-center">
+                    <div className="text-text-dim uppercase tracking-wide text-[10px]">Active</div>
+                    <div className="font-semibold mt-0.5 text-text-primary">{formatDuration(secs)}</div>
+                  </div>
+                  <div className="bg-bg-card rounded p-2 text-center">
+                    <div className="text-text-dim uppercase tracking-wide text-[10px]">Bosses</div>
+                    <div className="font-semibold mt-0.5 text-text-primary">{encs.length} pulls</div>
+                  </div>
+                </div>
+
+                {/* Encounter pills */}
+                <div className="flex flex-wrap gap-1">
+                  {encs.map(enc => (
+                    <span
+                      key={enc.id}
+                      className={cn(
+                        "text-[11px] px-2 py-0.5 rounded-sm border",
+                        enc.outcome === "KILL"
+                          ? "bg-success/8 border-success/25 text-success"
+                          : "bg-danger/8 border-danger/20 text-danger"
+                      )}
+                    >
+                      {enc.boss.name.split(" ").slice(-1)[0]} {enc.difficulty}
+                    </span>
+                  ))}
+                </div>
               </Link>
-            ))}
-          </div>
+            );
+          })}
         </section>
       )}
     </div>

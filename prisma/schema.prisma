@@ -101,6 +101,7 @@ model Encounter {
   outcome         Outcome       @default(UNKNOWN)
   difficulty      String        // "10N" | "10H" | "25N" | "25H"
   groupSize       Int           @default(10)
+  sessionIndex    Int           @default(0)  // which raid session within the upload (0-based)
   durationSeconds Int
   startedAt       DateTime
   endedAt         DateTime

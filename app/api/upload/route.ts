@@ -223,6 +223,7 @@ export async function POST(req: NextRequest) {
                 outcome:          enc.outcome as "KILL" | "WIPE" | "UNKNOWN",
                 difficulty:       enc.difficulty,
                 groupSize:        enc.groupSize,
+                sessionIndex:     enc.sessionIndex ?? 0,
                 durationSeconds:  enc.durationSeconds,
                 startedAt:        new Date(enc.startedAt),
                 endedAt:          new Date(enc.endedAt),
