@@ -5,66 +5,87 @@
 
 ## Last Completed (this session)
 
+### Accordion Sections ✅ SHIPPED
+- New `components/ui/AccordionSection.tsx`: animated collapse via CSS grid-rows trick, chevron indicator, item count badge, `defaultOpen` prop
+- Applied across all data-heavy pages:
+  - **Encounter page**: DPS/Healing meters open; Target Breakdown + Full Roster collapsed
+  - **Session page**: Encounters + Roster open; Mob Damage collapsed
+  - **Player profile**: Records + Per-Boss open; Recent Encounters collapsed
+  - **Session player**: Chart + Encounter Breakdown both open
+
+### Players Tab ✅ SHIPPED
+- New `/players` page: grid of all players sorted by top rank then encounter count
+- Class filter pills (All + each WoW class) via URL searchParams — shareable/linkable
+- Each card: class-colored avatar, name, class, realm, pull count, best DPS/HPS from milestones
+- 👑 badge for players holding a #1 rank
+- Nav: Players link between Raids and This Week
+
 ### Raids Tab ✅ SHIPPED
-- New `/raids` page: all sessions grouped by calendar day (e.g. "Saturday, April 19, 2026")
-- Each card: raid zone names, time range, kills/wipes/pulls count, links to session page
-- Added "Raids" nav link in Nav.tsx (between Upload and This Week)
+- New `/raids` page: sessions grouped by calendar day with kills/wipes/pulls cards
+- Nav: Raids link between Upload and Players
 
 ### Session-Scoped Player Pages ✅ SHIPPED
-- New route: `/uploads/[id]/sessions/[sessionIdx]/players/[playerName]`
-- Roster links in session page now go here instead of global `/players/[name]`
-- Shows: class-colored header, session date, stat cards (pulls/kills/best+avg DPS or HPS)
-- Per-encounter breakdown table: outcome, boss, difficulty, DPS, HPS, crit %, deaths, duration
-- "View all-time profile →" link at bottom
-- Healer auto-detection: if HPS > 70% of DPS → switches primary metric to HPS
+- Route: `/uploads/[id]/sessions/[sessionIdx]/players/[playerName]`
+- Session stats, DPS/HPS recharts line chart comparing same-class players, encounter breakdown table
+- Roster links in session page go here (not global profile)
 
-### DPS/HPS Line Chart ✅ SHIPPED
-- New `components/charts/SessionLineChart.tsx` using recharts (already in package.json)
-- X-axis = encounter sequence (boss name abbreviated), Y-axis = DPS or HPS
-- One line per same-class player in the session
-- Viewed player = gold line (bright), classmates = class color at reduced opacity
-- Null gaps where player didn't participate in a pull (connectNulls: false)
-- Custom tooltip: sorted by value descending, shows all players with value for that boss
-- Shown on session player page when 2+ encounters exist
-
-### Bug Fixes
-- UploadZone.tsx: 3 setState calls were missing `stalled: false` (TS error + potential stall-indicator stuck)
-- Session breadcrumb now links to /raids instead of /uploads
+### Bug Fix: PARSING-Stuck Uploads ✅ SHIPPED
+- Root cause: `upload.update(DONE)` was after `computeMilestones` — if milestones timed out or SSE stream dropped, upload stayed PARSING forever even though all encounters saved
+- Fix 1 (route): moved `update(DONE)` to BEFORE `computeMilestones` — status persists regardless of what happens after
+- Fix 2 (raids page): filter changed from `status: "DONE"` to `encounters: { some: {} }` — shows any upload with data
+- Fix 3 (history page): PARSING uploads with encounters show green DONE badge + "View sessions →" link
 
 ## Current State
 - App: https://pizza-logs-production.up.railway.app
-- Git: main branch, pushed (latest: 5c3f041)
-- DB: has encounters from previous test upload (may have 1-2 sessions)
+- Git: main branch, pushed (latest: 8c0d1b1)
+- DB: EMPTY (cleared after each feature this session)
 - All features clean — zero TypeScript errors
 
 ## Files Changed This Session
-- `components/layout/Nav.tsx` — added Raids link
-- `app/raids/page.tsx` — NEW: raid session listing page
-- `app/uploads/[id]/sessions/[sessionIdx]/page.tsx` — breadcrumb + roster links updated
-- `app/uploads/[id]/sessions/[sessionIdx]/players/[playerName]/page.tsx` — NEW: session player page
-- `components/charts/SessionLineChart.tsx` — NEW: recharts line chart component
-- `components/upload/UploadZone.tsx` — stalled: false fixes
+- `components/ui/AccordionSection.tsx` — NEW
+- `app/encounters/[id]/page.tsx` — accordion sections
+- `app/uploads/[id]/sessions/[sessionIdx]/page.tsx` — accordion + breadcrumb → /raids
+- `app/players/[playerName]/page.tsx` — accordion sections
+- `app/uploads/[id]/sessions/[sessionIdx]/players/[playerName]/page.tsx` — NEW (session player page)
+- `app/players/page.tsx` — NEW (players listing page)
+- `app/raids/page.tsx` — NEW (raids listing page)
+- `components/charts/SessionLineChart.tsx` — NEW (recharts line chart)
+- `components/layout/Nav.tsx` — added Raids + Players links
+- `app/api/upload/route.ts` — DONE status moved before milestones
+- `app/uploads/page.tsx` — PARSING-with-encounters treated as DONE
+- `components/upload/UploadZone.tsx` — stalled: false bug fixes
 
-## Architecture Notes
-- Session-scoped player URL: `/uploads/[uploadId]/sessions/[sessionIdx]/players/[playerName]`
-- Chart subject player always gets gold (#c8a84b), classmates get class color at 55% opacity
-- Healer detection threshold: `bestHps > bestDps * 0.7 && bestHps > 200`
-- `SessionLineChart` is "use client" (recharts requires browser); all data fetching stays server-side in page.tsx
-- `ChartPoint` and `PlayerLine` types exported from SessionLineChart for page.tsx import
+## Key Architecture Notes
+- `AccordionSection` is "use client" — wraps server-rendered children (valid in Next.js)
+- Grid-rows collapse: `grid-rows-[0fr]/[1fr]` with `overflow-hidden` inner div — no JS height measurement
+- Session player URL: `/uploads/[uploadId]/sessions/[sessionIdx]/players/[playerName]`
+- Chart subject player = gold (#c8a84b), classmates = class color at 55% opacity
+- Healer detection: `bestHps > bestDps * 0.7 && bestHps > 200`
+- Reset-DB pattern: deploy temp endpoint → curl until 200 → delete endpoint (automated in session)
+- DB clear now happens automatically after every new feature ship
+
+### Vault Audit ✅ DONE (2026-04-20)
+- Archived 5 superseded files to `99 Archive/`: START HERE, Project Overview, Railway Guide, Claude Prompts, Ideas
+- Removed empty `08 Prompts/` folder
+- Added missing graph links to Dashboard: Technical Debt, Security Checklist, Growth & Business, Prompt Library
+- Added `[[Technical Debt]]` link from Backlog
+- Added `[[Prompt Library]]` link from Claude Resume Prompt
+- Added `[[Dashboard]]` + `[[Prompt Library]]` links to Home
+- Refactored Now.md: removed inline bug list, links to `[[Known Issues]]` instead
 
 ## Exact Next Steps
-1. Upload fresh log → verify Raids tab shows session cards with correct dates
-2. Click a player from session roster → verify session-scoped page loads with chart
-3. Verify line chart shows classmates correctly (if you have multiple of same class)
+1. Upload WoWCombatLog.txt → verify Raids tab shows session cards with correct dates
+2. Click player in session roster → verify session-scoped page + line chart
+3. Fix footer text: "client-side" → "server-side" (5 min, see `app/` layout or footer component)
 
-## Pending (not started)
-- Absorbs tracking: parse `SPELL_ABSORBED` events — significant parser + schema + UI work
-- Damage mitigation stats: parse `SPELL_MISSED` subtypes (ABSORB, BLOCK, PARRY, DODGE)
-- Consumable tracking: buff applications from consumable spells — very complex
-- Gunship + Saurfang fix: `"High Overlord Saurfang"` alias in Gunship BossDef overlaps with Deathbringer — needs log event investigation
-- Marrowgar DPS over-count vs uwu-logs reference (~9.45k vs 9.3k)
-- Footer text fix: says "client-side" but parsing is server-side
-- Admin page auth: simple secret middleware (medium priority)
+## Pending Features (not started)
+- **Absorbs tracking**: parse `SPELL_ABSORBED` events — significant parser + schema + UI work
+- **Damage mitigation stats**: parse `SPELL_MISSED` subtypes (ABSORB, BLOCK, PARRY, DODGE)
+- **Consumable tracking**: buff applications from consumable spells — very complex
+- **Gunship + Saurfang fix**: `"High Overlord Saurfang"` alias in Gunship BossDef overlaps with Deathbringer
+- **Marrowgar DPS over-count**: ~9.45k vs uwu-logs 9.3k — under investigation
+- **Footer text fix**: says "client-side" but parsing is server-side
+- **Admin auth**: simple secret middleware (medium priority)
 
 ## Not Working On
 - Heroic detection (impossible without ENCOUNTER_START)

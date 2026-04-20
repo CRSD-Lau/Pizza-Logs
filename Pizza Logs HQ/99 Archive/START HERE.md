@@ -156,3 +156,4 @@ CLAUDE.md              ← instructs Claude to read this vault every session
 - [[Feature Status]] — what's built, what's planned, backlog
 - [[Railway Guide]] — deployment, env vars, common ops
 - [[Known Issues]] — bugs and their status
+- [[Repo Map]]

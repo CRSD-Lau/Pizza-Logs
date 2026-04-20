@@ -4,21 +4,21 @@
     "type": "split",
     "children": [
       {
-        "id": "28ba3083a351319d",
+        "id": "6b9420df9d44cddf",
         "type": "tabs",
         "children": [
           {
-            "id": "89f79a7a1149711b",
+            "id": "05279fcf4ebf06df",
             "type": "leaf",
             "state": {
               "type": "markdown",
               "state": {
-                "file": "04 Architecture/System Architecture.md",
+                "file": "05 Features/Technical Debt.md",
                 "mode": "source",
                 "source": false
               },
               "icon": "lucide-file",
-              "title": "System Architecture"
+              "title": "Technical Debt"
             }
           }
         ]
@@ -74,8 +74,7 @@
               "title": "Bookmarks"
             }
           }
-        ],
-        "currentTab": 1
+        ]
       }
     ],
     "direction": "horizontal",
@@ -184,23 +183,37 @@
       "bases:Create new base": false
     }
   },
-  "active": "89f79a7a1149711b",
+  "active": "05279fcf4ebf06df",
   "lastOpenFiles": [
-    "01 Home/Home.md",
-    "09 Bugs and Blockers/Known Issues.md",
-    "01 Home/Project Overview.md",
-    "03 Current Focus/Now.md",
-    "04 Architecture/Parser Deep Dive.md",
-    "00 Inbox/START HERE.md",
-    "06 Deployment/Railway Guide.md",
     "05 Features/Feature Status.md",
-    "04 Architecture/System Architecture.md",
-    "04 Architecture/Repo Map.md",
-    "02 Build Log/Latest Handoff.md",
+    "05 Features/Backlog.md",
+    "06 Deployment/Railway Runbook.md",
+    "99 Archive/START HERE.md",
+    "99 Archive/Railway Guide.md",
+    "99 Archive/Project Overview.md",
+    "99 Archive/Ideas.md",
+    "10 Ideas/Growth & Business.md",
+    "99 Archive/Claude Prompts.md",
+    "02 Build Log/Decision Log.md",
+    "08 AI Sessions/Prompt Library.md",
+    "07 Security/Security Checklist.md",
+    "01 Home/Project Overview.md",
+    "01 Home/Next 30 Minutes.md",
+    "05 Features/Technical Debt.md",
+    "01 Home/Dashboard.md",
+    "00 Inbox/START HERE.md",
+    "04 Architecture/Environment Variables.md",
+    "04 Architecture/Data Model.md",
+    "08 AI Sessions/Repeated Fixes & Gotchas.md",
+    "08 AI Sessions/What Claude Forgets.md",
+    "Decision Log.md",
+    "08 AI Sessions/Claude Resume Prompt.md",
+    "08 AI Sessions",
+    "01 Home/Home.md",
+    "Architecture.md",
+    "08 Prompts/Claude Prompts.md",
     "Untitled.canvas",
     "Untitled",
-    "00 Inbox/Untitled.md",
-    "Welcome.md",
     "desktop.ini"
   ]
 }

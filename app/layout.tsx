@@ -38,7 +38,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           </main>
           <footer className="relative z-10 border-t border-gold-dim mt-16 py-6 text-center">
             <p className="text-sm text-text-dim">
-              Pizza Logs &mdash; All parsing done client-side, no data leaves your browser &nbsp;·&nbsp;
+              Pizza Logs &mdash; All parsing handled server-side on Railway &nbsp;·&nbsp;
               <span className="text-gold-dim">PizzaWarriors</span>
             </p>
           </footer>
