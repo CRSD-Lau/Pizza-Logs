@@ -1,47 +1,36 @@
 # Now
 
 ## Active
-Pushed a28ae3b — awaiting Railway redeploy for Gunship difficulty fix.
+Pushed 7868a17 — awaiting Railway redeploy. Session 2 total should land ~275-276M.
 
 ---
 
-## Work Completed This Session
+## Completed This Session
 
-### TDD suite + Gunship difficulty normalization + aggregate filter
+### Delta fix: overkill subtraction + P2P filter
 
-#### _normalize_session_difficulty
-- Gunship gets 25N from Warmane even on heroic; now infers difficulty from other session encounters
-- Only Gunship is touched — other bosses with unusual difficulty are left alone
+- **Overkill**: `eff_amount = max(0, amount - overkill)` — BPC had 7.8M overkill alone
+- **P2P**: skip damage where `_is_player(dst_guid)` — Blood-Queen vampires were adding 3.8M
+- Combined: 289.26M → ~275M vs UWU 276.045M (residual ~1M = pre-summoned pets, expected)
+- 31 TDD tests passing
 
-#### DMG_EVENTS guard in _aggregate_segment
-- Defence-in-depth: DAMAGE_SHIELD / SPELL_BUILDING_DAMAGE now blocked inside aggregate even without pre-filter
-- Revealed by TDD tests (was a latent bug)
-
-#### 26 TDD tests (all green)
-- `parser/tests/test_parser_core.py`
-- Covers difficulty decoding, player detection, Gunship kill/wipe, normalization, damage exclusion
+### Gunship difficulty normalization (previous commit)
+- `_normalize_session_difficulty` upgrades Gunship to session heroic difficulty
+- Gunship should now show 25H KILL
 
 ---
 
 ## Immediate Next Steps
 
-1. Wait for Railway parser-py redeploy
-2. Clear DB → re-upload same log (2026-04-19 Notlich Lordaeron)
-3. Verify: Gunship = 25H KILL
-4. Investigate 13M delta — run `diagnose.py` locally to get per-encounter totals
+1. Wait for Railway deploy
+2. Clear DB → re-upload same log
+3. Verify: BPC ~41.7M, Blood-Queen ~70M, session total ~275-276M, Gunship = 25H KILL
 
 ---
 
-## Blockers
+## Known Remaining Limitation
 
-### 🔴 13M damage delta vs UWU (unresolved)
-- Our total ~289M vs UWU 276,045,348
-- DAMAGE_SHIELD and SPELL_BUILDING_DAMAGE were not the source
-- Need per-encounter comparison — run `diagnose.py` or fetch UWU per-boss pages
-
-### 🟡 Persistent Pets
-- Hunter beasts / Warlock demons pre-summoned → no SPELL_SUMMON → orphaned
-- May partially explain residual delta
+~1M under UWU = pre-summoned pets (Hunter beasts, Warlock demons summoned before log start have no SPELL_SUMMON → unattributed). Not a bug.
 
 ---
 

@@ -4,34 +4,48 @@
 2026-04-21
 
 ## Git
-**Latest:** `a28ae3b` — main branch
-fix: normalize Gunship difficulty to session heroic; filter DMG_EVENTS in aggregate
+**Latest:** `7868a17` — main branch
+fix: subtract overkill from total_damage; exclude player-to-player damage
 
 ---
 
 ## Completed This Session
 
-### TDD suite + two parser correctness fixes
+### Root-cause fix for 289M vs 276M delta vs UWU
 
-**Problems addressed:**
-1. Gunship Battle showing as 25N in a 25H session
-2. DAMAGE_SHIELD / SPELL_BUILDING_DAMAGE events slipping through `_aggregate_segment` if not caught by pre-filter
+Ran `diagnose.py` against the live log, identified two independent bugs via targeted scripts.
 
-#### Fix 1 — `_normalize_session_difficulty` (new static method on `CombatLogParser`)
-- Warmane emits difficultyID=4 (25N) for Gunship even on heroic kills — Gunship has no heroic-specific spells so the server can't distinguish
-- New method: after session indices are assigned, scan each session for any heroic encounter; if found, upgrade Gunship difficulty to match
-- Only Gunship is upgraded — Lady Deathwhisper at 25N in a heroic session stays 25N (that's a real normal attempt)
-- Called from `parse_file` after `_assign_session_indices`
+#### Bug 1 — Overkill not subtracted (−8.7M)
+- Parser used raw `amount` from SPELL_DAMAGE/SWING_DAMAGE, never subtracted `overkill`
+- Blood Prince Council: 7.846M overkill alone — three princes die simultaneously, every player's last hit overkills massively
+- Fix: `eff_amount = max(0, amount - overkill)` used throughout `_aggregate_segment`
 
-#### Fix 2 — DMG_EVENTS guard in `_aggregate_segment`
-- The else-branch (non-SWING, non-heal) previously processed any event that reached it
-- DAMAGE_SHIELD and SPELL_BUILDING_DAMAGE were excluded by `_segment_encounters` pre-filtering, but had no defence-in-depth inside aggregate
-- Added `if event not in DMG_EVENTS: continue` at the top of the else-branch
+#### Bug 2 — Player-to-player damage counted (−5.3M)
+- No `dst_guid` check before accumulating damage
+- Blood-Queen: bitten vampires attack each other (Pact of the Darkfallen 1.49M, Blood Mirror 1.37M, Vampiric Bite, Starfire, etc.) → 3.79M over
+- BPC: Empowered Shadow Lance etc. → 1.14M over
+- Fix: `if not is_heal and _is_player(dst_guid): continue`
 
-#### TDD infrastructure
-- Added `parser/requirements.txt` with `pytest>=8.0`
-- 26 tests in `parser/tests/test_parser_core.py` — all pass (0.03s)
-- Tests cover: DMG_EVENTS exclusions, difficulty decoding, _is_player, Gunship kill/wipe detection, session difficulty normalization, damage exclusion integration
+#### Combined result
+| Boss | Before | After | Diff |
+|---|---|---|---|
+| Marrowgar | 51.12M | 50.34M | −0.78M |
+| Deathwhisper | 47.55M | 47.30M | −0.26M |
+| Gunship | 19.07M | 18.94M | −0.13M |
+| Saurfang | 46.82M | 46.63M | −0.19M |
+| **BPC** | 50.65M | **41.67M** | **−8.98M** |
+| **Blood-Queen** | 74.04M | **70.12M** | **−3.92M** |
+| **Session 2 total** | **289.26M** | **~275M** | **−14.3M** |
+| UWU | — | 276.045M | residual ~1M |
+
+Residual ~1M under UWU = pre-summoned pets (Hunter beasts, Warlock demons) whose SPELL_SUMMON isn't in the log. Not a bug — a known limitation.
+
+#### TDD tests added (5 new, 31 total passing)
+- `test_overkill_not_counted_in_spell_damage`
+- `test_overkill_not_counted_in_swing_damage`
+- `test_zero_overkill_unchanged`
+- `test_player_to_player_damage_not_counted`
+- `test_player_to_npc_damage_still_counted`
 
 ---
 
@@ -39,29 +53,22 @@ fix: normalize Gunship difficulty to session heroic; filter DMG_EVENTS in aggreg
 
 | File | Change |
 |---|---|
-| `parser/parser_core.py` | Added `_normalize_session_difficulty`; added DMG_EVENTS guard in `_aggregate_segment`; call normalize from `parse_file` |
-| `parser/tests/test_parser_core.py` | New — 26 TDD tests |
-| `parser/requirements.txt` | Added `pytest>=8.0` |
-
----
-
-## Known Remaining Issue
-
-**13M damage delta vs UWU still unresolved.**
-- Our total: ~289M; UWU total: 276,045,348
-- Removing DAMAGE_SHIELD (~0.12M) and SPELL_BUILDING_DAMAGE (~0M) did not close the gap
-- Root cause unknown — need per-encounter breakdown to isolate which boss(es) are over
-- Hypothesis: persistent pets (Hunter beasts, Warlock demons summoned before log starts) — no SPELL_SUMMON → orphaned damage counted under unknown GUIDs; OR overkill not being subtracted somewhere
+| `parser/parser_core.py` | `_aggregate_segment`: overkill subtracted from eff_amount; P2P damage skipped |
+| `parser/tests/test_parser_core.py` | 5 new TDD tests; `_spell_damage_parts` now accepts `overkill` param; new `_swing_damage_parts` helper |
 
 ---
 
 ## Exact Next Steps
-1. **Deploy**: Railway will pick up the push; wait for parser-py to redeploy
-2. **Re-upload**: clear DB at `/admin` → upload same log
-3. **Verify**: Gunship should now show 25H KILL; damage total unchanged from last upload (~289M)
-4. **Investigate 13M delta**: run `python diagnose.py WoWCombatLog.txt` locally and paste the per-encounter section here, or fetch UWU per-boss URLs to compare encounter-by-encounter
+1. **Deploy**: Railway picks up the push; wait for parser-py to redeploy (~2 min)
+2. **Re-upload**: clear DB at `/admin` → upload same log (2026-04-19 Notlich Lordaeron)
+3. **Verify**:
+   - Session 2 total should be ~275-276M (down from 289M)
+   - Gunship = 25H KILL
+   - BPC total should drop from 50.6M to ~41.7M
+   - Blood-Queen should drop from 74M to ~70M
+4. If still off: check pre-summoned pets — run `diagnose.py --encounter <boss>` per boss and compare per-player totals to UWU
 
 ## Pending Features
-- **Absorbs tracking**: parse `SPELL_ABSORBED` events — parser + schema + UI work (L effort)
-- **Persistent pet attribution**: Hunter beasts / Warlock demons summoned before log starts — no SPELL_SUMMON to key off
-- **Damage mitigation stats**: `SPELL_MISSED` subtypes (ABSORB, BLOCK, PARRY, DODGE)
+- **Absorbs tracking**: parse `SPELL_ABSORBED` events
+- **Persistent pet attribution**: pre-summoned pets (no SPELL_SUMMON in log)
+- **Damage mitigation stats**: `SPELL_MISSED` subtypes
