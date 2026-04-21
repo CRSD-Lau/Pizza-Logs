@@ -514,11 +514,17 @@ class CombatLogParser:
 
         # Gunship Battle: ENCOUNTER_END emits success=0 on Warmane even on a genuine
         # kill (the fight ends via scripted ship destruction, not a boss death event).
-        # Override WIPE → KILL if any Skybreaker crew member died in the segment.
+        # Override WIPE → KILL if any crew member died during the segment.
+        # Horde-side kill (players board The Skybreaker): Skybreaker crew die.
+        # Alliance-side kill (players board Orgrim's Hammer): Kor'kron crew die.
         if outcome in ("WIPE", "UNKNOWN") and boss_name and "gunship" in boss_name.lower():
             _gunship_crew = {
+                # Horde log: Skybreaker (Alliance ship) crew
                 "muradin bronzebeard", "high captain justin bartlett",
                 "skybreaker sorcerer", "skybreaker rifleman", "skybreaker sergeant",
+                # Alliance log: Kor'kron (Horde ship) crew on Orgrim's Hammer
+                "kor'kron battle-mage", "kor'kron primalist",
+                "kor'kron defender", "kor'kron invoker",
             }
             for _, gparts, _ in segment:
                 if gparts[0] == UNIT_DIED_EVENT and len(gparts) >= 6:
@@ -804,13 +810,14 @@ class CombatLogParser:
                         return "KILL"
             return "WIPE"
 
-        # Gunship Battle: ends via scripted ship destruction, not a named boss UNIT_DIED.
-        # High Captain Justin Bartlett does NOT produce UNIT_DIED at fight end on Warmane.
-        # A KILL is confirmed by any Skybreaker crew member dying during the segment.
+        # Gunship Battle: ends via scripted ship destruction — no single boss UNIT_DIED.
+        # KILL = any crew member died. Horde log: Skybreaker crew. Alliance log: Kor'kron crew.
         if "gunship" in bn:
             _gunship_crew = {
                 "muradin bronzebeard", "high captain justin bartlett",
                 "skybreaker sorcerer", "skybreaker rifleman", "skybreaker sergeant",
+                "kor'kron battle-mage", "kor'kron primalist",
+                "kor'kron defender", "kor'kron invoker",
             }
             for _, parts, _ in segment:
                 if parts[0] == UNIT_DIED_EVENT and len(parts) >= 6:
