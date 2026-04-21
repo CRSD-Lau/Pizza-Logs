@@ -287,7 +287,34 @@ class CombatLogParser:
             if enc:
                 encounters.append(enc)
         self._assign_session_indices(encounters)
+        self._normalize_session_difficulty(encounters)
         return encounters
+
+    @staticmethod
+    def _normalize_session_difficulty(encounters: list["ParsedEncounter"]) -> None:
+        """Upgrade Gunship Battle difficulty to match the rest of the session.
+
+        Gunship has no heroic-specific spells so Warmane logs its difficultyID
+        as 4 (25N) even on a heroic kill. If any other encounter in the same
+        session is heroic, Gunship inherits that difficulty.
+        Only Gunship gets this treatment — other bosses that appear as normal
+        in a heroic session (e.g. Lady Deathwhisper on a 25N attempt) are left
+        unchanged.
+        """
+        by_session: dict[int, list["ParsedEncounter"]] = {}
+        for enc in encounters:
+            by_session.setdefault(enc.session_index, []).append(enc)
+        for session_encs in by_session.values():
+            heroic_diff = next(
+                (e.difficulty for e in session_encs if e.difficulty in ("25H", "10H")),
+                None,
+            )
+            if not heroic_diff:
+                continue
+            for enc in session_encs:
+                if enc.boss_name and "gunship" in enc.boss_name.lower():
+                    if enc.difficulty not in ("25H", "10H"):
+                        enc.difficulty = heroic_diff
 
     @staticmethod
     def _assign_session_indices(
@@ -602,6 +629,11 @@ class CombatLogParser:
                 overkill   = 0.0
                 is_crit    = len(parts) > 13 and parts[13] == "1"
             else:
+                # Only process recognised damage event types — defence-in-depth
+                # guard so DAMAGE_SHIELD / SPELL_BUILDING_DAMAGE etc. are dropped
+                # even if they slip past _segment_encounters pre-filtering.
+                if event not in DMG_EVENTS:
+                    continue
                 # SPELL_DAMAGE / SPELL_PERIODIC_DAMAGE / RANGE_DAMAGE etc.
                 if len(parts) < 15:
                     continue
