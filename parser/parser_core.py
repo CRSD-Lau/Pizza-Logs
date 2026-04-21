@@ -46,9 +46,10 @@ DMG_EVENTS = {
     "SWING_DAMAGE",
     "RANGE_DAMAGE",
     "SPELL_PERIODIC_DAMAGE",
-    "SPELL_BUILDING_DAMAGE",
     # DAMAGE_SHIELD excluded: reflects retribution aura/thorns triggered by boss
     # attacks, not player-initiated output. Excluded by UWU and Warcraft Logs.
+    # SPELL_BUILDING_DAMAGE excluded: vehicle/ship cannon fire (Gunship Battle).
+    # These appear with player GUIDs but are not player DPS. Excluded by UWU.
 }
 
 HEAL_EVENTS = {
@@ -510,6 +511,20 @@ class CombatLogParser:
                 success   = _safe_int(parts[5])
                 outcome   = "KILL" if success == 1 else "WIPE"
                 last_ts_str = ts_str
+
+        # Gunship Battle: ENCOUNTER_END emits success=0 on Warmane even on a genuine
+        # kill (the fight ends via scripted ship destruction, not a boss death event).
+        # Override WIPE → KILL if any Skybreaker crew member died in the segment.
+        if outcome in ("WIPE", "UNKNOWN") and boss_name and "gunship" in boss_name.lower():
+            _gunship_crew = {
+                "muradin bronzebeard", "high captain justin bartlett",
+                "skybreaker sorcerer", "skybreaker rifleman", "skybreaker sergeant",
+            }
+            for _, gparts, _ in segment:
+                if gparts[0] == UNIT_DIED_EVENT and len(gparts) >= 6:
+                    if gparts[5].strip('"').strip().lower() in _gunship_crew:
+                        outcome = "KILL"
+                        break
 
         # Heuristic boss detection if no ENCOUNTER_START
         if not boss_name:
