@@ -1,60 +1,51 @@
 # Now
 
 ## Active
-Two parser fixes shipped — awaiting re-upload to validate.
+Pushed a28ae3b — awaiting Railway redeploy for Gunship difficulty fix.
 
 ---
 
 ## Work Completed This Session
 
-### Forensic Parser Review — Two Root Causes Fixed
+### TDD suite + Gunship difficulty normalization + aggregate filter
 
-#### DAMAGE_SHIELD removed from DMG_EVENTS
-- `DAMAGE_SHIELD` = Retribution Aura / Thorns reflect — not player DPS
-- UWU and Warcraft Logs both exclude it
-- Was causing ~13M excess across full ICC session
-- Fix: removed from `DMG_EVENTS` set in `parser/parser_core.py`
+#### _normalize_session_difficulty
+- Gunship gets 25N from Warmane even on heroic; now infers difficulty from other session encounters
+- Only Gunship is touched — other bosses with unusual difficulty are left alone
 
-#### Gunship Battle kill detection
-- Gunship ends via scripted ship destruction, not UNIT_DIED
-- `High Captain Justin Bartlett` does NOT produce UNIT_DIED at fight end on Warmane
-- Fix: added Gunship-specific block in `_infer_outcome` — crew UNIT_DIED within segment = KILL
-- Mirrors existing Valithria special case
+#### DMG_EVENTS guard in _aggregate_segment
+- Defence-in-depth: DAMAGE_SHIELD / SPELL_BUILDING_DAMAGE now blocked inside aggregate even without pre-filter
+- Revealed by TDD tests (was a latent bug)
 
----
-
-## Files Changed
-
-| File | Change |
-|---|---|
-| `parser/parser_core.py` | DAMAGE_SHIELD removed; Gunship kill detection added |
-| `Pizza Logs HQ/09 Bugs and Blockers/Known Issues.md` | Updated |
-| `Pizza Logs HQ/02 Build Log/Latest Handoff.md` | Updated |
+#### 26 TDD tests (all green)
+- `parser/tests/test_parser_core.py`
+- Covers difficulty decoding, player detection, Gunship kill/wipe, normalization, damage exclusion
 
 ---
 
 ## Immediate Next Steps
 
-1. Push to Railway / wait for deploy
-2. Clear DB → re-upload same log
-3. Verify: Gunship = KILL, total drops to ~276M, Marrowgar DPS closes gap
-4. If Gunship still WIPE: run `diagnose.py` to check crew UNIT_DIED in segment window
+1. Wait for Railway parser-py redeploy
+2. Clear DB → re-upload same log (2026-04-19 Notlich Lordaeron)
+3. Verify: Gunship = 25H KILL
+4. Investigate 13M delta — run `diagnose.py` locally to get per-encounter totals
 
 ---
 
 ## Blockers
 
-### 🟡 Marrowgar DPS Over-Count (residual)
-- Was ~9.45k vs UWU 9.3k
-- DAMAGE_SHIELD removal should close most of this — re-upload needed to confirm
+### 🔴 13M damage delta vs UWU (unresolved)
+- Our total ~289M vs UWU 276,045,348
+- DAMAGE_SHIELD and SPELL_BUILDING_DAMAGE were not the source
+- Need per-encounter comparison — run `diagnose.py` or fetch UWU per-boss pages
 
 ### 🟡 Persistent Pets
-- Hunter beasts / Warlock demons pre-summoned before log = no SPELL_SUMMON → orphaned
-- May explain any residual damage delta after today's fixes
+- Hunter beasts / Warlock demons pre-summoned → no SPELL_SUMMON → orphaned
+- May partially explain residual delta
 
 ---
 
 ## Not Working On
-- Heroic detection improvements
 - UI redesigns
 - Non-ICC content
+- Absorbs tracking (backlog)
