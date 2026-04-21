@@ -44,14 +44,27 @@ def make_encounter(boss_name: str, difficulty: str = "25N", session_index: int =
 def _spell_damage_parts(src_guid: str, src_name: str,
                         dst_guid: str, dst_name: str,
                         amount: int, spell: str = "Fireball",
-                        event: str = "SPELL_DAMAGE") -> list[str]:
+                        event: str = "SPELL_DAMAGE",
+                        overkill: int = 0) -> list[str]:
     """Build a minimal SPELL_DAMAGE parts list (18 fields)."""
     return [
         event,
         src_guid, f'"{src_name}"', "0x512",
         dst_guid, f'"{dst_name}"', "0xa48",
         "133", f'"{spell}"', "4",
-        str(amount), "0", "4", "0", "0", "0", "0", "0",
+        str(amount), str(overkill), "4", "0", "0", "0", "0", "0",
+    ]
+
+
+def _swing_damage_parts(src_guid: str, src_name: str,
+                        dst_guid: str, dst_name: str,
+                        amount: int, overkill: int = 0) -> list[str]:
+    """Build a minimal SWING_DAMAGE parts list (14 fields)."""
+    return [
+        "SWING_DAMAGE",
+        src_guid, f'"{src_name}"', "0x512",
+        dst_guid, f'"{dst_name}"', "0xa48",
+        str(amount), str(overkill), "1", "0", "0", "0", "0",
     ]
 
 
@@ -356,3 +369,129 @@ def test_damage_shield_not_counted_in_total():
     enc = parser._aggregate_segment(seg, {})
     assert enc is not None
     assert enc.total_damage == pytest.approx(200_000, rel=0.01)
+
+
+# ── Overkill subtraction ───────────────────────────────────────────────────────
+
+def test_overkill_not_counted_in_spell_damage():
+    """SPELL_DAMAGE overkill must be subtracted from total_damage.
+    Root cause of BPC 7.8M over-count: three princes die simultaneously,
+    every last hit overkills. Parser was using raw amount, not amount-overkill."""
+    parser = CombatLogParser()
+    ts = 46800.0
+    seg = [
+        ("4/19 13:00:00.000",
+         [ENCOUNTER_START, "1234", '"Lord Marrowgar"', "6", "25"], ts),
+        # 100k hit, 30k overkill → effective = 70k
+        ("4/19 13:01:00.000",
+         _spell_damage_parts(PLAYER_GUID, "Phyre", NPC_GUID, "Lord Marrowgar",
+                             100_000, "Fireball", "SPELL_DAMAGE", overkill=30_000),
+         ts + 60),
+        ("4/19 13:02:00.000",
+         _unit_died_parts("Lord Marrowgar"),
+         ts + 120),
+        ("4/19 13:03:21.000",
+         [ENCOUNTER_END, "1234", '"Lord Marrowgar"', "6", "25", "1"], ts + 201),
+    ]
+    enc = parser._aggregate_segment(seg, {})
+    assert enc is not None
+    assert enc.total_damage == pytest.approx(70_000, rel=0.01)
+
+
+def test_overkill_not_counted_in_swing_damage():
+    """SWING_DAMAGE overkill must also be subtracted."""
+    parser = CombatLogParser()
+    ts = 46800.0
+    seg = [
+        ("4/19 13:00:00.000",
+         [ENCOUNTER_START, "1234", '"Lord Marrowgar"', "6", "25"], ts),
+        # 200k swing, 50k overkill → effective = 150k
+        ("4/19 13:01:00.000",
+         _swing_damage_parts(PLAYER_GUID, "Phyre", NPC_GUID, "Lord Marrowgar",
+                             200_000, overkill=50_000),
+         ts + 60),
+        ("4/19 13:02:00.000",
+         _unit_died_parts("Lord Marrowgar"),
+         ts + 120),
+        ("4/19 13:03:21.000",
+         [ENCOUNTER_END, "1234", '"Lord Marrowgar"', "6", "25", "1"], ts + 201),
+    ]
+    enc = parser._aggregate_segment(seg, {})
+    assert enc is not None
+    assert enc.total_damage == pytest.approx(150_000, rel=0.01)
+
+
+def test_zero_overkill_unchanged():
+    """When overkill=0 the effective damage equals raw amount."""
+    parser = CombatLogParser()
+    ts = 46800.0
+    seg = [
+        ("4/19 13:00:00.000",
+         [ENCOUNTER_START, "1234", '"Lord Marrowgar"', "6", "25"], ts),
+        ("4/19 13:01:00.000",
+         _spell_damage_parts(PLAYER_GUID, "Phyre", NPC_GUID, "Lord Marrowgar",
+                             500_000, "Fireball", "SPELL_DAMAGE", overkill=0),
+         ts + 60),
+        ("4/19 13:02:00.000",
+         _unit_died_parts("Lord Marrowgar"),
+         ts + 120),
+        ("4/19 13:03:21.000",
+         [ENCOUNTER_END, "1234", '"Lord Marrowgar"', "6", "25", "1"], ts + 201),
+    ]
+    enc = parser._aggregate_segment(seg, {})
+    assert enc is not None
+    assert enc.total_damage == pytest.approx(500_000, rel=0.01)
+
+
+# ── Player-to-player damage exclusion ─────────────────────────────────────────
+
+def test_player_to_player_damage_not_counted():
+    """Damage from a player to another player must not count as DPS.
+    Root cause of Blood-Queen 3.8M over-count: bitten vampires attack
+    other raid members (Pact of Darkfallen, Blood Mirror, Vampiric Bite)."""
+    parser = CombatLogParser()
+    ts = 46800.0
+    seg = [
+        ("4/19 13:00:00.000",
+         [ENCOUNTER_START, "1234", '"Blood-Queen Lana\'thel"', "6", "25"], ts),
+        # Legitimate DPS to boss
+        ("4/19 13:01:00.000",
+         _spell_damage_parts(PLAYER_GUID, "Phyre", NPC_GUID, "Blood-Queen Lana'thel",
+                             200_000, "Fireball"),
+         ts + 60),
+        # Vampire bites fellow player — must NOT count
+        ("4/19 13:01:30.000",
+         _spell_damage_parts(PLAYER_GUID, "Phyre", PLAYER_GUID, "Notlich",
+                             500_000, "Pact of the Darkfallen"),
+         ts + 90),
+        ("4/19 13:02:00.000",
+         _unit_died_parts("Blood-Queen Lana'thel"),
+         ts + 120),
+        ("4/19 13:03:21.000",
+         [ENCOUNTER_END, "1234", '"Blood-Queen Lana\'thel"', "6", "25", "1"], ts + 201),
+    ]
+    enc = parser._aggregate_segment(seg, {})
+    assert enc is not None
+    assert enc.total_damage == pytest.approx(200_000, rel=0.01)
+
+
+def test_player_to_npc_damage_still_counted():
+    """Player damage to NPCs must still be counted after P2P filter lands."""
+    parser = CombatLogParser()
+    ts = 46800.0
+    seg = [
+        ("4/19 13:00:00.000",
+         [ENCOUNTER_START, "1234", '"Lord Marrowgar"', "6", "25"], ts),
+        ("4/19 13:01:00.000",
+         _spell_damage_parts(PLAYER_GUID, "Phyre", NPC_GUID, "Lord Marrowgar",
+                             300_000, "Holy Shock"),
+         ts + 60),
+        ("4/19 13:02:00.000",
+         _unit_died_parts("Lord Marrowgar"),
+         ts + 120),
+        ("4/19 13:03:21.000",
+         [ENCOUNTER_END, "1234", '"Lord Marrowgar"', "6", "25", "1"], ts + 201),
+    ]
+    enc = parser._aggregate_segment(seg, {})
+    assert enc is not None
+    assert enc.total_damage == pytest.approx(300_000, rel=0.01)

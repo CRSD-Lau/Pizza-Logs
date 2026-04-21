@@ -666,6 +666,17 @@ class CombatLogParser:
             if not src_name:
                 continue
 
+            # Skip player-to-player damage (Blood-Queen vampires, Pact of the
+            # Darkfallen, Blood Mirror, etc.). These are not DPS against the boss.
+            if not is_heal and _is_player(dst_guid):
+                continue
+
+            # Effective damage = raw amount minus overkill (excess damage beyond
+            # the target's remaining HP). UWU and WCL both count effective damage.
+            # Critical for BPC: three princes die simultaneously, last hits carry
+            # massive overkill that we were previously counting as real damage.
+            eff_amount = max(0.0, amount - overkill) if not is_heal else amount
+
             a = _get_actor(actors, src_name, src_guid)
             ss = a.spells.setdefault(spell_name, SpellStats(school=school))
 
@@ -674,16 +685,16 @@ class CombatLogParser:
                 a.wow_class = SPELL_CLASS_MAP[spell_name]
 
             if is_heal:
-                a.total_healing += amount
-                ss.healing += amount
+                a.total_healing += eff_amount
+                ss.healing += eff_amount
             else:
-                a.total_damage += amount
-                ss.damage += amount
+                a.total_damage += eff_amount
+                ss.damage += eff_amount
                 targets_hit.add(dst_name)
                 # Track damage by target mob for drill-down
                 if dst_name:
                     ts = a.targets.setdefault(dst_name, TargetStats())
-                    ts.damage += amount
+                    ts.damage += eff_amount
                     ts.hits   += 1
                     ts.crits  += int(is_crit)
 
