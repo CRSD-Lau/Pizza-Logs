@@ -436,7 +436,18 @@ class CombatLogParser:
             # ── Accumulate full-session player/pet damage ─────────
             # Includes DAMAGE_SHIELD (Retribution Aura, thorns) in addition to
             # DMG_EVENTS — these are excluded from per-boss DPS but UWU counts
-            # them in the full Custom Slice total, closing the ~3-7M gap.
+            # them in the full Custom Slice total.
+            #
+            # Uses amount + absorbed - overkill to match UWU / WarcraftLogs
+            # "damage done" convention.  When a boss has a shield (Lady
+            # Deathwhisper mana barrier, Saurfang Blood Barrier) part of each
+            # hit is absorbed: the log records the HP-lost portion in `amount`
+            # and the shield-absorbed portion in `absorbed`.  WCL/UWU count
+            # both as player output.
+            #
+            # Field offsets:
+            #   SWING_DAMAGE (14 fields): [7]=amount  [8]=overkill  [12]=absorbed
+            #   All spell events  (18 f): [10]=amount [11]=overkill [15]=absorbed
             if (event in DMG_EVENTS or event == "DAMAGE_SHIELD") and len(parts) >= 5:
                 src_guid  = parts[1]
                 dst_guid  = parts[4]
@@ -457,9 +468,11 @@ class CombatLogParser:
                 if (is_player or is_pet) and not _is_player(dst_guid):
                     try:
                         if event == "SWING_DAMAGE" and len(parts) >= 9:
-                            eff = max(0.0, float(parts[7]) - float(parts[8]))
+                            absorbed = _safe_float(parts[12]) if len(parts) > 12 else 0.0
+                            eff = max(0.0, float(parts[7]) + absorbed - float(parts[8]))
                         elif len(parts) >= 12:
-                            eff = max(0.0, float(parts[10]) - float(parts[11]))
+                            absorbed = _safe_float(parts[15]) if len(parts) > 15 else 0.0
+                            eff = max(0.0, float(parts[10]) + absorbed - float(parts[11]))
                         else:
                             eff = 0.0
                         _full_dmg[_full_session_idx] = _full_dmg.get(_full_session_idx, 0.0) + eff

@@ -4,6 +4,7 @@ import { SectionHeader } from "@/components/ui/SectionHeader";
 import { StatCard } from "@/components/ui/StatCard";
 import { formatBytes, formatDuration } from "@/lib/utils";
 import { ClearDatabaseButton } from "./ClearDatabaseButton";
+import { DeleteUploadButton } from "./DeleteUploadButton";
 
 export const metadata: Metadata = { title: "Admin / Diagnostics" };
 export const dynamic = "force-dynamic";
@@ -135,6 +136,7 @@ export default async function AdminPage() {
                     <span className="text-text-dim">
                       {u.createdAt.toLocaleDateString("en-US", { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })}
                     </span>
+                    <DeleteUploadButton uploadId={u.id} />
                   </div>
                 </div>
               );

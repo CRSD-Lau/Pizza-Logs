@@ -323,13 +323,28 @@ function UploadResult({
         <div>
           <p className="heading-cinzel text-sm text-gold-light">{result.filename}</p>
           <p className="text-xs text-text-secondary mt-0.5">
-            {isDuplicate ? "Duplicate file — already uploaded" : `${result.encountersInserted} encounter${result.encountersInserted !== 1 ? "s" : ""} stored`}
+            {isDuplicate
+              ? "This log was already parsed — your data is ready"
+              : `${result.encountersInserted} encounter${result.encountersInserted !== 1 ? "s" : ""} stored`}
           </p>
         </div>
         <button onClick={onReset} className="text-xs text-text-dim hover:text-text-secondary uppercase tracking-wide">
           Upload Another
         </button>
       </div>
+
+      {/* Duplicate: direct link to existing session */}
+      {isDuplicate && result.uploadId && (
+        <div className="px-5 py-4 flex items-center gap-3">
+          <Link
+            href={`/uploads/${result.uploadId}/sessions/0`}
+            className="inline-flex items-center gap-1.5 px-4 py-2 rounded border border-gold/60 bg-gold/5 text-sm text-gold-light hover:border-gold hover:bg-gold/10 transition-colors"
+          >
+            View your session →
+          </Link>
+          <span className="text-xs text-text-dim">Session 1 of this log</span>
+        </div>
+      )}
 
       {/* Stats row */}
       {!isDuplicate && (
@@ -364,8 +379,8 @@ function UploadResult({
         </div>
       )}
 
-      {/* Warnings */}
-      {result.warnings && result.warnings.length > 0 && (
+      {/* Warnings — suppressed for DUPLICATE since the header already explains the state */}
+      {!isDuplicate && result.warnings && result.warnings.length > 0 && (
         <div className="px-5 py-3">
           {result.warnings.map((w, i) => (
             <p key={i} className="text-xs text-warning">{w}</p>

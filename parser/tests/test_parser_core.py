@@ -949,3 +949,86 @@ def test_session_damage_includes_guardian_from_player():
     assert parser.session_damage[0] == pytest.approx(expected, rel=0.01), (
         "Guardian (TYPE_GUARDIAN | CONTROL_PLAYER) damage missing from session total"
     )
+
+
+# ── Absorbed damage in session_damage ─────────────────────────────────────────
+#
+# WarcraftLogs and UWU both count "damage done" as amount + absorbed, not just
+# the HP the target actually lost.  When a boss has a shield (Lady Deathwhisper
+# mana barrier, Saurfang Blood Barrier), a hit may be partially or fully
+# absorbed: the log shows amount=<hp_lost> absorbed=<shield_absorbed>.  Our
+# session_damage accumulator must add both to match the reference totals.
+#
+# SPELL_DAMAGE field layout (18 fields):
+#   [10]=amount  [11]=overkill  [15]=absorbed
+# SWING_DAMAGE field layout (14 fields):
+#   [7]=amount   [8]=overkill   [12]=absorbed
+
+
+def test_session_damage_includes_absorbed_spell_damage():
+    """When a spell hit is partially absorbed by a boss shield, session_damage
+    must count amount + absorbed (total damage output, not just HP removed).
+
+    This is the WCL / UWU convention.  Lady Deathwhisper mana barrier (phase 1)
+    absorbs ALL physical damage; Saurfang Blood Barrier absorbs large hits.
+    Without this fix our totals are ~0.88 – 3.29 % below UWU."""
+    PG = PLAYER_GUID
+    BG = "0xF130000000000002"
+
+    unabsorbed = 15_000   # HP actually removed
+    absorbed   =  5_000   # absorbed by boss shield
+
+    def spell_dmg_absorbed(ts: str, src: str, dst: str, dst_name: str,
+                            amount: int, absorb: int) -> str:
+        # 18 fields: [10]=amount [11]=overkill=0 [12-14]=meta [15]=absorb [16-17]=0
+        return (f'{ts}  SPELL_DAMAGE,{src},"Phyre",0x512,'
+                f'{dst},"{dst_name}",0xa48,133,"Frostbolt",4,'
+                f'{amount},0,4,0,0,{absorb},0,0\n')
+
+    log = _make_full_log(
+        spell_dmg_absorbed("4/19 13:00:30.000", PG, BG, "Lady Deathwhisper",
+                            unabsorbed, absorbed),
+    )
+
+    parser = CombatLogParser()
+    parser.parse_file(_io.StringIO(log))
+
+    expected = unabsorbed + absorbed   # 20_000 total output
+    assert parser.session_damage.get(0, 0) == pytest.approx(expected, rel=0.01), (
+        "Absorbed spell damage must be counted in session total "
+        f"(expected {expected}, absorbed={absorbed}, unabsorbed={unabsorbed})"
+    )
+
+
+def test_session_damage_includes_absorbed_swing_damage():
+    """When a melee swing is partially absorbed by a boss shield, session_damage
+    must count amount + absorbed.
+
+    SWING_DAMAGE field layout (14 fields): [7]=amount [8]=overkill [12]=absorbed"""
+    PG = PLAYER_GUID
+    BG = "0xF130000000000002"
+
+    unabsorbed = 20_000
+    absorbed   =  8_000
+
+    def swing_dmg_absorbed(ts: str, src: str, dst: str, dst_name: str,
+                            amount: int, absorb: int) -> str:
+        # 14 fields: [7]=amount [8]=overkill=0 [9]=school [10-11]=meta
+        # [12]=absorb [13]=crit
+        return (f'{ts}  SWING_DAMAGE,{src},"Phyre",0x512,'
+                f'{dst},"{dst_name}",0xa48,'
+                f'{amount},0,1,0,0,{absorb},0\n')
+
+    log = _make_full_log(
+        swing_dmg_absorbed("4/19 13:00:30.000", PG, BG, "Lord Marrowgar",
+                            unabsorbed, absorbed),
+    )
+
+    parser = CombatLogParser()
+    parser.parse_file(_io.StringIO(log))
+
+    expected = unabsorbed + absorbed   # 28_000 total output
+    assert parser.session_damage.get(0, 0) == pytest.approx(expected, rel=0.01), (
+        "Absorbed swing damage must be counted in session total "
+        f"(expected {expected}, absorbed={absorbed}, unabsorbed={unabsorbed})"
+    )
