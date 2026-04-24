@@ -1,7 +1,7 @@
 # Now
 
 ## Status
-`75ae523` pushed. Railway redeploying. Clear DB → re-upload to verify delta is closed.
+`dbb95db` pushed. Railway redeploying. Re-upload the April 19 Notlich Lordaeron log to verify delta is closed.
 
 ---
 
@@ -12,14 +12,15 @@ Re-upload the April 19 Notlich Lordaeron log and confirm:
 
 ---
 
-## This Session Summary (all fixes)
+## What Was Fixed This Session
 
-| Fix | Delta Closed |
-|---|---|
-| Overkill + P2P | −13M |
-| Gunship Cannons | −4.46M |
-| Full-session (boss+trash) | +128M (was showing boss-only) |
-| DAMAGE_SHIELD | −3.8M / −6.74M |
+| Fix | Commit | Impact |
+|---|---|---|
+| Overkill + P2P | 7868a17 | −13M |
+| Gunship Cannons | 8a6e9ff | −4.46M |
+| Full-session (boss+trash) | 9e0ae01 | +128M (was showing boss-only) |
+| DAMAGE_SHIELD | 75ae523 | ~0.2M |
+| TYPE_GUARDIAN (Mirror Images, Treants, AotD) | dbb95db | TBD — expected ~3-6M |
 
 ---
 
