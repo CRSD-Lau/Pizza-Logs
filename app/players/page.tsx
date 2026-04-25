@@ -17,6 +17,47 @@ interface Props {
 export default async function PlayersPage({ searchParams }: Props) {
   const { class: classFilter } = await searchParams;
 
+  // Class stats — always unfiltered, used for the visualization panel
+  const allPlayersForStats = await db.player.findMany({
+    select: {
+      class:     true,
+      milestones: {
+        where:   { supersededAt: null, metric: "DPS" },
+        orderBy: { value: "desc" },
+        take:    1,
+        select:  { value: true },
+      },
+    },
+  });
+
+  // Aggregate per class: player count + sum of best DPS (for avg)
+  const classMap = new Map<string, { count: number; dpsTotal: number; dpsCount: number }>();
+  for (const p of allPlayersForStats) {
+    const cls = p.class ?? "Unknown";
+    const entry = classMap.get(cls) ?? { count: 0, dpsTotal: 0, dpsCount: 0 };
+    entry.count++;
+    if (p.milestones[0]) {
+      entry.dpsTotal += p.milestones[0].value;
+      entry.dpsCount++;
+    }
+    classMap.set(cls, entry);
+  }
+
+  // Sort by player count desc for distribution bar
+  const classStats = Array.from(classMap.entries())
+    .filter(([cls]) => cls !== "Unknown")
+    .sort((a, b) => b[1].count - a[1].count);
+
+  const totalPlayersWithClass = classStats.reduce((s, [, v]) => s + v.count, 0);
+
+  // Sort by avg DPS desc for the bar chart
+  const classAvgDps = classStats
+    .filter(([, v]) => v.dpsCount > 0)
+    .map(([cls, v]) => ({ cls, avg: v.dpsTotal / v.dpsCount }))
+    .sort((a, b) => b.avg - a.avg);
+
+  const maxAvgDps = classAvgDps[0]?.avg ?? 1;
+
   const players = await db.player.findMany({
     where:   classFilter ? { class: classFilter } : undefined,
     orderBy: { name: "asc" },
@@ -65,6 +106,77 @@ export default async function PlayersPage({ searchParams }: Props) {
             : `${totalCount} players across all raids`}
         </p>
       </div>
+
+      {/* Class stats */}
+      {classStats.length > 0 && (
+        <div className="bg-bg-panel border border-gold-dim rounded p-4 space-y-4">
+          {/* Distribution bar */}
+          <div>
+            <p className="text-xs font-semibold text-text-dim uppercase tracking-widest mb-2">
+              Class Distribution
+            </p>
+            <div className="flex h-5 rounded overflow-hidden gap-px">
+              {classStats.map(([cls, { count }]) => (
+                <div
+                  key={cls}
+                  style={{
+                    width:      `${(count / totalPlayersWithClass) * 100}%`,
+                    background: getClassColor(cls),
+                    opacity:    0.8,
+                    minWidth:   count > 0 ? 2 : 0,
+                  }}
+                  title={`${cls}: ${count} player${count !== 1 ? "s" : ""}`}
+                />
+              ))}
+            </div>
+            <div className="flex flex-wrap gap-x-4 gap-y-1 mt-2">
+              {classStats.map(([cls, { count }]) => (
+                <span key={cls} className="text-[11px] text-text-dim flex items-center gap-1">
+                  <span
+                    className="inline-block w-2 h-2 rounded-sm"
+                    style={{ background: getClassColor(cls) }}
+                  />
+                  {cls} <span className="text-text-secondary">{count}</span>
+                </span>
+              ))}
+            </div>
+          </div>
+
+          {/* Avg best DPS by class */}
+          {classAvgDps.length > 0 && (
+            <div>
+              <p className="text-xs font-semibold text-text-dim uppercase tracking-widest mb-2">
+                Avg Best DPS by Class
+              </p>
+              <div className="space-y-1.5">
+                {classAvgDps.map(({ cls, avg }) => (
+                  <div key={cls} className="flex items-center gap-2">
+                    <span
+                      className="text-[11px] font-semibold w-24 truncate shrink-0"
+                      style={{ color: getClassColor(cls) }}
+                    >
+                      {cls}
+                    </span>
+                    <div className="flex-1 h-3 bg-bg-card rounded overflow-hidden">
+                      <div
+                        style={{
+                          width:      `${(avg / maxAvgDps) * 100}%`,
+                          background: getClassColor(cls),
+                          opacity:    0.75,
+                        }}
+                        className="h-full rounded"
+                      />
+                    </div>
+                    <span className="text-[11px] text-text-secondary tabular-nums w-16 text-right shrink-0">
+                      {formatDps(avg)}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Class filter */}
       <div className="flex flex-wrap gap-1.5">

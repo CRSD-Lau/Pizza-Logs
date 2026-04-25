@@ -2,7 +2,7 @@
 
 import { db } from "@/lib/db";
 
-const MILESTONE_RANKS = [1, 3, 5, 10, 25, 50, 100] as const;
+const MILESTONE_RANKS = [1, 2, 3] as const;
 
 interface MilestoneCheck {
   playerId:    string;

@@ -5,27 +5,17 @@ import { UploadZoneWithRefresh } from "@/components/upload/UploadZoneWithRefresh
 import { StatCard } from "@/components/ui/StatCard";
 import { SectionHeader } from "@/components/ui/SectionHeader";
 import { Badge } from "@/components/ui/Badge";
-import { formatNumber, formatDuration, getWeekBounds } from "@/lib/utils";
-import { getClassColor } from "@/lib/constants/classes";
+import { getWeekBounds } from "@/lib/utils";
 
 export const dynamic = "force-dynamic";
 
 async function getHomeStats() {
   const { start } = getWeekBounds();
-  const [totalEncounters, totalKills, weekKills, recentMilestones, recentUploads] =
+  const [totalEncounters, totalKills, weekKills, recentUploads] =
     await Promise.all([
       db.encounter.count(),
       db.encounter.count({ where: { outcome: "KILL" } }),
       db.encounter.count({ where: { outcome: "KILL", startedAt: { gte: start } } }),
-      db.milestone.findMany({
-        where:   { supersededAt: null, rank: { lte: 10 } },
-        orderBy: { achievedAt: "desc" },
-        take:    6,
-        include: {
-          player:    { select: { name: true, class: true } },
-          encounter: { include: { boss: { select: { name: true, slug: true } } } },
-        },
-      }),
       db.upload.findMany({
         orderBy: { createdAt: "desc" },
         take:    5,
@@ -40,7 +30,7 @@ async function getHomeStats() {
       }),
     ]);
 
-  return { totalEncounters, totalKills, weekKills, recentMilestones, recentUploads };
+  return { totalEncounters, totalKills, weekKills, recentUploads };
 }
 
 export default async function HomePage() {
@@ -73,54 +63,29 @@ export default async function HomePage() {
         <UploadZoneWithRefresh />
       </section>
 
-      {/* Recent milestones */}
-      {stats.recentMilestones.length > 0 && (
-        <section>
-          <SectionHeader
-            title="Recent Milestones"
-            sub="Latest all-time ranking achievements"
-            action={
-              <Link href="/bosses" className="text-xs text-gold hover:text-gold-light uppercase tracking-wide">
-                View leaderboards →
-              </Link>
-            }
-          />
-          <div className="space-y-2">
-            {stats.recentMilestones.map(m => {
-              const color = getClassColor(m.player.class ?? m.player.name);
-              return (
-                <div key={m.id} className="milestone-banner flex items-center justify-between flex-wrap gap-2">
-                  <div className="flex items-center gap-3 text-sm">
-                    <span className={`rank-badge ${m.rank <= 3 ? `rank-${m.rank}` : ""}`}>
-                      #{m.rank}
-                    </span>
-                    <Link
-                      href={`/players/${encodeURIComponent(m.player.name)}`}
-                      className="font-bold hover:underline"
-                      style={{ color }}
-                    >
-                      {m.player.name}
-                    </Link>
-                    <span className="text-text-secondary">
-                      all-time #{m.rank} {m.metric} on{" "}
-                      <Link href={`/bosses/${m.encounter.boss.slug}`} className="hover:text-gold">
-                        {m.encounter.boss.name}
-                      </Link>
-                      {" "}
-                      <span className={`diff-badge ${m.difficulty?.endsWith("H") ? "heroic" : "normal"}`}>
-                        {m.difficulty}
-                      </span>
-                    </span>
-                  </div>
-                  <span className="tabular-nums font-bold text-gold-light text-sm">
-                    {m.value.toLocaleString(undefined, { maximumFractionDigits: 0 })} {m.metric}
-                  </span>
-                </div>
-              );
-            })}
-          </div>
-        </section>
-      )}
+      {/* Leaderboards teaser */}
+      <section>
+        <SectionHeader
+          title="All-Time Leaderboards"
+          sub="Top 10 DPS and HPS for every boss"
+          action={
+            <Link href="/leaderboards" className="text-xs text-gold hover:text-gold-light uppercase tracking-wide">
+              View all →
+            </Link>
+          }
+        />
+        <Link
+          href="/leaderboards"
+          className="block bg-bg-panel border border-gold-dim rounded px-6 py-10 text-center hover:border-gold/50 transition-colors group"
+        >
+          <p className="heading-cinzel text-2xl font-bold text-gold-light text-glow-gold group-hover:text-gold transition-colors">
+            Leaderboards
+          </p>
+          <p className="text-text-secondary text-sm mt-2">
+            All-time top 10 DPS and HPS for every WotLK boss
+          </p>
+        </Link>
+      </section>
 
       {/* Recent uploads */}
       {stats.recentUploads.length > 0 && (
