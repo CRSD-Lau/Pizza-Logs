@@ -1246,6 +1246,99 @@ def test_duration_uses_float_precision():
         f"Expected 234.758s, got {enc.duration_seconds}"
 
 
+# ── Heal over-count bug fixes ─────────────────────────────────────────────────
+#
+# Two bugs caused per-encounter healing totals to be 2-5x higher than UWU:
+#
+#   1. SPELL_HEAL_ABSORBED in HEAL_EVENTS: this event has a different field
+#      structure from SPELL_HEAL. parts[10] is the absorb amount (not a heal
+#      amount), causing massive inflation when read as a heal value.
+#
+#   2. No destination filter for heals: heals landing on pets/totems/non-player
+#      units were counted. UWU only counts heals where dst_guid is a player.
+
+def _heal_parts(src_guid: str, src_name: str, dst_guid: str, dst_name: str,
+                amount: int, spell: str = "Flash Heal") -> list[str]:
+    """Build minimal SPELL_HEAL parts (14 fields after stripping timestamp)."""
+    return [
+        "SPELL_HEAL",
+        src_guid, f'"{src_name}"', "0x512",
+        dst_guid, f'"{dst_name}"', "0xa48",
+        "19750", f'"{spell}"', "2",
+        str(amount), "0", "0", "0",
+    ]
+
+
+NON_PLAYER_GUID = "0xF130000000000999"   # pet/totem — not a player GUID
+
+
+def test_heal_to_non_player_not_counted():
+    """Heals landing on pets/totems must not appear in healer's total_healing.
+
+    UWU only counts heals where dst_guid is a player.
+    """
+    ts_start = 46800.0
+
+    segment = [
+        ("4/19 13:00:00.000", [ENCOUNTER_START, "1234", '"Lord Marrowgar"', "6", "25"], ts_start),
+        # Healer heals a player (should count)
+        ("4/19 13:00:05.000", _heal_parts(PLAYER_GUID, "Healer", PLAYER_GUID, "Healer", 50_000), ts_start + 5.0),
+        # Healer heals a non-player (pet) — must NOT count
+        ("4/19 13:00:06.000", _heal_parts(PLAYER_GUID, "Healer", NON_PLAYER_GUID, "HunterPet", 200_000), ts_start + 6.0),
+        # Boss dies
+        ("4/19 13:01:00.000", _unit_died_parts("Lord Marrowgar"), ts_start + 60.0),
+        ("4/19 13:01:10.000", [ENCOUNTER_END, "1234", '"Lord Marrowgar"', "6", "25", "1"], ts_start + 70.0),
+    ]
+
+    parser = CombatLogParser(file_year=2026)
+    enc = parser._aggregate_segment(segment, {})
+    assert enc is not None
+    healer = next((p for p in enc.participants if p["name"] == "Healer"), None)
+    assert healer is not None
+    assert healer["totalHealing"] == pytest.approx(50_000, abs=1), (
+        f"Only player-destined heal should count. Got {healer['totalHealing']:,.0f}, expected 50,000"
+    )
+
+
+def test_spell_heal_absorbed_not_counted_as_heal():
+    """SPELL_HEAL_ABSORBED must not be processed as a regular heal.
+
+    SPELL_HEAL_ABSORBED has a different field structure from SPELL_HEAL.
+    Including it in HEAL_EVENTS causes massive inflation (2-5x over UWU).
+    """
+    ts_start = 46800.0
+
+    # SPELL_HEAL_ABSORBED event — different field structure
+    # parts[10] happens to be the absorb amount (not a heal amount)
+    heal_absorbed_parts = [
+        "SPELL_HEAL_ABSORBED",
+        PLAYER_GUID, '"Healer"', "0x512",    # src (absorber)
+        PLAYER_GUID, '"Healer"', "0xa48",    # dst
+        "17747", '"Weakened Soul"', "2",     # absorb spell
+        "999999",                             # absorb amount (should NOT be counted as heal)
+        "19750", '"Flash Heal"', "2",        # absorbed spell info
+    ]
+
+    segment = [
+        ("4/19 13:00:00.000", [ENCOUNTER_START, "1234", '"Lord Marrowgar"', "6", "25"], ts_start),
+        # Normal heal (should count)
+        ("4/19 13:00:05.000", _heal_parts(PLAYER_GUID, "Healer", PLAYER_GUID, "Healer", 50_000), ts_start + 5.0),
+        # SPELL_HEAL_ABSORBED (must NOT count as extra healing)
+        ("4/19 13:00:06.000", heal_absorbed_parts, ts_start + 6.0),
+        ("4/19 13:01:00.000", _unit_died_parts("Lord Marrowgar"), ts_start + 60.0),
+        ("4/19 13:01:10.000", [ENCOUNTER_END, "1234", '"Lord Marrowgar"', "6", "25", "1"], ts_start + 70.0),
+    ]
+
+    parser = CombatLogParser(file_year=2026)
+    enc = parser._aggregate_segment(segment, {})
+    assert enc is not None
+    healer = next((p for p in enc.participants if p["name"] == "Healer"), None)
+    assert healer is not None
+    assert healer["totalHealing"] == pytest.approx(50_000, abs=1), (
+        f"SPELL_HEAL_ABSORBED must not inflate healing. Got {healer['totalHealing']:,.0f}, expected 50,000"
+    )
+
+
 def test_dps_uses_float_duration():
     """DPS must be computed with float duration to match UWU precision."""
     boss_guid = "0xF130000000000001"

@@ -55,7 +55,11 @@ DMG_EVENTS = {
 HEAL_EVENTS = {
     "SPELL_HEAL",
     "SPELL_PERIODIC_HEAL",
-    "SPELL_HEAL_ABSORBED",
+    # SPELL_HEAL_ABSORBED excluded: this event fires when a heal is absorbed by a
+    # shield (e.g. Power Word: Shield eating an incoming heal). Its field structure
+    # is NOT the same as SPELL_HEAL — parts[10] is the absorb amount, not a heal
+    # amount. Including it inflated healing 2-5x vs UWU. UWU only counts
+    # SPELL_HEAL and SPELL_PERIODIC_HEAL.
 }
 
 UNIT_DIED_EVENT = "UNIT_DIED"
@@ -783,6 +787,11 @@ class CombatLogParser:
             # Skip player-to-player damage (Blood-Queen vampires, Pact of the
             # Darkfallen, Blood Mirror, etc.). These are not DPS against the boss.
             if not is_heal and _is_player(dst_guid):
+                continue
+
+            # Skip heals landing on non-player targets (pets, totems, etc.)
+            # UWU only counts heals where the destination is a player.
+            if is_heal and not _is_player(dst_guid):
                 continue
 
             # Effective damage = raw amount minus overkill (excess damage beyond
