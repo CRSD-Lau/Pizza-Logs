@@ -102,7 +102,7 @@ def print_table(rows):
             status = "N/A"
         else:
             pct = abs(app - uwu) / uwu * 100
-            status = "✓" if pct <= tol * 100 else "✗"
+            status = "OK" if pct <= tol * 100 else "FAIL"
         print(f"{metric:<45} {uwu:>15,.1f} {app:>15,.1f} {pct:>7.2f}% {status:>6}")
     print("=" * len(header))
 

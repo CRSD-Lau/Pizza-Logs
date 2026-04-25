@@ -36,7 +36,7 @@ Include vault file changes in the same git commit as code changes.
 ## Critical Parser Facts (do not get wrong)
 
 - Warmane WotLK logs have **NO ENCOUNTER_START/END** — heuristic detection only
-- `SPELL_HEAL`: **14 fields**, crit at **index 13** (NOT 14, NOT 15)
+- `SPELL_HEAL`: **14 fields**, crit at **index 13** (NOT 14, NOT 15); `parts[10]`=total heal (before overheal), `parts[11]`=**effective heal** (use this for HPS)
 - `SWING_DAMAGE`: no spell fields, spell_name = "Auto Attack", crit at **index 13**
 - Player GUIDs: `0x06` prefix (Warmane) or `Player-` prefix (retail)
 - Heroic difficulty: **undetectable** — do not attempt

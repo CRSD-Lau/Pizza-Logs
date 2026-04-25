@@ -4,60 +4,66 @@
 2026-04-25
 
 ## Git
-**Latest commit:** `21b0922` — fix: remove unused imports after leaderboards redesign
+**Latest commit:** TBD (pending commit of this session's work)
 
 ---
 
-## Leaderboards & Players Redesign — DONE
+## Healing Field Fix — DONE
 
-Five changes shipped in this session:
+### What was fixed
+`parser/parser_core.py` — SPELL_HEAL now reads `parts[11]` (effective heal) instead of `parts[10]` (total heal before overheal).
 
-### 1. Milestone cap to top 3
-`lib/actions/milestones.ts` — `MILESTONE_RANKS = [1, 2, 3]` (was `[1, 3, 5, 10, 25, 50, 100]`). New milestones are only awarded for rank 1, 2, or 3. Past milestones at higher ranks untouched.
+**WotLK log format confirmed from actual log data:**
+- `parts[10]` = total heal (before overheal deduction)
+- `parts[11]` = effective heal (what actually restored HP; 0 = 100% overheal)
 
-### 2. Nav — Leaderboards link
-`components/layout/Nav.tsx` — added `{ href: "/leaderboards", label: "Leaderboards" }` between Raids and Players.
+Evidence from log samples:
+- `728,0` → 0 effective (target at full HP, all wasted)
+- `1225,738` → 738 effective (487 wasted to overheal)
+- `2379,2379` → 2379 effective (no overheal)
 
-### 3. Home page — milestone section removed
-`app/page.tsx` — removed `db.milestone.findMany()` query and milestone JSX section. Replaced with a leaderboards teaser card linking to `/leaderboards`.
+### What was NOT fixed (open issues)
 
-### 4. New /leaderboards page
-`app/leaderboards/page.tsx` — boss-grouped top 10 DPS and HPS (kills only, distinct by player). Reuses `LeaderboardBar` component. `EmptyState` for no data. Query pattern mirrors `bosses/[bossSlug]/page.tsx`.
+#### 1. Healing overcounting (56-265% over UWU on most bosses)
+Using parts[11] is correct field parsing, but we're still significantly over UWU.
+Suspected cause: UWU may filter passive proc heals (Vampiric Embrace, JoL, ILotP, Beacon of Light, set bonus procs).
+No single formula maps our counts to UWU counts across all bosses.
 
-### 5. Players page class stats
-`app/players/page.tsx` — added class distribution bar (colored segments by class) and avg best DPS by class horizontal bar chart. Stats are always unfiltered regardless of active class filter. CSS only, no charting library.
+#### 2. Blood-Queen healing undercounted (36% under UWU)
+Root cause identified: "Essence of the Blood Queen" vampiric bite heals are logged with Blood-Queen herself as the source GUID (0xF1... non-player). Our `_is_player(src_guid)` filter drops them.
+Fix: when `is_heal=True` and `_is_player(dst_guid)`, count the heal even if src is non-player.
 
----
+#### 3. Lady Deathwhisper damage overcounted (35%)
+Root cause identified: our per-encounter damage counts ALL targets (boss + adds). LDW phase 1 has Adherents/Fanatics worth ~12.5M damage. UWU appears to count only boss-directed damage.
+Fix: for per-encounter damage, only accumulate eff_amount where dst is the boss GUID. (Complex for multi-boss fights like BPC.)
 
-## Commit Log (this session)
+#### 4. S0 missing encounters (Sindragosa, BPC 10N)
+Sindragosa (10N) KILL and BPC (10N) KILL are not found at session_index=0. Session assignment bug.
 
-```
-21b0922 fix: remove unused formatNumber/formatDuration imports from home page
-37d79ff feat: add class distribution and avg DPS chart to Players page
-b696e07 fix: remove unused SectionHeader import in leaderboards page
-aa2aea3 feat: add /leaderboards page with top 10 DPS and HPS per boss
-59032a4 feat: replace home milestone section with leaderboards teaser
-38a2192 feat: add Leaderboards link to nav
-a31cb59 feat: cap milestone awards to top 3 ranks
-```
+#### 5. BPC damage slightly over (2%)
+Same add-damage issue (Kinetic Bombs, shadow orbs) — minor.
+
+### Tests
+61/61 tests passing. New tests added:
+- `test_heal_uses_effective_field` — verifies parts[11] is used, not parts[10]
+- `test_heal_pure_overheal_counts_zero` — verifies effective=0 events are filtered
+- `test_heal_no_overheal_unchanged` — verifies default (no overheal) still counts full amount
 
 ---
 
 ## Current State
 
 - **Live app**: https://pizza-logs-production.up.railway.app
-- **All parser tests green** (58/58 from previous session)
-- **TypeScript build clean**
-- **Branch:** `claude/elated-sutherland-11ac4b` — ready to merge to main
+- **All parser tests green** (61/61)
+- **Validation**: 12/26 UWU checks passing (damage metrics all green, healing metrics all failing)
+- **Branch:** `claude/elated-sutherland-11ac4b`
 
 ---
 
 ## Next Steps
 
-1. **Merge branch to main** and push to Railway to deploy
-2. **Re-upload `WoWCombatLog.txt`** — verify HPS totals match UWU now that the parser fixes are live
-3. **Next features (backlog):**
-   - Absorbs tracking: parse `SPELL_ABSORBED` events for absorb stats
-   - Player detail page: per-boss breakdown per player per session
-   - Damage mitigation stats: `SPELL_MISSED` subtypes (ABSORB, BLOCK, DODGE, etc.)
-   - Parallelize Players page queries (minor perf: `allPlayersForStats`, `players`, `totalCount` can all be `Promise.all`)
+1. **Fix BQ healing undercount**: include N→P heals (boss-sourced) when dst is player
+2. **Fix LDW damage**: filter per-encounter eff_amount to only count boss-targeted hits
+3. **Investigate healing overcounting**: determine which passive procs UWU excludes
+4. **Fix S0 missing sessions**: check session index assignment logic
+5. After parser fixes: merge branch, push to Railway, re-upload log to verify

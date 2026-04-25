@@ -738,15 +738,17 @@ class CombatLogParser:
                 spell_name = "Auto Attack"
             elif is_heal:
                 # SPELL_HEAL format: event,srcGUID,srcName,srcFlags,dstGUID,dstName,dstFlags,
-                #   spellID,spellName,spellSchool,amount,overhealing,absorbed,critical
+                #   spellID,spellName,spellSchool,total,effective,absorbed,critical
                 # → 14 fields (indices 0-13); critical is at index 13
+                # parts[10] = total heal (before overheal)
+                # parts[11] = effective heal (what actually restored HP; 0 = 100% overheal)
                 if len(parts) < 11:
                     continue
                 src_guid, src_name = parts[1], parts[2].strip('"').strip()
                 dst_guid, dst_name = parts[4], parts[5].strip('"').strip()
                 spell_name = parts[8].strip('"').strip()
                 school     = _safe_int(parts[9]) or 2
-                amount     = _safe_float(parts[10])
+                amount     = _safe_float(parts[11]) if len(parts) > 11 else _safe_float(parts[10])
                 overkill   = 0.0
                 absorbed   = 0.0
                 is_crit    = len(parts) > 13 and parts[13] == "1"
@@ -805,7 +807,7 @@ class CombatLogParser:
             # Overkill: damage past the target's remaining HP (wasted).
             # Absorbed: damage eaten by a boss shield (Lady DW mana barrier,
             # Saurfang blood barrier) — never reaches HP. UWU excludes both.
-            # For heals, amount is already the effective (landed) value.
+            # For heals, amount is already the effective value (parts[11] = effective).
             eff_amount = max(0.0, amount - overkill - absorbed) if not is_heal else amount
 
             a = _get_actor(actors, src_name, src_guid)

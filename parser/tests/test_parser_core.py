@@ -1258,15 +1258,105 @@ def test_duration_uses_float_precision():
 #      units were counted. UWU only counts heals where dst_guid is a player.
 
 def _heal_parts(src_guid: str, src_name: str, dst_guid: str, dst_name: str,
-                amount: int, spell: str = "Flash Heal") -> list[str]:
-    """Build minimal SPELL_HEAL parts (14 fields after stripping timestamp)."""
+                total: int, spell: str = "Flash Heal",
+                effective: int | None = None) -> list[str]:
+    """Build minimal SPELL_HEAL parts (14 fields after stripping timestamp).
+
+    WotLK log format: parts[10]=total heal (before overheal),
+    parts[11]=effective heal (what actually restored HP, i.e. total - overheal).
+    Defaults effective=total (zero overheal).
+    """
+    eff = total if effective is None else effective
     return [
         "SPELL_HEAL",
         src_guid, f'"{src_name}"', "0x512",
         dst_guid, f'"{dst_name}"', "0xa48",
         "19750", f'"{spell}"', "2",
-        str(amount), "0", "0", "0",
+        str(total), str(eff), "0", "0",
     ]
+
+
+# ── Overheal subtraction ─────────────────────────────────────────────────────
+#
+# SPELL_HEAL parts[10] = total heal (before overheal), parts[11] = overheal.
+# Effective heal = max(0, total - overheal). UWU only counts effective healing.
+
+def test_heal_uses_effective_field():
+    """Parser reads parts[11] (effective heal) not parts[10] (total heal).
+
+    WotLK log: parts[10]=total heal (before overheal), parts[11]=effective heal
+    (what actually restored HP). Example: total=100k, effective=40k → overheal=60k.
+    """
+    ts_start = 46800.0
+    total_heal = 100_000
+    effective  = 40_000   # 60k was overheal, 40k actually restored HP
+
+    segment = [
+        ("4/19 13:00:00.000", [ENCOUNTER_START, "1234", '"Lord Marrowgar"', "6", "25"], ts_start),
+        ("4/19 13:00:05.000", _heal_parts(PLAYER_GUID, "Healer", PLAYER_GUID, "Target",
+                                          total_heal, effective=effective), ts_start + 5.0),
+        ("4/19 13:01:00.000", _unit_died_parts("Lord Marrowgar"), ts_start + 60.0),
+        ("4/19 13:01:10.000", [ENCOUNTER_END, "1234", '"Lord Marrowgar"', "6", "25", "1"], ts_start + 70.0),
+    ]
+
+    parser = CombatLogParser(file_year=2026)
+    enc = parser._aggregate_segment(segment, {})
+    assert enc is not None
+    healer = next((p for p in enc.participants if p["name"] == "Healer"), None)
+    assert healer is not None
+    assert healer["totalHealing"] == pytest.approx(effective, abs=1), (
+        f"Parser must use parts[11] (effective). total={total_heal:,} effective={effective:,} "
+        f"got={healer['totalHealing']:,.0f}"
+    )
+
+
+def test_heal_pure_overheal_counts_zero():
+    """A heal where effective=0 (100% overheal) contributes 0 to healing totals.
+
+    Log line: total=50000, effective=0 → target was at full HP, nothing landed.
+    """
+    ts_start = 46800.0
+    total_heal = 50_000
+
+    segment = [
+        ("4/19 13:00:00.000", [ENCOUNTER_START, "1234", '"Lord Marrowgar"', "6", "25"], ts_start),
+        ("4/19 13:00:05.000", _heal_parts(PLAYER_GUID, "Healer", PLAYER_GUID, "Target",
+                                          total_heal, effective=0), ts_start + 5.0),
+        ("4/19 13:01:00.000", _unit_died_parts("Lord Marrowgar"), ts_start + 60.0),
+        ("4/19 13:01:10.000", [ENCOUNTER_END, "1234", '"Lord Marrowgar"', "6", "25", "1"], ts_start + 70.0),
+    ]
+
+    parser = CombatLogParser(file_year=2026)
+    enc = parser._aggregate_segment(segment, {})
+    assert enc is not None
+    healer = next((p for p in enc.participants if p["name"] == "Healer"), None)
+    actual = healer["totalHealing"] if healer else 0.0
+    assert actual == pytest.approx(0, abs=1), (
+        f"100% overhealed event (effective=0) should contribute 0. Got {actual:,.0f}"
+    )
+
+
+def test_heal_no_overheal_unchanged():
+    """A heal with zero overheal (effective=total) is counted fully."""
+    ts_start = 46800.0
+    total_heal = 80_000
+
+    segment = [
+        ("4/19 13:00:00.000", [ENCOUNTER_START, "1234", '"Lord Marrowgar"', "6", "25"], ts_start),
+        ("4/19 13:00:05.000", _heal_parts(PLAYER_GUID, "Healer", PLAYER_GUID, "Target",
+                                          total_heal), ts_start + 5.0),  # defaults effective=total
+        ("4/19 13:01:00.000", _unit_died_parts("Lord Marrowgar"), ts_start + 60.0),
+        ("4/19 13:01:10.000", [ENCOUNTER_END, "1234", '"Lord Marrowgar"', "6", "25", "1"], ts_start + 70.0),
+    ]
+
+    parser = CombatLogParser(file_year=2026)
+    enc = parser._aggregate_segment(segment, {})
+    assert enc is not None
+    healer = next((p for p in enc.participants if p["name"] == "Healer"), None)
+    assert healer is not None
+    assert healer["totalHealing"] == pytest.approx(total_heal, abs=1), (
+        f"Zero overheal: full amount should count. Got {healer['totalHealing']:,.0f}, expected {total_heal:,}"
+    )
 
 
 NON_PLAYER_GUID = "0xF130000000000999"   # pet/totem — not a player GUID
