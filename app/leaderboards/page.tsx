@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
 import { db } from "@/lib/db";
 import { LeaderboardBar } from "@/components/charts/LeaderboardBar";
-import { SectionHeader } from "@/components/ui/SectionHeader";
 import { EmptyState } from "@/components/ui/EmptyState";
 import Link from "next/link";
 
