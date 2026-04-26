@@ -1,7 +1,8 @@
 # Now
 
 ## Status
-S0 difficulty detection fix **DONE** — 70/70 tests green, 16/30 UWU checks passing.
+Healing formula fix **DONE** — 70/70 tests green.
+Healing delta: was 14–228% OVER UWU → now ~21-28% UNDER UWU (consistent gap).
 
 ---
 
@@ -9,40 +10,39 @@ S0 difficulty detection fix **DONE** — 70/70 tests green, 16/30 UWU checks pas
 
 | Change | File | Status |
 |--------|------|--------|
-| Remove wrong heroic markers: `backlash` (Sindragosa), `empowered shock vortex/shadow lance/blood` (BPC) | `parser/parser_core.py` | ✅ |
-| Extend `_normalize_session_difficulty` to promote 25N→25H in confirmed heroic sessions | `parser/parser_core.py` | ✅ |
-| TDD tests: Sindragosa 10N backlash stays 10N, BPC 10N empowered spell stays 10N, 25N Sindragosa in 25H session promoted | `parser/tests/test_parser_core.py` | ✅ |
-| Update existing normalize test: 25N in 25H session now correctly promoted to 25H | `parser/tests/test_parser_core.py` | ✅ |
-| Update UWU reference: LDW difficulty 25N → 25H | `parser/tests/validate_uwu.py` | ✅ |
-| VE/JoL/ILotP healing exclusion (prev session) | `parser/parser_core.py` | ✅ |
+| Fix heal effective field: `parts[10] - parts[11]` (gross - overheal), not `parts[11]` | `parser/parser_core.py` | ✅ |
+| Empty `PASSIVE_HEAL_EXCLUSIONS` — VE/JoL/ILotP now counted (correct per Skada) | `parser/parser_core.py` | ✅ |
+| Fix `_heal_parts` test helper: parts[11]=overheal (not effective) | `parser/tests/test_parser_core.py` | ✅ |
+| Update VE/JoL/ILotP tests: assert these ARE counted (60k/35k/23k not 50k/30k/20k) | `parser/tests/test_parser_core.py` | ✅ |
+| Fix inline boss_mechanic_heal event: parts[11]=7431 (overheal), not 11550 | `parser/tests/test_parser_core.py` | ✅ |
+| Vault updated | `Pizza Logs HQ/` | ✅ |
 
 ---
 
 ## Open Parser Issues (not yet fixed)
 
-### Healing overcounting (14–228% over UWU on S1 bosses)
-- Marrowgar: 14.57% over (was 55% before VE/JoL/ILotP exclusion — improved)
-- Saurfang, BPC: still massively over
-- Root cause: additional passive/proc heals that UWU excludes, unknown which
+### Healing undercounting (~21-28% under on all bosses)
+- Consistent gap across Marrowgar / Saurfang / BPC
+- Likely cause: Discipline Priest Power Word: Shield absorbs
+  (UWU counts them as healing done; we don't parse absorbed field from damage events)
 
 ### Blood-Queen healing undercounted (40% under)
-- UWU: 58.78M, parser: ~35.2M — missing ~23.6M
-- Vampiric bite heals from boss mechanic not fully captured
+- UWU: 58.78M, parser: ~35.2M — vampiric bite heals from boss mechanic missing
 
 ### LDW damage undercounted (7.17%)
-- Low priority — unclear without UWU's exact add-filter methodology
+- Low priority
 
 ### S0 BPC damage undercounted (21.29%)
-- Was MISSING before this session; now found at 10N
-- 8.18M vs UWU 10.40M — boss_guids may not capture all prince GUID forms in 10N
+- boss_guids may not capture all prince GUID forms in 10N segment
 
 ---
 
 ## Next Action
 
 Priority order:
-1. Investigate healing overcounting — what other spells does UWU exclude beyond VE/JoL/ILotP?
-2. Fix BQ healing undercount — inspect which vampiric bite events are being missed
-3. Fix S0 BPC damage undercount — check boss_guids for 10N segment
+1. **Commit** the heal formula fix (parser_core + tests + vault)
+2. **Re-run validate_uwu.py** to get exact new numbers
+3. Investigate PW:S absorb approach to close ~25% heal gap
+4. Fix BQ healing undercount
 
 **Log file**: `C:/Users/neil_/OneDrive/Desktop/PizzaLogs/WoWCombatLog/WoWCombatLog.txt`

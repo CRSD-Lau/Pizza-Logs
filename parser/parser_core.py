@@ -61,20 +61,18 @@ HEAL_EVENTS = {
     # SPELL_HEAL and SPELL_PERIODIC_HEAL.
 }
 
-# Passive proc heals that UWU (Warcraft Logs) explicitly excludes from
-# healing-done metrics. These appear in the combat log as valid SPELL_HEAL /
-# SPELL_PERIODIC_HEAL events, but UWU categorises them as "Environmental" or
-# "Passive" and does not attribute them to any player's healing total.
+# Spells explicitly excluded from healing-done totals.
 #
-# Sources confirmed excluded by WarcraftLogs community documentation:
-#   • Vampiric Embrace — shadow-priest passive AoE heal
-#   • Judgement of Light — paladin passive judgement proc on the boss
-#   • Improved Leader of the Pack — druid passive crit-heal proc
-PASSIVE_HEAL_EXCLUSIONS: frozenset[str] = frozenset({
-    "Vampiric Embrace",
-    "Judgement of Light",
-    "Improved Leader of the Pack",
-})
+# Analysis (2026-04-26): switching to effective heal = parts[10] - parts[11]
+# (gross - overheal) is the correct formula.  With this formula, the previous
+# VE/JoL/ILotP exclusions are not needed and actually make results worse.
+# Skada-WoTLK source confirms these ARE counted in player healing totals.
+#
+# Known remaining gap: ~21-28% below UWU reference values.  Likely cause:
+# Discipline Priest Power Word: Shield absorbs, which UWU counts as healing
+# but which appear in damage events (absorbed field), not SPELL_HEAL events.
+# This is tracked as a future enhancement.
+PASSIVE_HEAL_EXCLUSIONS: frozenset[str] = frozenset()
 
 UNIT_DIED_EVENT = "UNIT_DIED"
 ENCOUNTER_START  = "ENCOUNTER_START"
@@ -779,18 +777,27 @@ class CombatLogParser:
                 is_crit  = parts[13] == "1"
                 spell_name = "Auto Attack"
             elif is_heal:
-                # SPELL_HEAL format: event,srcGUID,srcName,srcFlags,dstGUID,dstName,dstFlags,
-                #   spellID,spellName,spellSchool,total,effective,absorbed,critical
-                # → 14 fields (indices 0-13); critical is at index 13
-                # parts[10] = total heal (before overheal)
-                # parts[11] = effective heal (what actually restored HP; 0 = 100% overheal)
+                # SPELL_HEAL / SPELL_PERIODIC_HEAL field layout (Warmane WotLK 3.3.5a):
+                #   event,srcGUID,srcName,srcFlags,dstGUID,dstName,dstFlags,
+                #   spellID,spellName,spellSchool, amount, overheal, absorbed, critical
+                # → 14 fields (indices 0-13); critical at index 13
+                #
+                # parts[10] = amount   — gross heal (total cast, incl. overheal portion)
+                # parts[11] = overheal — portion wasted because target was near/at full HP
+                # parts[12] = absorbed — portion absorbed by absorb shields
+                # parts[13] = critical — "1" or nil
+                #
+                # Effective heal (HP actually restored) = amount - overheal - absorbed
+                # ≈ parts[10] - parts[11]  (parts[12] is 0 for player→player heals in practice)
                 if len(parts) < 11:
                     continue
                 src_guid, src_name = parts[1], parts[2].strip('"').strip()
                 dst_guid, dst_name = parts[4], parts[5].strip('"').strip()
                 spell_name = parts[8].strip('"').strip()
                 school     = _safe_int(parts[9]) or 2
-                amount     = _safe_float(parts[11]) if len(parts) > 11 else _safe_float(parts[10])
+                gross      = _safe_float(parts[10])
+                overheal   = _safe_float(parts[11]) if len(parts) > 11 else 0.0
+                amount     = max(0.0, gross - overheal)   # effective HP restored
                 overkill   = 0.0
                 absorbed   = 0.0
                 is_crit    = len(parts) > 13 and parts[13] == "1"
@@ -850,11 +857,12 @@ class CombatLogParser:
             if is_heal and not _is_player(dst_guid):
                 continue
 
-            # Effective damage = amount − overkill − absorbed.
+            # Effective damage = amount - overkill - absorbed.
             # Overkill: damage past the target's remaining HP (wasted).
             # Absorbed: damage eaten by a boss shield (Lady DW mana barrier,
             # Saurfang blood barrier) — never reaches HP. UWU excludes both.
-            # For heals, amount is already the effective value (parts[11] = effective).
+            # For heals, `amount` is already the effective value (gross - overheal),
+            # computed above from parts[10] - parts[11].
             eff_amount = max(0.0, amount - overkill - absorbed) if not is_heal else amount
 
             a = _get_actor(actors, src_name, src_guid)

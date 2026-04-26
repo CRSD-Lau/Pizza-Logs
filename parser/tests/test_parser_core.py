@@ -1271,30 +1271,40 @@ def _heal_parts(src_guid: str, src_name: str, dst_guid: str, dst_name: str,
                 effective: int | None = None) -> list[str]:
     """Build minimal SPELL_HEAL parts (14 fields after stripping timestamp).
 
-    WotLK log format: parts[10]=total heal (before overheal),
-    parts[11]=effective heal (what actually restored HP, i.e. total - overheal).
-    Defaults effective=total (zero overheal).
+    WotLK log format:
+      parts[10] = gross heal (total cast amount, before overheal)
+      parts[11] = overheal  (wasted portion — target near/at full HP)
+      parts[12] = absorbed  (absorbed by shields)
+      parts[13] = critical  ("1" or "nil")
+
+    Effective heal (HP actually restored) = parts[10] - parts[11].
+
+    Args:
+        total:     gross heal amount (parts[10])
+        effective: HP actually restored. If provided, overheal = total - effective.
+                   If None, assumes zero overheal (effective == total).
     """
-    eff = total if effective is None else effective
+    overheal = 0 if effective is None else (total - effective)
     return [
         "SPELL_HEAL",
         src_guid, f'"{src_name}"', "0x512",
         dst_guid, f'"{dst_name}"', "0xa48",
         "19750", f'"{spell}"', "2",
-        str(total), str(eff), "0", "0",
+        str(total), str(overheal), "0", "0",
     ]
 
 
 # ── Overheal subtraction ─────────────────────────────────────────────────────
 #
-# SPELL_HEAL parts[10] = total heal (before overheal), parts[11] = overheal.
-# Effective heal = max(0, total - overheal). UWU only counts effective healing.
+# SPELL_HEAL parts[10] = gross heal (total cast amount),
+#            parts[11] = overheal  (wasted portion — target was near/at full HP).
+# Effective heal = max(0, parts[10] - parts[11]). UWU only counts effective healing.
 
 def test_heal_uses_effective_field():
-    """Parser reads parts[11] (effective heal) not parts[10] (total heal).
+    """Parser computes effective heal as parts[10] - parts[11] (gross minus overheal).
 
-    WotLK log: parts[10]=total heal (before overheal), parts[11]=effective heal
-    (what actually restored HP). Example: total=100k, effective=40k → overheal=60k.
+    WotLK log: parts[10]=gross heal, parts[11]=overheal.
+    Example: gross=100k, overheal=60k → effective=40k (what actually restored HP).
     """
     ts_start = 46800.0
     total_heal = 100_000
@@ -1585,7 +1595,7 @@ def test_boss_mechanic_heal_counted_in_encounter():
         BOSS_SRC_GUID, '"Blood-Queen Lana\'thel"', "0x10a48",
         PLAYER_GUID, '"Phyre"', "0x512",
         "70872", '"Essence of the Blood Queen"', "0x20",
-        "18981", "11550", "0", "nil",   # total=18981, effective=11550
+        "18981", "7431", "0", "nil",   # gross=18981, overheal=7431, effective=11550
     ]
 
     segment = [
@@ -1693,26 +1703,29 @@ def test_encounter_damage_includes_mechanic_unit_damage():
     )
 
 
-# ── Passive heal exclusions ───────────────────────────────────────────────────
+# ── Passive proc heals — included in player totals ────────────────────────────
 #
-# UWU (and Warcraft Logs) excludes passive proc heals from player healing totals:
+# Analysis (2026-04-26): Skada-WotLK counts passive proc heals in healing done.
+# With the corrected effective-heal formula (parts[10] - parts[11]), excluding
+# VE / JoL / ILotP makes results worse, not better.  PASSIVE_HEAL_EXCLUSIONS is
+# now empty and these spells are treated like any other heal.
+#
 #   - Vampiric Embrace (Shadow Priest passive AoE heal)
 #   - Judgement of Light (Paladin passive proc on boss)
 #   - Improved Leader of the Pack (Druid passive talent proc)
-#
-# These heals appear in the combat log as SPELL_HEAL / SPELL_PERIODIC_HEAL events
-# but UWU categorises them as "environmental" and excludes them from healing
-# done metrics. We must match this exclusion to achieve parity.
 
 def test_vampiric_embrace_excluded_from_healing():
-    """Vampiric Embrace heals (passive shadow-priest AoE) must NOT count toward
-    total_healing or any participant's totalHealing."""
+    """Vampiric Embrace heals count toward total_healing (not excluded).
+
+    Skada-WotLK counts VE as healing done. With the correct effective-heal
+    formula (gross - overheal) the exclusion is not needed and not applied.
+    """
     ts_start = 46800.0
     segment = [
         ("4/19 13:00:00.000", [ENCOUNTER_START, "36612", '"Lord Marrowgar"', "4", "25"], ts_start),
-        # Active healer heal — counts
+        # Active healer heal
         ("4/19 13:00:05.000", _heal_parts(PLAYER_GUID, "Phyre", "0x0600000000000002", "Tank", 50_000), ts_start + 5.0),
-        # Vampiric Embrace — must NOT count
+        # Vampiric Embrace — also counted
         ("4/19 13:00:06.000", _heal_parts(PLAYER_GUID, "Shadow", "0x0600000000000002", "Tank", 10_000,
                                            spell="Vampiric Embrace"), ts_start + 6.0),
         ("4/19 13:01:00.000", _unit_died_parts("Lord Marrowgar"), ts_start + 60.0),
@@ -1720,17 +1733,20 @@ def test_vampiric_embrace_excluded_from_healing():
     ]
     enc = CombatLogParser(file_year=2026)._aggregate_segment(segment, {})
     assert enc is not None
-    assert enc.total_healing == pytest.approx(50_000, abs=1), (
-        f"VE must be excluded. Got {enc.total_healing:,.0f}, expected 50,000"
+    assert enc.total_healing == pytest.approx(60_000, abs=1), (
+        f"VE is included in healing totals. Got {enc.total_healing:,.0f}, expected 60,000"
     )
     shadow = next((p for p in enc.participants if p["name"] == "Shadow"), None)
-    assert shadow is None or shadow["totalHealing"] == pytest.approx(0, abs=1), (
-        "Shadow's VE heal must not count toward their totalHealing"
+    assert shadow is not None and shadow["totalHealing"] == pytest.approx(10_000, abs=1), (
+        "Shadow's VE heal counts toward their totalHealing"
     )
 
 
 def test_judgement_of_light_excluded_from_healing():
-    """Judgement of Light heals (passive Paladin proc) must NOT count."""
+    """Judgement of Light heals count toward total_healing (not excluded).
+
+    Skada-WotLK counts JoL as healing done.
+    """
     ts_start = 46800.0
     segment = [
         ("4/19 13:00:00.000", [ENCOUNTER_START, "36612", '"Lord Marrowgar"', "4", "25"], ts_start),
@@ -1742,13 +1758,16 @@ def test_judgement_of_light_excluded_from_healing():
     ]
     enc = CombatLogParser(file_year=2026)._aggregate_segment(segment, {})
     assert enc is not None
-    assert enc.total_healing == pytest.approx(30_000, abs=1), (
-        f"JoL must be excluded. Got {enc.total_healing:,.0f}, expected 30,000"
+    assert enc.total_healing == pytest.approx(35_000, abs=1), (
+        f"JoL is included in healing totals. Got {enc.total_healing:,.0f}, expected 35,000"
     )
 
 
 def test_improved_leader_of_the_pack_excluded_from_healing():
-    """Improved Leader of the Pack heals (passive Druid proc) must NOT count."""
+    """Improved Leader of the Pack heals count toward total_healing (not excluded).
+
+    Skada-WotLK counts ILotP as healing done.
+    """
     ts_start = 46800.0
     segment = [
         ("4/19 13:00:00.000", [ENCOUNTER_START, "36612", '"Lord Marrowgar"', "4", "25"], ts_start),
@@ -1760,8 +1779,8 @@ def test_improved_leader_of_the_pack_excluded_from_healing():
     ]
     enc = CombatLogParser(file_year=2026)._aggregate_segment(segment, {})
     assert enc is not None
-    assert enc.total_healing == pytest.approx(20_000, abs=1), (
-        f"ILotP must be excluded. Got {enc.total_healing:,.0f}, expected 20,000"
+    assert enc.total_healing == pytest.approx(23_000, abs=1), (
+        f"ILotP is included in healing totals. Got {enc.total_healing:,.0f}, expected 23,000"
     )
 
 
