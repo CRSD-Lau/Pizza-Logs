@@ -1743,9 +1743,10 @@ def test_vampiric_embrace_excluded_from_healing():
 
 
 def test_judgement_of_light_excluded_from_healing():
-    """Judgement of Light heals count toward total_healing (not excluded).
+    """Judgement of Light heals must NOT count toward total_healing.
 
-    Skada-WotLK counts JoL as healing done.
+    Source: Skada-WoTLK Skada/Core/Tables.lua — JoL (spell ID 20267) is
+    explicitly listed in ignored_spells.heal and excluded from healing done.
     """
     ts_start = 46800.0
     segment = [
@@ -1758,8 +1759,8 @@ def test_judgement_of_light_excluded_from_healing():
     ]
     enc = CombatLogParser(file_year=2026)._aggregate_segment(segment, {})
     assert enc is not None
-    assert enc.total_healing == pytest.approx(35_000, abs=1), (
-        f"JoL is included in healing totals. Got {enc.total_healing:,.0f}, expected 35,000"
+    assert enc.total_healing == pytest.approx(30_000, abs=1), (
+        f"JoL must be excluded (Skada ignored_spells.heal). Got {enc.total_healing:,.0f}, expected 30,000"
     )
 
 

@@ -61,18 +61,20 @@ HEAL_EVENTS = {
     # SPELL_HEAL and SPELL_PERIODIC_HEAL.
 }
 
-# Spells explicitly excluded from healing-done totals.
+# Spells excluded from healing-done totals.
 #
-# Analysis (2026-04-26): switching to effective heal = parts[10] - parts[11]
-# (gross - overheal) is the correct formula.  With this formula, the previous
-# VE/JoL/ILotP exclusions are not needed and actually make results worse.
-# Skada-WoTLK source confirms these ARE counted in player healing totals.
+# Source: Skada-WoTLK Skada/Core/Tables.lua (ignored_spells.heal).
+# We replicate Skada exactly so website numbers match what players see in-game.
 #
-# Known remaining gap: ~21-28% below UWU reference values.  Likely cause:
-# Discipline Priest Power Word: Shield absorbs, which UWU counts as healing
-# but which appear in damage events (absorbed field), not SPELL_HEAL events.
-# This is tracked as a future enhancement.
-PASSIVE_HEAL_EXCLUSIONS: frozenset[str] = frozenset()
+# Confirmed EXCLUDED in Skada:
+#   - Judgement of Light (spell ID 20267 — explicitly in ignored_spells.heal)
+#
+# Confirmed INCLUDED in Skada (NOT in ignored_spells.heal):
+#   - Vampiric Embrace  — tracked as normal healing
+#   - Improved Leader of the Pack — tracked as normal healing
+PASSIVE_HEAL_EXCLUSIONS: frozenset[str] = frozenset({
+    "Judgement of Light",
+})
 
 UNIT_DIED_EVENT = "UNIT_DIED"
 ENCOUNTER_START  = "ENCOUNTER_START"
@@ -873,8 +875,7 @@ class CombatLogParser:
                 a.wow_class = SPELL_CLASS_MAP[spell_name]
 
             if is_heal:
-                # Skip passive proc heals that UWU excludes from healing-done
-                # metrics (Vampiric Embrace, Judgement of Light, ILotP, etc.).
+                # Skip spells in Skada's ignored_spells.heal (Tables.lua).
                 if spell_name in PASSIVE_HEAL_EXCLUSIONS:
                     continue
                 a.total_healing += eff_amount
