@@ -62,6 +62,21 @@ HEAL_EVENTS = {
     # SPELL_HEAL and SPELL_PERIODIC_HEAL.
 }
 
+# Passive proc heals that UWU (Warcraft Logs) explicitly excludes from
+# healing-done metrics. These appear in the combat log as valid SPELL_HEAL /
+# SPELL_PERIODIC_HEAL events, but UWU categorises them as "Environmental" or
+# "Passive" and does not attribute them to any player's healing total.
+#
+# Sources confirmed excluded by WarcraftLogs community documentation:
+#   • Vampiric Embrace — shadow-priest passive AoE heal
+#   • Judgement of Light — paladin passive judgement proc on the boss
+#   • Improved Leader of the Pack — druid passive crit-heal proc
+PASSIVE_HEAL_EXCLUSIONS: frozenset[str] = frozenset({
+    "Vampiric Embrace",
+    "Judgement of Light",
+    "Improved Leader of the Pack",
+})
+
 UNIT_DIED_EVENT = "UNIT_DIED"
 ENCOUNTER_START  = "ENCOUNTER_START"
 ENCOUNTER_END    = "ENCOUNTER_END"
@@ -838,6 +853,10 @@ class CombatLogParser:
                 a.wow_class = SPELL_CLASS_MAP[spell_name]
 
             if is_heal:
+                # Skip passive proc heals that UWU excludes from healing-done
+                # metrics (Vampiric Embrace, Judgement of Light, ILotP, etc.).
+                if spell_name in PASSIVE_HEAL_EXCLUSIONS:
+                    continue
                 a.total_healing += eff_amount
                 ss.healing += eff_amount
             else:

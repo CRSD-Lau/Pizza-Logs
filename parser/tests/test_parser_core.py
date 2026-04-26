@@ -1682,3 +1682,75 @@ def test_encounter_damage_includes_mechanic_unit_damage():
         f"Encounter total must include mechanic-unit damage. "
         f"Got {enc.total_damage:,.0f}, expected 150,000"
     )
+
+
+# ── Passive heal exclusions ───────────────────────────────────────────────────
+#
+# UWU (and Warcraft Logs) excludes passive proc heals from player healing totals:
+#   - Vampiric Embrace (Shadow Priest passive AoE heal)
+#   - Judgement of Light (Paladin passive proc on boss)
+#   - Improved Leader of the Pack (Druid passive talent proc)
+#
+# These heals appear in the combat log as SPELL_HEAL / SPELL_PERIODIC_HEAL events
+# but UWU categorises them as "environmental" and excludes them from healing
+# done metrics. We must match this exclusion to achieve parity.
+
+def test_vampiric_embrace_excluded_from_healing():
+    """Vampiric Embrace heals (passive shadow-priest AoE) must NOT count toward
+    total_healing or any participant's totalHealing."""
+    ts_start = 46800.0
+    segment = [
+        ("4/19 13:00:00.000", [ENCOUNTER_START, "36612", '"Lord Marrowgar"', "4", "25"], ts_start),
+        # Active healer heal — counts
+        ("4/19 13:00:05.000", _heal_parts(PLAYER_GUID, "Phyre", "0x0600000000000002", "Tank", 50_000), ts_start + 5.0),
+        # Vampiric Embrace — must NOT count
+        ("4/19 13:00:06.000", _heal_parts(PLAYER_GUID, "Shadow", "0x0600000000000002", "Tank", 10_000,
+                                           spell="Vampiric Embrace"), ts_start + 6.0),
+        ("4/19 13:01:00.000", _unit_died_parts("Lord Marrowgar"), ts_start + 60.0),
+        ("4/19 13:01:10.000", [ENCOUNTER_END, "36612", '"Lord Marrowgar"', "4", "25", "1"], ts_start + 70.0),
+    ]
+    enc = CombatLogParser(file_year=2026)._aggregate_segment(segment, {})
+    assert enc is not None
+    assert enc.total_healing == pytest.approx(50_000, abs=1), (
+        f"VE must be excluded. Got {enc.total_healing:,.0f}, expected 50,000"
+    )
+    shadow = next((p for p in enc.participants if p["name"] == "Shadow"), None)
+    assert shadow is None or shadow["totalHealing"] == pytest.approx(0, abs=1), (
+        "Shadow's VE heal must not count toward their totalHealing"
+    )
+
+
+def test_judgement_of_light_excluded_from_healing():
+    """Judgement of Light heals (passive Paladin proc) must NOT count."""
+    ts_start = 46800.0
+    segment = [
+        ("4/19 13:00:00.000", [ENCOUNTER_START, "36612", '"Lord Marrowgar"', "4", "25"], ts_start),
+        ("4/19 13:00:05.000", _heal_parts(PLAYER_GUID, "Phyre", "0x0600000000000002", "Tank", 30_000), ts_start + 5.0),
+        ("4/19 13:00:06.000", _heal_parts(PLAYER_GUID, "Retadin", "0x0600000000000003", "DPS", 5_000,
+                                           spell="Judgement of Light"), ts_start + 6.0),
+        ("4/19 13:01:00.000", _unit_died_parts("Lord Marrowgar"), ts_start + 60.0),
+        ("4/19 13:01:10.000", [ENCOUNTER_END, "36612", '"Lord Marrowgar"', "4", "25", "1"], ts_start + 70.0),
+    ]
+    enc = CombatLogParser(file_year=2026)._aggregate_segment(segment, {})
+    assert enc is not None
+    assert enc.total_healing == pytest.approx(30_000, abs=1), (
+        f"JoL must be excluded. Got {enc.total_healing:,.0f}, expected 30,000"
+    )
+
+
+def test_improved_leader_of_the_pack_excluded_from_healing():
+    """Improved Leader of the Pack heals (passive Druid proc) must NOT count."""
+    ts_start = 46800.0
+    segment = [
+        ("4/19 13:00:00.000", [ENCOUNTER_START, "36612", '"Lord Marrowgar"', "4", "25"], ts_start),
+        ("4/19 13:00:05.000", _heal_parts(PLAYER_GUID, "Phyre", "0x0600000000000002", "Tank", 20_000), ts_start + 5.0),
+        ("4/19 13:00:06.000", _heal_parts(PLAYER_GUID, "Kitty", "0x0600000000000004", "Tank2", 3_000,
+                                           spell="Improved Leader of the Pack"), ts_start + 6.0),
+        ("4/19 13:01:00.000", _unit_died_parts("Lord Marrowgar"), ts_start + 60.0),
+        ("4/19 13:01:10.000", [ENCOUNTER_END, "36612", '"Lord Marrowgar"', "4", "25", "1"], ts_start + 70.0),
+    ]
+    enc = CombatLogParser(file_year=2026)._aggregate_segment(segment, {})
+    assert enc is not None
+    assert enc.total_healing == pytest.approx(20_000, abs=1), (
+        f"ILotP must be excluded. Got {enc.total_healing:,.0f}, expected 20,000"
+    )
