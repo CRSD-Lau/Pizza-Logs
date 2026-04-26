@@ -8,6 +8,7 @@ node_modules/
 out/
 dist/
 .seed-build/
+tsconfig.tsbuildinfo
 
 # env
 .env
@@ -34,3 +35,12 @@ __pycache__/
 *.pyc
 *.pyo
 .pytest_cache/
+
+# combat log (large binary, not tracked)
+WoWCombatLog/
+
+# parser diagnostic/debug scripts
+parser/diag_*.py
+
+# claude worktrees
+.claude/worktrees/

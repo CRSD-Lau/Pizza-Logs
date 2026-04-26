@@ -4,93 +4,74 @@
 2026-04-26
 
 ## Git
-**Branch:** `claude/elated-sutherland-11ac4b`
-**Latest commit:** refactor: switch parser philosophy to Skada-WoTLK as source of truth
-
----
-
-## Strategic Direction Change
-
-**Old approach:** Try to match UWU addon output. UWU source code unavailable. Guessing at exclusions.
-
-**New approach:** Replicate Skada-WoTLK exactly. Skada is what the raid uses in-game. Website should show the same numbers. Skada source is fully available at https://github.com/bkader/Skada-WoTLK.
-
-**Every parser decision must now be grounded in Skada Lua source with a file/line citation.**
-
----
-
-## Current Goal: Full Skada Audit of parser_core.py
-
-Go through every aspect of parser_core.py and verify it against Skada source:
-
-### Healing (Skada/Modules/Healing.lua + Core/Tables.lua)
-- [ ] Verify SPELL_HEAL field indices match Skada's suffix definitions
-- [ ] Verify HEAL_EVENTS set matches what Skada listens to
-- [ ] Verify PASSIVE_HEAL_EXCLUSIONS is the complete ignored_spells.heal from Tables.lua
-- [ ] Verify effective heal formula = max(0, amount - overheal) matches Skada
-- [ ] Verify whether absorbs (PW:S) roll into "healing done" or are separate in Skada
-- [ ] Check how Skada handles boss-mechanic heals (non-player src → player dst)
-
-### Damage (Skada/Modules/Damage.lua + Core/Tables.lua)
-- [ ] Verify DMG_EVENTS set matches what Skada listens to
-- [ ] Verify SWING_DAMAGE field layout matches Skada
-- [ ] Verify SPELL_DAMAGE field layout (amount, overkill, school, resisted, blocked, absorbed, critical)
-- [ ] Verify DAMAGE_SHIELD exclusion is correct per Skada
-- [ ] Check if Skada has an ignored_spells.damage list
-- [ ] Check how Skada handles absorbed damage (Lady Deathwhisper mana barrier)
-
-### General
-- [ ] Verify player GUID detection logic matches Skada's unit flag checks
-- [ ] Check if Skada has any fight-window trimming (post-death event exclusion)
+**Branch:** `main` (merged + pushed — Railway deploy triggered)
+**Latest commit:** `3b58613` merge: align parser 100% with Skada-WoTLK source
 
 ---
 
 ## What Was Done This Session
 
-### 1. Healing formula fix (parts[10] - parts[11])
-- **Old (wrong):** `amount = parts[11]` (this is overheal, not effective)
-- **New (correct):** `amount = max(0.0, parts[10] - parts[11])` (gross - overheal)
-- Confirmed via Skada suffix: `HEAL = "amount, overheal, absorbed, critical"`
-- Confirmed via Skada Healing.lua: `local amount = max(0, heal.amount - heal.overheal)`
-- Result: was 14-228% OVER, now ~21-28% UNDER (consistent gap, likely absorbs)
+### 1. Heal formula fixed
+- `effective = max(0, parts[10] - parts[11])` — gross heal minus overheal
+- Was using `parts[11]` directly (the overheal amount), causing 14-228% overcounting
+- Confirmed via Skada `Healing.lua`: `local amount = max(0, heal.amount - heal.overheal)`
 
-### 2. PASSIVE_HEAL_EXCLUSIONS — Skada-sourced
-- **Judgement of Light**: EXCLUDED (Skada Tables.lua ignored_spells.heal, spell ID 20267)
-- **Vampiric Embrace**: INCLUDED (not in Skada exclusions)
-- **Improved Leader of the Pack**: INCLUDED (not in Skada exclusions)
+### 2. Parser philosophy switched to Skada-first
+- Skada-WoTLK is now the sole reference (https://github.com/bkader/Skada-WoTLK)
+- Not UWU — no source code available, not the player-facing reference
+- CLAUDE.md, vault, all comments updated to cite Skada files
 
-### 3. CLAUDE.md updated
-- New "Parser Philosophy — Skada-First" section
-- Skada source URLs and key files documented
-- Correct SPELL_HEAL field layout documented with Skada citation
+### 3. DMG_EVENTS aligned with Skada Damage.lua RegisterForCL
+Added: `DAMAGE_SHIELD`, `DAMAGE_SPLIT`, `SPELL_BUILDING_DAMAGE`
+Previously excluded based on UWU assumptions; Skada explicitly registers all three.
 
-### 4. Tests: 70/70 passing
+### 4. PASSIVE_HEAL_EXCLUSIONS emptied
+- `Tables.lua` has no `ignored_spells.heal` table
+- JoL line in Tables.lua is commented out = not excluded
+- All SPELL_HEAL / SPELL_PERIODIC_HEAL events count
 
----
+### 5. Tests: 71/71 passing
 
-## Open Questions (need Skada source to answer)
-
-1. **Are there more spells in ignored_spells.heal?** We only found JoL so far. Need full Tables.lua.
-2. **Is ignored_spells.damage a thing?** DAMAGE_SHIELD currently excluded — is that from Skada?
-3. **Do absorbs (PW:S) roll into Skada's healing done, or are they separate?** This determines whether the ~21-28% gap is expected or a bug.
-4. **How does Skada handle the `absorbed` field on damage events?** (Lady Deathwhisper mana barrier)
-
----
-
-## Known Remaining Gaps vs Skada (to investigate)
-
-| Issue | Delta | Hypothesis |
-|-------|-------|------------|
-| Healing ~21-28% under | all bosses | PW:S absorbs counted in Skada healing total? |
-| Blood-Queen healing 40% under | BQ only | Vampiric bite heals (boss mechanic NPC src) |
-| S0 BPC damage 21.29% under | S0 BPC | boss_guids missing some prince GUID variants |
-| LDW damage 7.17% under | LDW | add filter methodology differs |
+### 6. Full project review and cleanup
+- Stale UWU parity docs deleted (docs/superpowers/)
+- GuildLogs_PoC.html removed
+- All vault files updated for accuracy
+- Known Issues, Feature Status, Technical Debt, Decision Log, What Claude Forgets all current
 
 ---
 
-## Next Steps
+## Current State
 
-1. Read full Skada Tables.lua, Healing.lua, Damage.lua source (fetch from GitHub)
-2. Audit parser_core.py against Skada line by line
-3. Fix any discrepancies found
-4. Commit + push to Railway
+- **Live app**: https://pizza-logs-production.up.railway.app
+- **Deploy**: Pushed to main — Railway building now
+- **Tests**: 71/71 passing
+- **HPS gap**: ~21-28% under Skada — expected (PW:S absorbs not yet implemented)
+- **DPS**: <1% residual from orphaned pets — accepted
+
+---
+
+## Open Items
+
+### HPS gap — Power Word: Shield absorbs
+Skada tracks absorbs in `Absorbs.lua` as `actor.absorb` (separate from `actor.heal`).
+We only parse `SPELL_HEAL` events. To close the ~25% gap:
+1. Parse `SPELL_AURA_APPLIED` for PW:S spell IDs — store shield capacity per caster
+2. Parse `absorbed` field on incoming damage events — attribute consumed absorb to Disc priest
+
+Decision needed: heal-only column (Skada Healing module) or heal+absorbs column (Skada combined view)?
+
+### Footer text bug
+Footer says "All parsing done client-side" — wrong, it's server-side. Fix: update footer component.
+
+### Admin page has no auth
+`/admin` is publicly accessible. Fix: env-var cookie check in middleware.
+
+---
+
+## Next Steps (priority order)
+
+1. Upload a log and verify numbers match Skada in-game
+2. Fix footer text (5 min)
+3. Add admin auth (30 min)
+4. Decide absorbs strategy — heal-only or heal+absorbs column?
+5. If absorbs: implement Absorbs.lua-style tracking

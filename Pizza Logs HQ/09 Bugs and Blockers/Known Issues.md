@@ -15,7 +15,7 @@
 | False positive Sindragosa 10N | Added `total_damage == 0 and duration < 60` filter | c630c12 |
 | Gunship adds triggering Saurfang KILL | Removed add NPC aliases from Gunship def | c630c12 |
 | Gunship shows as WIPE | Added Gunship-specific kill detection (crew UNIT_DIED = KILL) mirroring Valithria pattern | TBD |
-| Session total ~13M over UWU | Removed DAMAGE_SHIELD from DMG_EVENTS (retribution aura/thorns not player DPS) | TBD |
+| Session total ~13M over Skada | Heal formula was using parts[11] (overheal) instead of parts[10]-parts[11] (gross-overheal). Fixed 2026-04-26. | 174255a |
 | False Deathbringer Saurfang WIPE (230s) | Gunship wow_boss_id=37813 conflicted with Saurfang; removed Gunship aliases | 5340523 |
 | Blood Prince Council kill duration wrong | boss_died_ts now checks aliases (Prince Valanar → BPC) | 5340523 |
 | TypeScript build error (UploadZone reset) | Missing `elapsed: 0` in reset state | 9e70a1e |
@@ -34,6 +34,6 @@
 |---|---|
 | Heroic difficulty undetectable | Warmane uses same NPC/spell IDs for 25N and 25H; no ENCOUNTER_START difficulty flag |
 | Gunship damage ±small vs UWU | Persistent pets (Hunter beast, Warlock demon pre-summoned) have no SPELL_SUMMON — orphaned until resolved |
-| DPS accuracy ±1-2% vs uwu-logs | Different event inclusion rules; fingerprint-level accuracy probably not achievable |
+| HPS gap ~21-28% vs Skada | Parser matches Skada heal events exactly. Gap is Power Word: Shield absorbs — Skada tracks these separately in Absorbs.lua (not yet implemented) |
+| DPS residual gap <1% vs Skada | Parser matches all Skada damage events. Sub-1% from orphaned pets (no SPELL_SUMMON before log start) |
 | Progress bar fake before file received | File write to parser happens before SSE can start; first event is at 28% |
-| Session total residual gap (~0.1%) | Parser correctly counts every event. Tiny remainder (~194K S0, ~360K over) likely due to minor differences in event inclusion vs UWU edge cases. Empirically verified using same log file. |

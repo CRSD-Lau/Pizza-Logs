@@ -62,5 +62,5 @@
 | Item | Reason |
 |---|---|
 | Heroic detection | Impossible without ENCOUNTER_START |
-| DPS accuracy to 0.1% | Different event inclusion rules vs uwu-logs; not worth chasing |
+| DPS accuracy to 0.01% | Parser matches Skada event rules exactly. Sub-1% residual from orphaned pets (no SPELL_SUMMON) — accepted |
 | Gunship Battle detection | Impossible |

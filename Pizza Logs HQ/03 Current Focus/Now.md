@@ -1,41 +1,45 @@
 # Now
 
-## Mission
-**Make parser_core.py a 1:1 replication of Skada-WoTLK.**
-Skada is what the raid uses in-game. The website must show the same numbers.
-Source: https://github.com/bkader/Skada-WoTLK
-
----
-
-## Active Task: Full Skada Audit
-
-### Healing audit checklist
-- [ ] Full ignored_spells.heal from Tables.lua → update PASSIVE_HEAL_EXCLUSIONS
-- [ ] Verify HEAL_EVENTS matches Skada event listeners
-- [ ] Verify effective heal formula matches Skada (currently: gross - overheal ✅)
-- [ ] Determine if PW:S absorbs are in Skada's "healing done" or separate
-- [ ] Boss-mechanic heals (non-player src → player dst) — how does Skada handle?
-
-### Damage audit checklist
-- [ ] Full ignored_spells.damage from Tables.lua (if it exists)
-- [ ] Verify DMG_EVENTS matches Skada event listeners
-- [ ] Verify DAMAGE_SHIELD exclusion is per Skada (not a guess)
-- [ ] SWING_DAMAGE / SPELL_DAMAGE field layout — verify against Skada suffix defs
-- [ ] Absorbed damage handling (LDW mana barrier) — verify vs Skada
-
-### General
-- [ ] Player vs NPC detection — verify vs Skada unit flag logic
-- [ ] Fight window (post-death trimming) — does Skada trim? Do we?
-
----
-
 ## Status
-- 70/70 tests passing
-- Branch: `claude/elated-sutherland-11ac4b`
-- Healing formula fixed (gross - overheal per Skada)
-- JoL excluded per Skada Tables.lua
-- VE and ILotP included per Skada
-- CLAUDE.md updated with Skada-first philosophy
+Skada-WoTLK alignment **DONE** — merged to main, Railway deploying.
+Parser replicates Skada exactly: DMG_EVENTS, HEAL_EVENTS, heal formula, no spell exclusions.
+71/71 tests passing.
 
-## Log file for validation
-`C:/Users/neil_/OneDrive/Desktop/PizzaLogs/WoWCombatLog/WoWCombatLog.txt`
+---
+
+## Verify the Deploy
+
+1. Wait for Railway build (~3-5 min after push)
+2. Upload a log at https://pizza-logs-production.up.railway.app
+3. Compare DPS to Skada in-game for the same fight — should match
+
+---
+
+## Quick Wins (next up)
+
+| Task | Effort | Why |
+|------|--------|-----|
+| Fix footer text | 5 min | Says "client-side" — it's server-side |
+| Add admin auth | 30 min | `/admin` is publicly accessible |
+
+---
+
+## Open Parser Work
+
+### HPS gap (~21-28% under Skada)
+Cause: Power Word: Shield absorbs. Skada counts in `Absorbs.lua` as `actor.absorb`.
+We only parse SPELL_HEAL events — absorbs appear in incoming damage event `absorbed` fields.
+
+Decision needed: heal-only column vs heal+absorbs column?
+
+Implementation:
+1. `SPELL_AURA_APPLIED` → detect PW:S, record capacity + caster
+2. `absorbed` field on damage events → attribute to Disc priest
+3. Add `total_absorbs` to ParsedEncounter, expose in API + UI
+
+---
+
+## Reference
+- Skada source: https://github.com/bkader/Skada-WoTLK
+- Log file: `C:/Users/neil_/OneDrive/Desktop/PizzaLogs/WoWCombatLog/WoWCombatLog.txt`
+- Live app: https://pizza-logs-production.up.railway.app

@@ -5,7 +5,7 @@
 At the start of EVERY session (before writing any code or answering any question),
 Claude MUST read these files in order:
 
-1. `Pizza Logs HQ/00 Inbox/START HERE.md` — master context, key technical facts
+1. `Pizza Logs HQ/00 Inbox/START HERE.md` — project overview, stack, key facts
 2. `Pizza Logs HQ/02 Build Log/Latest Handoff.md` — what happened last session
 3. `Pizza Logs HQ/03 Current Focus/Now.md` — what's actively in progress
 
@@ -51,7 +51,7 @@ Key files:
 - `Skada/Modules/Healing.lua` — healing done tracking, ignored_spells.heal, effective heal formula
 - `Skada/Modules/Absorbs.lua` — shield absorb tracking (separate from healing)
 - `Skada/Modules/Damage.lua` — damage done tracking
-- `Skada/Core/Tables.lua` — ignored_spells.heal exclusion list (JoL is excluded here)
+- `Skada/Core/Tables.lua` — spell exclusion lists (buff/debuff/time — NO ignored_spells.heal)
 - `Skada/Core/Functions.lua` — event suffix/field index definitions
 
 ---
@@ -71,22 +71,29 @@ Key files:
 - Gunship Battle: **undetectable** — do not attempt
 - KILL duration: use **boss death timestamp**, not last segment event
 
-## Healing Exclusions (per Skada Tables.lua `ignored_spells.heal`)
+## Healing Exclusions (per Skada `Tables.lua`)
 
-- **Judgement of Light** — EXCLUDED (explicitly in Skada's ignored_spells.heal)
-- **Vampiric Embrace** — INCLUDED (not in Skada exclusion list)
-- **Improved Leader of the Pack** — INCLUDED (not in Skada exclusion list)
+Tables.lua has **no `ignored_spells.heal` table** — Skada excludes NO spells from
+healing-done totals. Every SPELL_HEAL / SPELL_PERIODIC_HEAL event counts.
+- **Judgement of Light** — INCLUDED (line in Tables.lua is commented out = not excluded)
+- **Vampiric Embrace** — INCLUDED
+- **Improved Leader of the Pack** — INCLUDED
+
+## DMG_EVENTS (per Skada `Damage.lua` RegisterForCL)
+
+```python
+DMG_EVENTS = {
+    "SPELL_DAMAGE", "SWING_DAMAGE", "RANGE_DAMAGE", "SPELL_PERIODIC_DAMAGE",
+    "DAMAGE_SHIELD",         # Thorns / Ret Aura reflect
+    "DAMAGE_SPLIT",          # Shared-damage mechanics
+    "SPELL_BUILDING_DAMAGE", # Gunship cannons etc.
+}
+```
 
 ## Absorbs (Skada `Absorbs.lua` — separate from Healing module)
 
-Skada tracks absorbs (Power Word: Shield, etc.) in a dedicated module, separate from
-`actor.heal`. PW:S absorbs are detected via:
-1. `SPELL_AURA_APPLIED` / `SPELL_AURA_REFRESH` — shield applied, store capacity
-2. `absorbed` field on incoming damage events — count what was actually consumed
-
-Whether to include absorbs in the website's "healing done" column is TBD — we need to
-decide if we want to match Skada's Healing module (heal-only) or Skada's combined
-Healing+Absorbs view.
+Skada tracks Power Word: Shield and other absorbs in a **separate** module (`actor.absorb`
+vs `actor.heal`). Not currently implemented in our parser — future enhancement.
 
 ## Vault Deep Dives
 
@@ -94,5 +101,5 @@ For detailed reference during implementation:
 - Architecture: `Pizza Logs HQ/04 Architecture/System Architecture.md`
 - Parser internals: `Pizza Logs HQ/04 Architecture/Parser Deep Dive.md`
 - Feature status: `Pizza Logs HQ/05 Features/Feature Status.md`
-- Railway ops: `Pizza Logs HQ/06 Deployment/Railway Guide.md`
+- Railway ops: `Pizza Logs HQ/06 Deployment/Railway Runbook.md`
 - Active bugs: `Pizza Logs HQ/09 Bugs and Blockers/Known Issues.md`

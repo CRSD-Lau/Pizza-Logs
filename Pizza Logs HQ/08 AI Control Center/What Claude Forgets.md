@@ -42,6 +42,15 @@
 - `ReadableStream` controller: use safe `send/close` wrappers that swallow ERR_INVALID_STATE
 - Upload status: move `update(DONE)` **before** `computeMilestones`, not after
 
+## Parser — Skada Source of Truth
+
+- **Reference = Skada-WoTLK** (https://github.com/bkader/Skada-WoTLK), NOT UWU
+- Every parser decision needs a Skada file+line citation. If unsure, fetch the source.
+- `Tables.lua` has **no `ignored_spells.heal`** — nothing is excluded from healing done
+- `DAMAGE_SHIELD`, `DAMAGE_SPLIT`, `SPELL_BUILDING_DAMAGE` are **in** DMG_EVENTS (Skada includes them)
+- Heal formula is `max(0, parts[10] - parts[11])` — gross minus overheal, not parts[11] alone
+- `SPELL_HEAL_ABSORBED` is **not** tracked by Skada — keep it out of HEAL_EVENTS
+
 ---
 
 ## Things That Always Break

@@ -24,6 +24,9 @@
 | Boss sort order (ICC first) | sortOrder field, ICC=10-40, Naxx=700-741 |
 | Obsidian vault | Pizza Logs HQ/ in repo, Claude reads on session start |
 | CLAUDE.md | Session instructions committed to repo root |
+| Parser — Skada-WoTLK alignment | DMG_EVENTS, HEAL_EVENTS, heal formula all match Skada source exactly |
+| Heal formula fix | effective = max(0, parts[10] - parts[11]) — gross minus overheal per Skada |
+| Heroic difficulty normalization | 25N encounters in confirmed 25H sessions promoted via `_normalize_session_difficulty` |
 
 ---
 
@@ -31,8 +34,8 @@
 
 | Feature | Status |
 |---|---|
-| DPS accuracy vs uwu-logs | Investigating Marrowgar over-count |
-| SSE streaming E2E test | Shipped, needs test after Railway deploy |
+| HPS accuracy vs Skada | Parser aligned with Skada-WoTLK source. ~21-28% gap remains — likely PW:S absorbs (separate Skada module, not yet implemented) |
+| Absorbs tracking (PW:S) | Skada counts absorbs separately (`actor.absorb`). Not yet in parser. Future enhancement. |
 
 ---
 

@@ -45,6 +45,20 @@
 
 ---
 
+## 2026-04-26 — Skada-WoTLK as sole parser reference
+
+**Decision:** Parser replicates Skada-WoTLK exactly. Not UWU, not Warcraft Logs, not guesswork.  
+**Why:** Skada is what the raid uses in-game. Website showing the same numbers as Skada = players immediately trust it. UWU source code is unavailable and UWU is not the player-facing reference.  
+**How:** Every DMG_EVENTS entry, HEAL_EVENTS entry, spell exclusion, and field interpretation must cite a Skada Lua file + line. If Skada does it, we do it. If Skada doesn't, we don't.  
+**Source:** https://github.com/bkader/Skada-WoTLK — Damage.lua, Healing.lua, Tables.lua, Functions.lua  
+**Key findings from audit:**
+- Heal formula: `max(0, parts[10] - parts[11])` — gross minus overheal (was wrong: using overheal as amount)
+- DAMAGE_SHIELD, DAMAGE_SPLIT, SPELL_BUILDING_DAMAGE all included (Damage.lua RegisterForCL)
+- Tables.lua has no `ignored_spells.heal` — nothing excluded from healing done
+- SPELL_HEAL_ABSORBED not registered by Skada — correctly excluded
+
+---
+
 ## Early — No heroic detection
 
 **Decision:** Don't attempt to detect 25H vs 25N from log events  
