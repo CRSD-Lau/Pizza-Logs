@@ -1,7 +1,7 @@
 # Now
 
 ## Status
-Damage regression fix **DONE** — 64/64 tests green, 14/26 UWU checks passing.
+S0 difficulty detection fix **DONE** — 70/70 tests green, 16/30 UWU checks passing.
 
 ---
 
@@ -9,44 +9,40 @@ Damage regression fix **DONE** — 64/64 tests green, 14/26 UWU checks passing.
 
 | Change | File | Status |
 |--------|------|--------|
-| Add `filter_add_damage: bool = False` to BossDef | `parser/bosses.py` | ✅ |
-| Set `filter_add_damage=True` on LDW and BPC only | `parser/bosses.py` | ✅ |
-| Apply boss_guids filter only when `boss_def.filter_add_damage=True` | `parser/parser_core.py` | ✅ |
-| TDD test: mechanic-unit damage included when filter_add_damage=False | `parser/tests/test_parser_core.py` | ✅ |
-| Boss-mechanic healing accumulator for BQ vampiric bites (prev session) | `parser/parser_core.py` | ✅ |
+| Remove wrong heroic markers: `backlash` (Sindragosa), `empowered shock vortex/shadow lance/blood` (BPC) | `parser/parser_core.py` | ✅ |
+| Extend `_normalize_session_difficulty` to promote 25N→25H in confirmed heroic sessions | `parser/parser_core.py` | ✅ |
+| TDD tests: Sindragosa 10N backlash stays 10N, BPC 10N empowered spell stays 10N, 25N Sindragosa in 25H session promoted | `parser/tests/test_parser_core.py` | ✅ |
+| Update existing normalize test: 25N in 25H session now correctly promoted to 25H | `parser/tests/test_parser_core.py` | ✅ |
+| Update UWU reference: LDW difficulty 25N → 25H | `parser/tests/validate_uwu.py` | ✅ |
+| VE/JoL/ILotP healing exclusion (prev session) | `parser/parser_core.py` | ✅ |
 
 ---
 
 ## Open Parser Issues (not yet fixed)
 
-### Healing overcounting (55-265% over UWU on all non-BQ bosses)
-- Parts[11] (effective heal) is being used — that's correct
-- Still massively over for Marrowgar (+55%), Saurfang (+264%), BPC (+127%)
-- Root cause: UWU likely excludes passive proc heals (Vampiric Embrace, JoL, ILotP)
-- Need to identify which SPELL_PERIODIC_HEAL events UWU excludes
+### Healing overcounting (14–228% over UWU on S1 bosses)
+- Marrowgar: 14.57% over (was 55% before VE/JoL/ILotP exclusion — improved)
+- Saurfang, BPC: still massively over
+- Root cause: additional passive/proc heals that UWU excludes, unknown which
 
-### Blood-Queen healing undercounted (33.75% under UWU)
-- Boss-mechanic accumulator added but BQ still 33.75% short
-- Essence of the Blood Queen vampiric bites from S1 25H kill window may use different GUIDs
-- Need to inspect actual log events around BQ segment to see what heals are logged
+### Blood-Queen healing undercounted (40% under)
+- UWU: 58.78M, parser: ~35.2M — missing ~23.6M
+- Vampiric bite heals from boss mechanic not fully captured
 
-### Lady Deathwhisper damage undercounted (7.17% under UWU)
-- Was 34.92% over (add damage), now 7.17% under (adds correctly filtered)
-- Diff = ~2.5M — could be LDW phase 1 absorbed damage, or some LDW GUID not in boss_guids
-- Lower priority
+### LDW damage undercounted (7.17%)
+- Low priority — unclear without UWU's exact add-filter methodology
 
-### S0 encounters missing (Sindragosa, BPC 10N)
-- Not found at session_index=0
-- Both are from a 10N session (different night from the 25H session)
-- Session indexing bug — investigate _assign_session_indices
+### S0 BPC damage undercounted (21.29%)
+- Was MISSING before this session; now found at 10N
+- 8.18M vs UWU 10.40M — boss_guids may not capture all prince GUID forms in 10N
 
 ---
 
 ## Next Action
 
 Priority order:
-1. Investigate healing overcounting — what does UWU exclude from SPELL_PERIODIC_HEAL?
-2. Fix BQ healing — inspect log events around BQ encounter for boss-sourced heals
-3. Fix S0 missing sessions — check session gap detection
+1. Investigate healing overcounting — what other spells does UWU exclude beyond VE/JoL/ILotP?
+2. Fix BQ healing undercount — inspect which vampiric bite events are being missed
+3. Fix S0 BPC damage undercount — check boss_guids for 10N segment
 
-**Log file**: `C:/Users/neil_/Downloads/WoWCombatLog/WoWCombatLog.txt`
+**Log file**: `C:/Users/neil_/OneDrive/Desktop/PizzaLogs/WoWCombatLog/WoWCombatLog.txt`

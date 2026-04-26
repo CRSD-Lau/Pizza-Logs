@@ -285,9 +285,16 @@ def test_gunship_difficulty_unchanged_in_all_normal_session():
     assert gunship.difficulty == "25N"
 
 
-def test_non_gunship_difficulty_not_changed_by_normalization():
-    """Lady Deathwhisper at 25N in a heroic session must NOT be changed —
-    only Gunship gets the special session-inference treatment."""
+def test_25n_in_25h_session_promoted_by_normalization():
+    """Any 25N encounter inside a confirmed 25H session must be promoted to 25H.
+
+    In ICC (and all WotLK raids) 25N and 25H share a single lockout — you cannot
+    mix difficulties within a session.  So if Marrowgar is detected as 25H (via
+    'Bone Slice' marker), every other 25N encounter in the same session is actually
+    heroic and should be promoted.  This handles bosses whose heroic markers were
+    removed because they also fire in 10N on Warmane (Sindragosa, BPC).
+    10N encounters are intentionally left alone.
+    """
     encounters = [
         make_encounter("Lord Marrowgar", difficulty="25H", session_index=0),
         make_encounter("Lady Deathwhisper", difficulty="25N", session_index=0),
@@ -295,7 +302,9 @@ def test_non_gunship_difficulty_not_changed_by_normalization():
     ]
     CombatLogParser._normalize_session_difficulty(encounters)
     dw = next(e for e in encounters if "deathwhisper" in e.boss_name.lower())
-    assert dw.difficulty == "25N"
+    assert dw.difficulty == "25H", (
+        f"Lady Deathwhisper 25N in a 25H session must be promoted to '25H', got '{dw.difficulty}'"
+    )
 
 
 def test_gunship_difficulty_not_cross_contaminated_across_sessions():
@@ -1753,4 +1762,96 @@ def test_improved_leader_of_the_pack_excluded_from_healing():
     assert enc is not None
     assert enc.total_healing == pytest.approx(20_000, abs=1), (
         f"ILotP must be excluded. Got {enc.total_healing:,.0f}, expected 20,000"
+    )
+
+
+# ── S0 difficulty detection: Warmane 10N bosses with heroic-looking spells ─────
+
+def _heuristic_segment_10n(boss_name: str, heroic_spell: str,
+                            extra_player_guids: int = 0) -> list[tuple[str, list[str], float]]:
+    """
+    Build a heuristic segment (no ENCOUNTER_START) for a boss fight with a
+    given heroic_spell in it and ≤10 unique player GUIDs — simulating a Warmane
+    10N pull where certain spells appear despite not being heroic-exclusive.
+
+    extra_player_guids: additional players beyond the default 1, up to 9 more.
+    """
+    ts = 46800.0
+    boss_npc_guid = "0xF130000000000099"
+    # One player hits the boss
+    seg: list[tuple[str, list[str], float]] = [
+        (
+            "4/19 13:00:00.000",
+            _spell_damage_parts(PLAYER_GUID, "PlayerA", boss_npc_guid, boss_name, 100_000),
+            ts,
+        ),
+    ]
+    # Extra players (still ≤10 total)
+    for i in range(min(extra_player_guids, 9)):
+        pg = f"0x060000000000{i + 2:04d}"
+        seg.append((
+            "4/19 13:00:01.000",
+            _spell_damage_parts(pg, f"Player{i+2}", boss_npc_guid, boss_name, 50_000),
+            ts + 1.0 + i,
+        ))
+    # Heroic-looking spell fires — should NOT upgrade to heroic for 10N
+    seg.append((
+        "4/19 13:00:10.000",
+        _spell_damage_parts(boss_npc_guid, boss_name, PLAYER_GUID, "PlayerA",
+                            5_000, spell=heroic_spell),
+        ts + 10.0,
+    ))
+    # Boss dies → outcome = KILL
+    seg.append((
+        "4/19 13:01:10.000",
+        _unit_died_parts(boss_name),
+        ts + 70.0,
+    ))
+    return seg
+
+
+def test_sindragosa_10n_backlash_does_not_upgrade_to_heroic():
+    """
+    On Warmane, Sindragosa 10N also logs 'Backlash' (Unchained Magic self-damage).
+    A Sindragosa segment with ≤10 player GUIDs must stay '10N', not be upgraded
+    to '10H' by the heroic-spell-marker detection.
+    """
+    seg = _heuristic_segment_10n("Sindragosa", "Backlash", extra_player_guids=4)
+    enc = CombatLogParser(file_year=2026)._aggregate_segment(seg, {})
+    assert enc is not None, "Should produce an encounter"
+    assert enc.difficulty == "10N", (
+        f"Sindragosa 10N with Backlash must stay '10N', got '{enc.difficulty}'"
+    )
+
+
+def test_bpc_10n_empowered_shock_vortex_does_not_upgrade_to_heroic():
+    """
+    On Warmane, Blood Prince Council 10N logs 'Empowered Shock Vortex'.
+    A BPC segment with ≤10 player GUIDs must stay '10N', not be upgraded to '10H'.
+    """
+    seg = _heuristic_segment_10n("Prince Valanar", "Empowered Shock Vortex",
+                                  extra_player_guids=4)
+    enc = CombatLogParser(file_year=2026)._aggregate_segment(seg, {})
+    assert enc is not None, "Should produce an encounter"
+    assert enc.difficulty == "10N", (
+        f"BPC 10N with Empowered Shock Vortex must stay '10N', got '{enc.difficulty}'"
+    )
+
+
+def test_normalize_session_difficulty_upgrades_25n_sindragosa_to_25h():
+    """
+    When a session has other 25H encounters (detected via reliable markers like
+    'Bone Slice' on Marrowgar), any 25N encounter in the same session must be
+    upgraded to 25H by _normalize_session_difficulty.
+
+    This handles Sindragosa and BPC in a 25H session where their own heroic
+    spell markers have been removed (they fire in 10N too on Warmane).
+    """
+    marrowgar_25h = make_encounter("Lord Marrowgar", difficulty="25H", session_index=0)
+    sindragosa_25n = make_encounter("Sindragosa", difficulty="25N", session_index=0)
+    encounters = [marrowgar_25h, sindragosa_25n]
+    CombatLogParser._normalize_session_difficulty(encounters)
+    assert sindragosa_25n.difficulty == "25H", (
+        f"Sindragosa 25N in a 25H session must be upgraded to '25H', "
+        f"got '{sindragosa_25n.difficulty}'"
     )

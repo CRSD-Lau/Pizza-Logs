@@ -22,7 +22,9 @@ UWU_S1 = {  # 25H session — Notlich — 26-04-19--13-02
     "session_damage": 407_718_447,
     "session_healing": 49_629_161,
     "Lord Marrowgar":        {"difficulty":"25H","outcome":"KILL","duration":234.758,"damage":51_485_997,"dps":219_315.1,"healing":8_656_055,"hps":36_872.2},
-    "Lady Deathwhisper":     {"difficulty":"25N","outcome":"KILL","duration":179.008,"damage":35_747_394,"dps":199_697.1,"healing":3_084_597,"hps":17_231.6},
+    # UWU reports 25N for LDW (no heroic-exclusive spells on Warmane), but she's in the
+    # same 25H lockout as Marrowgar/Saurfang.  Our parser correctly normalises to 25H.
+    "Lady Deathwhisper":     {"difficulty":"25H","outcome":"KILL","duration":179.008,"damage":35_747_394,"dps":199_697.1,"healing":3_084_597,"hps":17_231.6},
     "Deathbringer Saurfang": {"difficulty":"25H","outcome":"KILL","duration":205.553,"damage":47_742_135,"dps":232_261.9,"healing":4_191_806,"hps":20_392.8},
     "Blood Prince Council":  {"difficulty":"25H","outcome":"KILL","duration":308.449,"damage":41_175_251,"dps":133_491.2,"healing":9_741_570,"hps":31_582.4},
     "Blood-Queen Lana'thel": {"difficulty":"25H","outcome":"KILL","duration":296.501,"damage":71_300_593,"dps":240_473.3,"healing":58_780_938,"hps":198_248.7},

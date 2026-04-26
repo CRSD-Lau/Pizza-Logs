@@ -29,16 +29,15 @@ HEROIC_SPELL_MARKERS: frozenset[str] = frozenset({
     "bone slice",
     # Deathbringer Saurfang (ICC) — heroic debuff DoT
     "rune of blood",
-    # Blood Prince Council (ICC) — empowered abilities are heroic-only
-    "empowered shock vortex",
-    "empowered shadow lance",
-    "empowered blood",
     # Blood-Queen Lana'thel (ICC) — heroic group link mechanic
     "pact of the darkfallen",
     # Professor Putricide (ICC) — spreads between players in heroic only
     "unbound plague",
-    # Sindragosa (ICC) — self-damage from Unchained Magic stacks (heroic only)
-    "backlash",
+    # NOTE: "backlash" (Sindragosa) and "empowered shock vortex" / "empowered shadow lance" /
+    # "empowered blood" (Blood Prince Council) are intentionally EXCLUDED here.
+    # On Warmane these spells also appear in 10N, so they cannot be used as heroic-exclusive
+    # markers.  Sindragosa and BPC in a 25H session instead inherit the session's heroic
+    # difficulty via _normalize_session_difficulty (25N → 25H promotion).
 })
 
 DMG_EVENTS = {
@@ -312,14 +311,19 @@ class CombatLogParser:
 
     @staticmethod
     def _normalize_session_difficulty(encounters: list["ParsedEncounter"]) -> None:
-        """Upgrade Gunship Battle difficulty to match the rest of the session.
+        """Normalize encounter difficulties within a session.
 
-        Gunship has no heroic-specific spells so Warmane logs its difficultyID
-        as 4 (25N) even on a heroic kill. If any other encounter in the same
-        session is heroic, Gunship inherits that difficulty.
-        Only Gunship gets this treatment — other bosses that appear as normal
-        in a heroic session (e.g. Lady Deathwhisper on a 25N attempt) are left
-        unchanged.
+        Two cases handled:
+
+        1. Gunship Battle: Warmane emits difficultyID=4 (25N) even on heroic kills
+           because the boss has no heroic-exclusive spells.  Always inherit from session.
+
+        2. 25N encounters in a confirmed 25H session: some bosses (Sindragosa, Blood Prince
+           Council) have spells that look heroic-exclusive but also appear in 10N on Warmane,
+           so their markers were removed from HEROIC_SPELL_MARKERS.  In a 25H session (where
+           other bosses confirmed heroic via reliable markers like Marrowgar "Bone Slice" or
+           Saurfang "Rune of Blood") any remaining 25N encounter is promoted to 25H.
+           10N encounters are never promoted — group-size detection is reliable.
         """
         by_session: dict[int, list["ParsedEncounter"]] = {}
         for enc in encounters:
@@ -332,9 +336,17 @@ class CombatLogParser:
             if not heroic_diff:
                 continue
             for enc in session_encs:
-                if enc.boss_name and "gunship" in enc.boss_name.lower():
-                    if enc.difficulty not in ("25H", "10H"):
-                        enc.difficulty = heroic_diff
+                if enc.difficulty in ("25H", "10H"):
+                    continue  # already heroic — no change needed
+                bn = (enc.boss_name or "").lower()
+                if "gunship" in bn:
+                    # Gunship: always inherit session difficulty
+                    enc.difficulty = heroic_diff
+                elif heroic_diff == "25H" and enc.difficulty == "25N":
+                    # 25N encounter in a confirmed 25H session → promote to 25H.
+                    # 10N encounters are intentionally left alone (10N and 10H can
+                    # coexist across sessions; group-size detection is reliable for 10).
+                    enc.difficulty = "25H"
 
     @staticmethod
     def _assign_session_indices(
