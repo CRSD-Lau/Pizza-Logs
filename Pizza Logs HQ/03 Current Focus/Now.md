@@ -1,39 +1,41 @@
 # Now
 
 ## Status
-Repo fully clean. Main only. Railway deployed.
-Parser replicates Skada exactly: DMG_EVENTS, HEAL_EVENTS, heal formula, no spell exclusions.
-71/71 tests passing. README accurate.
+Repo clean. Main only. Railway deployed. 71/71 tests passing.
 
 ---
 
-## Verify the Deploy
+## Next Up
 
-1. Wait for Railway build (~3-5 min after push)
-2. Upload a log at https://pizza-logs-production.up.railway.app
-3. Compare DPS to Skada in-game for the same fight — should match
-
----
-
-## Quick Wins (next up)
-
-| Task | Effort | Why |
-|------|--------|-----|
+| Task | Type | Notes |
+|------|------|-------|
+| Fix Hardcore vs Normal detection | BUG | Regression — difficulty not distinguishing correctly |
+| Stats / Analytics page | FEATURE | Class comparisons, raid comparisons, all-time trends, graphs |
+| Verify Skada numbers in-game | VERIFY | Neil to do manually — deferred to next week |
+| Absorbs (PW:S) | FEATURE | Decision: combined Healing+Absorbs column. Do after verification. |
 
 ---
 
-## Open Parser Work
+## Hardcore vs Normal Bug
+Parser not correctly distinguishing Hardcore from Normal difficulty.
+- Investigate what signal the log provides (player flags, damage values, NPC IDs?)
+- Fix parser difficulty assignment and add tests
 
-### HPS gap (~21-28% under Skada)
-Cause: Power Word: Shield absorbs. Skada counts in `Absorbs.lua` as `actor.absorb`.
-We only parse SPELL_HEAL events — absorbs appear in incoming damage event `absorbed` fields.
+---
 
-Decision needed: heal-only column vs heal+absorbs column?
+## Stats / Analytics Page
+New `/stats` page — full brainstorm needed before implementation.
+Confirmed scope ideas:
+- Class performance comparisons (avg DPS/HPS by class)
+- Raid comparisons (instance vs instance, week over week)
+- All-time records and progression trends
+- Multiple graph types using Recharts
 
-Implementation:
-1. `SPELL_AURA_APPLIED` → detect PW:S, record capacity + caster
-2. `absorbed` field on damage events → attribute to Disc priest
-3. Add `total_absorbs` to ParsedEncounter, expose in API + UI
+---
+
+## Absorbs Decision (logged)
+When implemented: **combined Healing+Absorbs column**, not separate.
+Reason: simpler UI, matches Skada's combined view that players reference.
 
 ---
 

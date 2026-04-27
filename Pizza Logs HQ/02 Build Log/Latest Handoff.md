@@ -5,37 +5,30 @@
 
 ## Git
 **Branch:** `main` (clean — only branch)
-**Latest commit:** `219cb9a` docs: rewrite README to reflect current state
+**Latest commit:** `93392fd` docs: remove stale quick-win tasks
 
 ---
 
 ## What Was Done This Session
 
 ### 1. Cleanup commit pushed to main
-- Staged vault changes from previous session committed (`f4764db`)
+- Staged vault changes from previous session committed
 - Deleted stale UWU parity docs, validate_uwu.py
 - Added parser/tests/__init__.py
-- Updated all vault files (Decision Log, Latest Handoff, Now.md, Parser Deep Dive, Feature Status, Technical Debt, What Claude Forgets, Known Issues, START HERE, Obsidian plugins/themes)
+- Updated all vault files
 
 ### 2. .gitignore hardened
-- `tsconfig.tsbuildinfo` — build artifact, untracked and ignored
-- `WoWCombatLog/` — 158MB log file, never track
-- `parser/diag_*.py` — throwaway debug scripts
-- `.claude/worktrees/` — Claude worktree directories
+- `tsconfig.tsbuildinfo`, `WoWCombatLog/`, `parser/diag_*.py`, `.claude/worktrees/`
 
 ### 3. README rewritten
-Old README had stale/wrong info. New README reflects:
-- Deployment: Railway (not Docker Compose)
-- Architecture: Warmane has no ENCOUNTER_START/END; heuristic detection
-- Parser: Skada-WoTLK as source of truth, DMG_EVENTS, heal formula, absorbs TBD
-- Pages: all current routes (raids, sessions, leaderboards, players)
-- Prisma CLI: correct `node ./node_modules/prisma/build/index.js` command
-- Project structure: AccordionSection, tests/, Obsidian vault
+- Correct deployment (Railway), architecture (no ENCOUNTER_START/END), Skada parser note, all current routes
 
 ### 4. Branch cleanup
-- Deleted `claude/elated-sutherland-11ac4b` (local + remote)
-- Deleted `claude/parser-rework-skada-logic` (remote)
-- GitHub now has only `main`
+- All stale Claude worktree branches deleted — only `main` remains
+
+### 5. Decisions logged
+- Absorbs: will be combined Healing+Absorbs column when implemented (not separate)
+- Skada number verification deferred to next week (manual in-game check)
 
 ---
 
@@ -49,20 +42,40 @@ Old README had stale/wrong info. New README reflects:
 
 ---
 
-## Open Items
+## Open Items (priority order)
 
-### HPS gap — Power Word: Shield absorbs
-Skada tracks absorbs in `Absorbs.lua` as `actor.absorb` (separate from `actor.heal`).
-To close the ~25% gap:
-1. Parse `SPELL_AURA_APPLIED` for PW:S spell IDs — store shield capacity per caster
-2. Parse `absorbed` field on incoming damage events — attribute consumed absorb to Disc priest
+### 1. BUG: Difficulty detection regression — Hardcore vs Normal not distinguishing
+Parser is not correctly detecting Hardcore vs Normal difficulty. Needs investigation.
+- Check what signal in the log distinguishes them (player flag? damage scaling? NPC IDs?)
+- Fix parser difficulty assignment
+- Add tests
 
-Decision needed: heal-only column (Skada Healing module) or heal+absorbs column (combined view)?
+### 2. Stats / Analytics page
+Big new feature: a dedicated `/stats` page with as much analytics as we can surface.
+Ideas confirmed by Neil:
+- Class performance comparisons (avg DPS/HPS by class across all logs)
+- Raid comparisons (instance vs instance, week over week)
+- All-time records and trends (top parses over time, progression charts)
+- Various graphs — Recharts, same chart library already in use
+
+Scope to be designed before implementation (brainstorm session).
+
+### 3. Absorbs — Power Word: Shield
+Decision made: **combined Healing+Absorbs column** (not separate).
+Implementation:
+1. Parse `SPELL_AURA_APPLIED` for PW:S spell IDs — store shield capacity + caster
+2. Parse `absorbed` field on incoming damage events — attribute to Disc priest
+3. Add `total_absorbs` to ParsedEncounter, merge into HPS column in API + UI
+
+### 4. Verify Skada numbers in-game
+Upload a log and compare DPS/HPS to Skada addon numbers for the same fight.
+Deferred to next week (Neil to do manually).
 
 ---
 
 ## Next Steps (priority order)
 
-1. Upload a log and verify numbers match Skada in-game
-2. Decide absorbs strategy — heal-only or heal+absorbs column?
-3. If absorbs: implement Absorbs.lua-style tracking
+1. Fix Hardcore vs Normal detection regression
+2. Brainstorm + design Stats/Analytics page
+3. Verify Skada numbers in-game (next week)
+4. Implement absorbs (after verification)

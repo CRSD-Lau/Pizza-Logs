@@ -59,6 +59,14 @@
 
 ---
 
+## 2026-04-26 — Absorbs displayed as combined Healing + Absorbs
+
+**Decision:** When absorbs are implemented, show a single combined Healing+Absorbs column — not separate columns.
+**Why:** Simpler UI, matches how most players think about Disc priest contribution. Skada's combined view is the most commonly referenced number.
+**Status:** Not yet implemented. Parser work deferred — implement after Skada number verification.
+
+---
+
 ## Early — No heroic detection
 
 **Decision:** Don't attempt to detect 25H vs 25N from log events  
