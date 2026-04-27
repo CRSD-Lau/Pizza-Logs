@@ -166,33 +166,69 @@ Rank thresholds tracked per boss per difficulty per metric (DPS/HPS):
 ## Project Structure
 
 ```
-├── app/                   Next.js App Router pages + API routes
-│   ├── api/               upload, bosses, encounters, players endpoints
-│   ├── bosses/            leaderboard pages
-│   ├── raids/             raid history
-│   ├── uploads/           upload detail + session/player drill-down
-│   ├── players/           global roster + all-time profiles
-│   ├── leaderboards/      global rankings
-│   └── weekly/            weekly summary
+├── app/
+│   ├── api/
+│   │   ├── bosses/            boss list
+│   │   ├── encounters/        encounter detail + list
+│   │   ├── leaderboard/       ranking queries
+│   │   ├── players/[name]/    player stats
+│   │   ├── upload/            multipart upload + SSE stream
+│   │   ├── uploads/           upload history
+│   │   └── weekly/            weekly summary data
+│   ├── admin/                 admin dashboard + login (secret-protected)
+│   ├── bosses/[bossSlug]/     per-boss leaderboard + kill history
+│   ├── encounters/[id]/       full encounter breakdown
+│   ├── leaderboards/          global rankings
+│   ├── players/[playerName]/  all-time player profile
+│   ├── raids/                 raid history browser
+│   ├── uploads/[id]/
+│   │   └── sessions/[idx]/
+│   │       └── players/[name]/  per-player session stats
+│   ├── weekly/                weekly summary
+│   └── layout.tsx             root layout + nav + footer
 ├── components/
-│   ├── layout/            Nav
-│   ├── ui/                Button, Card, Badge, Skeleton, StatCard, AccordionSection
-│   ├── upload/            UploadZone (drag-and-drop, SSE progress)
-│   ├── meter/             DamageMeter (expandable spell breakdown)
-│   └── charts/            Recharts wrappers
+│   ├── charts/
+│   │   ├── LeaderboardBar.tsx
+│   │   └── SessionLineChart.tsx
+│   ├── layout/
+│   │   └── Nav.tsx
+│   ├── meter/
+│   │   ├── DamageMeter.tsx      expandable damage/heal meter
+│   │   └── MobBreakdown.tsx
+│   ├── ui/
+│   │   ├── AccordionSection.tsx
+│   │   ├── Badge.tsx
+│   │   ├── Button.tsx
+│   │   ├── Card.tsx
+│   │   ├── EmptyState.tsx
+│   │   ├── Skeleton.tsx
+│   │   ├── StatCard.tsx
+│   │   └── index.ts
+│   └── upload/
+│       ├── UploadZone.tsx           drag-and-drop, SSE progress
+│       └── UploadZoneWithRefresh.tsx
 ├── lib/
-│   ├── constants/         bosses.ts, classes.ts
-│   ├── actions/           milestones.ts
-│   ├── db.ts              Prisma client singleton
-│   ├── schema.ts          Zod schemas
-│   └── utils.ts           formatters, week bounds
-├── parser/                Python FastAPI service
-│   ├── main.py            FastAPI routes + SSE upload endpoint
-│   ├── parser_core.py     Combat log parser (Skada-WoTLK aligned)
-│   ├── bosses.py          WotLK boss definitions
-│   └── tests/             71 pytest tests
+│   ├── actions/milestones.ts    milestone rank computation
+│   ├── constants/
+│   │   ├── bosses.ts
+│   │   └── classes.ts
+│   ├── db.ts                    Prisma client singleton
+│   ├── schema.ts                Zod schemas
+│   └── utils.ts                 formatters, week bounds
+├── parser/                      Python FastAPI service
+│   ├── main.py                  FastAPI routes + SSE upload endpoint
+│   ├── parser_core.py           combat log parser (Skada-WoTLK aligned)
+│   ├── bosses.py                WotLK boss definitions
+│   ├── diagnose.py              diagnostic utilities
+│   ├── Dockerfile
+│   └── tests/
+│       └── test_parser_core.py  71 pytest tests
 ├── prisma/
-│   ├── schema.prisma      Full data model
-│   └── seed.ts            Boss + realm seeding
-└── Pizza Logs HQ/         Obsidian project vault (docs, decisions, handoffs)
+│   ├── schema.prisma            full data model
+│   └── seed.ts                  boss + realm seeding
+├── middleware.ts                admin auth cookie check
+├── start.sh                     Railway startup (prisma db push + next start)
+├── docker-compose.yml
+├── SECURITY.md
+└── Pizza Logs HQ/               Obsidian project vault (docs, decisions, handoffs)
 ```
