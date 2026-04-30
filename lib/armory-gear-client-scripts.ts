@@ -169,6 +169,12 @@ export function buildUserscript(): string {
     const lastRunKey = "pizzaLogsLastGearSyncAt";
     const autoIntervalMs = 60 * 60 * 1000;
 
+    console.info("Pizza Logs userscript starting", {
+      href: location.href,
+      hostname: location.hostname,
+      readyState: document.readyState,
+    });
+
     if (location.hostname !== "armory.warmane.com") return;
 
     const wait = function wait(ms: number) {
@@ -193,6 +199,7 @@ export function buildUserscript(): string {
         return;
       }
 
+      try {
       const panel = document.createElement("div");
       panel.style.cssText = [
         "position:fixed",
@@ -246,6 +253,9 @@ export function buildUserscript(): string {
       state.panel = panel;
       state.status = status;
       state.button = button;
+      } catch (error) {
+        console.error("Pizza Logs panel injection failed", error);
+      }
     };
 
     const getSecret = function getSecret(forcePrompt: boolean) {
@@ -364,7 +374,7 @@ export function buildUserscript(): string {
     "// ==UserScript==",
     "// @name         Pizza Logs Warmane Gear Auto Sync",
     "// @namespace    https://pizza-logs-production.up.railway.app",
-    "// @version      1.0.2",
+    "// @version      1.0.3",
     "// @description  Automatically sync Pizza Logs gear cache from Warmane Armory pages.",
     "// @match        https://armory.warmane.com/*",
     "// @match        http://armory.warmane.com/*",

@@ -14,6 +14,8 @@ assert.match(userscript, /\/\/ @match\s+https:\/\/armory\.warmane\.com\/\*/);
 assert.match(userscript, /\/\/ @match\s+http:\/\/armory\.warmane\.com\/\*/);
 assert.match(userscript, /\/\/ @run-at\s+document-idle/);
 assert.match(userscript, /DOMContentLoaded/);
+assert.match(userscript, /Pizza Logs userscript starting/);
+assert.match(userscript, /Pizza Logs panel injection failed/);
 assert.match(userscript, /Pizza Logs Gear Sync/);
 
 console.log("armory-gear-client-scripts tests passed");

@@ -10,6 +10,7 @@ The bookmarklet now retries intermittent Warmane per-character failures and repo
 The recommended gear import path is now a Tampermonkey/userscript from `/admin`; it adds a Pizza Logs panel on Warmane pages and auto-syncs at most once per hour after saving the admin secret in browser localStorage.
 The userscript is hosted at `/api/admin/armory-gear/userscript.user.js`, and `/admin` links directly to it so Tampermonkey can install/update from URL metadata.
 Userscript v1.0.2 supports both HTTP and HTTPS Warmane pages and waits for the page body before injecting the panel.
+Userscript v1.0.3 logs `Pizza Logs userscript starting` at startup and `Pizza Logs panel injection failed` if panel creation crashes.
 
 ---
 

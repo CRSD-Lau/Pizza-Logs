@@ -56,6 +56,7 @@
 - Added a recommended Tampermonkey/userscript flow on `/admin` that injects a Pizza Logs Gear Sync panel on Warmane Armory pages and auto-syncs at most once per hour after the admin secret is saved locally in that browser
 - Userscript is now hosted at `/api/admin/armory-gear/userscript.user.js` with Tampermonkey `@downloadURL` and `@updateURL` metadata; `/admin` links directly to the hosted install/update URL. The older `/userscript` route remains a compatibility alias.
 - Userscript v1.0.2 matches both `https://armory.warmane.com/*` and `http://armory.warmane.com/*`, runs at `document-idle`, and waits for `document.body` before injecting the Pizza Logs panel
+- Userscript v1.0.3 adds startup and panel-injection console diagnostics so a missing panel can be distinguished from Tampermonkey not running the script
 
 ### 6. Verification
 - `tests/armory-gear-client-scripts.test.ts` passed
