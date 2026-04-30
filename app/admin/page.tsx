@@ -6,6 +6,7 @@ import { StatCard } from "@/components/ui/StatCard";
 import { formatBytes, formatDuration } from "@/lib/utils";
 import { ClearDatabaseButton } from "./ClearDatabaseButton";
 import { DeleteUploadButton } from "./DeleteUploadButton";
+import { SeedGearCacheButton } from "./SeedGearCacheButton";
 
 export const metadata: Metadata = { title: "Admin / Diagnostics" };
 export const dynamic = "force-dynamic";
@@ -21,6 +22,8 @@ export default async function AdminPage() {
     topUploaders,
     parserHealth,
     bossCount,
+    gearCacheTotal,
+    recentGearErrors,
   ] = await Promise.all([
     db.upload.count(),
     db.encounter.count(),
@@ -49,6 +52,8 @@ export default async function AdminPage() {
       cache: "no-store",
     }).then(r => r.json()).catch(() => ({ status: "unreachable" })),
     db.boss.count(),
+    db.armoryGearCache.count(),
+    db.armoryGearCache.count({ where: { lastError: { not: null } } }),
   ]);
 
   return (
@@ -73,6 +78,24 @@ export default async function AdminPage() {
         <StatCard label="Players"     value={playersTotal} />
         <StatCard label="Active Milestones" value={milestonesTotal} />
       </div>
+
+      {/* Gear cache */}
+      <section>
+        <SectionHeader title="Warmane Gear Cache" sub="Batch seed from existing DB players" />
+        <div className="bg-bg-panel border border-gold-dim rounded p-4 space-y-4">
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+            <StatCard label="Cached Characters" value={gearCacheTotal} />
+            <StatCard label="Recent Gear Errors" value={recentGearErrors} />
+            <StatCard label="Batch Size" value={100} sub="players per run" />
+          </div>
+          <div className="flex items-start justify-between gap-4 flex-wrap">
+            <p className="text-sm text-text-secondary max-w-2xl">
+              Attempts to refresh gear for existing Pizza Logs players. Successful Warmane responses are stored in the DB cache; failed requests are recorded without affecting player pages.
+            </p>
+            <SeedGearCacheButton />
+          </div>
+        </div>
+      </section>
 
       {/* Service health */}
       <section>

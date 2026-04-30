@@ -30,12 +30,18 @@
 - Empty/error states are non-blocking and still render the rest of the player page
 - The Warmane page is linked as the source, not embedded as an iframe
 
-### 3. Warmane access note
+### 3. Admin gear cache seeding
+- Added an admin-only "Seed Gear Cache" control on `/admin`
+- The action loops over up to 100 existing DB players and attempts Warmane gear refreshes
+- Successful responses are stored in `armory_gear_cache`
+- Failed requests are counted and recorded without affecting player pages
+
+### 4. Warmane access note
 - Direct local requests to Warmane HTML and API returned Cloudflare/403 from this environment
 - The feature is built to fail gracefully when Warmane blocks, is down, or changes behavior
 - Railway behavior still needs verification after deploy because Warmane may treat Railway egress differently
 
-### 4. Verification
+### 5. Verification
 - `tests/warmane-armory-cache.test.ts` passed
 - `prisma validate` passed with a dummy local `DATABASE_URL`
 - `tsc --noEmit` passed via bundled Node runtime
@@ -85,8 +91,8 @@ Do after Skada verification.
 3. Merge into HPS column in API + UI
 
 ### 5. Gear follow-ups
-- Verify Warmane API access from Railway production
-- Seed/cache at least one successful Warmane gear snapshot so blocked refreshes can still show gear
+- Run `/admin` Seed Gear Cache after deploy and inspect success/failure counts
+- If all Warmane server refreshes fail, add a browser-assisted/manual import path for first-fill snapshots
 - Add item quality/item level/icon/gem/enchant enrichment if a reliable source is chosen
 - Consider historical gear snapshots per raid date
 
@@ -94,4 +100,4 @@ Do after Skada verification.
 
 ## Next Step
 
-Run type/build verification for the gear section, then verify `/players/Ashien` after deployment. Parser priority remains fixing HC/Normal detection in `parser/parser_core.py`.
+Deploy the admin seeding action, run `/admin` Seed Gear Cache, then verify whether any `armory_gear_cache` rows are populated. Parser priority remains fixing HC/Normal detection in `parser/parser_core.py`.

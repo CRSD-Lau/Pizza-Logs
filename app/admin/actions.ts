@@ -2,6 +2,7 @@
 
 import { cookies } from "next/headers";
 import { db } from "@/lib/db";
+import { getWarmaneCharacterGear } from "@/lib/warmane-armory";
 
 async function verifyAdmin(): Promise<boolean> {
   const secret = process.env.ADMIN_SECRET;
@@ -43,4 +44,36 @@ export async function deleteUpload(
   await db.upload.delete({ where: { id: uploadId } });
 
   return { ok: true };
+}
+
+export async function seedArmoryGearCache(
+  limit = 25,
+): Promise<{ ok: true; attempted: number; cached: number; failed: number } | { ok: false; error: string }> {
+  if (!(await verifyAdmin())) return { ok: false, error: "Unauthorized" };
+
+  const safeLimit = Math.min(Math.max(Math.floor(limit), 1), 100);
+  const players = await db.player.findMany({
+    orderBy: { name: "asc" },
+    take: safeLimit,
+    include: { realm: { select: { name: true } } },
+  });
+
+  let cached = 0;
+  let failed = 0;
+
+  for (const player of players) {
+    const result = await getWarmaneCharacterGear(player.name, player.realm?.name ?? "Lordaeron");
+    if (result.ok && !result.stale) {
+      cached++;
+    } else {
+      failed++;
+    }
+  }
+
+  return {
+    ok: true,
+    attempted: players.length,
+    cached,
+    failed,
+  };
 }
