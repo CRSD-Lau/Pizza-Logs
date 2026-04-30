@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { normalizeImportedArmoryGear } from "../lib/warmane-armory";
+import { gearNeedsWowheadEnrichment, normalizeImportedArmoryGear } from "../lib/warmane-armory";
 
 const result = normalizeImportedArmoryGear({
   characterName: "Ashien",
@@ -50,5 +50,43 @@ if (apiResult.ok) {
   assert.equal(apiResult.gear.characterName, "Aalaska");
   assert.equal(apiResult.gear.items[0].itemUrl, "https://www.wowhead.com/wotlk/item=51281/sanctified-bloodmage-hood");
 }
+
+assert.equal(
+  gearNeedsWowheadEnrichment({
+    characterName: "Aalaska",
+    realm: "Lordaeron",
+    sourceUrl: "https://armory.warmane.com/character/Aalaska/Lordaeron/summary",
+    fetchedAt: new Date().toISOString(),
+    items: [
+      {
+        slot: "Head",
+        name: "Sanctified Bloodmage Hood",
+        itemUrl: "https://armory.warmane.com/item/51281",
+      },
+    ],
+  }),
+  true,
+);
+
+assert.equal(
+  gearNeedsWowheadEnrichment({
+    characterName: "Aalaska",
+    realm: "Lordaeron",
+    sourceUrl: "https://armory.warmane.com/character/Aalaska/Lordaeron/summary",
+    fetchedAt: new Date().toISOString(),
+    items: [
+      {
+        slot: "Head",
+        name: "Sanctified Bloodmage Hood",
+        itemId: "51281",
+        itemLevel: 264,
+        iconUrl: "https://wow.zamimg.com/images/wow/icons/large/inv_helmet_142.jpg",
+        itemUrl: "https://www.wowhead.com/wotlk/item=51281/sanctified-bloodmage-hood",
+        details: ["Item Level 264"],
+      },
+    ],
+  }),
+  false,
+);
 
 console.log("warmane-armory-import tests passed");

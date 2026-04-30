@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
+import { gearNeedsWowheadEnrichment } from "@/lib/warmane-armory";
 
 const MAX_PLAYERS = 100;
 
@@ -65,16 +66,21 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     select: {
       characterKey: true,
       realm: true,
+      gear: true,
     },
   });
-  const cachedKeys = new Set(cachedRows.map(row => `${row.characterKey}:${row.realm}`));
+  const freshCachedKeys = new Set(
+    cachedRows
+      .filter((row) => !gearNeedsWowheadEnrichment(row.gear))
+      .map(row => `${row.characterKey}:${row.realm}`)
+  );
 
   const missing = players
     .map(player => ({
       characterName: player.name,
       realm: player.realm?.name ?? "Lordaeron",
     }))
-    .filter(player => !cachedKeys.has(`${player.characterName.toLowerCase()}:${player.realm}`));
+    .filter(player => !freshCachedKeys.has(`${player.characterName.toLowerCase()}:${player.realm}`));
 
   return NextResponse.json({ ok: true, players: missing }, { headers });
 }

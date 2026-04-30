@@ -27,7 +27,7 @@ function buildBookmarklet(): string {
       .then(async (queue) => {
         const players = queue.players || [];
         if (players.length === 0) {
-          alert("Pizza Logs: no uncached players found.");
+          alert("Pizza Logs: no players need gear import or enrichment.");
           return;
         }
 
@@ -125,6 +125,7 @@ export function GearImportBookmarklet() {
         <h3 className="heading-cinzel text-sm text-gold tracking-wide">Browser Gear Import</h3>
         <p className="text-sm text-text-secondary mt-1">
           Create a bookmark manually and paste the bulk code below as its URL. Open any Warmane Armory page, click that bookmark, enter the admin secret, and the browser will import missing Pizza Logs players through Warmane's API.
+          Existing cached rows that do not have Wowhead item details will be re-imported and enriched too.
         </p>
       </div>
       <ol className="list-decimal space-y-1 pl-5 text-sm text-text-secondary">

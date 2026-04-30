@@ -51,6 +51,7 @@
 - Gear cache writes enrich imported/browser-fetched Warmane items before saving, so player pages can render icons and details from the DB snapshot
 - Gear cards on player pages are no longer outbound item links; they are native, non-clicking cards with hover/focus tooltips
 - Tooltip content is native Pizza Logs UI, not a Wowhead iframe or embedded external widget
+- Admin missing-player queue now treats cached rows without Wowhead metadata as needing re-import/enrichment, so older cached gear can be upgraded by rerunning the bookmarklet
 
 ### 6. Verification
 - `tests/warmane-armory-cache.test.ts` passed
@@ -107,7 +108,7 @@ Do after Skada verification.
 ### 5. Gear follow-ups
 - Use `/admin` browser bookmarklet import when Warmane blocks Railway server refreshes
 - Warmane API forum note: API accepts `/api/character/<name>/<realm>/summary`, returns JSON errors inside 200 responses, and currently lacks slot/itemlevel fields
-- Watch production import timing: each cached Warmane item may trigger Wowhead enrichment on first write
+- Watch production import timing: each cached Warmane item may trigger Wowhead enrichment on first write or first re-enrichment
 - Consider adding a dedicated item metadata cache if the Wowhead fetch volume becomes noisy
 - Consider historical gear snapshots per raid date
 
@@ -115,4 +116,4 @@ Do after Skada verification.
 
 ## Next Step
 
-Deploy the Wowhead-enriched gear UI, rerun the `/admin` browser bookmarklet until missing players are cached, then verify that `/players/<name>` shows icons and native hover details. Parser priority remains fixing HC/Normal detection in `parser/parser_core.py`.
+Deploy the Wowhead-enriched gear UI, rerun the `/admin` browser bookmarklet until it reports no players need import/enrichment, then verify that `/players/<name>` shows icons and native hover details. Parser priority remains fixing HC/Normal detection in `parser/parser_core.py`.

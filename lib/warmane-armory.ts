@@ -153,6 +153,17 @@ function isArmoryCharacterGear(value: unknown): value is ArmoryCharacterGear {
   );
 }
 
+export function gearNeedsWowheadEnrichment(gear: unknown): boolean {
+  if (!isArmoryCharacterGear(gear)) return true;
+
+  return gear.items.some((item) => {
+    if (!item.itemId) return true;
+
+    const usesWowheadUrl = item.itemUrl?.includes("wowhead.com/wotlk/item=");
+    return !usesWowheadUrl || !item.iconUrl || !item.itemLevel || !item.details?.length;
+  });
+}
+
 function normalizeEquipment(items: unknown): ArmoryGearItem[] {
   if (!Array.isArray(items)) return [];
 

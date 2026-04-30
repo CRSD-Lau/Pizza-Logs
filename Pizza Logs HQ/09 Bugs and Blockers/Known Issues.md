@@ -9,7 +9,7 @@
 | Blocker | Impact | Status |
 |---|---|---|
 | Warmane Armory returned Cloudflare/403 to direct server requests during gear feature work | Gear section shows unavailable state until a character has a cached snapshot; once cached, stale gear can still render | Browser bookmarklet import added for first-fill snapshots |
-| Warmane API omits rich item details | Native gear cards need a second source for icons, item level, quality, and tooltip text | Wowhead WotLK page enrichment added during cache writes |
+| Warmane API omits rich item details | Native gear cards need a second source for icons, item level, quality, and tooltip text | Wowhead WotLK page enrichment added during cache writes; older cached rows are now re-queued for enrichment |
 
 ---
 
