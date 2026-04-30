@@ -188,6 +188,10 @@ export function buildUserscript(): string {
 
     const buildPanel = function buildPanel() {
       if (state.panel) return;
+      if (!document.body) {
+        document.addEventListener("DOMContentLoaded", buildPanel, { once: true });
+        return;
+      }
 
       const panel = document.createElement("div");
       panel.style.cssText = [
@@ -360,11 +364,13 @@ export function buildUserscript(): string {
     "// ==UserScript==",
     "// @name         Pizza Logs Warmane Gear Auto Sync",
     "// @namespace    https://pizza-logs-production.up.railway.app",
-    "// @version      1.0.1",
+    "// @version      1.0.2",
     "// @description  Automatically sync Pizza Logs gear cache from Warmane Armory pages.",
     "// @match        https://armory.warmane.com/*",
+    "// @match        http://armory.warmane.com/*",
     `// @downloadURL   ${USERSCRIPT_URL}`,
     `// @updateURL     ${USERSCRIPT_URL}`,
+    "// @run-at       document-idle",
     "// @grant        none",
     "// ==/UserScript==",
     "",

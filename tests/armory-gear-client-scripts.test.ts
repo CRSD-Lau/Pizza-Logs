@@ -11,6 +11,9 @@ assert.match(userscript, /\/\/ @name\s+Pizza Logs Warmane Gear Auto Sync/);
 assert.match(userscript, new RegExp(`// @downloadURL\\s+${USERSCRIPT_URL.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}`));
 assert.match(userscript, new RegExp(`// @updateURL\\s+${USERSCRIPT_URL.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}`));
 assert.match(userscript, /\/\/ @match\s+https:\/\/armory\.warmane\.com\/\*/);
+assert.match(userscript, /\/\/ @match\s+http:\/\/armory\.warmane\.com\/\*/);
+assert.match(userscript, /\/\/ @run-at\s+document-idle/);
+assert.match(userscript, /DOMContentLoaded/);
 assert.match(userscript, /Pizza Logs Gear Sync/);
 
 console.log("armory-gear-client-scripts tests passed");
