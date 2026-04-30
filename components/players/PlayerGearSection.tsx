@@ -20,15 +20,55 @@ function getQualityColor(quality?: string): string | undefined {
   return QUALITY_COLORS[quality.toLowerCase()];
 }
 
+function GearItemTooltip({ item, qualityColor }: { item: ArmoryGearItem; qualityColor?: string }) {
+  const detailLines = [
+    ...(item.details ?? []),
+    item.enchant ? `Enchant: ${item.enchant}` : null,
+    item.gems?.length ? `Gems: ${item.gems.join(", ")}` : null,
+  ].filter((line): line is string => Boolean(line) && line !== item.name);
+
+  return (
+    <div className="pointer-events-none absolute left-3 top-[calc(100%-6px)] z-30 w-[min(28rem,calc(100vw-3rem))] rounded border border-gold bg-bg-deep p-3 text-xs text-text-secondary opacity-0 shadow-2xl shadow-black/50 transition-opacity group-hover:opacity-100 group-focus-visible:opacity-100 sm:left-14 sm:top-12">
+      <div className="flex gap-3">
+        <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-sm border border-gold bg-bg-panel">
+          {item.iconUrl ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={item.iconUrl} alt="" className="h-10 w-10 rounded-sm object-cover" />
+          ) : (
+            <span className="text-xs font-bold text-text-dim">{item.slot.slice(0, 2).toUpperCase()}</span>
+          )}
+        </div>
+        <div className="min-w-0">
+          <p className="text-sm font-semibold text-text-primary" style={qualityColor ? { color: qualityColor } : undefined}>
+            {item.name}
+          </p>
+          <p className="mt-0.5 uppercase tracking-widest text-text-dim">{item.slot}</p>
+        </div>
+      </div>
+
+      <div className="mt-3 space-y-1 border-t border-gold-dim pt-3">
+        {detailLines.length > 0 ? (
+          detailLines.map((line, index) => (
+            <p key={`${item.slot}-detail-${index}`} className="leading-relaxed">
+              {line}
+            </p>
+          ))
+        ) : (
+          <p>No additional Wowhead details available.</p>
+        )}
+        {item.itemId && <p className="pt-1 text-text-dim">Wowhead item #{item.itemId}</p>}
+      </div>
+    </div>
+  );
+}
+
 function GearItemCard({ item }: { item: ArmoryGearItem }) {
   const qualityColor = getQualityColor(item.quality);
 
   return (
-    <a
-      href={item.itemUrl}
-      target="_blank"
-      rel="noreferrer"
-      className="group flex min-h-[76px] items-start gap-3 rounded border border-gold-dim bg-bg-card px-3 py-3 transition-colors hover:border-gold/50 hover:bg-bg-hover"
+    <article
+      tabIndex={0}
+      className="group relative flex min-h-[76px] cursor-default items-start gap-3 rounded border border-gold-dim bg-bg-card px-3 py-3 transition-colors hover:border-gold/50 hover:bg-bg-hover focus-visible:border-gold focus-visible:outline-none"
     >
       <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-sm border border-gold-dim bg-bg-deep">
         {item.iconUrl ? (
@@ -62,7 +102,8 @@ function GearItemCard({ item }: { item: ArmoryGearItem }) {
           </div>
         )}
       </div>
-    </a>
+      <GearItemTooltip item={item} qualityColor={qualityColor} />
+    </article>
   );
 }
 

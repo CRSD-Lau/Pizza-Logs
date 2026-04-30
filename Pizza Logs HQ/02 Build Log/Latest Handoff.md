@@ -5,7 +5,7 @@
 
 ## Git
 **Branch:** `main`
-**Latest commit before this handoff commit:** unknown locally - `git` unavailable on PATH in this Codex shell
+**Latest commit before this handoff commit:** `0d7e5ed chore: simplify gear admin workflow`
 **Release:** `v0.1.0` - tagged and published on GitHub
 
 ---
@@ -45,9 +45,17 @@
 - The feature is built to fail gracefully when Warmane blocks, is down, or changes behavior
 - Railway behavior still needs verification after deploy because Warmane may treat Railway egress differently
 
-### 5. Verification
+### 5. Wowhead item enrichment and native hover details
+- Added `lib/wowhead-items.ts` to enrich Warmane equipment item IDs with Wowhead WotLK item metadata
+- Wowhead enrichment reads the normal Wowhead item page and parses embedded `g_items[...]` data for item name, quality, item level, icon, and tooltip text
+- Gear cache writes enrich imported/browser-fetched Warmane items before saving, so player pages can render icons and details from the DB snapshot
+- Gear cards on player pages are no longer outbound item links; they are native, non-clicking cards with hover/focus tooltips
+- Tooltip content is native Pizza Logs UI, not a Wowhead iframe or embedded external widget
+
+### 6. Verification
 - `tests/warmane-armory-cache.test.ts` passed
 - `tests/warmane-armory-import.test.ts` passed
+- `tests/wowhead-items.test.ts` passed
 - `prisma validate` passed with a dummy local `DATABASE_URL`
 - `tsc --noEmit` passed via bundled Node runtime
 - `next build` passed via bundled Node runtime
@@ -60,8 +68,9 @@
 - **Live app**: https://pizza-logs-production.up.railway.app
 - **Release**: `v0.1.0`
 - **Player profiles**: include a native Warmane Armory Gear section wired to a DB-backed gear cache
+- **Gear display**: uses Wowhead-enriched icons, quality, item level, and tooltip text when item IDs are present
 - **Warmane local access**: blocked by Cloudflare/403 from this Codex shell, handled gracefully by UI
-- **Checks run**: cache fallback test passed; import normalization test passed; `prisma validate` passed; `tsc --noEmit` passed; `next build` passed
+- **Checks run**: cache fallback test passed; import normalization test passed; Wowhead parser test passed; `prisma validate` passed; `tsc --noEmit` passed; `next build` passed
 - **Local env blocker**: DB-backed pages cannot render locally until PostgreSQL is running on `localhost:5432`
 - **HPS gap**: ~21-28% under Skada for Disc priests - expected until absorbs are implemented
 - **DPS**: <1% residual from orphaned pets - accepted
@@ -98,11 +107,12 @@ Do after Skada verification.
 ### 5. Gear follow-ups
 - Use `/admin` browser bookmarklet import when Warmane blocks Railway server refreshes
 - Warmane API forum note: API accepts `/api/character/<name>/<realm>/summary`, returns JSON errors inside 200 responses, and currently lacks slot/itemlevel fields
-- Add item quality/item level/icon/gem/enchant enrichment if a reliable source is chosen
+- Watch production import timing: each cached Warmane item may trigger Wowhead enrichment on first write
+- Consider adding a dedicated item metadata cache if the Wowhead fetch volume becomes noisy
 - Consider historical gear snapshots per raid date
 
 ---
 
 ## Next Step
 
-Deploy the cleaned-up browser API import workflow, run it from any Warmane Armory page, then verify that `/players/<name>` renders cached gear. Parser priority remains fixing HC/Normal detection in `parser/parser_core.py`.
+Deploy the Wowhead-enriched gear UI, rerun the `/admin` browser bookmarklet until missing players are cached, then verify that `/players/<name>` shows icons and native hover details. Parser priority remains fixing HC/Normal detection in `parser/parser_core.py`.

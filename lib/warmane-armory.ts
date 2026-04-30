@@ -1,12 +1,15 @@
 import { db } from "./db";
+import { enrichGearWithWowhead, getWowheadItemUrl } from "./wowhead-items";
 
 export type ArmoryGearItem = {
   slot: string;
   name: string;
+  itemId?: string;
   quality?: string;
   itemLevel?: number;
   iconUrl?: string;
   itemUrl?: string;
+  details?: string[];
   enchant?: string;
   gems?: string[];
 };
@@ -166,10 +169,11 @@ function normalizeEquipment(items: unknown): ArmoryGearItem[] {
       return {
         slot: EQUIPMENT_SLOTS[index] ?? `Slot ${index + 1}`,
         name,
+        itemId,
         quality: asString(item.quality),
         itemLevel: asNumber(item.itemLevel) ?? asNumber(item.itemlevel),
         iconUrl,
-        itemUrl: itemId ? `https://armory.warmane.com/item/${encodeURIComponent(itemId)}` : undefined,
+        itemUrl: itemId ? getWowheadItemUrl(itemId, name) : undefined,
         enchant: asString(item.enchant),
         gems: asStringArray(item.gems),
       };
@@ -243,7 +247,7 @@ async function fetchWarmaneGearLive(
         realm: asString(data.realm) ?? sanitizedRealm,
         sourceUrl,
         fetchedAt: new Date().toISOString(),
-        items: normalizeEquipment(data.equipment),
+        items: await enrichGearWithWowhead(normalizeEquipment(data.equipment)),
       },
     };
   } catch (error) {
@@ -290,27 +294,32 @@ async function readCachedGear(characterName: string, realm: string): Promise<Arm
 }
 
 export async function writeCachedGear(gear: ArmoryCharacterGear): Promise<void> {
+  const enrichedGear: ArmoryCharacterGear = {
+    ...gear,
+    items: await enrichGearWithWowhead(gear.items),
+  };
+
   await db.armoryGearCache.upsert({
     where: {
       characterKey_realm: {
-        characterKey: getCharacterKey(gear.characterName),
-        realm: gear.realm,
+        characterKey: getCharacterKey(enrichedGear.characterName),
+        realm: enrichedGear.realm,
       },
     },
     create: {
-      characterName: gear.characterName,
-      characterKey: getCharacterKey(gear.characterName),
-      realm: gear.realm,
-      sourceUrl: gear.sourceUrl,
-      gear,
-      fetchedAt: new Date(gear.fetchedAt),
+      characterName: enrichedGear.characterName,
+      characterKey: getCharacterKey(enrichedGear.characterName),
+      realm: enrichedGear.realm,
+      sourceUrl: enrichedGear.sourceUrl,
+      gear: enrichedGear,
+      fetchedAt: new Date(enrichedGear.fetchedAt),
       lastAttemptAt: new Date(),
     },
     update: {
-      characterName: gear.characterName,
-      sourceUrl: gear.sourceUrl,
-      gear,
-      fetchedAt: new Date(gear.fetchedAt),
+      characterName: enrichedGear.characterName,
+      sourceUrl: enrichedGear.sourceUrl,
+      gear: enrichedGear,
+      fetchedAt: new Date(enrichedGear.fetchedAt),
       lastAttemptAt: new Date(),
       lastError: null,
     },

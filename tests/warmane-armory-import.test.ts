@@ -48,7 +48,7 @@ const apiResult = normalizeImportedArmoryGear({
 assert.equal(apiResult.ok, true);
 if (apiResult.ok) {
   assert.equal(apiResult.gear.characterName, "Aalaska");
-  assert.equal(apiResult.gear.items[0].itemUrl, "https://armory.warmane.com/item/51281");
+  assert.equal(apiResult.gear.items[0].itemUrl, "https://www.wowhead.com/wotlk/item=51281/sanctified-bloodmage-hood");
 }
 
 console.log("warmane-armory-import tests passed");
