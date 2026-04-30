@@ -116,29 +116,37 @@ function buildSingleBookmarklet(): string {
 }
 
 export function GearImportBookmarklet() {
-  const href = buildBookmarklet();
-  const singleHref = buildSingleBookmarklet();
+  const bulkCode = buildBookmarklet();
+  const singleCode = buildSingleBookmarklet();
 
   return (
     <div className="rounded border border-gold-dim bg-bg-card p-4 space-y-3">
       <div>
         <h3 className="heading-cinzel text-sm text-gold tracking-wide">Browser Gear Import</h3>
         <p className="text-sm text-text-secondary mt-1">
-          Drag the bulk bookmarklet to your bookmarks bar, open any Warmane Armory page, then click it to import missing Pizza Logs players through Warmane's browser-accessible API.
+          Create a bookmark manually, paste the bulk code below as its URL, open any Warmane Armory page, then click the bookmark to import missing Pizza Logs players through Warmane's browser-accessible API.
         </p>
       </div>
-      <a
-        href={href}
-        className="inline-flex rounded border border-gold-mid px-4 py-2 text-sm text-gold hover:border-gold hover:text-gold-light transition-colors"
-      >
-        Pizza Logs Bulk Gear Import
-      </a>
-      <a
-        href={singleHref}
-        className="ml-2 inline-flex rounded border border-gold-dim px-4 py-2 text-sm text-text-secondary hover:border-gold hover:text-gold-light transition-colors"
-      >
-        Single Page Fallback
-      </a>
+      <div className="space-y-2">
+        <label className="block text-xs font-bold uppercase tracking-widest text-text-dim">
+          Bulk bookmark URL
+        </label>
+        <textarea
+          readOnly
+          rows={4}
+          value={bulkCode}
+          className="w-full rounded border border-gold-dim bg-bg-deep p-3 font-mono text-xs text-text-secondary"
+        />
+      </div>
+      <details className="text-sm text-text-secondary">
+        <summary className="cursor-pointer text-gold hover:text-gold-light">Single-page fallback code</summary>
+        <textarea
+          readOnly
+          rows={4}
+          value={singleCode}
+          className="mt-2 w-full rounded border border-gold-dim bg-bg-deep p-3 font-mono text-xs text-text-secondary"
+        />
+      </details>
     </div>
   );
 }

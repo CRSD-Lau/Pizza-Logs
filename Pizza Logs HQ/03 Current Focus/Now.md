@@ -29,4 +29,4 @@ Native Warmane Armory gear UI has been added to player profiles. Gear now has a 
 - Warmane gear source pattern: `https://armory.warmane.com/api/character/<name>/Lordaeron/summary`
 - Gear cache table: `armory_gear_cache`
 - Admin seed UI: `/admin` -> Warmane Gear Cache -> Seed Gear Cache
-- Admin browser import: `/admin` -> Warmane Gear Cache -> Pizza Logs Gear Import bookmarklet
+- Admin browser import: `/admin` -> Warmane Gear Cache -> copy Bulk bookmark URL into a browser bookmark, then run it from Warmane Armory

@@ -40,6 +40,7 @@
 - Added `POST /api/admin/armory-gear/missing` so the browser importer can fetch the missing Pizza Logs players queue
 - Bookmarklet uses Warmane's JSON API from the Warmane browser origin, prompts for the admin secret, and stores normalized gear in `armory_gear_cache`
 - The older single-page fallback remains available, but the recommended flow is now bulk API import
+- React blocks rendered `javascript:` links, so `/admin` now shows copyable bookmarklet code instead of clickable bookmarklet anchors
 
 ### 4. Warmane access note
 - Direct local requests to Warmane HTML and API returned Cloudflare/403 from this environment
