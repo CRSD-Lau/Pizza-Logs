@@ -3,7 +3,7 @@
 ## Status
 `v0.1.0` shipped. Wiki live. Railway deployed.
 Public upload analytics have been moved into admin-only routes, and the mobile nav/raids/leaderboards pass is done.
-Native Warmane Armory gear UI has been added to player profiles. Gear now has a DB-backed cache, an admin seed action, and a browser bookmarklet import path for Warmane pages that Railway cannot fetch directly.
+Native Warmane Armory gear UI has been added to player profiles. Gear now has a DB-backed cache, an admin seed action, and a browser bookmarklet that bulk-imports missing players through Warmane's browser-accessible API.
 
 ---
 
@@ -13,7 +13,7 @@ Native Warmane Armory gear UI has been added to player profiles. Gear now has a 
 |------|------|-------|
 | Fix HC/Normal difficulty detection | BUG | Regression - issue open on GitHub |
 | Run admin Seed Gear Cache | VERIFY | Attempts Warmane refreshes for existing DB players and records success/failure counts |
-| Test browser gear import | VERIFY | Drag/use `/admin` bookmarklet on a Warmane character page, then confirm profile gear renders |
+| Test browser gear import | VERIFY | Drag/use `/admin` bulk bookmarklet on any Warmane Armory page, then confirm profile gear renders |
 | Stats / Analytics page | FEATURE | Brainstorm first, then design, then build |
 | Verify Skada numbers in-game | VERIFY | Neil to do manually next week |
 | Absorbs (PW:S) | FEATURE | Combined column. Do after verification. |

@@ -34,4 +34,21 @@ assert.deepEqual(
   { ok: false, error: "Invalid character name." },
 );
 
+const apiResult = normalizeImportedArmoryGear({
+  name: "Aalaska",
+  realm: "Lordaeron",
+  equipment: [
+    {
+      name: "Sanctified Bloodmage Hood",
+      item: "51281",
+    },
+  ],
+});
+
+assert.equal(apiResult.ok, true);
+if (apiResult.ok) {
+  assert.equal(apiResult.gear.characterName, "Aalaska");
+  assert.equal(apiResult.gear.items[0].itemUrl, "https://armory.warmane.com/item/51281");
+}
+
 console.log("warmane-armory-import tests passed");

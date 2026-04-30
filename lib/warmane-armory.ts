@@ -44,9 +44,11 @@ type WarmaneCharacterSummary = {
 
 export type ImportedArmoryGearPayload = {
   characterName?: unknown;
+  name?: unknown;
   realm?: unknown;
   sourceUrl?: unknown;
   items?: unknown;
+  equipment?: unknown;
 };
 
 const DEFAULT_REALM = "Lordaeron";
@@ -178,11 +180,11 @@ function normalizeEquipment(items: unknown): ArmoryGearItem[] {
 export function normalizeImportedArmoryGear(
   payload: ImportedArmoryGearPayload
 ): { ok: true; gear: ArmoryCharacterGear } | { ok: false; error: string } {
-  const characterName = sanitizeCharacterName(asString(payload.characterName) ?? "");
+  const characterName = sanitizeCharacterName(asString(payload.characterName) ?? asString(payload.name) ?? "");
   if (!characterName) return { ok: false, error: "Invalid character name." };
 
   const realm = sanitizeRealm(asString(payload.realm) ?? DEFAULT_REALM);
-  const items = normalizeEquipment(payload.items);
+  const items = normalizeEquipment(payload.items ?? payload.equipment);
   if (items.length === 0) return { ok: false, error: "No gear items found in import." };
 
   return {

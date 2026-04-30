@@ -37,7 +37,9 @@
 - Failed requests are counted and recorded without affecting player pages
 - Added a browser-side "Pizza Logs Gear Import" bookmarklet on `/admin`
 - Added `POST /api/admin/armory-gear/import` for authenticated browser imports from Warmane pages
-- Bookmarklet scans visible Warmane item links, prompts for the admin secret, and stores normalized gear in `armory_gear_cache`
+- Added `POST /api/admin/armory-gear/missing` so the browser importer can fetch the missing Pizza Logs players queue
+- Bookmarklet uses Warmane's JSON API from the Warmane browser origin, prompts for the admin secret, and stores normalized gear in `armory_gear_cache`
+- The older single-page fallback remains available, but the recommended flow is now bulk API import
 
 ### 4. Warmane access note
 - Direct local requests to Warmane HTML and API returned Cloudflare/403 from this environment
@@ -97,6 +99,7 @@ Do after Skada verification.
 ### 5. Gear follow-ups
 - Run `/admin` Seed Gear Cache after deploy and inspect success/failure counts
 - Use `/admin` browser bookmarklet import when Warmane blocks Railway server refreshes
+- Warmane API forum note: API accepts `/api/character/<name>/<realm>/summary`, returns JSON errors inside 200 responses, and currently lacks slot/itemlevel fields
 - Add item quality/item level/icon/gem/enchant enrichment if a reliable source is chosen
 - Consider historical gear snapshots per raid date
 
@@ -104,4 +107,4 @@ Do after Skada verification.
 
 ## Next Step
 
-Deploy the bookmarklet import workflow, import one Warmane character from the browser, then verify that `/players/<name>` renders cached gear. Parser priority remains fixing HC/Normal detection in `parser/parser_core.py`.
+Deploy the bulk browser API import workflow, run it from any Warmane Armory page, then verify that `/players/<name>` renders cached gear. Parser priority remains fixing HC/Normal detection in `parser/parser_core.py`.
