@@ -80,6 +80,7 @@ assert.equal(
         name: "Sanctified Bloodmage Hood",
         itemId: "51281",
         itemLevel: 264,
+        equipLoc: "INVTYPE_HEAD",
         iconUrl: "https://wow.zamimg.com/images/wow/icons/large/inv_helmet_142.jpg",
         itemUrl: "https://www.wowhead.com/wotlk/item=51281/sanctified-bloodmage-hood",
         details: ["Item Level 264"],

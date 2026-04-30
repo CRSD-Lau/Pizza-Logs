@@ -1,5 +1,7 @@
 import { slugify } from "./utils";
 import type { ArmoryGearItem } from "./warmane-armory";
+import { mapWowheadInventoryTypeToEquipLoc } from "./gearscore";
+import type { GearScoreEquipLoc } from "./gearscore";
 
 type WowheadItemData = {
   itemId: string;
@@ -8,6 +10,7 @@ type WowheadItemData = {
   itemLevel?: number;
   iconUrl?: string;
   itemUrl: string;
+  equipLoc?: GearScoreEquipLoc;
   details?: string[];
 };
 
@@ -145,6 +148,14 @@ function asNumber(value: unknown): number | undefined {
   return Number.isFinite(parsed) && parsed > 0 ? parsed : undefined;
 }
 
+function readNestedNumber(record: Record<string, unknown> | null, key: string): number | undefined {
+  const direct = asNumber(record?.[key]);
+  if (direct !== undefined) return direct;
+
+  const jsonEquip = asRecord(record?.jsonequip);
+  return asNumber(jsonEquip?.[key]);
+}
+
 export function parseWowheadItemPage(itemId: string | number, pageHtml: string): WowheadItemData | null {
   const id = String(itemId);
   const extendData = asRecord(extractJsonObjectAfter(pageHtml, `$.extend(g_items[${id}],`));
@@ -156,6 +167,10 @@ export function parseWowheadItemPage(itemId: string | number, pageHtml: string):
   const iconName = asString(gatheredItem?.icon);
   const qualityId = asNumber(extendData?.quality) ?? asNumber(gatheredItem?.quality);
   const itemLevel = asNumber(extendData?.level);
+  const inventoryType = readNestedNumber(gatheredItem, "slotbak")
+    ?? readNestedNumber(extendData, "slotbak")
+    ?? asNumber(gatheredItem?.slot)
+    ?? asNumber(extendData?.slot);
 
   return {
     itemId: id,
@@ -164,6 +179,7 @@ export function parseWowheadItemPage(itemId: string | number, pageHtml: string):
     itemLevel,
     iconUrl: iconName ? `https://wow.zamimg.com/images/wow/icons/large/${iconName}.jpg` : undefined,
     itemUrl: getWowheadItemUrl(id, name),
+    equipLoc: mapWowheadInventoryTypeToEquipLoc(inventoryType),
     details: parseTooltipDetails(tooltipHtml),
   };
 }
@@ -204,6 +220,7 @@ export async function enrichGearWithWowhead(items: ArmoryGearItem[]): Promise<Ar
       itemLevel: wowhead?.itemLevel ?? item.itemLevel,
       iconUrl: wowhead?.iconUrl ?? item.iconUrl,
       itemUrl: wowhead?.itemUrl ?? item.itemUrl ?? getWowheadItemUrl(item.itemId, item.name),
+      equipLoc: wowhead?.equipLoc ?? item.equipLoc,
       details: wowhead?.details ?? item.details,
     };
   }));

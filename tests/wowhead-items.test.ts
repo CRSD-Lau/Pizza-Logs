@@ -17,6 +17,7 @@ assert.deepEqual(parsed, {
   itemLevel: 264,
   iconUrl: "https://wow.zamimg.com/images/wow/icons/large/inv_helmet_154.jpg",
   itemUrl: "https://www.wowhead.com/wotlk/item=51167/sanctified-lightsworn-headpiece",
+  equipLoc: "INVTYPE_HEAD",
   details: [
     "Sanctified Lightsworn Headpiece",
     "Item Level 264",

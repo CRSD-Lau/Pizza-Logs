@@ -52,12 +52,14 @@ export function getGearTooltipPosition(
 
 function GearItemTooltip({
   item,
+  gearScore,
   qualityColor,
   tooltipId,
   position,
   tooltipRef,
 }: {
   item: ArmoryGearItem;
+  gearScore?: number;
   qualityColor?: string;
   tooltipId: string;
   position: { left: number; top: number };
@@ -104,13 +106,14 @@ function GearItemTooltip({
         ) : (
           <p>No additional Wowhead details available.</p>
         )}
+        {gearScore !== undefined && <p className="pt-1 text-gold-light">GearScore {gearScore.toLocaleString()}</p>}
         {item.itemId && <p className="pt-1 text-text-dim">Wowhead item #{item.itemId}</p>}
       </div>
     </div>
   );
 }
 
-export function GearItemCard({ item }: { item: ArmoryGearItem }) {
+export function GearItemCard({ item, gearScore }: { item: ArmoryGearItem; gearScore?: number }) {
   const qualityColor = getQualityColor(item.quality);
   const cardRef = useRef<HTMLElement | null>(null);
   const tooltipRef = useRef<HTMLDivElement | null>(null);
@@ -193,9 +196,10 @@ export function GearItemCard({ item }: { item: ArmoryGearItem }) {
               {item.name}
             </p>
           </div>
-          {item.itemLevel && (
-            <span className="shrink-0 text-xs tabular-nums text-text-secondary">ilvl {item.itemLevel}</span>
-          )}
+          <div className="shrink-0 space-y-0.5 text-right text-xs tabular-nums text-text-secondary">
+            {item.itemLevel && <p>ilvl {item.itemLevel}</p>}
+            {gearScore !== undefined && <p className="text-gold-light">GS {gearScore.toLocaleString()}</p>}
+          </div>
         </div>
 
         {(item.enchant || item.gems?.length) && (
@@ -208,6 +212,7 @@ export function GearItemCard({ item }: { item: ArmoryGearItem }) {
       {mounted && visible && createPortal(
         <GearItemTooltip
           item={item}
+          gearScore={gearScore}
           qualityColor={qualityColor}
           tooltipId={tooltipId}
           position={position}

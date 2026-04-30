@@ -77,6 +77,13 @@
 - Tooltip placement now clamps to the viewport and flips above the item when there is not enough room below
 - Added `tests/gear-tooltip-position.test.ts` for the viewport positioning helper
 
+### 8. GearScoreLite scoring added to native gear section
+- Added `lib/gearscore.ts` with a TypeScript port of the GearScoreLite 3.3.5 item/character score math from `GearScoreLite.lua` and `informationLite.lua`
+- Player gear sections now show a GearScoreLite total, quality band, average item level, scored-slot count, and per-item GS values on each gear card/tooltip
+- Wowhead item enrichment now stores `equipLoc` from Wowhead `slotbak`/slot metadata so two-hand weapons, ranged weapons, trinkets, rings, and armor slots use the same slot weights as the addon
+- Existing cached rows missing `equipLoc` are treated as needing re-enrichment by the admin gear sync queue
+- Added `tests/gearscore-lite.test.ts` for the core formula, Wowhead inventory-type mapping, two-hand/titan-grip behavior, hunter weapon modifiers, and character summary output
+
 ---
 
 ## Current State
@@ -84,10 +91,10 @@
 - **Live app**: https://pizza-logs-production.up.railway.app
 - **Release**: `v0.1.0`
 - **Player profiles**: include a native Warmane Armory Gear section wired to a DB-backed gear cache
-- **Gear display**: uses Wowhead-enriched icons, quality, item level, and tooltip text when item IDs are present; tooltips render in a viewport-level portal so they are not clipped by accordion/table wrappers
+- **Gear display**: uses Wowhead-enriched icons, quality, item level, equip-location metadata, GearScoreLite totals/per-item scores, and tooltip text when item IDs are present; tooltips render in a viewport-level portal so they are not clipped by accordion/table wrappers
 - **Gear sync**: hosted Tampermonkey userscript v1.0.3 is installed/running on Warmane and actively imports missing or enrichment-needed DB players
 - **Warmane local access**: blocked by Cloudflare/403 from this Codex shell, handled gracefully by UI
-- **Checks run**: cache fallback test passed; import normalization test passed; Wowhead parser test passed; gear tooltip positioning test passed; `prisma validate` passed; `tsc --noEmit` passed; `next build` passed
+- **Checks run**: GearScoreLite formula test passed; cache fallback test passed; import normalization test passed; Wowhead parser test passed; gear tooltip positioning test passed; admin gear script test passed; `prisma validate` passed; `tsc --noEmit` passed; `next build` passed
 - **Local env blocker**: DB-backed pages cannot render locally until PostgreSQL is running on `localhost:5432`
 - **HPS gap**: ~21-28% under Skada for Disc priests - expected until absorbs are implemented
 - **DPS**: <1% residual from orphaned pets - accepted
@@ -135,4 +142,4 @@ Do after Skada verification.
 
 ## Next Step
 
-After deploy, spot-check `/players/Ashien` gear hover details in production to confirm the portal tooltip floats above the Gear section and All-Time Records. Parser priority remains fixing HC/Normal detection in `parser/parser_core.py`.
+After deploy, spot-check `/players/Ashien` gear hover details and GearScoreLite summary in production. Rerun the hosted Warmane userscript so cached rows missing Wowhead `equipLoc` metadata are refreshed for exact weapon scoring. Parser priority remains fixing HC/Normal detection in `parser/parser_core.py`.

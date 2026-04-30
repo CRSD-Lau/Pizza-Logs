@@ -14,9 +14,9 @@ import { cn } from "@/lib/utils";
 
 interface Props { params: Promise<{ playerName: string }> }
 
-async function PlayerGear({ name, realm }: { name: string; realm?: string }) {
+async function PlayerGear({ name, realm, playerClass }: { name: string; realm?: string; playerClass?: string | null }) {
   const result = await getWarmaneCharacterGear(name, realm ?? "Lordaeron");
-  return <PlayerGearSection result={result} />;
+  return <PlayerGearSection result={result} playerClass={playerClass} />;
 }
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
@@ -108,7 +108,7 @@ export default async function PlayerPage({ params }: Props) {
 
       {/* Gear */}
       <Suspense fallback={<PlayerGearSectionSkeleton />}>
-        <PlayerGear name={name} realm={player.realm?.name ?? "Lordaeron"} />
+        <PlayerGear name={name} realm={player.realm?.name ?? "Lordaeron"} playerClass={player.class} />
       </Suspense>
 
       {/* Milestones */}

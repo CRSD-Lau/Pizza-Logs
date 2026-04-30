@@ -1,5 +1,6 @@
 import { db } from "./db";
 import { enrichGearWithWowhead, getWowheadItemUrl } from "./wowhead-items";
+import type { GearScoreEquipLoc } from "./gearscore";
 
 export type ArmoryGearItem = {
   slot: string;
@@ -9,6 +10,7 @@ export type ArmoryGearItem = {
   itemLevel?: number;
   iconUrl?: string;
   itemUrl?: string;
+  equipLoc?: GearScoreEquipLoc;
   details?: string[];
   enchant?: string;
   gems?: string[];
@@ -34,6 +36,8 @@ type WarmaneEquipmentItem = {
   itemlevel?: unknown;
   icon?: unknown;
   iconUrl?: unknown;
+  equipLoc?: unknown;
+  itemEquipLoc?: unknown;
   enchant?: unknown;
   gems?: unknown;
 };
@@ -119,6 +123,11 @@ function asStringArray(value: unknown): string[] | undefined {
   return strings.length > 0 ? strings : undefined;
 }
 
+function asGearScoreEquipLoc(value: unknown): GearScoreEquipLoc | undefined {
+  const equipLoc = asString(value);
+  return equipLoc?.startsWith("INVTYPE_") ? equipLoc as GearScoreEquipLoc : undefined;
+}
+
 function sanitizeSourceUrl(value: unknown, characterName: string, realm: string): string {
   const fallback = getSourceUrl(characterName, realm);
   const url = asString(value);
@@ -160,7 +169,7 @@ export function gearNeedsWowheadEnrichment(gear: unknown): boolean {
     if (!item.itemId) return true;
 
     const usesWowheadUrl = item.itemUrl?.includes("wowhead.com/wotlk/item=");
-    return !usesWowheadUrl || !item.iconUrl || !item.itemLevel || !item.details?.length;
+    return !usesWowheadUrl || !item.iconUrl || !item.itemLevel || !item.equipLoc || !item.details?.length;
   });
 }
 
@@ -185,6 +194,7 @@ function normalizeEquipment(items: unknown): ArmoryGearItem[] {
         itemLevel: asNumber(item.itemLevel) ?? asNumber(item.itemlevel),
         iconUrl,
         itemUrl: itemId ? getWowheadItemUrl(itemId, name) : undefined,
+        equipLoc: asGearScoreEquipLoc(item.equipLoc) ?? asGearScoreEquipLoc(item.itemEquipLoc),
         enchant: asString(item.enchant),
         gems: asStringArray(item.gems),
       };
