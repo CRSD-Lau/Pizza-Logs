@@ -11,6 +11,9 @@ export type GuildRosterTableMember = {
   raceName: string | null;
   level: number | null;
   rankName: string | null;
+  rankOrder?: number | null;
+  professionsJson?: unknown | null;
+  gearScore?: number | null;
   armoryUrl: string;
   gearSnapshotJson: unknown | null;
   lastSyncedAt: Date;
@@ -27,13 +30,29 @@ function formatSyncedAt(value: Date): string {
   }).format(value);
 }
 
+function formatProfession(value: unknown): string | null {
+  if (typeof value === "string") return value;
+  if (!value || typeof value !== "object") return null;
+  const profession = value as Record<string, unknown>;
+  const name = typeof profession.name === "string" ? profession.name : null;
+  const skill = typeof profession.skill === "number" ? profession.skill : Number(profession.skill);
+  if (!name) return null;
+  return Number.isFinite(skill) && skill > 0 ? `${name} ${skill}` : name;
+}
+
+function formatProfessions(value: unknown): string {
+  if (!Array.isArray(value)) return "-";
+  const professions = value.map(formatProfession).filter((profession): profession is string => Boolean(profession));
+  return professions.length > 0 ? professions.join(", ") : "-";
+}
+
 export function GuildRosterTable({ members }: { members: GuildRosterTableMember[] }) {
   if (members.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center py-16 px-6 text-center">
         <p className="heading-cinzel text-base text-text-secondary mb-2">No guild roster data yet</p>
         <p className="text-sm text-text-dim max-w-xs">
-          Use the roster sync endpoint to import PizzaWarriors members from Warmane.
+          Use Admin Guild Roster Sync to import PizzaWarriors members from Warmane.
         </p>
       </div>
     );
@@ -49,6 +68,8 @@ export function GuildRosterTable({ members }: { members: GuildRosterTableMember[
             <th className="px-4 py-3 font-semibold">Race</th>
             <th className="px-4 py-3 font-semibold">Level</th>
             <th className="px-4 py-3 font-semibold">Rank</th>
+            <th className="px-4 py-3 font-semibold">GS</th>
+            <th className="px-4 py-3 font-semibold">Professions</th>
             <th className="px-4 py-3 font-semibold">Guild</th>
             <th className="px-4 py-3 font-semibold">Realm</th>
             <th className="px-4 py-3 font-semibold">Last Synced</th>
@@ -82,6 +103,10 @@ export function GuildRosterTable({ members }: { members: GuildRosterTableMember[
                 <td className="px-4 py-3 text-text-secondary">{member.raceName ?? "Unknown"}</td>
                 <td className="px-4 py-3 text-text-secondary tabular-nums">{member.level ?? "-"}</td>
                 <td className="px-4 py-3 text-text-secondary">{member.rankName ?? "-"}</td>
+                <td className="px-4 py-3 text-text-secondary tabular-nums">
+                  {member.gearScore ? member.gearScore.toLocaleString() : "-"}
+                </td>
+                <td className="px-4 py-3 text-text-secondary whitespace-nowrap">{formatProfessions(member.professionsJson)}</td>
                 <td className="px-4 py-3 text-text-secondary">{member.guildName}</td>
                 <td className="px-4 py-3 text-text-secondary">{member.realm}</td>
                 <td className="px-4 py-3 text-text-dim whitespace-nowrap">{formatSyncedAt(member.lastSyncedAt)}</td>

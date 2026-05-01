@@ -172,6 +172,9 @@ model GuildRosterMember {
   raceName                String?  @map("race_name")
   level                   Int?
   rankName                String?  @map("rank_name")
+  rankOrder               Int?     @map("rank_order")
+  professionsJson         Json?    @map("professions_json")
+  gearScore               Int?     @map("gear_score")
   armoryUrl               String   @map("armory_url")
   gearSnapshotJson        Json?    @map("gear_snapshot_json")
   lastSyncedAt            DateTime @map("last_synced_at")
@@ -180,6 +183,7 @@ model GuildRosterMember {
 
   @@unique([normalizedCharacterName, guildName, realm])
   @@index([guildName, realm])
+  @@index([guildName, realm, rankOrder])
   @@index([lastSyncedAt])
   @@map("guild_roster_members")
 }

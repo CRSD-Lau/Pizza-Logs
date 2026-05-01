@@ -51,27 +51,56 @@ function buildRosterScriptBody(autoRun: boolean): string {
       });
     };
 
+    const rosterHasRanks = function rosterHasRanks(data: unknown) {
+      if (!data || typeof data !== "object") return false;
+      const record = data as Record<string, unknown>;
+      const rows = Array.isArray(data)
+        ? data
+        : Array.isArray(record.roster)
+          ? record.roster
+          : Array.isArray(record.members)
+            ? record.members
+            : Array.isArray(record.guildmembers)
+              ? record.guildmembers
+              : [];
+
+      return rows.some((row) => {
+        if (!row || typeof row !== "object") return false;
+        const member = row as Record<string, unknown>;
+        return Boolean(member.rank || member.rankName || member.rankname);
+      });
+    };
+
     async function fetchRosterPayload() {
       const apiPaths = [
         "__SUMMARY_API_PATH__",
         "__MEMBERS_API_PATH__",
       ];
+      let ranklessJsonData: unknown = null;
 
       for (const path of apiPaths) {
         try {
           const response = await fetch(path, { headers: { Accept: "application/json,text/plain,*/*" } });
           const data = await response.json();
-          if (response.ok && !data.error) return { data };
+          if (response.ok && !data.error) {
+            if (rosterHasRanks(data)) return { data };
+            if (!ranklessJsonData) ranklessJsonData = data;
+          }
         } catch (error) {
           console.warn("Pizza Logs roster JSON fetch failed", path, error);
         }
       }
 
-      const htmlResponse = await fetch("__GUILD_HTML_PATH__", {
-        headers: { Accept: "text/html,application/xhtml+xml,*/*" },
-      });
-      if (!htmlResponse.ok) throw new Error(`Warmane HTML ${htmlResponse.status}`);
-      return { html: await htmlResponse.text() };
+      try {
+        const htmlResponse = await fetch("__GUILD_HTML_PATH__", {
+          headers: { Accept: "text/html,application/xhtml+xml,*/*" },
+        });
+        if (!htmlResponse.ok) throw new Error(`Warmane HTML ${htmlResponse.status}`);
+        return { html: await htmlResponse.text() };
+      } catch (error) {
+        if (ranklessJsonData) return { data: ranklessJsonData };
+        throw error;
+      }
     }
 
     async function runRosterSync() {
@@ -195,7 +224,7 @@ export function buildGuildRosterUserscript(): string {
     "// ==UserScript==",
     "// @name         Pizza Logs Warmane Guild Roster Sync",
     "// @namespace    https://pizza-logs-production.up.railway.app",
-    "// @version      1.0.0",
+    "// @version      1.0.1",
     "// @description  Sync Pizza Logs guild roster from Warmane Armory in-browser.",
     "// @match        https://armory.warmane.com/*",
     "// @match        http://armory.warmane.com/*",

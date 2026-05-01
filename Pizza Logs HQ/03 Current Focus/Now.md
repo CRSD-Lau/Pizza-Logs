@@ -21,6 +21,8 @@ Git/deploy expectations are now explicit in root instructions and the Railway ru
 
 Guild Roster feature has been added. `/guild-roster` reads from a new DB-backed `guild_roster_members` table, separate from combat-log `players`. The Warmane roster service tries JSON first (`/api/guild/<guild>/<realm>/summary`, then `/members`) and falls back to parsing the native guild summary HTML. It tries `Pizza+Warriors` before `PizzaWarriors` because Warmane search/index results show the guild title with a space. `/admin` now has a **Guild Roster Sync** panel with row count, last sync time, and a **Sync Roster** button. The button uses the existing admin session/cookie through a server action and runs a forced PizzaWarriors/Lordaeron sync. Because Railway showed Warmane unavailable, `/admin` also links a hosted roster userscript. The userscript runs on Warmane Armory, fetches the guild JSON/HTML from the browser, and posts normalized roster data to Pizza Logs via `POST /api/admin/guild-roster/import`.
 
+Guild Roster has been extended for rank/profession/GS visibility. `guild_roster_members` now has nullable `rank_order`, `professions_json`, and `gear_score` columns. Sync preserves Warmane's source order so the public table sorts by guild rank order, with Maximusboom first if Warmane returns him first. Warmane JSON is still attempted first, but rankless JSON falls through to the guild HTML page because Warmane's API has historically omitted rank while the HTML roster includes the Rank column. The roster userscript is v1.0.1 and mirrors this behavior. `/guild-roster` now shows GS and Professions columns; GS is computed with the same GearScoreLite code as the player page from existing `armory_gear_cache` snapshots when available, so roster rendering stays DB-backed.
+
 Local direct Warmane calls for guild roster returned 403 from this environment, same as prior gear work. Production `/admin` also showed "Roster sync is temporarily unavailable from Warmane" for the server-side sync. Use the browser roster userscript fallback from `/admin` when the server-side button is blocked. The roster page remains DB-backed and does not depend on live Warmane availability at render time.
 
 ---
@@ -33,7 +35,7 @@ Local direct Warmane calls for guild roster returned 403 from this environment, 
 | Spot-check gear slot/GearScore fix | VERIFY | After deploy, confirm `/players/Lausudo` shows the libram as `Ranged/Relic` and full 2H+relic GearScore; confirm `/players/Aalaska` shows staff/wand in the weapon row |
 | Refresh gear metadata | VERIFY | Rerun the hosted Warmane userscript so cached rows missing Wowhead `equipLoc` metadata get re-enriched for exact weapon scoring |
 | Stats / Analytics page | FEATURE | Brainstorm first, then design, then build |
-| Populate Guild Roster | VERIFY | Apply migration, deploy, then use `/admin` -> Guild Roster Sync. If server sync is blocked, install roster userscript and sync from Warmane guild page |
+| Populate Guild Roster | VERIFY | Apply migrations, deploy, install/update roster userscript v1.0.1 from `/admin`, sync from Warmane guild page, then confirm rank order/professions/GS on `/guild-roster` |
 | Verify Skada numbers in-game | VERIFY | Neil to do manually next week |
 | Absorbs (PW:S) | FEATURE | Combined column. Do after verification. |
 
@@ -46,7 +48,7 @@ Local direct Warmane calls for guild roster returned 403 from this environment, 
 - GitHub: https://github.com/CRSD-Lau/Pizza-Logs
 - Wiki: https://github.com/CRSD-Lau/Pizza-Logs/wiki
 - Warmane gear source pattern: `https://armory.warmane.com/api/character/<name>/Lordaeron/summary`
-- Warmane guild roster source patterns: `https://armory.warmane.com/api/guild/Pizza+Warriors/Lordaeron/summary`, `/members`, HTML fallback `https://armory.warmane.com/guild/Pizza+Warriors/Lordaeron/summary`
+- Warmane guild roster source patterns: `https://armory.warmane.com/api/guild/Pizza+Warriors/Lordaeron/summary`, `/members`, HTML fallback `https://armory.warmane.com/guild/Pizza+Warriors/Lordaeron/summary`; use HTML when JSON lacks rank data
 - Wowhead item enrichment pattern: `https://www.wowhead.com/wotlk/item=<id>/<slug>`
 - Gear cache table: `armory_gear_cache`
 - Guild roster table: `guild_roster_members`

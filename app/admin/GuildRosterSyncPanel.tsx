@@ -31,7 +31,7 @@ export function GuildRosterSyncPanel({
       </div>
 
       <p className="text-sm text-text-secondary max-w-3xl">
-        The sync runs server-side: Pizza Logs asks Warmane for the PizzaWarriors roster JSON first, falls back to the guild summary page if needed, normalizes each member, and upserts the rows into <span className="font-mono text-text-primary">guild_roster_members</span>. The public roster page reads only from our database, so it still loads even when Warmane is down or blocking requests.
+        The sync runs server-side: Pizza Logs asks Warmane for the PizzaWarriors roster JSON first, falls back to the guild summary page if needed, preserves Warmane's rank order, normalizes professions, and upserts the rows into <span className="font-mono text-text-primary">guild_roster_members</span>. The public roster page reads only from our database and uses the existing gear cache for GearScore, so it still loads even when Warmane is down or blocking requests.
       </p>
 
       <div className="flex flex-wrap items-center gap-4">

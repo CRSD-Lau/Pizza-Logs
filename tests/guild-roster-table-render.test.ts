@@ -19,6 +19,12 @@ const markup = renderToStaticMarkup(
         raceName: "Night Elf",
         level: 80,
         rankName: "Small Council",
+        rankOrder: 0,
+        professionsJson: [
+          { name: "Engineering", skill: 450 },
+          { name: "Jewelcrafting", skill: 450 },
+        ],
+        gearScore: 5875,
         armoryUrl: "https://armory.warmane.com/character/Azyva/Lordaeron/summary",
         gearSnapshotJson: null,
         lastSyncedAt: new Date("2026-04-30T12:00:00.000Z"),
@@ -33,6 +39,9 @@ assert.match(markup, /Azyva/);
 assert.match(markup, /Druid/);
 assert.match(markup, /Night Elf/);
 assert.match(markup, /Small Council/);
+assert.match(markup, /5,875/);
+assert.match(markup, /Engineering 450/);
+assert.match(markup, /Jewelcrafting 450/);
 assert.match(markup, /\/players\/Azyva/);
 
 console.log("guild-roster-table-render tests passed");
