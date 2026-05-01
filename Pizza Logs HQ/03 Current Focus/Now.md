@@ -1,7 +1,7 @@
 # Now
 
 ## Status
-`v0.1.0` shipped. Wiki live. Railway deployed.
+`v0.1.0` shipped. Wiki live. Railway deployed. Admin UI copy updated to reflect "Clear Upload Data" scope.
 Public upload analytics have been moved into admin-only routes, and the mobile nav/raids/leaderboards pass is done.
 Native Warmane Armory gear UI has been added to player profiles. Gear now has a DB-backed cache and a browser bookmarklet that bulk-imports missing players through Warmane's browser-accessible API.
 Gear items are enriched with Wowhead WotLK metadata when cached, giving the player page native icons, item quality, item level, and hover/focus tooltip details without making each item card link away.

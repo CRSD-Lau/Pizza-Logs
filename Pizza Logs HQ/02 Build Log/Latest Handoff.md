@@ -5,12 +5,23 @@
 
 ## Git
 **Branch:** `main`
-**Latest commit before this handoff commit:** `1844c36 fix: scope warmane userscripts by page`
+**Latest commit:** `8b802a3 fix(admin): update Clear Database copy to Clear Upload Data with retention disclaimer`
 **Release:** `v0.1.0` - tagged and published on GitHub
 
 ---
 
 ## What Was Done This Session
+
+### Admin UI Copy Update
+- Updated `app/admin/ClearDatabaseButton.tsx` to reflect the narrowed scope of the `clearDatabase` action
+  - Button label: "Clear Database" → "Clear Upload Data"
+  - Confirmation text: "Wipes all uploads, encounters, players. Sure?" → Multi-line disclaimer explaining what is deleted (logs, raids, encounters, events, analytics) and what is retained (Warmane gear cache, player profiles, guild roster)
+  - Confirm button: "Yes, wipe it" → "Yes, clear uploads"
+  - Done message: "✓ Database cleared" → "✓ Upload data cleared"
+- TypeScript check passed
+- Committed as `8b802a3`
+
+## Previous Session Summary
 
 ### 1. Native Warmane Armory gear section added to player profiles
 - Added `lib/warmane-armory.ts` as the isolated server-side Warmane reader
