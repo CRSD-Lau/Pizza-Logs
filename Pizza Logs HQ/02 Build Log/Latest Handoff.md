@@ -4,215 +4,26 @@
 2026-05-01
 
 ## Git
-**Branch:** `main`
-**Latest commit:** `8b802a3 fix(admin): update Clear Database copy to Clear Upload Data with retention disclaimer`
+**Branch:** `claude/laughing-hertz-750b19`
+**Latest commit:** `2eda0d5 fix(admin): remove GuildRosterSyncButton component`
 **Release:** `v0.1.0` - tagged and published on GitHub
 
 ---
 
 ## What Was Done This Session
 
-### Admin UI Copy Update
-- Updated `app/admin/ClearDatabaseButton.tsx` to reflect the narrowed scope of the `clearDatabase` action
-  - Button label: "Clear Database" → "Clear Upload Data"
-  - Confirmation text: "Wipes all uploads, encounters, players. Sure?" → Multi-line disclaimer explaining what is deleted (logs, raids, encounters, events, analytics) and what is retained (Warmane gear cache, player profiles, guild roster)
-  - Confirm button: "Yes, wipe it" → "Yes, clear uploads"
-  - Done message: "✓ Database cleared" → "✓ Upload data cleared"
-- TypeScript check passed
-- Committed as `8b802a3`
+### GuildRosterSyncButton Component Deleted
+- Deleted dead code: `app/admin/GuildRosterSyncButton.tsx` (54 lines, unused)
+- Component was previously removed from usage after `GuildRosterSyncPanel` stopped accepting an `action` prop
+- Committed as: `2eda0d5 fix(admin): remove GuildRosterSyncButton component`
 
-## Previous Session Summary
+### TypeScript Error Status
+Ran `npx tsc --noEmit` — confirmed expected errors (intentional, will be fixed in next task):
+- `app/admin/page.tsx(10,39)`: Cannot find module './GuildRosterSyncButton' import
+- `app/admin/page.tsx(112,11)`: `action` prop type error (prop no longer accepted by component)
+- `tests/guild-roster-admin-panel.test.ts(10,5)`: `action` prop in test setup
 
-### 1. Native Warmane Armory gear section added to player profiles
-- Added `lib/warmane-armory.ts` as the isolated server-side Warmane reader
-- Uses the Warmane character summary API endpoint for Lordaeron by default:
-  `https://armory.warmane.com/api/character/<name>/<realm>/summary`
-- Sanitizes character names before URL construction
-- Adds timeout handling, user-agent headers, server-side logging, and graceful public error messages
-- Uses a persistent Prisma `ArmoryGearCache` table with 12-hour freshness
-- Player pages render cached gear from the database without requiring a new combat-log upload
-- If Warmane blocks a refresh but cached gear exists, the page renders the stale cached snapshot
-- Maps Warmane API equipment order to native slot labels
-
-### 2. Player profile UI integration
-- Added `components/players/PlayerGearSection.tsx`
-- `/players/[playerName]` now renders a native "Gear" `AccordionSection`
-- Gear is streamed behind `Suspense` with a skeleton loading state
-- Empty/error states are non-blocking and still render the rest of the player page
-- The Warmane page is linked as the source, not embedded as an iframe
-
-### 3. Admin gear cache import
-- Removed the failed server-side "Seed Gear Cache" admin action from the UI and code
-- The production-supported admin path is now browser-assisted Warmane API import
-- Added a browser-side "Pizza Logs Gear Import" bookmarklet on `/admin`
-- Added `POST /api/admin/armory-gear/import` for authenticated browser imports from Warmane pages
-- Added `POST /api/admin/armory-gear/missing` so the browser importer can fetch the missing Pizza Logs players queue
-- Bookmarklet uses Warmane's JSON API from the Warmane browser origin, prompts for the admin secret, and stores normalized gear in `armory_gear_cache`
-- The older single-page fallback remains available, but the recommended flow is now bulk API import
-- React blocks rendered `javascript:` links, so `/admin` now shows copyable bookmarklet code instead of clickable bookmarklet anchors
-
-### 4. Warmane access note
-- Direct local requests to Warmane HTML and API returned Cloudflare/403 from this environment
-- The feature is built to fail gracefully when Warmane blocks, is down, or changes behavior
-- Railway behavior still needs verification after deploy because Warmane may treat Railway egress differently
-
-### 5. Wowhead item enrichment and native hover details
-- Added `lib/wowhead-items.ts` to enrich Warmane equipment item IDs with Wowhead WotLK item metadata
-- Wowhead enrichment reads the normal Wowhead item page and parses embedded `g_items[...]` data for item name, quality, item level, icon, and tooltip text
-- Gear cache writes enrich imported/browser-fetched Warmane items before saving, so player pages can render icons and details from the DB snapshot
-- Gear cards on player pages are no longer outbound item links; they are native, non-clicking cards with hover/focus tooltips
-- Tooltip content is native Pizza Logs UI, not a Wowhead iframe or embedded external widget
-- Admin missing-player queue now treats cached rows without Wowhead metadata as needing re-import/enrichment, so older cached gear can be upgraded by rerunning the bookmarklet
-- Browser bookmarklet import now retries each Warmane character fetch up to 4 times with backoff and reports failed character names, because Warmane intermittently fails individual API reads
-- Added a recommended Tampermonkey/userscript flow on `/admin` that injects a Pizza Logs Gear Sync panel on Warmane Armory pages and auto-syncs at most once per hour after the admin secret is saved locally in that browser
-- Userscript is now hosted at `/api/admin/armory-gear/userscript.user.js` with Tampermonkey `@downloadURL` and `@updateURL` metadata; `/admin` links directly to the hosted install/update URL. The older `/userscript` route remains a compatibility alias.
-- Userscript v1.0.2 matches both `https://armory.warmane.com/*` and `http://armory.warmane.com/*`, runs at `document-idle`, and waits for `document.body` before injecting the Pizza Logs panel
-- Userscript v1.0.3 adds startup and panel-injection console diagnostics so a missing panel can be distinguished from Tampermonkey not running the script
-- Confirmed in browser after enabling Tampermonkey injection: the **Pizza Logs Gear Sync** panel appeared on Warmane Armory and was actively importing queued players (`Importing Rimeclaw (13/18)...`)
-- Bookmarklet remains a fallback, but the hosted Tampermonkey userscript is now the supported production workflow for filling/refreshing gear cache rows from existing DB players
-
-### 6. Verification
-- `tests/armory-gear-client-scripts.test.ts` passed
-- `tests/warmane-armory-cache.test.ts` passed
-- `tests/warmane-armory-import.test.ts` passed
-- `tests/wowhead-items.test.ts` passed
-- `prisma validate` passed with a dummy local `DATABASE_URL`
-- `tsc --noEmit` passed via bundled Node runtime
-- `next build` passed via bundled Node runtime
-- `next lint` could not run non-interactively because this Next.js 15 project has no ESLint config yet and Next prompts for setup
-
-### 7. Gear tooltip clipping fix
-- Fixed native gear hover/focus tooltips being clipped inside the player profile Gear accordion/table wrapper
-- Root cause: the tooltip was absolutely positioned inside `AccordionSection` content, whose animated collapse wrapper uses `overflow-hidden`
-- Extracted `components/players/GearItemCard.tsx` as a client component and renders the tooltip through a `document.body` portal with fixed viewport positioning and top-level overlay z-index
-- Tooltip placement now clamps to the viewport and flips above the item when there is not enough room below
-- Added `tests/gear-tooltip-position.test.ts` for the viewport positioning helper
-
-### 8. GearScoreLite scoring added to native gear section
-- Added `lib/gearscore.ts` with a TypeScript port of the GearScoreLite 3.3.5 item/character score math from `GearScoreLite.lua` and `informationLite.lua`
-- Player gear sections now show a GearScoreLite total, quality band, average item level, scored-slot count, and per-item GS values on each gear card/tooltip
-- Wowhead item enrichment now stores `equipLoc` from Wowhead `slotbak`/slot metadata so two-hand weapons, ranged weapons, trinkets, rings, and armor slots use the same slot weights as the addon
-- Existing cached rows missing `equipLoc` are treated as needing re-enrichment by the admin gear sync queue
-- Added `tests/gearscore-lite.test.ts` for the core formula, Wowhead inventory-type mapping, two-hand/titan-grip behavior, hunter weapon modifiers, and character summary output
-
-### 9. Partial gear enrichment bug fixed
-- Investigated `/players/Lausudo`: all 18 gear slots were present, and missing rows had item IDs/Wowhead URLs, but only 8 slots had enriched icon/item-level/equip-location details
-- Root cause: `enrichGearWithWowhead` fetched every item concurrently and saved partial snapshots when individual Wowhead requests failed transiently
-- Added retry/backoff to `fetchWowheadItemData` and capped Wowhead enrichment concurrency at 3 requests
-- Fresh cached rows that still need Wowhead enrichment are now re-enriched before being returned by `getWarmaneCharacterGear`, instead of staying partial for the 12-hour cache window
-- Added `tests/wowhead-enrichment-retry.test.ts` and expanded `tests/warmane-armory-cache.test.ts`
-
-### 10. Relic/ranged slot and GearScore two-hander bug fixed
-- Investigated `/players/Lausudo` and `/players/Aalaska` screenshots showing sparse Warmane equipment arrays sliding weapons/relics into the wrong display slots
-- Root cause: Warmane omits empty equipment slots, but Pizza Logs assigned slot labels by raw array index; the GearScore Titan Grip adjustment then saw Lausudo as `Main Hand` 2H + `Off Hand` relic and halved both item scores
-- Added `normalizeArmoryGearSlots` to repair display slot names from Wowhead `equipLoc` metadata after enrichment and when reading cached rows
-- The ranged/relic equipment slot now displays as `Ranged/Relic`, covering bows/guns/wands/thrown/relics without implying every class uses a physical ranged weapon
-- Added `lib/gear-layout.ts` so the player gear grid groups by normalized slot name instead of fixed array slices
-- Tightened Titan Grip scoring so the half-score modifier only applies when both main/off-hand items are actual weapons and at least one is a two-hander
-- Added regression coverage in `tests/gearscore-lite.test.ts`, `tests/warmane-armory-import.test.ts`, and `tests/gear-layout.test.ts`
-
-### 11. Git/Railway push expectations clarified
-- Updated `AGENTS.md`, `CLAUDE.md`, `START HERE.md`, and the Railway runbook with the canonical GitHub remote
-- Documented that user requests to push/deploy/publish/get changes live mean `git push origin main`, which triggers Railway's deployment from `origin/main`
-- Documented the local Windows Git fallback path: `C:\Program Files\Git\cmd\git.exe`
-
-### 12. Guild Roster feature added
-- Added a dedicated `/guild-roster` route and nav link
-- Added route-level loading, empty, and error states for the roster page
-- Added `/admin` Guild Roster Sync controls:
-  - Shows roster row count and latest sync time
-  - Uses the existing admin login/cookie via a server action
-  - Calls the Warmane sync with `force: true`
-  - Revalidates `/admin` and `/guild-roster` after a successful sync
-- Added browser-assisted roster import fallback for when Warmane blocks server/Railway:
-  - Hosted userscript at `/api/admin/guild-roster/userscript.user.js`
-  - Admin panel links to the roster userscript and the Warmane guild page
-  - Warmane-side script fetches guild JSON from Warmane first, falls back to Warmane guild HTML, then posts to Pizza Logs
-  - Added CORS import route at `POST /api/admin/guild-roster/import`
-- Added `GuildRosterMember` / `guild_roster_members` as a separate Prisma-backed roster table, distinct from combat-log `Player` rows
-- Added a Prisma migration SQL file at `prisma/migrations/20260430210000_add_guild_roster_members/migration.sql`
-- Added `lib/warmane-guild-roster.ts` for JSON-first Warmane roster retrieval:
-  - Tries `https://armory.warmane.com/api/guild/<guild>/<realm>/summary`
-  - Then tries `/members`
-  - Falls back to parsing the native Warmane guild summary HTML
-  - Handles the observed Warmane naming split by trying `Pizza+Warriors` before `PizzaWarriors`
-- Added upsert sync logic keyed by `normalized_character_name + guild_name + realm`
-- Added public DB-backed read API: `GET /api/guild-roster?guild=PizzaWarriors&realm=Lordaeron`
-- Added admin/manual sync API: `POST /api/guild-roster/sync`
-  - Uses the existing `ADMIN_SECRET` style when configured
-  - Returns generic public errors rather than raw scraper failures
-  - Has a 30-minute cooldown unless `force: true` is provided
-- Added focused validation tests for:
-  - Warmane guild URL candidate generation
-  - JSON roster normalization
-  - malformed/empty roster handling
-  - HTML fallback parsing
-  - upsert payload behavior
-  - roster table empty/data render states
-  - admin sync panel copy/rendering
-  - roster browser importer/userscript generation
-- Verified existing Warmane player gear tests still pass
-
-### 13. Warmane roster API investigation
-- Warmane forum documentation confirms API-like guild endpoints:
-  - `/api/guild/name/realm/summary`
-  - `/api/guild/name/realm/members`
-- Warmane forum examples show roster data under `roster`
-- Local direct requests from this Windows/Codex environment still returned Cloudflare/403, matching the prior gear-work blocker
-- Search index showed the actual Warmane guild title as `Pizza Warriors`; code now tries the camel-split `Pizza+Warriors` candidate first while storing `PizzaWarriors`
-
-### 14. Guild roster rank/profession/GearScore refactor
-- Extended `guild_roster_members` with nullable `rank_order`, `professions_json`, and `gear_score` columns
-- Roster normalization now preserves Warmane source order as `rank_order`; this keeps the public roster sorted in the same rank order Warmane shows, including guild leader first when Warmane has Maximusboom first
-- JSON roster normalization now supports Warmane's historical nested profession shape: `professions.professions[]`, plus direct profession arrays
-- HTML fallback parsing now extracts professions from the Warmane guild summary page's profession icons/text
-- Server-side Warmane sync remains JSON-first, but if JSON has no guild rank data it falls through to the HTML roster before accepting the result, because Warmane forum notes indicate the guild API has historically omitted rank while the HTML table includes it
-- Browser roster userscript v1.0.1 mirrors that behavior: it uses JSON only if rank data is present, otherwise it fetches the guild HTML and posts that to Pizza Logs
-- `/guild-roster` now shows GS and Professions columns
-- Roster GearScore uses the same GearScoreLite calculation as the player page, sourced from existing `armory_gear_cache` rows when available, so the page remains DB-backed and does not depend on live Warmane at render time
-- Admin Guild Roster Sync copy now explains rank order, professions, and gear-cache GS behavior
-- Added/updated validation tests for rankless JSON fallback decisions, profession normalization, upsert payload shape, roster GS calculation, userscript rank fallback behavior, and table rendering
-
-### 15. Guild roster HTML and roster-only player profile fix
-- Investigated missing guild rank/professions after the previous roster refactor
-- Root cause: Warmane's guild roster HTML can link members as `/guild/Pizza+Warriors/Lordaeron/summary/<Character>` rather than `/character/<Character>/Lordaeron/summary`; the HTML parser only recognized character summary links, so the browser importer could still fall back to rankless JSON
-- Updated the HTML parser to recognize guild-summary member links and `Image: ...` text labels from Warmane's roster table
-- Changed roster sync/browser userscript behavior to prefer Warmane guild HTML first because that is where Rank and Professions are reliably present; JSON is now the fallback
-- Bumped the roster userscript to v1.0.2
-- Added roster-only player profile support: `/players/<name>` now resolves a `guild_roster_members` row even when the character has never appeared in uploaded combat logs
-- Existing combat-log player profiles now merge roster metadata such as guild, race, level, and guild rank when available
-- The admin Warmane gear queue now includes roster-only members as well as combat-log `players`, so the existing Warmane Gear Sync userscript can import their gear, enrich it with Wowhead metadata, and calculate GS on the roster/player pages
-- Added tests for Warmane guild-route HTML parsing, roster-only gear queue entries, and roster-only player profile resolution
-
-### 16. Warrior Titan Grip gear slot scoring fixed
-- Investigated `/players/Contents` screenshot showing a warrior with two two-handed weapons reporting too much GearScore
-- Root cause: `normalizeArmoryGearSlots` mapped every `INVTYPE_2HWEAPON` to `Main Hand`, so Titan Grip characters could have two `Main Hand` items and no `Off Hand`; the GearScore half-score modifier never activated
-- Updated two-handed weapon slot normalization to assign the first 2H weapon to `Main Hand` and the second 2H weapon to `Off Hand`
-- Added a regression assertion in `tests/warmane-armory-import.test.ts` so dual-2H gear normalizes to `Main Hand` + `Off Hand`
-
-### 17. Gear and roster userscript panel overlap fixed
-- Investigated Warmane pages where only the Guild Roster userscript panel appeared after installing both Warmane userscripts
-- Root cause: both userscripts matched all `armory.warmane.com/*` pages and rendered fixed panels at `right:16px; bottom:16px` with the same high z-index, so the roster panel sat directly on top of the gear panel
-- Moved the roster userscript panel up to `bottom:176px`, leaving the Gear Sync panel at the lower-right corner
-- Bumped the roster userscript to v1.0.3 so Tampermonkey can pick up the layout fix
-- Added a regression assertion in `tests/armory-gear-client-scripts.test.ts` ensuring the gear and roster panels do not share the same bottom dock position
-
-### 18. Warmane userscripts made page-specific
-- Adjusted the previous userscript overlap fix after screenshot verification showed the roster panel on character pages
-- Gear userscript now matches and runs only on Warmane character pages (`/character/*`)
-- Guild roster userscript now matches and runs only on Warmane guild pages (`/guild/*`)
-- Added runtime path guards (`isCharacterPage`, `isGuildPage`) so manually installed/stale match metadata still exits on the wrong page type
-- Bumped both Warmane userscripts to v1.0.4
-- Updated userscript tests to assert page-specific match metadata and guards
-
-### 19. Claude workspace transition prepared
-- Updated `CLAUDE.md` with a dedicated Claude handoff block:
-  - Use the existing PizzaLogs repo workspace and canonical `origin` remote
-  - Read the vault files first, then check git status before edits
-  - Treat "push/deploy/publish/live" as `git push origin main` after a scoped commit
-  - Ignore current local-only Codex noise unless Neil asks otherwise
-  - Remember that Warmane gear/roster sync uses browser-assisted Tampermonkey scripts from `/admin`
-- This handoff is intended for a seamless switch to Claude near the current chat rate limit
+These errors are scoped for cleanup in the next task.
 
 ---
 
@@ -220,67 +31,23 @@
 
 - **Live app**: https://pizza-logs-production.up.railway.app
 - **Release**: `v0.1.0`
-- **Player profiles**: include a native Warmane Armory Gear section wired to a DB-backed gear cache
-- **Guild roster**: `/guild-roster` reads from the DB-backed `guild_roster_members` table; `/api/guild-roster/sync` refreshes from Warmane with JSON-first retrieval and HTML fallback
-- **Guild roster rank/professions/GS**: roster rows preserve Warmane rank order, store professions, and show GearScore from existing armory gear cache snapshots where available
-- **Gear display**: uses Wowhead-enriched icons, quality, item level, equip-location metadata, GearScoreLite totals/per-item scores, and tooltip text when item IDs are present; partial cached snapshots are re-enriched with retry/backoff before rendering; slot labels are repaired from equip-location metadata so sparse Warmane arrays do not shift weapons/relics into the wrong UI slot; tooltips render in a viewport-level portal so they are not clipped by accordion/table wrappers
-- **GearScore Titan Grip**: dual two-handed weapons now normalize as main hand + off hand so the existing Titan Grip half-score modifier applies; single 2H + relic/ranged still scores as a single doubled 2H plus ranged/relic
-- **Gear sync userscript**: v1.0.4 appears only on Warmane character pages and imports missing/enrichment-needed gear rows
-- **Roster sync userscript**: v1.0.4 appears only on Warmane guild pages and imports guild roster rows
-- **Claude transition**: `CLAUDE.md` now includes a workspace handoff note with remote/deploy rules, expected local-only noise, and Warmane userscript workflow reminders
-- **Git/deploy**: canonical remote is `origin` -> `https://github.com/CRSD-Lau/Pizza-Logs.git`; push live changes with `git push origin main` so Railway deploys from `origin/main`
-- **Warmane local access**: blocked by Cloudflare/403 from this Codex shell, handled gracefully by UI
-- **Checks run**: Guild roster parser/client-script/admin-panel/table tests passed; armory gear queue tests passed; roster-only player profile tests passed; `prisma validate` passed; `tsc --noEmit` passed; `next build` passed
-- **Local env blocker**: DB-backed pages cannot render locally until PostgreSQL is running on `localhost:5432`
-- **HPS gap**: ~21-28% under Skada for Disc priests - expected until absorbs are implemented
-- **DPS**: <1% residual from orphaned pets - accepted
+- **Component cleanup**: `GuildRosterSyncButton.tsx` removed; next task will clean up stale imports/props in `page.tsx` and test file
+- **Git/deploy**: canonical remote is `origin` -> `https://github.com/CRSD-Lau/Pizza-Logs.git`; push live changes with `git push origin main`
 
 ---
 
-## Open Items (priority order)
+## Next Steps
 
-### 1. BUG: Hardcore vs Normal difficulty detection regression
-Tracked in: https://github.com/CRSD-Lau/Pizza-Logs/issues
-- Identify what signal in the Warmane log distinguishes Normal from Hardcore
-- Fix difficulty assignment in `parser/parser_core.py`
-- Add regression tests
+1. **Remove stale imports/props** (next task)
+   - Delete import of `GuildRosterSyncButton` from `app/admin/page.tsx(10)`
+   - Remove `action` prop from `GuildRosterSyncPanel` call at line 112
+   - Remove `action` prop from test setup in `tests/guild-roster-admin-panel.test.ts`
+   - Run `npx tsc --noEmit` to verify all errors resolved
 
-### 2. Stats / Analytics page
-New `/stats` page - brainstorm session needed before any code.
-Confirmed scope:
-- Class performance comparisons (avg DPS/HPS by class)
-- Raid comparisons (instance vs instance, week over week)
-- All-time records and progression trends
-- Multiple graph types using Recharts
-
-### 3. Verify Skada numbers in-game
-Neil to upload a log and compare DPS/HPS to in-game Skada for the same fight.
-Deferred to next week.
-
-### 4. Absorbs - Power Word: Shield
-Decision: **combined Healing+Absorbs column** (not separate).
-Do after Skada verification.
-1. Parse `SPELL_AURA_APPLIED` for PW:S - store capacity + caster
-2. Parse `absorbed` field on damage events - attribute to Disc priest
-3. Merge into HPS column in API + UI
-
-### 5. Gear follow-ups
-- Use `/admin` hosted userscript install/update link for ongoing Warmane gear imports; bookmarklet is fallback only
-- Warmane API forum note: API accepts `/api/character/<name>/<realm>/summary`, returns JSON errors inside 200 responses, and currently lacks slot/itemlevel fields
-- Watch production import timing: each cached Warmane item may trigger Wowhead enrichment on first write or first re-enrichment
-- Prefer the hosted `/api/admin/armory-gear/userscript.user.js` install over bookmarklets for ongoing gear cache maintenance
-- Tampermonkey should update from the hosted URL; manual copy-paste userscripts still need replacement after deploys that change importer code
-- Enchants/gems are still source-limited: Wowhead can provide static item details, but character-specific gems/enchants require Warmane to expose them in the data the importer can read
-- Consider adding a dedicated item metadata cache if the Wowhead fetch volume becomes noisy
-- Consider historical gear snapshots per raid date
-
-### 6. Guild roster follow-ups
-- Apply the Prisma migration in the target database before using `/guild-roster`
-- After deploy, open `/admin` and click **Sync Roster** in the Guild Roster Sync panel
-- If server-side sync reports Warmane unavailable, install/update the roster userscript v1.0.4 from `/admin`, open `https://armory.warmane.com/guild/Pizza+Warriors/Lordaeron/summary`, and click the floating **Sync roster** button
-
----
-
-## Next Step
-
-In Claude, first run `git status --short --branch`, read `START HERE.md`, this handoff, and `Now.md`, then pull latest `origin/main` if needed. After Railway deploys the latest pushed commits, install/update both Warmane userscripts from `/admin` so Tampermonkey gets v1.0.4. Confirm **Pizza Logs Gear Sync** appears on Warmane character pages and **Pizza Logs Roster Sync** appears on Warmane guild pages. Open the Warmane Pizza Warriors guild page and click **Sync roster**; confirm `/guild-roster` lists PizzaWarriors members sorted with Warmane rank order and professions. Then run the Warmane Gear Sync userscript from a Warmane character page so roster-only members get cached gear and GS. After that, spot-check `/players/Maximusboom`, `/players/Contents`, `/players/Lausudo`, and `/players/Aalaska`; parser priority remains fixing HC/Normal detection in `parser/parser_core.py`.
+2. **Remaining priority work**
+   - Fix HC/Normal difficulty detection regression
+   - Spot-check gear/GS fixes in player profiles
+   - Populate Guild Roster via Warmane userscript
+   - Stats/Analytics page (brainstorm first)
+   - Verify Skada numbers in-game
+   - Absorbs (PW:S) tracking
