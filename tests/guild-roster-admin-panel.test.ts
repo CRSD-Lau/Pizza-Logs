@@ -7,7 +7,6 @@ const markup = renderToStaticMarkup(
   React.createElement(GuildRosterSyncPanel, {
     rosterCount: 42,
     latestSync: new Date("2026-05-01T12:00:00.000Z"),
-    action: React.createElement("span", null, "Sync Roster"),
   }),
 );
 
@@ -16,6 +15,5 @@ assert.match(markup, /42/);
 assert.match(markup, /Warmane/);
 assert.match(markup, /guild_roster_members/);
 assert.match(markup, /View public roster/);
-assert.match(markup, /Sync Roster/);
 
 console.log("guild-roster-admin-panel tests passed");

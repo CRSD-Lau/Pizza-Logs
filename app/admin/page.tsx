@@ -3,11 +3,10 @@ import Link from "next/link";
 import { db } from "@/lib/db";
 import { SectionHeader } from "@/components/ui/SectionHeader";
 import { StatCard } from "@/components/ui/StatCard";
-import { formatBytes, formatDuration } from "@/lib/utils";
+import { formatBytes } from "@/lib/utils";
 import { ClearDatabaseButton } from "./ClearDatabaseButton";
 import { DeleteUploadButton } from "./DeleteUploadButton";
 import { GearImportBookmarklet } from "./GearImportBookmarklet";
-import { GuildRosterSyncButton } from "./GuildRosterSyncButton";
 import { GuildRosterSyncPanel } from "./GuildRosterSyncPanel";
 
 export const metadata: Metadata = { title: "Admin / Diagnostics" };
@@ -80,62 +79,68 @@ export default async function AdminPage() {
         <ClearDatabaseButton />
       </div>
 
-      {/* Global stats */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-        <StatCard label="Uploads"     value={uploadsTotal} />
-        <StatCard label="Encounters"  value={encountersTotal} highlight />
-        <StatCard label="Players"     value={playersTotal} />
-        <StatCard label="Active Milestones" value={milestonesTotal} />
-      </div>
-
-      {/* Gear cache */}
-      <section>
-        <SectionHeader title="Warmane Gear Cache" sub="Browser-assisted import for player profile gear" />
-        <div className="bg-bg-panel border border-gold-dim rounded p-4 space-y-4">
-          <div className="grid grid-cols-2 gap-3">
-            <StatCard label="Cached Characters" value={gearCacheTotal} />
-            <StatCard label="Server Refresh Errors" value={recentGearErrors} />
-          </div>
-          <p className="text-sm text-text-secondary max-w-3xl">
-            Player pages read gear from this database cache. Railway cannot reliably fetch Warmane directly, so use the browser importer below from a Warmane Armory page to fill missing snapshots.
-          </p>
-          <GearImportBookmarklet />
-        </div>
-      </section>
-
-      {/* Guild roster */}
-      <section>
-        <SectionHeader title="Guild Roster Sync" sub="Server-side Warmane roster import for PizzaWarriors" />
-        <GuildRosterSyncPanel
-          rosterCount={rosterCount}
-          latestSync={latestRosterSync?.lastSyncedAt ?? null}
-          action={<GuildRosterSyncButton />}
-        />
-      </section>
-
-      {/* Service health */}
+      {/* 1. Service Health */}
       <section>
         <SectionHeader title="Service Health" />
         <div className="grid sm:grid-cols-3 gap-3">
-          <ServiceCard
-            name="Next.js App"
-            status="ok"
-            detail="Running"
-          />
+          <ServiceCard name="Next.js App"    status="ok"    detail="Running" />
           <ServiceCard
             name="Python Parser"
             status={parserHealth.status === "ok" ? "ok" : "error"}
             detail={parserHealth.status === "ok" ? "Reachable" : "Unreachable"}
           />
-          <ServiceCard
-            name="Database"
-            status="ok"
-            detail={`${bossCount} bosses seeded`}
-          />
+          <ServiceCard name="Database" status="ok" detail={`${bossCount} bosses seeded`} />
         </div>
       </section>
 
-      {/* Top uploaders */}
+      {/* 2. Configuration */}
+      <section>
+        <SectionHeader title="Configuration" />
+        <div className="bg-bg-panel border border-gold-dim rounded p-4 space-y-2 font-mono text-xs text-text-secondary">
+          <div><span className="text-text-dim">PARSER_SERVICE_URL</span> = {process.env.PARSER_SERVICE_URL ?? "http://localhost:8000"}</div>
+          <div><span className="text-text-dim">NODE_ENV</span>           = {process.env.NODE_ENV}</div>
+          <div><span className="text-text-dim">UPLOAD_DIR</span>         = {process.env.UPLOAD_DIR ?? "./uploads"}</div>
+        </div>
+      </section>
+
+      {/* 3. Guild Roster */}
+      <section>
+        <SectionHeader title="Guild Roster" sub="Browser-assisted import for PizzaWarriors" />
+        <GuildRosterSyncPanel
+          rosterCount={rosterCount}
+          latestSync={latestRosterSync?.lastSyncedAt ?? null}
+        />
+      </section>
+
+      {/* 4. Warmane Gear Cache */}
+      <section>
+        <SectionHeader title="Warmane Gear Cache" sub="Browser-assisted import for player profile gear" />
+        <div className="bg-bg-panel border border-gold-dim rounded p-4 space-y-4">
+          <div className="grid grid-cols-2 gap-3">
+            <StatCard label="Cached Characters"    value={gearCacheTotal} />
+            <StatCard label="Server Refresh Errors" value={recentGearErrors} />
+          </div>
+          <p className="text-sm text-text-secondary max-w-3xl">
+            Player pages read gear from this database cache. Railway cannot reliably fetch
+            Warmane directly, so use the browser importer below from a Warmane Armory
+            character page to fill missing snapshots.
+          </p>
+          <GearImportBookmarklet />
+        </div>
+      </section>
+
+      {/* 5. Upload stats */}
+      <section>
+        <SectionHeader title="Upload Analytics" sub="Counts reset when upload data is cleared" />
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+          <StatCard label="Uploads"           value={uploadsTotal} />
+          <StatCard label="Encounters"        value={encountersTotal} highlight />
+          <StatCard label="Players"           value={playersTotal} />
+          <StatCard label="Active Milestones" value={milestonesTotal} />
+        </div>
+      </section>
+
+      {/* 6. Top uploaders */}
       <section>
         <SectionHeader title="Most Active Uploaders" sub="By logs submitted" />
         <div className="bg-bg-panel border border-gold-dim rounded divide-y divide-gold-dim">
@@ -153,13 +158,13 @@ export default async function AdminPage() {
         </div>
       </section>
 
-      {/* Recent upload timings */}
+      {/* 7. Recent upload timings */}
       {recentUploads.length > 0 && (
         <section>
           <SectionHeader title="Recent Upload Timings" sub="Parse duration per log" />
           <div className="bg-bg-panel border border-gold-dim rounded divide-y divide-gold-dim">
             {recentUploads.map(u => {
-              const elapsedMs = u.parsedAt ? u.parsedAt.getTime() - u.createdAt.getTime() : null;
+              const elapsedMs  = u.parsedAt ? u.parsedAt.getTime() - u.createdAt.getTime() : null;
               const elapsedSec = elapsedMs ? Math.round(elapsedMs / 1000) : null;
               return (
                 <div key={u.id} className="flex items-center justify-between px-4 py-2.5 gap-4 flex-wrap">
@@ -188,7 +193,7 @@ export default async function AdminPage() {
         </section>
       )}
 
-      {/* Failed uploads */}
+      {/* 8. Failed uploads */}
       {recentErrors.length > 0 && (
         <section>
           <SectionHeader title="Recent Failures" />
@@ -205,16 +210,6 @@ export default async function AdminPage() {
           </div>
         </section>
       )}
-
-      {/* Parser env info */}
-      <section>
-        <SectionHeader title="Configuration" />
-        <div className="bg-bg-panel border border-gold-dim rounded p-4 space-y-2 font-mono text-xs text-text-secondary">
-          <div><span className="text-text-dim">PARSER_SERVICE_URL</span> = {process.env.PARSER_SERVICE_URL ?? "http://localhost:8000"}</div>
-          <div><span className="text-text-dim">NODE_ENV</span>           = {process.env.NODE_ENV}</div>
-          <div><span className="text-text-dim">UPLOAD_DIR</span>         = {process.env.UPLOAD_DIR ?? "./uploads"}</div>
-        </div>
-      </section>
     </div>
   );
 }
