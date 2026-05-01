@@ -364,6 +364,26 @@ function findRank(values: string[], level?: number): string | undefined {
   });
 }
 
+function extractRosterCharacter(rowHtml: string, guildName: string, realm: string): string | null {
+  const characterLink = rowHtml.match(/href=["'](?:https?:\/\/armory\.warmane\.com)?\/character\/([^\/"']+)\/([^\/"']+)\/summary["']/i);
+  if (characterLink && decodeURIComponent(characterLink[2]) === realm) {
+    return sanitizeCharacterName(decodeURIComponent(characterLink[1]));
+  }
+
+  const guildLink = rowHtml.match(/href=["'](?:https?:\/\/armory\.warmane\.com)?\/guild\/[^\/"']+\/([^\/"']+)\/summary\/([^\/"']+)["']/i);
+  if (guildLink && decodeURIComponent(guildLink[1]) === realm) {
+    return sanitizeCharacterName(decodeURIComponent(guildLink[2]));
+  }
+
+  const firstCell = rowHtml.match(/<td\b[^>]*>([\s\S]*?)<\/td>/i);
+  if (!firstCell) return null;
+  const text = stripTags(firstCell[1])
+    .replace(/\bImage:\s*Captain\b/i, "")
+    .trim();
+  const name = text.match(/\b([A-Za-z]{2,12})\b/)?.[1];
+  return name ? sanitizeCharacterName(name) : null;
+}
+
 export function parseWarmaneGuildRosterHtml(
   html: string,
   context: WarmaneGuildRosterContext
@@ -375,10 +395,7 @@ export function parseWarmaneGuildRosterHtml(
   const rows = Array.from(html.matchAll(/<tr\b[^>]*>([\s\S]*?)<\/tr>/gi));
 
   for (const [, rowHtml] of rows) {
-    const linkMatch = rowHtml.match(/href=["'](?:https?:\/\/armory\.warmane\.com)?\/character\/([^\/"']+)\/([^\/"']+)\/summary["']/i);
-    if (!linkMatch || decodeURIComponent(linkMatch[2]) !== realm) continue;
-
-    const characterName = sanitizeCharacterName(decodeURIComponent(linkMatch[1]));
+    const characterName = extractRosterCharacter(rowHtml, guildName, realm);
     if (!characterName) continue;
 
     const cellValues = extractCellValues(rowHtml).filter((value) => value !== characterName);
@@ -450,20 +467,6 @@ export async function fetchWarmaneGuildRoster(
     realm: sanitizeRealm(realm),
     now: new Date(),
   };
-  const jsonUrls = [...buildWarmaneGuildApiUrls(context.guildName, context.realm), ...buildWarmaneGuildMembersApiUrls(context.guildName, context.realm)];
-  let ranklessJsonResult: (Extract<GuildRosterResult, { ok: true }> & { sourceUrl?: string }) | null = null;
-
-  for (const url of jsonUrls) {
-    try {
-      const response = await fetchWithTimeout(url, "application/json,text/plain,*/*");
-      if (!response.ok) throw new Error(`Warmane Armory returned ${response.status}`);
-      const result = normalizeWarmaneGuildRosterPayload(await response.json(), context);
-      if (result.ok && guildRosterResultHasRanks(result)) return { ...result, sourceUrl: url };
-      if (result.ok && !ranklessJsonResult) ranklessJsonResult = { ...result, sourceUrl: url };
-    } catch (error) {
-      console.error("Warmane guild roster JSON fetch error", { guildName: context.guildName, realm: context.realm, url, error });
-    }
-  }
 
   for (const url of buildWarmaneGuildHtmlUrls(context.guildName, context.realm)) {
     try {
@@ -476,7 +479,17 @@ export async function fetchWarmaneGuildRoster(
     }
   }
 
-  if (ranklessJsonResult) return ranklessJsonResult;
+  const jsonUrls = [...buildWarmaneGuildApiUrls(context.guildName, context.realm), ...buildWarmaneGuildMembersApiUrls(context.guildName, context.realm)];
+  for (const url of jsonUrls) {
+    try {
+      const response = await fetchWithTimeout(url, "application/json,text/plain,*/*");
+      if (!response.ok) throw new Error(`Warmane Armory returned ${response.status}`);
+      const result = normalizeWarmaneGuildRosterPayload(await response.json(), context);
+      if (result.ok) return { ...result, sourceUrl: url };
+    } catch (error) {
+      console.error("Warmane guild roster JSON fetch error", { guildName: context.guildName, realm: context.realm, url, error });
+    }
+  }
 
   return {
     ok: false,

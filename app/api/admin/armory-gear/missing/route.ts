@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
-import { gearNeedsWowheadEnrichment } from "@/lib/warmane-armory";
+import { DEFAULT_GUILD_NAME, DEFAULT_GUILD_REALM } from "@/lib/warmane-guild-roster";
+import { getMissingArmoryGearPlayers } from "@/lib/armory-gear-queue";
 
 const MAX_PLAYERS = 100;
 
@@ -58,10 +59,30 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
       realm: { select: { name: true } },
     },
   });
+  const rosterMembers = await db.guildRosterMember.findMany({
+    where: {
+      guildName: DEFAULT_GUILD_NAME,
+      realm: DEFAULT_GUILD_REALM,
+    },
+    orderBy: [
+      { rankOrder: "asc" },
+      { characterName: "asc" },
+    ],
+    take: MAX_PLAYERS,
+    select: {
+      characterName: true,
+      normalizedCharacterName: true,
+      realm: true,
+    },
+  });
+  const queueKeys = Array.from(new Set([
+    ...players.map(player => player.name.toLowerCase()),
+    ...rosterMembers.map(member => member.normalizedCharacterName),
+  ]));
 
   const cachedRows = await db.armoryGearCache.findMany({
     where: {
-      characterKey: { in: players.map(player => player.name.toLowerCase()) },
+      characterKey: { in: queueKeys },
     },
     select: {
       characterKey: true,
@@ -69,18 +90,7 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
       gear: true,
     },
   });
-  const freshCachedKeys = new Set(
-    cachedRows
-      .filter((row) => !gearNeedsWowheadEnrichment(row.gear))
-      .map(row => `${row.characterKey}:${row.realm}`)
-  );
-
-  const missing = players
-    .map(player => ({
-      characterName: player.name,
-      realm: player.realm?.name ?? "Lordaeron",
-    }))
-    .filter(player => !freshCachedKeys.has(`${player.characterName.toLowerCase()}:${player.realm}`));
+  const missing = getMissingArmoryGearPlayers({ players, rosterMembers, cachedRows }).slice(0, MAX_PLAYERS);
 
   return NextResponse.json({ ok: true, players: missing }, { headers });
 }

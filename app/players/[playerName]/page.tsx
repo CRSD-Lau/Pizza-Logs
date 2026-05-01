@@ -8,6 +8,8 @@ import { AccordionSection } from "@/components/ui/AccordionSection";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { PlayerGearSection, PlayerGearSectionSkeleton } from "@/components/players/PlayerGearSection";
 import { getWarmaneCharacterGear } from "@/lib/warmane-armory";
+import { DEFAULT_GUILD_NAME, DEFAULT_GUILD_REALM } from "@/lib/warmane-guild-roster";
+import { resolvePlayerProfile } from "@/lib/player-profile";
 import { formatDps } from "@/lib/utils";
 import { getClassColor } from "@/lib/constants/classes";
 import { cn } from "@/lib/utils";
@@ -42,25 +44,46 @@ export default async function PlayerPage({ params }: Props) {
     },
   });
 
-  if (!player) notFound();
-
-  const participants = await db.participant.findMany({
-    where: { playerId: player.id },
-    orderBy: { encounter: { startedAt: "desc" } },
-    take: 50,
-    include: {
-      encounter: {
-        include: { boss: { select: { name: true, slug: true, raid: true } } },
-      },
+  const rosterMember = await db.guildRosterMember.findFirst({
+    where: {
+      normalizedCharacterName: name.toLowerCase(),
+      guildName: DEFAULT_GUILD_NAME,
+      realm: DEFAULT_GUILD_REALM,
+    },
+    select: {
+      characterName: true,
+      realm: true,
+      guildName: true,
+      className: true,
+      raceName: true,
+      level: true,
+      rankName: true,
     },
   });
+
+  const profile = resolvePlayerProfile({ player, rosterMember });
+  if (!profile) notFound();
+
+  const participants = player
+    ? await db.participant.findMany({
+      where: { playerId: player.id },
+      orderBy: { encounter: { startedAt: "desc" } },
+      take: 50,
+      include: {
+        encounter: {
+          include: { boss: { select: { name: true, slug: true, raid: true } } },
+        },
+      },
+    })
+    : [];
 
   const kills       = participants.filter(p => p.encounter.outcome === "KILL");
   const avgDps      = kills.length > 0
     ? kills.reduce((a, p) => a + p.dps, 0) / kills.length : 0;
   const bestDps     = Math.max(0, ...participants.map(p => p.dps));
 
-  const color = getClassColor(player.class ?? name);
+  const milestones = player?.milestones ?? [];
+  const color = getClassColor(profile.className ?? name);
 
   // Group by boss for per-boss bests
   const perBoss = participants.reduce<Record<string, {
@@ -82,18 +105,22 @@ export default async function PlayerPage({ params }: Props) {
           className="w-14 h-14 rounded-sm flex items-center justify-center text-lg font-bold"
           style={{ background: `${color}22`, color, border: `1px solid ${color}44` }}
         >
-          {name.substring(0, 2).toUpperCase()}
+          {profile.name.substring(0, 2).toUpperCase()}
         </div>
         <div>
           <h1
             className="heading-cinzel text-2xl font-bold text-glow-gold"
             style={{ color }}
           >
-            {name}
+            {profile.name}
           </h1>
-          <div className="flex items-center gap-2 mt-1">
-            {player.class && <span className="text-sm text-text-secondary">{player.class}</span>}
-            {player.realm && <span className="text-xs text-text-dim">{player.realm.name}</span>}
+          <div className="flex flex-wrap items-center gap-2 mt-1">
+            {profile.className && <span className="text-sm text-text-secondary">{profile.className}</span>}
+            {profile.raceName && <span className="text-sm text-text-dim">{profile.raceName}</span>}
+            {profile.level && <span className="text-xs text-text-dim">Level {profile.level}</span>}
+            <span className="text-xs text-text-dim">{profile.realmName}</span>
+            {profile.guildName && <span className="text-xs text-gold">{profile.guildName}</span>}
+            {profile.rankName && <span className="text-xs text-text-secondary">{profile.rankName}</span>}
           </div>
         </div>
       </div>
@@ -108,14 +135,14 @@ export default async function PlayerPage({ params }: Props) {
 
       {/* Gear */}
       <Suspense fallback={<PlayerGearSectionSkeleton />}>
-        <PlayerGear name={name} realm={player.realm?.name ?? "Lordaeron"} playerClass={player.class} />
+        <PlayerGear name={profile.name} realm={profile.realmName} playerClass={profile.className} />
       </Suspense>
 
       {/* Milestones */}
-      {player.milestones.length > 0 && (
-        <AccordionSection title="All-Time Records" sub="Current rankings, kills only" count={player.milestones.length} defaultOpen>
+      {milestones.length > 0 && (
+        <AccordionSection title="All-Time Records" sub="Current rankings, kills only" count={milestones.length} defaultOpen>
           <div className="grid sm:grid-cols-2 gap-2">
-            {player.milestones.map(m => (
+            {milestones.map(m => (
               <div key={m.id} className="milestone-banner flex items-center justify-between text-sm">
                 <div className="flex items-center gap-2">
                   <span className={cn(

@@ -130,6 +130,35 @@ if (htmlResult.ok) {
   assert.equal(htmlResult.members[1].rankOrder, 1);
 }
 
+const warmaneGuildRouteHtmlResult = parseWarmaneGuildRosterHtml(`
+  <table>
+    <tr>
+      <td><a href="/guild/Pizza%2BWarriors/Lordaeron/summary/Maximusboom">Maximusboom</a> Image: Captain</td>
+      <td>Image: Night Elf</td>
+      <td>Image: Druid</td>
+      <td>Image: Alliance</td>
+      <td>80</td>
+      <td>First of Equals</td>
+      <td>2905</td>
+      <td>Image: Alchemy Image: Engineering</td>
+    </tr>
+  </table>
+`, {
+  guildName: "PizzaWarriors",
+  realm: "Lordaeron",
+});
+assert.equal(warmaneGuildRouteHtmlResult.ok, true);
+if (warmaneGuildRouteHtmlResult.ok) {
+  assert.equal(warmaneGuildRouteHtmlResult.members[0].characterName, "Maximusboom");
+  assert.equal(warmaneGuildRouteHtmlResult.members[0].rankName, "First of Equals");
+  assert.equal(warmaneGuildRouteHtmlResult.members[0].raceName, "Night Elf");
+  assert.equal(warmaneGuildRouteHtmlResult.members[0].className, "Druid");
+  assert.deepEqual(warmaneGuildRouteHtmlResult.members[0].professions, [
+    { name: "Alchemy" },
+    { name: "Engineering" },
+  ]);
+}
+
 assert.deepEqual(parseWarmaneGuildRosterHtml("<html>No roster here</html>", {
   guildName: "PizzaWarriors",
   realm: "Lordaeron",

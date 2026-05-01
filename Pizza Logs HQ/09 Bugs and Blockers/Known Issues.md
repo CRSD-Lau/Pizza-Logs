@@ -8,7 +8,7 @@
 
 | Blocker | Impact | Status |
 |---|---|---|
-| Warmane Armory returned Cloudflare/403 to direct server requests during gear and guild-roster feature work | Gear section shows unavailable state until a character has a cached snapshot; roster sync may fail from server/Railway, but `/guild-roster` still reads previously synced DB rows | Hosted Tampermonkey userscript confirmed working for gear in browser. Roster now has the same browser-assisted fallback via `/admin` -> Guild Roster Sync -> Install / Update Roster Userscript; roster userscript v1.0.1 falls back to Warmane HTML when JSON lacks rank data. |
+| Warmane Armory returned Cloudflare/403 to direct server requests during gear and guild-roster feature work | Gear section shows unavailable state until a character has a cached snapshot; roster sync may fail from server/Railway, but `/guild-roster` still reads previously synced DB rows | Hosted Tampermonkey userscript confirmed working for gear in browser. Roster now has the same browser-assisted fallback via `/admin` -> Guild Roster Sync -> Install / Update Roster Userscript; roster userscript v1.0.2 prefers Warmane HTML for Rank/Professions and uses JSON as fallback. |
 | Warmane API omits rich item details | Native gear cards need a second source for icons, item level, quality, and tooltip text | Wowhead WotLK page enrichment added during cache writes; older cached rows are now re-queued for enrichment |
 
 ---
@@ -17,6 +17,8 @@
 
 | Bug | Fix | Commit |
 |---|---|---|
+| Guild roster Rank/Professions blank after sync | Warmane HTML roster can use guild-summary member links; parser now handles those links and `Image:` text, and roster sync/userscript prefer HTML first | pending |
+| Roster-only members had no Pizza Logs player profile or gear queue entry | `/players/<name>` now resolves roster rows and the Warmane gear queue includes roster-only guild members | pending |
 | Relics/ranged/wands displayed as Off Hand/trinkets and two-hander + relic characters got half GearScore | Slot labels are repaired from Wowhead `equipLoc`, the ranged/relic slot displays as `Ranged/Relic`, gear layout groups by slot name instead of array index, and Titan Grip half-score only applies to real weapon pairs | pending |
 | Player gear slots showed names but no icon/item level/GearScore after import | Wowhead item fetches now retry transient failures, enrichment concurrency is capped, and fresh partial cache rows are re-enriched before player pages return them | pending |
 | Native gear tooltip clipped inside player profile Gear wrapper | Moved gear item tooltip rendering into a client-side `document.body` portal with fixed viewport positioning, viewport edge clamping, and top-level overlay z-index | pending |

@@ -162,6 +162,17 @@
 - Admin Guild Roster Sync copy now explains rank order, professions, and gear-cache GS behavior
 - Added/updated validation tests for rankless JSON fallback decisions, profession normalization, upsert payload shape, roster GS calculation, userscript rank fallback behavior, and table rendering
 
+### 15. Guild roster HTML and roster-only player profile fix
+- Investigated missing guild rank/professions after the previous roster refactor
+- Root cause: Warmane's guild roster HTML can link members as `/guild/Pizza+Warriors/Lordaeron/summary/<Character>` rather than `/character/<Character>/Lordaeron/summary`; the HTML parser only recognized character summary links, so the browser importer could still fall back to rankless JSON
+- Updated the HTML parser to recognize guild-summary member links and `Image: ...` text labels from Warmane's roster table
+- Changed roster sync/browser userscript behavior to prefer Warmane guild HTML first because that is where Rank and Professions are reliably present; JSON is now the fallback
+- Bumped the roster userscript to v1.0.2
+- Added roster-only player profile support: `/players/<name>` now resolves a `guild_roster_members` row even when the character has never appeared in uploaded combat logs
+- Existing combat-log player profiles now merge roster metadata such as guild, race, level, and guild rank when available
+- The admin Warmane gear queue now includes roster-only members as well as combat-log `players`, so the existing Warmane Gear Sync userscript can import their gear, enrich it with Wowhead metadata, and calculate GS on the roster/player pages
+- Added tests for Warmane guild-route HTML parsing, roster-only gear queue entries, and roster-only player profile resolution
+
 ---
 
 ## Current State
@@ -175,7 +186,7 @@
 - **Gear sync**: hosted Tampermonkey userscript v1.0.3 is installed/running on Warmane and actively imports missing or enrichment-needed DB players
 - **Git/deploy**: canonical remote is `origin` -> `https://github.com/CRSD-Lau/Pizza-Logs.git`; push live changes with `git push origin main` so Railway deploys from `origin/main`
 - **Warmane local access**: blocked by Cloudflare/403 from this Codex shell, handled gracefully by UI
-- **Checks run**: Guild roster parser/client-script/admin-panel/table tests passed; `prisma validate` passed; `tsc --noEmit` passed; `next build` passed
+- **Checks run**: Guild roster parser/client-script/admin-panel/table tests passed; armory gear queue tests passed; roster-only player profile tests passed; `prisma validate` passed; `tsc --noEmit` passed; `next build` passed
 - **Local env blocker**: DB-backed pages cannot render locally until PostgreSQL is running on `localhost:5432`
 - **HPS gap**: ~21-28% under Skada for Disc priests - expected until absorbs are implemented
 - **DPS**: <1% residual from orphaned pets - accepted
@@ -228,4 +239,4 @@ Do after Skada verification.
 
 ## Next Step
 
-Apply the new roster migration, deploy, then install/update the roster userscript from `/admin` so Tampermonkey gets v1.0.1. Open the Warmane Pizza Warriors guild page and click the floating **Sync roster** button; confirm `/guild-roster` lists PizzaWarriors members sorted with Warmane rank order, professions, and GS where gear cache rows exist. After that, spot-check `/players/Lausudo` and `/players/Aalaska` for the gear slot fixes; parser priority remains fixing HC/Normal detection in `parser/parser_core.py`.
+Apply the new roster migration, deploy, then install/update the roster userscript from `/admin` so Tampermonkey gets v1.0.2. Open the Warmane Pizza Warriors guild page and click the floating **Sync roster** button; confirm `/guild-roster` lists PizzaWarriors members sorted with Warmane rank order and professions. Then run the Warmane Gear Sync userscript from any Warmane Armory page so roster-only members get cached gear and GS. After that, spot-check `/players/Maximusboom`, `/players/Lausudo`, and `/players/Aalaska`; parser priority remains fixing HC/Normal detection in `parser/parser_core.py`.
