@@ -3,6 +3,7 @@ import {
   buildWarmaneGuildApiUrls,
   normalizeWarmaneGuildRosterPayload,
   parseWarmaneGuildRosterHtml,
+  normalizeImportedGuildRoster,
   toGuildRosterRecord,
   upsertGuildRosterMembers,
 } from "../lib/warmane-guild-roster";
@@ -104,6 +105,30 @@ assert.deepEqual(parseWarmaneGuildRosterHtml("<html>No roster here</html>", {
   ok: false,
   message: "Warmane roster page did not include usable guild members.",
 });
+
+const importedJsonResult = normalizeImportedGuildRoster({
+  guild: "PizzaWarriors",
+  realm: "Lordaeron",
+  data: {
+    roster: [
+      { name: "Nimbledot", race: "Gnome", class: "Mage", level: 80, rank: "Raider" },
+    ],
+  },
+});
+assert.equal(importedJsonResult.ok, true);
+if (importedJsonResult.ok) {
+  assert.equal(importedJsonResult.members[0].characterName, "Nimbledot");
+}
+
+const importedHtmlResult = normalizeImportedGuildRoster({
+  guildName: "PizzaWarriors",
+  realm: "Lordaeron",
+  html: '<table><tr><td><a href="/character/Healz/Lordaeron/summary">Healz</a></td><td>Human</td><td>Priest</td><td>80</td><td>Core</td></tr></table>',
+});
+assert.equal(importedHtmlResult.ok, true);
+if (importedHtmlResult.ok) {
+  assert.equal(importedHtmlResult.members[0].className, "Priest");
+}
 
 const record = toGuildRosterRecord({
   characterName: "Azyva",

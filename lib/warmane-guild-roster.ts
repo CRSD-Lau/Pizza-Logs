@@ -59,6 +59,16 @@ export type GuildRosterResult =
   | { ok: true; members: GuildRosterMemberInput[]; sourceUrl?: string }
   | { ok: false; message: string; sourceUrl?: string };
 
+export type ImportedGuildRosterPayload = {
+  guild?: unknown;
+  guildName?: unknown;
+  realm?: unknown;
+  data?: unknown;
+  roster?: unknown;
+  members?: unknown;
+  html?: unknown;
+};
+
 export type GuildRosterUpsert = {
   where: {
     normalizedCharacterName_guildName_realm: {
@@ -311,6 +321,21 @@ export function parseWarmaneGuildRosterHtml(
   return { ok: true, members };
 }
 
+export function normalizeImportedGuildRoster(payload: ImportedGuildRosterPayload): GuildRosterResult {
+  const guildName = sanitizeGuildName(asString(payload.guildName) ?? asString(payload.guild) ?? DEFAULT_GUILD_NAME);
+  const realm = sanitizeRealm(asString(payload.realm) ?? DEFAULT_GUILD_REALM);
+  const html = asString(payload.html);
+
+  if (html) {
+    return parseWarmaneGuildRosterHtml(html, { guildName, realm });
+  }
+
+  return normalizeWarmaneGuildRosterPayload(
+    payload.data ?? { roster: payload.roster, members: payload.members },
+    { guildName, realm },
+  );
+}
+
 async function fetchWithTimeout(url: string, accept: string): Promise<Response> {
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
@@ -400,6 +425,10 @@ export async function upsertGuildRosterMembers(
   }
 }
 
+export async function writeGuildRosterMembers(members: GuildRosterMemberInput[]): Promise<void> {
+  await upsertGuildRosterMembers(db as unknown as GuildRosterDbClient, members);
+}
+
 export async function readGuildRosterMembers(
   guildName: string = DEFAULT_GUILD_NAME,
   realm: string = DEFAULT_GUILD_REALM,
@@ -446,6 +475,6 @@ export async function syncGuildRoster({
   const result = await fetchWarmaneGuildRoster(sanitizedGuild, sanitizedRealm);
   if (!result.ok) return { ok: false, message: result.message };
 
-  await upsertGuildRosterMembers(db as unknown as GuildRosterDbClient, result.members);
+  await writeGuildRosterMembers(result.members);
   return { ok: true, count: result.members.length };
 }

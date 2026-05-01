@@ -113,6 +113,11 @@
   - Uses the existing admin login/cookie via a server action
   - Calls the Warmane sync with `force: true`
   - Revalidates `/admin` and `/guild-roster` after a successful sync
+- Added browser-assisted roster import fallback for when Warmane blocks server/Railway:
+  - Hosted userscript at `/api/admin/guild-roster/userscript.user.js`
+  - Admin panel links to the roster userscript and the Warmane guild page
+  - Warmane-side script fetches guild JSON from Warmane first, falls back to Warmane guild HTML, then posts to Pizza Logs
+  - Added CORS import route at `POST /api/admin/guild-roster/import`
 - Added `GuildRosterMember` / `guild_roster_members` as a separate Prisma-backed roster table, distinct from combat-log `Player` rows
 - Added a Prisma migration SQL file at `prisma/migrations/20260430210000_add_guild_roster_members/migration.sql`
 - Added `lib/warmane-guild-roster.ts` for JSON-first Warmane roster retrieval:
@@ -134,6 +139,7 @@
   - upsert payload behavior
   - roster table empty/data render states
   - admin sync panel copy/rendering
+  - roster browser importer/userscript generation
 - Verified existing Warmane player gear tests still pass
 
 ### 13. Warmane roster API investigation
@@ -203,10 +209,10 @@ Do after Skada verification.
 ### 6. Guild roster follow-ups
 - Apply the Prisma migration in the target database before using `/guild-roster`
 - After deploy, open `/admin` and click **Sync Roster** in the Guild Roster Sync panel
-- If Railway can reach Warmane, the sync should populate `guild_roster_members`; if Warmane blocks Railway too, keep the page DB-backed and consider a browser-assisted roster importer similar to the gear userscript
+- If server-side sync reports Warmane unavailable, install/update the roster userscript from `/admin`, open `https://armory.warmane.com/guild/Pizza+Warriors/Lordaeron/summary`, and click the floating **Sync roster** button
 
 ---
 
 ## Next Step
 
-Apply the roster migration, deploy, then open `/admin` and click **Sync Roster** in the Guild Roster Sync panel. Confirm `/guild-roster` lists PizzaWarriors members from the DB. After that, spot-check `/players/Lausudo` and `/players/Aalaska` for the gear slot fixes; parser priority remains fixing HC/Normal detection in `parser/parser_core.py`.
+Apply the roster migration, deploy, then open `/admin` and click **Sync Roster**. If Warmane blocks Railway, install/update the roster userscript from `/admin`, open the Warmane Pizza Warriors guild page, and click the floating **Sync roster** button. Confirm `/guild-roster` lists PizzaWarriors members from the DB. After that, spot-check `/players/Lausudo` and `/players/Aalaska` for the gear slot fixes; parser priority remains fixing HC/Normal detection in `parser/parser_core.py`.
