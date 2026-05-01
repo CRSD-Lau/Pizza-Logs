@@ -14,6 +14,15 @@ type WowheadItemData = {
   details?: string[];
 };
 
+// Shape of the Wowhead /wotlk/tooltip/item/{id} JSON response
+type WowheadTooltipResponse = {
+  name?: string;
+  quality?: number;
+  icon?: string;
+  tooltip?: string;
+  jsonequip?: Record<string, unknown>;
+};
+
 const QUALITY_BY_ID: Record<number, string> = {
   0: "poor",
   1: "common",
@@ -35,75 +44,21 @@ export function getWowheadItemUrl(itemId: string, itemName?: string): string {
   return `https://www.wowhead.com/wotlk/item=${encodeURIComponent(itemId)}${suffix}`;
 }
 
-function extractJsonObjectAfter(pageHtml: string, marker: string): unknown | null {
-  const start = pageHtml.indexOf(marker);
-  if (start === -1) return null;
-
-  const objectStart = pageHtml.indexOf("{", start);
-  if (objectStart === -1) return null;
-
-  let depth = 0;
-  let inString = false;
-  let escaping = false;
-
-  for (let i = objectStart; i < pageHtml.length; i++) {
-    const char = pageHtml[i];
-
-    if (inString) {
-      if (escaping) {
-        escaping = false;
-      } else if (char === "\\") {
-        escaping = true;
-      } else if (char === "\"") {
-        inString = false;
-      }
-      continue;
-    }
-
-    if (char === "\"") inString = true;
-    if (char === "{") depth++;
-    if (char === "}") depth--;
-
-    if (depth === 0) {
-      try {
-        return JSON.parse(pageHtml.slice(objectStart, i + 1));
-      } catch {
-        return null;
-      }
-    }
-  }
-
-  return null;
+function getWowheadTooltipUrl(itemId: string): string {
+  return `https://www.wowhead.com/wotlk/tooltip/item/${itemId}`;
 }
 
-function extractJsonStringAfter(pageHtml: string, marker: string): string | null {
-  const start = pageHtml.indexOf(marker);
-  if (start === -1) return null;
+function asNumber(value: unknown): number | undefined {
+  const parsed = typeof value === "number" ? value : Number(value);
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : undefined;
+}
 
-  const stringStart = pageHtml.indexOf("\"", start);
-  if (stringStart === -1) return null;
+function asString(value: unknown): string | undefined {
+  return typeof value === "string" && value.trim() ? value.trim() : undefined;
+}
 
-  let escaping = false;
-  for (let i = stringStart + 1; i < pageHtml.length; i++) {
-    const char = pageHtml[i];
-    if (escaping) {
-      escaping = false;
-      continue;
-    }
-    if (char === "\\") {
-      escaping = true;
-      continue;
-    }
-    if (char === "\"") {
-      try {
-        return JSON.parse(pageHtml.slice(stringStart, i + 1)) as string;
-      } catch {
-        return null;
-      }
-    }
-  }
-
-  return null;
+function wait(ms: number): Promise<void> {
+  return new Promise(resolve => setTimeout(resolve, ms));
 }
 
 function decodeHtmlEntities(text: string): string {
@@ -138,52 +93,33 @@ function parseTooltipDetails(tooltipHtml: string | null): string[] | undefined {
   return uniqueLines.length > 0 ? uniqueLines.slice(0, 18) : undefined;
 }
 
-function asRecord(value: unknown): Record<string, unknown> | null {
-  return value && typeof value === "object" ? value as Record<string, unknown> : null;
+// The tooltip HTML contains "Item Level <!--ilvl-->264" — strip the comment and parse the number.
+function parseItemLevelFromTooltip(tooltipHtml: string): number | undefined {
+  const match = tooltipHtml.match(/Item Level\s*(?:<!--[^-]*-->)?\s*(\d+)/i);
+  const val = match ? Number(match[1]) : NaN;
+  return Number.isFinite(val) && val > 0 ? val : undefined;
 }
 
-function asString(value: unknown): string | undefined {
-  return typeof value === "string" && value.trim() ? value.trim() : undefined;
-}
-
-function asNumber(value: unknown): number | undefined {
-  const parsed = typeof value === "number" ? value : Number(value);
-  return Number.isFinite(parsed) && parsed > 0 ? parsed : undefined;
-}
-
-function readNestedNumber(record: Record<string, unknown> | null, key: string): number | undefined {
-  const direct = asNumber(record?.[key]);
-  if (direct !== undefined) return direct;
-
-  const jsonEquip = asRecord(record?.jsonequip);
-  return asNumber(jsonEquip?.[key]);
-}
-
-function wait(ms: number): Promise<void> {
-  return new Promise(resolve => setTimeout(resolve, ms));
-}
-
-export function parseWowheadItemPage(itemId: string | number, pageHtml: string): WowheadItemData | null {
+// Parse a Wowhead tooltip JSON API response into the shape the rest of the codebase expects.
+// Exported so it can be unit-tested without a live HTTP call.
+export function parseWowheadTooltipJson(
+  itemId: string | number,
+  json: WowheadTooltipResponse,
+): WowheadItemData {
   const id = String(itemId);
-  const extendData = asRecord(extractJsonObjectAfter(pageHtml, `$.extend(g_items[${id}],`));
-  const gathererData = asRecord(extractJsonObjectAfter(pageHtml, `WH.Gatherer.addData(3, 8,`));
-  const gatheredItem = asRecord(gathererData?.[id]);
-  const tooltipHtml = extractJsonStringAfter(pageHtml, `g_items[${id}].tooltip_enus = `);
+  const name = asString(json.name);
+  const qualityId = asNumber(json.quality);
+  const iconName = asString(json.icon);
+  const tooltipHtml = asString(json.tooltip) ?? null;
 
-  const name = asString(extendData?.name) ?? asString(gatheredItem?.name_enus);
-  const iconName = asString(gatheredItem?.icon);
-  const qualityId = asNumber(extendData?.quality) ?? asNumber(gatheredItem?.quality);
-  const itemLevel = asNumber(extendData?.level);
-  const inventoryType = readNestedNumber(gatheredItem, "slotbak")
-    ?? readNestedNumber(extendData, "slotbak")
-    ?? asNumber(gatheredItem?.slot)
-    ?? asNumber(extendData?.slot);
+  const jsonequip = json.jsonequip && typeof json.jsonequip === "object" ? json.jsonequip : {};
+  const inventoryType = asNumber(jsonequip.slotbak);
 
   return {
     itemId: id,
     name,
     quality: qualityId !== undefined ? QUALITY_BY_ID[qualityId] : undefined,
-    itemLevel,
+    itemLevel: parseItemLevelFromTooltip(tooltipHtml ?? ""),
     iconUrl: iconName ? `https://wow.zamimg.com/images/wow/icons/large/${iconName}.jpg` : undefined,
     itemUrl: getWowheadItemUrl(id, name),
     equipLoc: mapWowheadInventoryTypeToEquipLoc(inventoryType),
@@ -191,7 +127,7 @@ export function parseWowheadItemPage(itemId: string | number, pageHtml: string):
   };
 }
 
-export async function fetchWowheadItemData(itemId: string, itemName?: string): Promise<WowheadItemData | null> {
+export async function fetchWowheadItemData(itemId: string, _itemName?: string): Promise<WowheadItemData | null> {
   let lastError: unknown;
 
   for (let attempt = 1; attempt <= WOWHEAD_RETRY_ATTEMPTS; attempt++) {
@@ -199,9 +135,9 @@ export async function fetchWowheadItemData(itemId: string, itemName?: string): P
     const timeout = setTimeout(() => controller.abort(), WOWHEAD_TIMEOUT_MS);
 
     try {
-      const response = await fetch(getWowheadItemUrl(itemId, itemName), {
+      const response = await fetch(getWowheadTooltipUrl(itemId), {
         headers: {
-          Accept: "text/html,*/*",
+          Accept: "application/json,*/*",
           "User-Agent": "PizzaLogsBot/0.1 (+https://pizza-logs-production.up.railway.app)",
         },
         signal: controller.signal,
@@ -209,7 +145,8 @@ export async function fetchWowheadItemData(itemId: string, itemName?: string): P
       } as RequestInit & { next: { revalidate: number } });
 
       if (response.ok) {
-        return parseWowheadItemPage(itemId, await response.text());
+        const json = await response.json() as WowheadTooltipResponse;
+        return parseWowheadTooltipJson(itemId, json);
       }
 
       lastError = new Error(`Wowhead returned ${response.status}`);
@@ -246,13 +183,13 @@ export async function enrichGearWithWowhead(items: ArmoryGearItem[]): Promise<Ar
       const wowhead = await fetchWowheadItemData(item.itemId, item.name);
       enriched[index] = {
         ...item,
-        name: wowhead?.name ?? item.name,
-        quality: wowhead?.quality ?? item.quality,
+        name:      wowhead?.name      ?? item.name,
+        quality:   wowhead?.quality   ?? item.quality,
         itemLevel: wowhead?.itemLevel ?? item.itemLevel,
-        iconUrl: wowhead?.iconUrl ?? item.iconUrl,
-        itemUrl: wowhead?.itemUrl ?? item.itemUrl ?? getWowheadItemUrl(item.itemId, item.name),
-        equipLoc: wowhead?.equipLoc ?? item.equipLoc,
-        details: wowhead?.details ?? item.details,
+        iconUrl:   wowhead?.iconUrl   ?? item.iconUrl,
+        itemUrl:   wowhead?.itemUrl   ?? item.itemUrl ?? getWowheadItemUrl(item.itemId, item.name),
+        equipLoc:  wowhead?.equipLoc  ?? item.equipLoc,
+        details:   wowhead?.details   ?? item.details,
       };
     }
   }
