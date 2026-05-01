@@ -4,8 +4,8 @@
 2026-05-01
 
 ## Git
-**Branch:** `claude/laughing-hertz-750b19`
-**Latest commit:** `08dd0b7 feat(admin): reorder sections and remove stale GuildRosterSyncButton references`
+**Branch:** `main`
+**Latest commit:** `6b076e0 feat: enrich gear with Wowhead data in browser-side userscript (v1.1.0)`
 **Release:** `v0.1.0` - tagged and published on GitHub
 
 ---
@@ -23,11 +23,18 @@ All 6 scoped changes were made and validated:
 6. `app/admin/page.tsx` — reordered sections, removed stale imports.
 7. `tests/guild-roster-admin-panel.test.ts` — removed stale `action` prop from test render.
 
-### Validation Results
-- **TypeScript:** PASS — `npx tsc --noEmit` returned zero errors
-- **Grep checks:** All clean — no remaining references to `bookmarklet`, `Sync Roster`, `copy-paste`, or `GuildRosterSyncButton` in `app/`
-- **Retention policy:** Confirmed — `clearDatabase` only calls `db.weeklySummary.deleteMany()` and `db.upload.deleteMany()`. No player/gear/roster deletions.
-- **Tests:** 14 suites fail with `SyntaxError: Cannot use import statement outside a module` — this is a **pre-existing Jest config issue** (no transform/ESM setup) that predates this branch and is unrelated to the admin cleanup. No Jest config (`jest.config.*`) exists in the repo; tests use ESM `import` syntax with no Babel transform configured.
+### Nav + Players subtitle (complete)
+- `components/layout/Nav.tsx` — "Roster" nav label renamed to "Guild"
+- `app/players/page.tsx` — subtitle updated to "players tracked across logs and the guild roster"
+
+### Wowhead gear enrichment (complete)
+Root cause: Railway's server IPs are blocked by Cloudflare for both Warmane and Wowhead, so server-side enrichment always returns null. Also, the old Wowhead HTML scraping approach was broken because Wowhead removed the `$.extend(g_items[...])` marker from their pages.
+
+Two fixes shipped:
+- `lib/wowhead-items.ts` — rewrote to use Wowhead tooltip JSON API (`/wotlk/tooltip/item/{id}`) instead of HTML scraping. `parseWowheadTooltipJson` is exported for unit testing.
+- `lib/armory-gear-client-scripts.ts` (v1.1.0) — Tampermonkey userscript now fetches Wowhead tooltip JSON **browser-side** before posting to Pizza Logs. Uses `GM_xmlhttpRequest` (bypasses CORS/Cloudflare). Adds `itemLevel`, `equipLoc` (INVTYPE_* from slotbak), and `iconUrl` to each item. 300ms delay between items.
+
+**Required user action after deploy:** Update Tampermonkey userscript from `/admin` Install/Update button, then run sync on any Warmane Armory character page to re-import and re-enrich cached players.
 
 ---
 
@@ -43,10 +50,9 @@ All 6 scoped changes were made and validated:
 
 ## Next Steps
 
-1. **Push and deploy** — merge/push this branch to `origin/main` so Railway picks it up; update Tampermonkey scripts if userscript versions bumped
-2. **Fix HC/Normal difficulty detection** — regression bug (open on GitHub)
-3. **Spot-check gear/GS fixes** in player profiles after deploy
-4. **Populate Guild Roster** via Warmane userscript (install/update from `/admin` after deploy)
-5. **Stats/Analytics page** — brainstorm first
-6. **Verify Skada numbers in-game** — Neil to do manually
-7. **Absorbs (PW:S)** tracking — future enhancement
+1. **Update Tampermonkey userscript** — click Install/Update on `/admin`, then run sync on a Warmane Armory character page to re-enrich cached players with correct ilvl/slot/icon data
+2. **Verify gear pages** — check Writman, Yanna, and other players after re-sync to confirm ilvl, GS, and slot labels are now correct
+3. **Fix HC/Normal difficulty detection** — regression bug (open on GitHub)
+4. **Stats/Analytics page** — brainstorm first
+5. **Verify Skada numbers in-game** — Neil to do manually
+6. **Absorbs (PW:S)** tracking — future enhancement
