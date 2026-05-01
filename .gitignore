@@ -22,13 +22,16 @@ tsconfig.tsbuildinfo
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
+.next-*.log
 
 # OS
 .DS_Store
 Thumbs.db
 
 # prisma
-prisma/migrations/
+# Keep schema migrations versioned alongside Prisma model changes.
+!prisma/migrations/
+!prisma/migrations/**
 
 # python
 __pycache__/

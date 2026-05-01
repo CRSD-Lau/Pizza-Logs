@@ -162,6 +162,28 @@ model ArmoryGearCache {
   @@map("armory_gear_cache")
 }
 
+model GuildRosterMember {
+  id                      String   @id @default(cuid())
+  characterName           String   @map("character_name")
+  normalizedCharacterName String   @map("normalized_character_name")
+  guildName               String   @map("guild_name")
+  realm                   String   @default("Lordaeron")
+  className               String?  @map("class_name")
+  raceName                String?  @map("race_name")
+  level                   Int?
+  rankName                String?  @map("rank_name")
+  armoryUrl               String   @map("armory_url")
+  gearSnapshotJson        Json?    @map("gear_snapshot_json")
+  lastSyncedAt            DateTime @map("last_synced_at")
+  createdAt               DateTime @default(now()) @map("created_at")
+  updatedAt               DateTime @updatedAt @map("updated_at")
+
+  @@unique([normalizedCharacterName, guildName, realm])
+  @@index([guildName, realm])
+  @@index([lastSyncedAt])
+  @@map("guild_roster_members")
+}
+
 // ─────────────────────────────────────────────
 //  PARTICIPANT (player stats within one encounter)
 // ─────────────────────────────────────────────

@@ -105,6 +105,39 @@
 - Documented that user requests to push/deploy/publish/get changes live mean `git push origin main`, which triggers Railway's deployment from `origin/main`
 - Documented the local Windows Git fallback path: `C:\Program Files\Git\cmd\git.exe`
 
+### 12. Guild Roster feature added
+- Added a dedicated `/guild-roster` route and nav link
+- Added route-level loading, empty, and error states for the roster page
+- Added `GuildRosterMember` / `guild_roster_members` as a separate Prisma-backed roster table, distinct from combat-log `Player` rows
+- Added a Prisma migration SQL file at `prisma/migrations/20260430210000_add_guild_roster_members/migration.sql`
+- Added `lib/warmane-guild-roster.ts` for JSON-first Warmane roster retrieval:
+  - Tries `https://armory.warmane.com/api/guild/<guild>/<realm>/summary`
+  - Then tries `/members`
+  - Falls back to parsing the native Warmane guild summary HTML
+  - Handles the observed Warmane naming split by trying `Pizza+Warriors` before `PizzaWarriors`
+- Added upsert sync logic keyed by `normalized_character_name + guild_name + realm`
+- Added public DB-backed read API: `GET /api/guild-roster?guild=PizzaWarriors&realm=Lordaeron`
+- Added admin/manual sync API: `POST /api/guild-roster/sync`
+  - Uses the existing `ADMIN_SECRET` style when configured
+  - Returns generic public errors rather than raw scraper failures
+  - Has a 30-minute cooldown unless `force: true` is provided
+- Added focused validation tests for:
+  - Warmane guild URL candidate generation
+  - JSON roster normalization
+  - malformed/empty roster handling
+  - HTML fallback parsing
+  - upsert payload behavior
+  - roster table empty/data render states
+- Verified existing Warmane player gear tests still pass
+
+### 13. Warmane roster API investigation
+- Warmane forum documentation confirms API-like guild endpoints:
+  - `/api/guild/name/realm/summary`
+  - `/api/guild/name/realm/members`
+- Warmane forum examples show roster data under `roster`
+- Local direct requests from this Windows/Codex environment still returned Cloudflare/403, matching the prior gear-work blocker
+- Search index showed the actual Warmane guild title as `Pizza Warriors`; code now tries the camel-split `Pizza+Warriors` candidate first while storing `PizzaWarriors`
+
 ---
 
 ## Current State
@@ -112,11 +145,12 @@
 - **Live app**: https://pizza-logs-production.up.railway.app
 - **Release**: `v0.1.0`
 - **Player profiles**: include a native Warmane Armory Gear section wired to a DB-backed gear cache
+- **Guild roster**: `/guild-roster` reads from the DB-backed `guild_roster_members` table; `/api/guild-roster/sync` refreshes from Warmane with JSON-first retrieval and HTML fallback
 - **Gear display**: uses Wowhead-enriched icons, quality, item level, equip-location metadata, GearScoreLite totals/per-item scores, and tooltip text when item IDs are present; partial cached snapshots are re-enriched with retry/backoff before rendering; slot labels are repaired from equip-location metadata so sparse Warmane arrays do not shift weapons/relics into the wrong UI slot; tooltips render in a viewport-level portal so they are not clipped by accordion/table wrappers
 - **Gear sync**: hosted Tampermonkey userscript v1.0.3 is installed/running on Warmane and actively imports missing or enrichment-needed DB players
 - **Git/deploy**: canonical remote is `origin` -> `https://github.com/CRSD-Lau/Pizza-Logs.git`; push live changes with `git push origin main` so Railway deploys from `origin/main`
 - **Warmane local access**: blocked by Cloudflare/403 from this Codex shell, handled gracefully by UI
-- **Checks run**: GearScoreLite formula test passed; Wowhead parser/enrichment retry tests passed; cache fallback/refresh test passed; import normalization test passed; gear tooltip positioning test passed; admin gear script test passed; `prisma validate` passed; `tsc --noEmit` passed; `next build` passed
+- **Checks run**: Guild roster parser/table tests passed; Warmane gear cache/import tests passed; Wowhead parser/enrichment retry tests passed; `prisma validate` passed; `tsc --noEmit` passed; `next build` passed
 - **Local env blocker**: DB-backed pages cannot render locally until PostgreSQL is running on `localhost:5432`
 - **HPS gap**: ~21-28% under Skada for Disc priests - expected until absorbs are implemented
 - **DPS**: <1% residual from orphaned pets - accepted
@@ -160,8 +194,13 @@ Do after Skada verification.
 - Consider adding a dedicated item metadata cache if the Wowhead fetch volume becomes noisy
 - Consider historical gear snapshots per raid date
 
+### 6. Guild roster follow-ups
+- Apply the Prisma migration in the target database before using `/guild-roster`
+- After deploy, run `POST /api/guild-roster/sync` with the admin secret and `{ "guild": "PizzaWarriors", "realm": "Lordaeron", "force": true }`
+- If Railway can reach Warmane, the sync should populate `guild_roster_members`; if Warmane blocks Railway too, keep the page DB-backed and consider a browser-assisted roster importer similar to the gear userscript
+
 ---
 
 ## Next Step
 
-After deploy, spot-check `/players/Lausudo` and `/players/Aalaska`: Lausudo's libram should display as `Ranged/Relic`, not `Off Hand`, and the two-hander/relic pair should no longer be half-scored. Aalaska's staff/wand should appear in the weapon row even when missing shirt/tabard/off-hand slots compress the Warmane equipment array. Parser priority remains fixing HC/Normal detection in `parser/parser_core.py`.
+Apply the roster migration, deploy, then call `POST /api/guild-roster/sync` with admin auth and `{ "guild": "PizzaWarriors", "realm": "Lordaeron", "force": true }`. Confirm `/guild-roster` lists PizzaWarriors members from the DB. After that, spot-check `/players/Lausudo` and `/players/Aalaska` for the gear slot fixes; parser priority remains fixing HC/Normal detection in `parser/parser_core.py`.

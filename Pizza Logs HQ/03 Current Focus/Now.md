@@ -19,6 +19,10 @@ After enabling Tampermonkey/userscript injection, the Warmane page showed the **
 Character-specific enchants/gems are still limited by what Warmane exposes to the browser/importer. Wowhead enrichment provides static item icons, quality, item level, and tooltip text, but not a player's chosen enchants/gems unless those are present in Warmane data.
 Git/deploy expectations are now explicit in root instructions and the Railway runbook: canonical remote is `origin` -> `https://github.com/CRSD-Lau/Pizza-Logs.git`, and user requests to push/deploy/publish/get changes live mean push `main` to `origin` so Railway deploys from `origin/main`. If `git` is missing from PATH on this Windows machine, use `C:\Program Files\Git\cmd\git.exe`.
 
+Guild Roster feature has been added. `/guild-roster` reads from a new DB-backed `guild_roster_members` table, separate from combat-log `players`. The Warmane roster service tries JSON first (`/api/guild/<guild>/<realm>/summary`, then `/members`) and falls back to parsing the native guild summary HTML. It tries `Pizza+Warriors` before `PizzaWarriors` because Warmane search/index results show the guild title with a space. The sync endpoint is `POST /api/guild-roster/sync` and uses the same `ADMIN_SECRET` style as admin gear import when configured.
+
+Local direct Warmane calls for guild roster returned 403 from this environment, same as prior gear work. The roster page remains DB-backed and does not depend on live Warmane availability at render time. After deployment, test whether Railway can call Warmane; if not, the next enhancement should be a browser-assisted roster import path modeled after the gear userscript.
+
 ---
 
 ## Next Up
@@ -29,6 +33,7 @@ Git/deploy expectations are now explicit in root instructions and the Railway ru
 | Spot-check gear slot/GearScore fix | VERIFY | After deploy, confirm `/players/Lausudo` shows the libram as `Ranged/Relic` and full 2H+relic GearScore; confirm `/players/Aalaska` shows staff/wand in the weapon row |
 | Refresh gear metadata | VERIFY | Rerun the hosted Warmane userscript so cached rows missing Wowhead `equipLoc` metadata get re-enriched for exact weapon scoring |
 | Stats / Analytics page | FEATURE | Brainstorm first, then design, then build |
+| Populate Guild Roster | VERIFY | Apply migration, deploy, then POST `/api/guild-roster/sync` with admin auth and force=true |
 | Verify Skada numbers in-game | VERIFY | Neil to do manually next week |
 | Absorbs (PW:S) | FEATURE | Combined column. Do after verification. |
 
@@ -41,6 +46,8 @@ Git/deploy expectations are now explicit in root instructions and the Railway ru
 - GitHub: https://github.com/CRSD-Lau/Pizza-Logs
 - Wiki: https://github.com/CRSD-Lau/Pizza-Logs/wiki
 - Warmane gear source pattern: `https://armory.warmane.com/api/character/<name>/Lordaeron/summary`
+- Warmane guild roster source patterns: `https://armory.warmane.com/api/guild/Pizza+Warriors/Lordaeron/summary`, `/members`, HTML fallback `https://armory.warmane.com/guild/Pizza+Warriors/Lordaeron/summary`
 - Wowhead item enrichment pattern: `https://www.wowhead.com/wotlk/item=<id>/<slug>`
 - Gear cache table: `armory_gear_cache`
+- Guild roster table: `guild_roster_members`
 - Admin browser import: `/admin` -> Warmane Gear Cache -> install/update hosted userscript (`/api/admin/armory-gear/userscript.user.js`), then use the Pizza Logs panel on Warmane Armory

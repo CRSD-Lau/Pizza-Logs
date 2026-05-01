@@ -11,6 +11,7 @@ const NAV_LINKS = [
   { href: "/raids",        label: "Raids"        },
   { href: "/leaderboards", label: "Leaderboards" },
   { href: "/players",      label: "Players"      },
+  { href: "/guild-roster", label: "Roster"       },
   { href: "/weekly",       label: "This Week"    },
   { href: "/bosses",       label: "Bosses"       },
   { href: "/admin",        label: "Admin"        },
