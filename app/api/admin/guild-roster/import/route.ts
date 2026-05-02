@@ -53,6 +53,13 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     return NextResponse.json({ ok: false, error: normalized.message }, { status: 400, headers });
   }
 
+  if (normalized.members.length === 0) {
+    return NextResponse.json(
+      { ok: false, error: "Empty roster — import skipped to preserve existing data." },
+      { status: 400, headers }
+    );
+  }
+
   await writeGuildRosterMembers(normalized.members);
 
   return NextResponse.json({
