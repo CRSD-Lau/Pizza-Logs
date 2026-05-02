@@ -5,5 +5,5 @@
     "noEmit": false,
     "outDir": ".seed-build"
   },
-  "include": ["prisma/seed.ts"]
+  "include": ["prisma/seed.ts", "scripts/*.ts"]
 }

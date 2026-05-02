@@ -135,60 +135,53 @@ function parseRow(values: (string | null)[]): ItemRow | null {
 }
 
 async function upsertBatch(batch: ItemRow[]): Promise<number> {
-  let done = 0;
-  for (const row of batch) {
-    // Prisma requires Prisma.DbNull (not JS null) for nullable Json fields in create
-    const statsValue   = row.stats   ?? Prisma.DbNull;
-    const socketsValue = row.socketColors ?? Prisma.DbNull;
+  if (batch.length === 0) return 0;
 
-    await db.wowItem.upsert({
-      where:  { itemId: row.itemId },
-      create: {
-        itemId:        row.itemId,
-        name:          row.name,
-        quality:       row.quality,
-        itemLevel:     row.itemLevel,
-        itemClass:     row.itemClass,
-        itemSubclass:  row.itemSubclass,
-        displayId:     row.displayId,
-        equipLoc:      row.equipLoc,
-        requiredLevel: row.requiredLevel,
-        armor:         row.armor,
-        dmgMin:        row.dmgMin,
-        dmgMax:        row.dmgMax,
-        delay:         row.delay,
-        bonding:       row.bonding,
-        description:   row.description,
-        stats:         statsValue,
-        socketColors:  socketsValue,
-        socketBonus:   row.socketBonus,
-        importedAt:    row.importedAt,
-      },
-      update: {
-        name:          row.name,
-        quality:       row.quality,
-        itemLevel:     row.itemLevel,
-        itemClass:     row.itemClass,
-        itemSubclass:  row.itemSubclass,
-        displayId:     row.displayId,
-        equipLoc:      row.equipLoc,
-        requiredLevel: row.requiredLevel,
-        armor:         row.armor,
-        dmgMin:        row.dmgMin,
-        dmgMax:        row.dmgMax,
-        delay:         row.delay,
-        bonding:       row.bonding,
-        description:   row.description,
-        stats:         statsValue,
-        socketColors:  socketsValue,
-        socketBonus:   row.socketBonus,
-        importedAt:    row.importedAt,
-        // intentionally NOT overwriting iconName — it comes from Tampermonkey cache
-      },
-    });
-    done++;
-  }
-  return done;
+  // Build parameterized bulk INSERT ... ON CONFLICT DO UPDATE
+  // We skip iconName deliberately (sourced from Tampermonkey cache)
+  const values = batch.map(row =>
+    Prisma.sql`(
+      ${row.itemId}, ${row.name}, ${row.quality}, ${row.itemLevel},
+      ${row.itemClass}, ${row.itemSubclass}, ${row.displayId}, ${row.equipLoc},
+      ${row.requiredLevel}, ${row.armor}, ${row.dmgMin}, ${row.dmgMax},
+      ${row.delay}, ${row.bonding}, ${row.description},
+      ${row.stats !== null ? JSON.stringify(row.stats) : null}::jsonb,
+      ${row.socketColors !== null ? JSON.stringify(row.socketColors) : null}::jsonb,
+      ${row.socketBonus}, ${row.importedAt}
+    )`
+  );
+
+  await db.$executeRaw`
+    INSERT INTO wow_items (
+      "itemId", name, quality, "itemLevel",
+      "itemClass", "itemSubclass", "displayId", "equipLoc",
+      "requiredLevel", armor, "dmgMin", "dmgMax",
+      delay, bonding, description, stats, "socketColors", "socketBonus", "importedAt"
+    )
+    VALUES ${Prisma.join(values)}
+    ON CONFLICT ("itemId") DO UPDATE SET
+      name = EXCLUDED.name,
+      quality = EXCLUDED.quality,
+      "itemLevel" = EXCLUDED."itemLevel",
+      "itemClass" = EXCLUDED."itemClass",
+      "itemSubclass" = EXCLUDED."itemSubclass",
+      "displayId" = EXCLUDED."displayId",
+      "equipLoc" = EXCLUDED."equipLoc",
+      "requiredLevel" = EXCLUDED."requiredLevel",
+      armor = EXCLUDED.armor,
+      "dmgMin" = EXCLUDED."dmgMin",
+      "dmgMax" = EXCLUDED."dmgMax",
+      delay = EXCLUDED.delay,
+      bonding = EXCLUDED.bonding,
+      description = EXCLUDED.description,
+      stats = EXCLUDED.stats,
+      "socketColors" = EXCLUDED."socketColors",
+      "socketBonus" = EXCLUDED."socketBonus",
+      "importedAt" = EXCLUDED."importedAt"
+      -- iconName intentionally excluded: sourced from Tampermonkey cache
+  `;
+
+  return batch.length;
 }
 
 async function getStream(filePath: string | null): Promise<NodeJS.ReadableStream> {
@@ -245,7 +238,8 @@ async function main() {
         const ch = remaining[i];
         if (ch === "'" && !inStr)       { inStr = true; continue; }
         if (ch === "'" && inStr) {
-          if (remaining[i + 1] === "'") { i++; continue; }
+          if (i > 0 && remaining[i - 1] === "\\") { continue; } // backslash-escaped
+          if (remaining[i + 1] === "'") { i++; continue; }       // doubled quote
           inStr = false; continue;
         }
         if (inStr) continue;
