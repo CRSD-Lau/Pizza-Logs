@@ -21,7 +21,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 
-from parser_core import CombatLogParser, ParsedEncounter
+from parser_core import CombatLogParser, ParsedEncounter, DebugInfo
 from bosses import lookup_boss, lookup_boss_by_id
 
 # ── App setup ─────────────────────────────────────────────────────
@@ -229,6 +229,144 @@ async def parse_log_by_path(body: dict) -> ParseResponse:
         encounters    = encounters_out,
         warnings      = parser.warnings,
         sessionDamage = {str(k): v for k, v in parser.session_damage.items()},
+    )
+
+
+# ── Debug parse endpoint ─────────────────────────────────────────
+
+class DebugInfoOut(BaseModel):
+    bossName: str
+    difficultyMethod: str
+    difficultyRaw: str
+    difficultyFinal: str
+    heroicMarkersFound: list[str]
+    outcomeMethod: str
+    outcomeEvidence: str
+    eventCount: int
+    skippedEventCount: int
+    petRemaps: list[str]
+    actorCount: int
+    bossGuidCount: int
+    parserWarnings: list[str]
+
+
+class DebugParseResponse(BaseModel):
+    filename: str
+    fileHash: str
+    rawLineCount: int
+    encounters: list[EncounterOut]
+    warnings: list[str]
+    sessionDamage: dict[str, float]
+    debugInfo: list[DebugInfoOut]
+
+
+@app.post("/parse-debug", response_model=DebugParseResponse)
+async def parse_debug(
+    file: UploadFile = File(...),
+    year_hint: int = Form(default=0),
+) -> DebugParseResponse:
+    """Admin-only: parse and return per-encounter debug metadata.
+    Not exposed in production UI."""
+    if file.filename and not file.filename.lower().endswith((".txt", ".log")):
+        raise HTTPException(400, "Only .txt and .log files are supported")
+
+    # Stream upload to a temp file while computing SHA-256 in chunks
+    sha256 = hashlib.sha256()
+    tmp_path: str | None = None
+    try:
+        with tempfile.NamedTemporaryFile(
+            mode="wb", suffix=".txt", delete=False
+        ) as tmp:
+            tmp_path = tmp.name
+            first_chunk: bytes = b""
+            chunk_size = 8 * 1024 * 1024  # 8 MB chunks
+            while True:
+                chunk = await file.read(chunk_size)
+                if not chunk:
+                    break
+                sha256.update(chunk)
+                if not first_chunk:
+                    first_chunk = chunk[:4096]
+                tmp.write(chunk)
+    except Exception as exc:
+        if tmp_path:
+            os.unlink(tmp_path)
+        raise HTTPException(500, f"Failed to read uploaded file: {exc}") from exc
+
+    file_hash = sha256.hexdigest()
+    file_year = year_hint if year_hint > 2000 else _infer_year(first_chunk)
+
+    warnings: list[str] = []
+    try:
+        # First pass: normal parse for encounters
+        parser = CombatLogParser(file_year=file_year)
+        with open(tmp_path, encoding="utf-8", errors="replace") as fh:
+            encounters_raw = parser.parse_file(fh)
+
+        # Second pass: debug pass to collect DebugInfo per segment
+        parser2 = CombatLogParser(file_year=file_year)
+        with open(tmp_path, encoding="utf-8", errors="replace") as fh2:
+            lines_gen = parser2._iter_lines(fh2)
+            segments, pet_owner = parser2._segment_encounters(lines_gen)
+        debug_infos: list[DebugInfoOut] = []
+        for seg in segments:
+            result = parser2._aggregate_segment(seg, pet_owner, debug=True)
+            if isinstance(result, tuple):
+                _, dbg = result
+                if dbg is not None:
+                    debug_infos.append(DebugInfoOut(
+                        bossName=dbg.boss_name,
+                        difficultyMethod=dbg.difficulty_method,
+                        difficultyRaw=dbg.difficulty_raw,
+                        difficultyFinal=dbg.difficulty_final,
+                        heroicMarkersFound=dbg.heroic_markers_found,
+                        outcomeMethod=dbg.outcome_method,
+                        outcomeEvidence=dbg.outcome_evidence,
+                        eventCount=dbg.event_count,
+                        skippedEventCount=dbg.skipped_event_count,
+                        petRemaps=dbg.pet_remaps,
+                        actorCount=dbg.actor_count,
+                        bossGuidCount=dbg.boss_guid_count,
+                        parserWarnings=dbg.parser_warnings,
+                    ))
+    except Exception as exc:
+        raise HTTPException(500, f"Parse error: {exc}") from exc
+    finally:
+        if tmp_path:
+            os.unlink(tmp_path)
+
+    if parser.warnings:
+        warnings.extend(parser.warnings)
+    if not encounters_raw:
+        warnings.append("No raid boss encounters were detected in this log.")
+
+    encounters_out: list[EncounterOut] = []
+    for enc in encounters_raw:
+        encounters_out.append(EncounterOut(
+            bossName         = enc.boss_name,
+            bossId           = enc.boss_id,
+            difficulty       = enc.difficulty,
+            groupSize        = enc.group_size,
+            outcome          = enc.outcome,
+            durationSeconds  = enc.duration_seconds,
+            durationMs       = round(enc.duration_seconds * 1000),
+            startedAt        = enc.started_at,
+            endedAt          = enc.ended_at,
+            totalDamage      = enc.total_damage,
+            totalHealing     = enc.total_healing,
+            totalDamageTaken = enc.total_damage_taken,
+            fingerprint      = enc.fingerprint,
+            participants     = enc.participants,
+        ))
+
+    return DebugParseResponse(
+        filename      = file.filename or "WoWCombatLog.txt",
+        fileHash      = file_hash,
+        rawLineCount  = parser.raw_count,
+        encounters    = encounters_out,
+        warnings      = warnings,
+        sessionDamage = {str(k): v for k, v in parser.session_damage.items()},
+        debugInfo     = debug_infos,
     )
 
 
