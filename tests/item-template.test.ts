@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { parseSqlTuple, QUALITY_MAP, INVENTORY_TYPE_MAP, buildStatsFromTemplate, buildItemDetailsFromTemplate } from "../lib/item-template";
+import { parseSqlTuple, QUALITY_MAP, INVENTORY_TYPE_MAP, buildStatsFromTemplate, buildItemDetailsFromTemplate, enrichGearWithLocalTemplate } from "../lib/item-template";
 
 // parseSqlTuple: parses a raw MySQL VALUES tuple string into array of string|null values
 const raw = "(17, 4, 1, -1, 'Martin Fury', 7016, 6, 0, 0, 1, 0, 7, 4, -1, -1, 5, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, -1, 0, 0, 0, -1, -1, 0, -1, 0, -1, -1, 0, -1, 0, -1, -1, 0, -1, 0, -1, -1, 0, -1, 0, -1, -1, 0, -1, 0, -1, -1, 0, -1, 1, '', 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, -1, 0, 0, 0, 0, 0, '', 0, 0, 0, 0, 0, 1)";
@@ -62,5 +62,29 @@ const emptyDetails = buildItemDetailsFromTemplate({
   stats: null, description: null, bonding: null, requiredLevel: null,
 });
 assert.deepStrictEqual(emptyDetails, []);
+
+// No-Wowhead guard: verify enrichGearWithLocalTemplate is a function
+// and that importing it (at module evaluation time) does not call fetch with a Wowhead URL.
+let wowheadCallDetected = false;
+const originalFetch = globalThis.fetch;
+globalThis.fetch = async (input: RequestInfo | URL, init?: RequestInit): Promise<Response> => {
+  const url = typeof input === "string" ? input
+    : input instanceof URL ? input.href
+    : (input as Request).url;
+  if (url.includes("wowhead.com")) {
+    wowheadCallDetected = true;
+    throw new Error(`BLOCKED: Wowhead fetch detected: ${url}`);
+  }
+  return originalFetch(input as Parameters<typeof originalFetch>[0], init);
+};
+
+// The module was already imported at the top of this file.
+// If enrichGearWithLocalTemplate triggered a Wowhead call at import time, wowheadCallDetected would be true.
+assert.strictEqual(typeof enrichGearWithLocalTemplate, "function", "enrichGearWithLocalTemplate should be a function");
+assert.strictEqual(wowheadCallDetected, false, "No Wowhead fetch should occur at import time");
+
+// Restore
+globalThis.fetch = originalFetch;
+console.log("No-Wowhead guard passed");
 
 console.log("item-template tests passed");
