@@ -1,3 +1,4 @@
+import { db } from "./db";
 import { slugify } from "./utils";
 import type { ArmoryGearItem } from "./warmane-armory";
 import { mapWowheadInventoryTypeToEquipLoc } from "./gearscore";
@@ -165,7 +166,27 @@ export async function fetchWowheadItemData(itemId: string, _itemName?: string): 
   return null;
 }
 
+function dbItemToData(row: { itemId: string; name: string; itemLevel: number | null; quality: string | null; equipLoc: string | null; iconName: string | null }): WowheadItemData {
+  const iconUrl = row.iconName ? `https://wow.zamimg.com/images/wow/icons/large/${row.iconName}.jpg` : undefined;
+  return {
+    itemId: row.itemId,
+    name: row.name,
+    quality: row.quality ?? undefined,
+    itemLevel: row.itemLevel ?? undefined,
+    iconUrl,
+    itemUrl: getWowheadItemUrl(row.itemId, row.name),
+    equipLoc: row.equipLoc as GearScoreEquipLoc | undefined,
+  };
+}
+
 export async function enrichGearWithWowhead(items: ArmoryGearItem[]): Promise<ArmoryGearItem[]> {
+  // Batch DB lookup first — avoids per-item Wowhead calls for known items
+  const itemIds = items.map(i => i.itemId).filter((id): id is string => Boolean(id));
+  const dbRows = itemIds.length > 0
+    ? await db.wowItem.findMany({ where: { itemId: { in: itemIds } } })
+    : [];
+  const dbMap = new Map(dbRows.map(r => [r.itemId, r]));
+
   const enriched: ArmoryGearItem[] = new Array(items.length);
   let nextIndex = 0;
 
@@ -180,7 +201,47 @@ export async function enrichGearWithWowhead(items: ArmoryGearItem[]): Promise<Ar
         continue;
       }
 
+      const dbRow = dbMap.get(item.itemId);
+      if (dbRow) {
+        const cached = dbItemToData(dbRow);
+        enriched[index] = {
+          ...item,
+          name:      cached.name      ?? item.name,
+          quality:   cached.quality   ?? item.quality,
+          itemLevel: cached.itemLevel ?? item.itemLevel,
+          iconUrl:   cached.iconUrl   ?? item.iconUrl,
+          itemUrl:   cached.itemUrl   ?? item.itemUrl,
+          equipLoc:  cached.equipLoc  ?? item.equipLoc,
+        };
+        continue;
+      }
+
       const wowhead = await fetchWowheadItemData(item.itemId, item.name);
+
+      if (wowhead) {
+        const iconName = wowhead.iconUrl
+          ? wowhead.iconUrl.replace(/.*\/([^/]+)\.jpg$/, "$1")
+          : null;
+        await db.wowItem.upsert({
+          where: { itemId: item.itemId },
+          create: {
+            itemId: item.itemId,
+            name: wowhead.name ?? item.name,
+            itemLevel: wowhead.itemLevel ?? null,
+            quality: wowhead.quality ?? null,
+            equipLoc: wowhead.equipLoc ?? null,
+            iconName,
+          },
+          update: {
+            name: wowhead.name ?? item.name,
+            itemLevel: wowhead.itemLevel ?? null,
+            quality: wowhead.quality ?? null,
+            equipLoc: wowhead.equipLoc ?? null,
+            iconName,
+          },
+        });
+      }
+
       enriched[index] = {
         ...item,
         name:      wowhead?.name      ?? item.name,
