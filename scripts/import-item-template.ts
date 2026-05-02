@@ -236,9 +236,13 @@ async function main() {
       let end = -1;
       for (let i = start; i < remaining.length; i++) {
         const ch = remaining[i];
+        // Handle backslash escape sequences inside strings
+        if (inStr && ch === "\\" && remaining[i + 1] === "'") {
+          i++; // skip escaped quote
+          continue;
+        }
         if (ch === "'" && !inStr)       { inStr = true; continue; }
         if (ch === "'" && inStr) {
-          if (i > 0 && remaining[i - 1] === "\\") { continue; } // backslash-escaped
           if (remaining[i + 1] === "'") { i++; continue; }       // doubled quote
           inStr = false; continue;
         }
