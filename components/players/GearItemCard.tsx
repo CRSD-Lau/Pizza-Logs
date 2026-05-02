@@ -104,10 +104,10 @@ function GearItemTooltip({
             </p>
           ))
         ) : (
-          <p>No additional Wowhead details available.</p>
+          <p>No item details available.</p>
         )}
         {gearScore !== undefined && <p className="pt-1 text-gold-light">GearScore {gearScore.toLocaleString()}</p>}
-        {item.itemId && <p className="pt-1 text-text-dim">Wowhead item #{item.itemId}</p>}
+        {item.itemId && <p className="pt-1 text-text-dim">Item #{item.itemId}</p>}
       </div>
     </div>
   );
