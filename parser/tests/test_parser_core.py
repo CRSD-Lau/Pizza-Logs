@@ -2044,3 +2044,38 @@ def test_heroic_correct_diff_id_unchanged():
     enc = p._aggregate_segment(seg, {})
     assert enc is not None
     assert enc.difficulty == "25H", f"Expected 25H, got {enc.difficulty}"
+
+
+# ── Debug mode ───────────────────────────────────────────────────────────────
+
+def test_debug_info_returned_when_requested():
+    """_aggregate_segment returns (enc, DebugInfo) when debug=True."""
+    from parser_core import DebugInfo
+    seg = _make_encounter_start_segment(
+        "Lord Marrowgar", diff_id=4, group_size=25,
+        heroic_spell=None, extra_player_count=20,
+    )
+    p = CombatLogParser()
+    result = p._aggregate_segment(seg, {}, debug=True)
+    assert isinstance(result, tuple), f"Expected tuple, got {type(result)}"
+    enc, dbg = result
+    assert enc is not None
+    assert isinstance(dbg, DebugInfo)
+    assert dbg.boss_name == "Lord Marrowgar"
+    assert dbg.difficulty_method in ("encounter_start", "heuristic")
+    assert isinstance(dbg.heroic_markers_found, list)
+    assert isinstance(dbg.outcome_evidence, str)
+    assert isinstance(dbg.skipped_event_count, int)
+
+
+def test_debug_info_none_when_not_requested():
+    """_aggregate_segment returns ParsedEncounter (not tuple) when debug=False."""
+    seg = _make_encounter_start_segment(
+        "Lord Marrowgar", diff_id=4, group_size=25,
+    )
+    p = CombatLogParser()
+    result = p._aggregate_segment(seg, {})
+    # Normal call: should return a ParsedEncounter, not a tuple
+    assert not isinstance(result, tuple), (
+        f"Expected ParsedEncounter, got tuple: {result}"
+    )

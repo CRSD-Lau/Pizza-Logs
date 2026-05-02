@@ -247,6 +247,24 @@ class RawEncounterEvent:
 
 
 @dataclass
+class DebugInfo:
+    """Optional debug metadata produced by parsing one encounter segment."""
+    boss_name: str
+    difficulty_method: str           # "encounter_start" | "heuristic"
+    difficulty_raw: str              # difficulty before heroic upgrade
+    difficulty_final: str            # difficulty after heroic upgrade
+    heroic_markers_found: list[str]  # spell names that triggered upgrade
+    outcome_method: str              # "encounter_end" | "unit_died" | "gunship_crew" | "heuristic"
+    outcome_evidence: str            # human-readable reason
+    event_count: int                 # total events in segment
+    skipped_event_count: int         # events skipped (currently 0 — placeholder for future)
+    pet_remaps: list[str]            # "PetName → OwnerName" strings
+    actor_count: int                 # distinct actors counted
+    boss_guid_count: int             # number of GUIDs identified as the boss
+    parser_warnings: list[str]       # parser warnings at time of encounter
+
+
+@dataclass
 class ParsedEncounter:
     boss_name:         str
     boss_def:          Optional[BossDef]
@@ -663,9 +681,12 @@ class CombatLogParser:
         self,
         segment: list[tuple[str, list[str], float]],
         pet_owner: Optional[dict[str, tuple[str, str]]] = None,
-    ) -> Optional[ParsedEncounter]:
+        debug: bool = False,
+    ) -> "Optional[ParsedEncounter] | tuple[Optional[ParsedEncounter], Optional[DebugInfo]]":
         """Turn a list of raw log lines into a ParsedEncounter."""
         if not segment:
+            if debug:
+                return None, None
             return None
 
         # Determine boss from ENCOUNTER_START if present
@@ -676,6 +697,13 @@ class CombatLogParser:
         outcome    = "UNKNOWN"
         first_ts_str = segment[0][0]
         last_ts_str  = segment[-1][0]
+
+        _debug_difficulty_method = "heuristic"
+        _debug_difficulty_raw = "10N"
+        _debug_markers: list[str] = []
+        _debug_outcome_method = "heuristic"
+        _debug_outcome_evidence = ""
+        _debug_pet_remaps: list[str] = []
 
         # Check for ENCOUNTER_START / ENCOUNTER_END markers
         for ts_str, parts, ts in segment:
@@ -690,6 +718,8 @@ class CombatLogParser:
                 success   = _safe_int(parts[5])
                 outcome   = "KILL" if success == 1 else "WIPE"
                 last_ts_str = ts_str
+                _debug_outcome_method = "encounter_end"
+                _debug_outcome_evidence = f"ENCOUNTER_END success={success}"
 
         # Gunship Battle: ENCOUNTER_END emits success=0 on Warmane even on a genuine
         # kill (the fight ends via scripted ship destruction, not a boss death event).
@@ -701,13 +731,18 @@ class CombatLogParser:
                 if gparts[0] == UNIT_DIED_EVENT and len(gparts) >= 6:
                     if gparts[5].strip('"').strip().lower() in GUNSHIP_CREW_NAMES:
                         outcome = "KILL"
+                        _debug_outcome_method = "gunship_crew"
+                        _debug_outcome_evidence = f"{gparts[5].strip(chr(34)).strip()} died"
                         break
 
         # Heuristic boss detection if no ENCOUNTER_START
+        _debug_difficulty_method = "encounter_start" if boss_name else "heuristic"
+        _debug_difficulty_raw = difficulty
         if not boss_name:
             boss_name, boss_id = self._infer_boss(segment)
             group_size, difficulty = self._infer_difficulty(segment)
             outcome = self._infer_outcome(segment, boss_name)
+            _debug_difficulty_raw = difficulty
 
         # Heroic upgrade: run even when ENCOUNTER_START was present, because Warmane
         # (and many WotLK private servers) emit difficultyID=4 (25N) for heroic runs.
@@ -715,8 +750,20 @@ class CombatLogParser:
         # If the difficulty was correctly set to H via difficultyID, the replace() is a no-op.
         if difficulty in ("10N", "25N") and self._detect_heroic(segment):
             difficulty = difficulty.replace("N", "H")
+            if debug and difficulty != _debug_difficulty_raw:
+                for _, _mp, _ in segment:
+                    if _mp[0] == "SWING_DAMAGE" or _mp[0] == UNIT_DIED_EVENT:
+                        continue
+                    if len(_mp) > 8:
+                        spell = _mp[8].strip('"').strip().lower()
+                        if spell in HEROIC_SPELL_MARKERS:
+                            marker = _mp[8].strip('"').strip()
+                            if marker not in _debug_markers:
+                                _debug_markers.append(marker)
 
         if not boss_name:
+            if debug:
+                return None, None
             return None  # Cannot identify boss — skip
 
         boss_def = (lookup_boss_by_id(boss_id) if boss_id else None) or lookup_boss(boss_name)
@@ -984,6 +1031,8 @@ class CombatLogParser:
         # Discard false-positive segments: no player output AND very short
         # (pre-pull buffs / noise captured before first real pull)
         if total_damage == 0 and duration < 60:
+            if debug:
+                return None, None
             return None
 
         started_at = parse_ts_to_iso(first_ts_str, self.file_year)
@@ -996,7 +1045,7 @@ class CombatLogParser:
             participants = [p["name"] for p in participants],
         )
 
-        return ParsedEncounter(
+        enc = ParsedEncounter(
             boss_name         = boss_def.name if boss_def else boss_name,
             boss_def          = boss_def,
             boss_id           = boss_id,
@@ -1013,6 +1062,25 @@ class CombatLogParser:
             participants      = participants,
             raw_event_count   = len(segment),
         )
+
+        if debug:
+            dbg = DebugInfo(
+                boss_name=boss_name or "",
+                difficulty_method=_debug_difficulty_method,
+                difficulty_raw=_debug_difficulty_raw,
+                difficulty_final=difficulty,
+                heroic_markers_found=_debug_markers,
+                outcome_method=_debug_outcome_method,
+                outcome_evidence=_debug_outcome_evidence,
+                event_count=len(segment),
+                skipped_event_count=0,
+                pet_remaps=_debug_pet_remaps,
+                actor_count=len(actors) if 'actors' in dir() else 0,
+                boss_guid_count=len(boss_guids) if 'boss_guids' in dir() else 0,
+                parser_warnings=list(self.warnings),
+            )
+            return enc, dbg
+        return enc
 
     def _infer_boss(
         self, segment: list[tuple[str, list[str], float]]
