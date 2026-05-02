@@ -1,5 +1,5 @@
 import { db } from "./db";
-import { enrichGearWithWowhead, getWowheadItemUrl } from "./wowhead-items";
+import { enrichGearWithLocalTemplate } from "./item-template";
 import type { GearScoreEquipLoc } from "./gearscore";
 
 export type ArmoryGearItem = {
@@ -162,15 +162,9 @@ function isArmoryCharacterGear(value: unknown): value is ArmoryCharacterGear {
   );
 }
 
-export function gearNeedsWowheadEnrichment(gear: unknown): boolean {
+export function gearNeedsEnrichment(gear: unknown): boolean {
   if (!isArmoryCharacterGear(gear)) return true;
-
-  return gear.items.some((item) => {
-    if (!item.itemId) return true;
-
-    const usesWowheadUrl = item.itemUrl?.includes("wowhead.com/wotlk/item=");
-    return !usesWowheadUrl || !item.iconUrl || !item.itemLevel || !item.equipLoc || !item.details?.length;
-  });
+  return gear.items.some(item => !item.itemId || !item.itemLevel || !item.equipLoc);
 }
 
 function normalizeEquipment(items: unknown): ArmoryGearItem[] {
@@ -195,7 +189,7 @@ function normalizeEquipment(items: unknown): ArmoryGearItem[] {
         quality: asString(item.quality),
         itemLevel: asNumber(item.itemLevel) ?? asNumber(item.itemlevel),
         iconUrl,
-        itemUrl: itemId ? getWowheadItemUrl(itemId, name) : undefined,
+        itemUrl: undefined,
         equipLoc: asGearScoreEquipLoc(item.equipLoc) ?? asGearScoreEquipLoc(item.itemEquipLoc),
         enchant: asString(item.enchant),
         gems: asStringArray(item.gems),
@@ -348,7 +342,7 @@ async function fetchWarmaneGearLive(
         realm: asString(data.realm) ?? sanitizedRealm,
         sourceUrl,
         fetchedAt: new Date().toISOString(),
-        items: normalizeArmoryGearSlots(await enrichGearWithWowhead(normalizeEquipment(data.equipment))),
+        items: normalizeArmoryGearSlots(await enrichGearWithLocalTemplate(normalizeEquipment(data.equipment))),
       },
     };
   } catch (error) {
@@ -398,12 +392,12 @@ export async function writeCachedGear(
   gear: ArmoryCharacterGear,
   opts?: { sourceAgent?: string }
 ): Promise<ArmoryCharacterGear> {
-  // Skip Wowhead enrichment if items are already fully enriched (e.g. posted by bridge)
-  const needsEnrichment = gearNeedsWowheadEnrichment(gear);
+  // Skip enrichment if items are already fully enriched (e.g. posted by bridge)
+  const needsEnrichment = gearNeedsEnrichment(gear);
   const enrichedGear: ArmoryCharacterGear = {
     ...gear,
     items: needsEnrichment
-      ? normalizeArmoryGearSlots(await enrichGearWithWowhead(gear.items))
+      ? normalizeArmoryGearSlots(await enrichGearWithLocalTemplate(gear.items))
       : normalizeArmoryGearSlots(gear.items),
   };
 
@@ -501,7 +495,7 @@ export async function getWarmaneCharacterGear(
   }
 
   let cachedGear = await readCachedGear(sanitizedName, sanitizedRealm);
-  if (shouldRefreshArmoryGearCache({ cachedGear, now: new Date() }) && cachedGear && gearNeedsWowheadEnrichment(cachedGear)) {
+  if (shouldRefreshArmoryGearCache({ cachedGear, now: new Date() }) && cachedGear && gearNeedsEnrichment(cachedGear)) {
     cachedGear = await writeCachedGear(cachedGear);
   }
 
@@ -530,7 +524,7 @@ export function shouldRefreshArmoryGearCache({
   now: Date;
 }): boolean {
   if (!cachedGear) return true;
-  if (gearNeedsWowheadEnrichment(cachedGear)) return true;
+  if (gearNeedsEnrichment(cachedGear)) return true;
 
   const cachedFetchedAt = new Date(cachedGear.fetchedAt).getTime();
   return !Number.isFinite(cachedFetchedAt) || now.getTime() - cachedFetchedAt >= CACHE_MS;

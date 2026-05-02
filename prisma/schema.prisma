@@ -287,12 +287,28 @@ model WeeklySummary {
 // ─────────────────────────────────────────────
 
 model WowItem {
-  itemId     String  @id                // WoW item ID as string
-  name       String
-  itemLevel  Int?
-  quality    String?                    // "Poor" | "Common" | "Uncommon" | "Rare" | "Epic" | "Legendary"
-  equipLoc   String?                    // "Head" | "Chest" etc.
-  iconName   String?                    // zamimg icon slug, e.g. "inv_sword_01"
+  itemId        String   @id                // WoW item ID as string
+  name          String
+  itemLevel     Int?
+  quality       String?                     // "poor"|"common"|"uncommon"|"rare"|"epic"|"legendary"
+  equipLoc      String?                     // INVTYPE_* string
+  iconName      String?                     // zamimg icon slug, e.g. "inv_sword_01"
+
+  // AzerothCore item_template fields (populated by import-item-template script)
+  itemClass     Int?
+  itemSubclass  Int?
+  displayId     Int?
+  requiredLevel Int?
+  armor         Int?
+  dmgMin        Float?
+  dmgMax        Float?
+  delay         Int?                        // weapon speed in ms
+  bonding       Int?                        // 0=none, 1=BoP, 2=BoE, 3=BoU
+  description   String?
+  stats         Json?                       // { "Stamina": 74, "Intellect": 56, ... }
+  socketColors  Json?                       // [1, 2, 0] socket color per slot, 0=none
+  socketBonus   Int?
+  importedAt    DateTime?                   // set when row was imported from item_template
 
   @@map("wow_items")
 }

@@ -1,3 +1,9 @@
+/**
+ * @deprecated Wowhead runtime enrichment is no longer used.
+ * This file is kept for reference only. Do not import from it in production code.
+ * Gear enrichment now uses lib/item-template.ts (AzerothCore item_template data).
+ * Safe to delete after verifying no production imports remain.
+ */
 import { db } from "./db";
 import { slugify } from "./utils";
 import type { ArmoryGearItem } from "./warmane-armory";

@@ -1,0 +1,15 @@
+-- AlterTable: Expand wow_items with AzerothCore item_template fields
+ALTER TABLE "wow_items" ADD COLUMN "itemClass" INTEGER,
+ADD COLUMN "itemSubclass" INTEGER,
+ADD COLUMN "displayId" INTEGER,
+ADD COLUMN "requiredLevel" INTEGER,
+ADD COLUMN "armor" INTEGER,
+ADD COLUMN "dmgMin" DOUBLE PRECISION,
+ADD COLUMN "dmgMax" DOUBLE PRECISION,
+ADD COLUMN "delay" INTEGER,
+ADD COLUMN "bonding" INTEGER,
+ADD COLUMN "description" TEXT,
+ADD COLUMN "stats" JSONB,
+ADD COLUMN "socketColors" JSONB,
+ADD COLUMN "socketBonus" INTEGER,
+ADD COLUMN "importedAt" TIMESTAMP(3);

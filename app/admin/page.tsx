@@ -27,6 +27,8 @@ export default async function AdminPage() {
     recentGearErrors,
     rosterCount,
     latestRosterSync,
+    itemImportCount,
+    latestItemImport,
   ] = await Promise.all([
     db.upload.count(),
     db.encounter.count(),
@@ -61,6 +63,12 @@ export default async function AdminPage() {
     db.guildRosterMember.findFirst({
       orderBy: { lastSyncedAt: "desc" },
       select: { lastSyncedAt: true },
+    }),
+    db.wowItem.count({ where: { importedAt: { not: null } } }),
+    db.wowItem.findFirst({
+      where:   { importedAt: { not: null } },
+      orderBy: { importedAt: "desc" },
+      select:  { importedAt: true },
     }),
   ]);
 
@@ -129,7 +137,32 @@ export default async function AdminPage() {
         </div>
       </section>
 
-      {/* 5. Upload stats */}
+      {/* 5. Item Template (AzerothCore) */}
+      <section>
+        <SectionHeader title="Item Template (AzerothCore)" sub="Read-only import status for WoW item metadata" />
+        <div className="bg-bg-panel border border-gold-dim rounded p-4 space-y-4">
+          <div className="grid grid-cols-2 gap-3">
+            <StatCard label="Items Imported" value={itemImportCount} />
+            <StatCard
+              label="Last Import"
+              value={latestItemImport?.importedAt
+                ? latestItemImport.importedAt.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })
+                : "Never"}
+            />
+          </div>
+          {itemImportCount === 0 && (
+            <p className="text-sm text-text-secondary">
+              No items imported yet. Run{" "}
+              <code className="font-mono text-xs bg-bg-card border border-gold-dim rounded px-1.5 py-0.5">
+                npm run db:import-items
+              </code>{" "}
+              to populate.
+            </p>
+          )}
+        </div>
+      </section>
+
+      {/* 6. Upload stats */}
       <section>
         <SectionHeader title="Upload Analytics" sub="Counts reset when upload data is cleared" />
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
@@ -140,7 +173,7 @@ export default async function AdminPage() {
         </div>
       </section>
 
-      {/* 6. Top uploaders */}
+      {/* 7. Top uploaders */}
       <section>
         <SectionHeader title="Most Active Uploaders" sub="By logs submitted" />
         <div className="bg-bg-panel border border-gold-dim rounded divide-y divide-gold-dim">
@@ -158,7 +191,7 @@ export default async function AdminPage() {
         </div>
       </section>
 
-      {/* 7. Recent upload timings */}
+      {/* 8. Recent upload timings */}
       {recentUploads.length > 0 && (
         <section>
           <SectionHeader title="Recent Upload Timings" sub="Parse duration per log" />
@@ -193,7 +226,7 @@ export default async function AdminPage() {
         </section>
       )}
 
-      {/* 8. Failed uploads */}
+      {/* 9. Failed uploads */}
       {recentErrors.length > 0 && (
         <section>
           <SectionHeader title="Recent Failures" />

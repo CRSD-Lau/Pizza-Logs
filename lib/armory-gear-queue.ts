@@ -1,4 +1,4 @@
-import { gearNeedsWowheadEnrichment } from "./warmane-armory";
+import { gearNeedsEnrichment } from "./warmane-armory";
 
 export type ArmoryGearQueuePlayer = {
   name: string;
@@ -54,7 +54,7 @@ export function getMissingArmoryGearPlayers({
 
   const freshCachedKeys = new Set(
     cachedRows
-      .filter((row) => !gearNeedsWowheadEnrichment(row.gear))
+      .filter((row) => !gearNeedsEnrichment(row.gear))
       .map((row) => queueKey(row.characterKey, row.realm))
   );
 

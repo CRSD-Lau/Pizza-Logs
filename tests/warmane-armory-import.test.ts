@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { gearNeedsWowheadEnrichment, normalizeArmoryGearSlots, normalizeImportedArmoryGear } from "../lib/warmane-armory";
+import { gearNeedsEnrichment, normalizeArmoryGearSlots, normalizeImportedArmoryGear } from "../lib/warmane-armory";
 
 const result = normalizeImportedArmoryGear({
   characterName: "Ashien",
@@ -48,7 +48,7 @@ const apiResult = normalizeImportedArmoryGear({
 assert.equal(apiResult.ok, true);
 if (apiResult.ok) {
   assert.equal(apiResult.gear.characterName, "Aalaska");
-  assert.equal(apiResult.gear.items[0].itemUrl, "https://www.wowhead.com/wotlk/item=51281/sanctified-bloodmage-hood");
+  assert.equal(apiResult.gear.items[0].itemUrl, undefined);
 }
 
 assert.deepEqual(
@@ -69,7 +69,7 @@ assert.deepEqual(
 );
 
 assert.equal(
-  gearNeedsWowheadEnrichment({
+  gearNeedsEnrichment({
     characterName: "Aalaska",
     realm: "Lordaeron",
     sourceUrl: "https://armory.warmane.com/character/Aalaska/Lordaeron/summary",
@@ -86,7 +86,7 @@ assert.equal(
 );
 
 assert.equal(
-  gearNeedsWowheadEnrichment({
+  gearNeedsEnrichment({
     characterName: "Aalaska",
     realm: "Lordaeron",
     sourceUrl: "https://armory.warmane.com/character/Aalaska/Lordaeron/summary",

@@ -2,10 +2,7 @@
 
 ## Status
 
-**Parser fixture harness added.** Three synthetic fixtures cover: 25N kill (ENCOUNTER_START/END path), 25H kill (heroic detection via spell marker even with wrong difficultyID), and Gunship kill (ENCOUNTER_END success=0 → crew death override).
-
-Worktree branch `claude/musing-curie-718edb` has the fixture harness.
-Prior worktree branch `claude/sharp-ramanujan-489f4d` (WowItem DB cache) still needs merging to main.
+**Gear enrichment overhaul complete.** Wowhead runtime dependency removed. AzerothCore `item_template.sql` importer built. `lib/warmane-armory.ts` updated to use local enrichment. Branch `claude/gear-item-template` ready to merge.
 
 ---
 
@@ -13,11 +10,10 @@ Prior worktree branch `claude/sharp-ramanujan-489f4d` (WowItem DB cache) still n
 
 | Task | Type | Notes |
 |------|------|-------|
-| Implement `test_fixtures.py` | CODE | Pytest parametrize over fixture dirs; assert boss_name, difficulty, outcome, damage ranges |
-| Merge worktrees to main and push | DEPLOY | `claude/sharp-ramanujan-489f4d` first, then `claude/musing-curie-718edb`; Railway auto-deploys |
-| Seed item DB | SETUP | After deploy: `npm run db:seed-items` — one-time bulk Wowhead fetch |
-| Verify gear pages | VERIFY | Check Writman, Yanna, Lausudo for correct ilvl, GS, slot labels |
-| Add real log fixtures | TEST | Trim real WoWCombatLog.txt pulls; follow README in fixtures/ |
+| Merge `claude/gear-item-template` to main | DEPLOY | Railway auto-deploys |
+| Run `npm run db:import-items` | SETUP | After deploy: set DATABASE_URL from Railway, run once |
+| Verify admin page item count | VERIFY | Should show 78k+ items after import |
+| Verify player gear pages | VERIFY | Check Writman, Yanna, Lausudo |
 | Fix HC/Normal difficulty detection | BUG | Regression/open task |
 | Stats / Analytics page | FEATURE | Brainstorm first, then design, then build |
 | Verify Skada numbers in-game | VERIFY | Neil to do manually |
@@ -30,8 +26,8 @@ Prior worktree branch `claude/sharp-ramanujan-489f4d` (WowItem DB cache) still n
 - Log file: `C:/Users/neil_/OneDrive/Desktop/PizzaLogs/WoWCombatLog/WoWCombatLog.txt`
 - Live app: https://pizza-logs-production.up.railway.app
 - GitHub: https://github.com/CRSD-Lau/Pizza-Logs
-- Fixture harness: `parser/tests/fixtures/` — README has schema and how to add real log fixtures
-- Admin browser import: `/admin` → Warmane Gear Cache → install/update hosted userscript (`/api/admin/armory-gear/userscript.user.js`), then use the Pizza Logs panel on Warmane Armory
+- Admin browser import: `/admin` → Warmane Gear Cache → install/update hosted userscript, then use the Pizza Logs panel on Warmane Armory
 - Gear cache table: `armory_gear_cache`
 - Guild roster table: `guild_roster_members`
 - WowItem cache table: `wow_items`
+- Item template import: `npm run db:import-items` (AzerothCore → wow_items)
