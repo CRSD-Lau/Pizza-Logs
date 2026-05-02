@@ -1,5 +1,13 @@
 # Parser Deep Dive
 
+> **Formal parser contract:** See `docs/parser-contract.md` for the authoritative
+> reference on accepted file format, encounter segmentation rules, damage/healing
+> calculations, difficulty detection, pet merge rules, and known limitations.
+
+> **Recent fixes (2026-05-02):**
+> - Heroic detection now runs even when ENCOUNTER_START is present (Warmane emits wrong difficultyID)
+> - GUNSHIP_CREW_NAMES expanded and extracted to module constant
+
 > Source of truth for how parser_core.py interprets WoW combat logs.
 > All field layouts verified against **Skada-WoTLK** source (https://github.com/bkader/Skada-WoTLK).
 

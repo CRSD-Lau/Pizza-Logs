@@ -75,6 +75,34 @@ The parser replicates [Skada-WoTLK](https://github.com/bkader/Skada-WoTLK) exact
 
 ---
 
+## Parser Validation
+
+The parser is validated against a fixture system of synthetic and real combat logs.
+
+**Running parser tests:**
+```bash
+cd parser
+pytest tests/ -v
+```
+
+**Adding a new fixture:**
+See `parser/tests/fixtures/README.md` for the full process. Short version: add
+`combatlog.txt` + `expected.json` to a new subdirectory under `parser/tests/fixtures/`,
+then run `pytest tests/test_fixtures.py -v`.
+
+**Known deviations from uwu-logs:**
+- Encounter boundaries differ (30s heuristic vs uwu-logs window algorithm)
+- We subtract overkill from damage totals (Skada does; uwu-logs may not)
+- We remap pet damage to owner (uwu-logs may not)
+
+See `docs/parser-contract.md` for the full specification.
+
+**Debug mode (admin only):**
+POST to `/parse-debug` on the parser service to get per-encounter debug metadata
+(difficulty evidence, heroic markers, outcome reasoning). See `docs/parser-contract.md § Debug Mode`.
+
+---
+
 ## Local Development
 
 ### Prerequisites

@@ -46,6 +46,28 @@
 
 ---
 
+## Fixed (2026-05-02)
+
+### [H3/H4] 25H/10H bosses showing as 25N/10N
+**Root cause:** ENCOUNTER_START present with difficultyID=4 (25N). Heroic marker check was only running in the heuristic path (guarded by `if not boss_name:`).  
+**Fix:** Heroic upgrade now runs regardless of ENCOUNTER_START.  
+**Commit:** `babcca6 fix: run heroic detection even when ENCOUNTER_START is present`
+
+### [H2] Gunship Battle showing as WIPE on kills
+**Root cause:** `_gunship_crew` name set was incomplete (missing Skybreaker Mortar Soldier, Vindicator, Marksman, Kor'kron Reaver, Sergeant) and duplicated in two methods.  
+**Fix:** Extracted `GUNSHIP_CREW_NAMES` module constant, expanded to 14 entries.  
+**Commit:** `6c9ab28 fix: extract GUNSHIP_CREW_NAMES constant, expand crew coverage`
+
+## Still Open
+
+- **Absorbs (PW:S)** — Not tracked. Skada tracks in separate `actor.absorb` module. No ETA. Documented in `docs/parser-contract.md`.
+- **Role detection** — Heuristic (healing ratio), not spec-based.
+- **Damage mismatch vs uwu-logs** — Root cause: different encounter boundaries + uwu-logs may not subtract overkill. See `docs/parser-contract.md § Values That May Differ from uwu-logs`.
+- **pet_remaps debug field** — DebugInfo.pet_remaps is always empty (placeholder). Populate from Pre-pass B in a future pass.
+- **Gunship difficulty detection** — Gunship always inherits session difficulty (no heroic-exclusive spells). If run outside a confirmed H session it stays 25N.
+
+---
+
 ## Known Limitations (not bugs, won't fix)
 
 | Limitation | Reason |
