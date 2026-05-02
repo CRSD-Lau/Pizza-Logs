@@ -2,15 +2,12 @@
 
 ## Status
 
-Admin page cleanup is complete and validated. TypeScript was clean in the previous verification (`tsc --noEmit` zero errors). All bookmarklet/copy-paste/GuildRosterSyncButton references were removed. `clearDatabase` only deletes volatile upload-derived data (weeklySummaries + uploads via cascade).
+**Warmane Sync Agent is fully built.** The desktop bridge + admin UI are implemented across all 12 plan tasks. 25/25 tests pass. TypeScript is clean. The worktree branch `claude/sharp-ramanujan-489f4d` is 13 commits ahead of main and ready to merge.
 
-Current active focus is **Warmane roster/gear automation**. The approved direction is laptop-primary automation: a local sync agent will fetch Warmane Armory roster and character gear from Neil's laptop, validate snapshots, and POST imports into the hosted Pizza Logs app. Railway should serve cached snapshots and should not depend on live Warmane/Wowhead requests during page render.
+Current active focus: **deploy and activate the bridge on Neil's desktop.**
 
-`CLAUDE.md` now contains a dedicated handoff section for this work so Claude sessions on the laptop/desktop should pick up the sync-agent context quickly.
-
-Design spec: `docs/superpowers/specs/2026-05-01-warmane-sync-agent-design.md`.
-
-Note: Jest test suites fail with a pre-existing ESM/Babel config issue (no `jest.config.*` in repo, no transform for `import` syntax). This is not caused by the admin cleanup.
+Implementation plan: `docs/superpowers/plans/2026-05-01-warmane-sync-agent.md`
+Design spec: `docs/superpowers/specs/2026-05-01-warmane-sync-agent-design.md`
 
 ---
 
@@ -18,20 +15,15 @@ Note: Jest test suites fail with a pre-existing ESM/Babel config issue (no `jest
 
 | Task | Type | Notes |
 |------|------|-------|
-| Move context to desktop/Claude | HANDOFF | Ensure desktop checkout includes the sync-agent design spec and updated `CLAUDE.md` |
-| Review Warmane sync agent design | PLAN | Approve or revise `docs/superpowers/specs/2026-05-01-warmane-sync-agent-design.md` before implementation |
-| Write Warmane sync implementation plan | PLAN | Use the design to plan backend hardening, sync CLI, admin health UI, and laptop scheduling |
-| Build laptop-primary Warmane sync agent | FEATURE | First command should be `npm run sync:warmane`; runs from laptop, not Railway |
-| Harden roster/gear import snapshots | BUG/TECH DEBT | Reject invalid/empty/HTML challenge payloads and preserve last known good data |
+| Merge worktree to main and push | DEPLOY | `git merge claude/sharp-ramanujan-489f4d && git push origin main`; Railway auto-deploys |
+| Set up `.env.sync-agent` on desktop | SETUP | Copy from `.env.sync-agent.example`, fill in `PIZZA_ADMIN_SECRET` |
+| Test dry-run on desktop | VERIFY | `npm run sync:warmane:dry` — should log roster fetch without importing |
+| Test live run on desktop | VERIFY | `npm run sync:warmane` — watch `/admin` Warmane Auto-Sync panel update |
+| Register Task Scheduler | SETUP | `powershell -ExecutionPolicy Bypass -File scripts\setup-sync-scheduler.ps1` |
+| Verify gear pages after first sync | VERIFY | Check Writman, Yanna, Lausudo for correct ilvl, GS, slot labels |
 | Fix HC/Normal difficulty detection | BUG | Regression/open task |
-| Push and deploy current scoped changes | DEPLOY | Push to `origin/main`; Railway auto-deploys; update Tampermonkey if userscript versions are bumped |
-| Spot-check gear slot/GearScore fix | VERIFY | After deploy, confirm `/players/Lausudo` shows the libram as `Ranged/Relic` and full 2H+relic GearScore; confirm `/players/Aalaska` shows staff/wand in the weapon row |
-| Spot-check Titan Grip GS fix | VERIFY | After deploy, confirm `/players/Contents` no longer double-counts both two-handed weapons |
-| Refresh gear metadata | VERIFY | Temporary manual path remains the hosted Warmane userscript; target replacement is automated laptop sync agent |
 | Stats / Analytics page | FEATURE | Brainstorm first, then design, then build |
-| Populate Guild Roster | VERIFY | Temporary manual path remains roster userscript v1.0.4; target replacement is automated laptop sync agent |
-| Spot-check Warmane panels | VERIFY | Confirm Gear Sync appears on character pages and Roster Sync appears on guild pages |
-| Verify Skada numbers in-game | VERIFY | Neil to do manually next week |
+| Verify Skada numbers in-game | VERIFY | Neil to do manually |
 | Absorbs (PW:S) | FEATURE | Combined column. Do after verification. |
 
 ---
