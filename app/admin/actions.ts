@@ -48,25 +48,6 @@ export async function deleteUpload(
   return { ok: true };
 }
 
-export async function triggerSync(
-  type: "ROSTER" | "GEAR"
-): Promise<{ ok: boolean; jobId?: string; error?: string }> {
-  try {
-    await db.syncJob.updateMany({
-      where: { type, status: "PENDING" },
-      data: { status: "CANCELLED" },
-    });
-
-    const job = await db.syncJob.create({
-      data: { type, status: "PENDING" },
-    });
-
-    return { ok: true, jobId: job.id };
-  } catch (err) {
-    return { ok: false, error: err instanceof Error ? err.message : "Unknown error" };
-  }
-}
-
 export async function syncGuildRosterFromAdmin(): Promise<
   | { ok: true; count: number; skipped?: boolean }
   | { ok: false; error: string }

@@ -283,33 +283,16 @@ model WeeklySummary {
 }
 
 // ─────────────────────────────────────────────
-//  SYNC JOBS  (desktop bridge job queue)
+//  WOW ITEM CACHE  (static WotLK item metadata)
 // ─────────────────────────────────────────────
 
-enum SyncJobType {
-  ROSTER
-  GEAR
-}
+model WowItem {
+  itemId     String  @id                // WoW item ID as string
+  name       String
+  itemLevel  Int?
+  quality    String?                    // "Poor" | "Common" | "Uncommon" | "Rare" | "Epic" | "Legendary"
+  equipLoc   String?                    // "Head" | "Chest" etc.
+  iconName   String?                    // zamimg icon slug, e.g. "inv_sword_01"
 
-enum SyncJobStatus {
-  PENDING
-  IN_PROGRESS
-  DONE
-  FAILED
-  CANCELLED
-}
-
-model SyncJob {
-  id          String        @id @default(cuid())
-  type        SyncJobType
-  status      SyncJobStatus @default(PENDING)
-  triggeredAt DateTime      @default(now())
-  startedAt   DateTime?
-  completedAt DateTime?
-  agentId     String?
-  error       String?
-  result      Json?
-
-  @@index([status, triggeredAt])
-  @@map("sync_jobs")
+  @@map("wow_items")
 }
