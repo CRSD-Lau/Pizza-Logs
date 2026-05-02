@@ -1,7 +1,7 @@
 #!/bin/sh
 set -e
 
-echo "[start] Running prisma db push..."
+echo "[start] Running prisma migrate deploy..."
 
 # Run prisma CLI via its package source entry point.
 # The .bin/prisma bundled script looks for a companion .wasm at __dirname
@@ -15,7 +15,7 @@ PRISMA_BIN=$(node -e "
   console.log('./node_modules/prisma/' + rel);
 ")
 echo "[start] prisma entry: $PRISMA_BIN"
-node "$PRISMA_BIN" db push --skip-generate
+node "$PRISMA_BIN" migrate deploy
 
 echo "[start] Starting Next.js server..."
 exec node server.js
