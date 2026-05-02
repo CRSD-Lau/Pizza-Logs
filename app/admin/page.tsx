@@ -173,7 +173,7 @@ export default async function AdminPage() {
         </div>
       </section>
 
-      {/* 6. Top uploaders */}
+      {/* 7. Top uploaders */}
       <section>
         <SectionHeader title="Most Active Uploaders" sub="By logs submitted" />
         <div className="bg-bg-panel border border-gold-dim rounded divide-y divide-gold-dim">
@@ -191,7 +191,7 @@ export default async function AdminPage() {
         </div>
       </section>
 
-      {/* 7. Recent upload timings */}
+      {/* 8. Recent upload timings */}
       {recentUploads.length > 0 && (
         <section>
           <SectionHeader title="Recent Upload Timings" sub="Parse duration per log" />
@@ -226,7 +226,7 @@ export default async function AdminPage() {
         </section>
       )}
 
-      {/* 8. Failed uploads */}
+      {/* 9. Failed uploads */}
       {recentErrors.length > 0 && (
         <section>
           <SectionHeader title="Recent Failures" />
