@@ -2,9 +2,11 @@
 
 ## Status
 
-**Warmane Sync Agent is fully built.** The desktop bridge + admin UI are implemented across all 12 plan tasks. 25/25 tests pass. TypeScript is clean. The worktree branch `claude/sharp-ramanujan-489f4d` is 13 commits ahead of main and ready to merge.
+**Warmane Sync Agent is fully built + Playwright migration complete.** The desktop bridge uses headed Chrome via Playwright to bypass Cloudflare Turnstile. 25/25 tests pass. TypeScript is clean. The worktree branch `claude/sharp-ramanujan-489f4d` is 14 commits ahead of main and ready to merge.
 
 Current active focus: **deploy and activate the bridge on Neil's desktop.**
+
+**Important:** Cloudflare Turnstile on armory.warmane.com requires a residential IP to auto-pass the invisible challenge. The smoke test could not be verified from the Claude Code sandbox (datacenter IP). Neil must run the smoke test from his own desktop to confirm end-to-end.
 
 Implementation plan: `docs/superpowers/plans/2026-05-01-warmane-sync-agent.md`
 Design spec: `docs/superpowers/specs/2026-05-01-warmane-sync-agent-design.md`
