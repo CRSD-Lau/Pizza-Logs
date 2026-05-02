@@ -46,6 +46,18 @@
 
 ---
 
+## Fixed (2026-05-02): Wowhead runtime dependency removed
+
+### Fixed — 2026-05-02: Wowhead runtime dependency removed
+
+**Problem:** Gear enrichment (item name, ilvl, quality, stats) depended on runtime Wowhead API calls, which fail due to Cloudflare blocking on Railway.
+
+**Fix:** `lib/wowhead-items.ts` deprecated. Replaced by `lib/item-template.ts` backed by AzerothCore `item_template.sql` imported into `wow_items` table. Import script: `npm run db:import-items`.
+
+**Icon source:** zamimg CDN (`wow.zamimg.com`) — static, not a Wowhead API call. Icon slugs come from Warmane's API response.
+
+**Known remaining gap:** Items not in `wow_items` table fall back gracefully to Warmane-supplied data rather than showing missing metadata.
+
 ## Fixed (2026-05-02)
 
 ### [H3/H4] 25H/10H bosses showing as 25N/10N

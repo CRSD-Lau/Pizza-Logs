@@ -7,6 +7,29 @@
 
 ---
 
+## Gear Display
+
+Player gear is displayed on profile pages using data from two sources:
+
+| Source | What it provides |
+|--------|-----------------|
+| Warmane Armory (Tampermonkey userscript) | Equipped item IDs, icon slugs, enchants, gems |
+| AzerothCore `item_template` (local DB) | Item name, ilvl, quality, slot type, stats, armor |
+
+**No runtime external API calls.** Wowhead is not used. Icon images are served from the static `wow.zamimg.com` CDN.
+
+### Importing item metadata
+
+Run once after deploying (or to refresh):
+
+```bash
+npm run db:import-items
+```
+
+This downloads and imports AzerothCore's WotLK `item_template.sql` (~80k items) into the `wow_items` table. Safe to re-run — existing rows are updated, `iconName` (from Warmane) is never overwritten.
+
+---
+
 ## Stack
 
 | Layer      | Tech                             |
