@@ -1,0 +1,19 @@
+{
+  "encounter_count": 1,
+  "encounters": [
+    {
+      "boss_name": "Lord Marrowgar",
+      "difficulty": "25H",
+      "outcome": "KILL",
+      "group_size": 25,
+      "duration_seconds_min": 28,
+      "duration_seconds_max": 32,
+      "total_damage_min": 163000,
+      "total_damage_max": 167000,
+      "total_healing_min": 0,
+      "total_healing_max": 0,
+      "participant_count_min": 24,
+      "participant_count_max": 25
+    }
+  ]
+}
