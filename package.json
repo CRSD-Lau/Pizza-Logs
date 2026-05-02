@@ -13,7 +13,8 @@
     "db:studio": "prisma studio",
     "db:generate": "prisma generate",
     "type-check": "tsc --noEmit",
-    "db:seed-items": "ts-node --project tsconfig.seed.json scripts/seed-wow-items.ts"
+    "db:seed-items": "ts-node --project tsconfig.seed.json scripts/seed-wow-items.ts",
+    "db:import-items": "ts-node --project tsconfig.seed.json scripts/import-item-template.ts"
   },
   "dependencies": {
     "@prisma/client": "^5.22.0",
