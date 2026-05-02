@@ -41,6 +41,30 @@ HEROIC_SPELL_MARKERS: frozenset[str] = frozenset({
     # difficulty via _normalize_session_difficulty (25N → 25H promotion).
 })
 
+# Gunship Battle: Warmane emits ENCOUNTER_END success=0 even on a genuine kill
+# (the fight ends via scripted ship destruction, not a boss UNIT_DIED).
+# A KILL is detected by any crew member dying during the encounter window.
+# Sources: Horde log = players board The Skybreaker (Alliance ship crew die).
+#          Alliance log = players board Orgrim's Hammer (Kor'kron crew die).
+GUNSHIP_CREW_NAMES: frozenset[str] = frozenset({
+    # Skybreaker (Alliance ship) crew — appear in Horde-side logs
+    "muradin bronzebeard",
+    "high captain justin bartlett",
+    "skybreaker sorcerer",
+    "skybreaker rifleman",
+    "skybreaker sergeant",
+    "skybreaker mortar soldier",
+    "skybreaker vindicator",
+    "skybreaker marksman",
+    # Kor'kron (Horde ship) crew — appear in Alliance-side logs
+    "kor'kron battle-mage",
+    "kor'kron primalist",
+    "kor'kron defender",
+    "kor'kron invoker",
+    "kor'kron reaver",
+    "kor'kron sergeant",
+})
+
 # Source: Skada-WoTLK Skada/Modules/Damage.lua — RegisterForCL call.
 # We track exactly the same damage events Skada tracks.
 DMG_EVENTS = {
@@ -673,17 +697,9 @@ class CombatLogParser:
         # Horde-side kill (players board The Skybreaker): Skybreaker crew die.
         # Alliance-side kill (players board Orgrim's Hammer): Kor'kron crew die.
         if outcome in ("WIPE", "UNKNOWN") and boss_name and "gunship" in boss_name.lower():
-            _gunship_crew = {
-                # Horde log: Skybreaker (Alliance ship) crew
-                "muradin bronzebeard", "high captain justin bartlett",
-                "skybreaker sorcerer", "skybreaker rifleman", "skybreaker sergeant",
-                # Alliance log: Kor'kron (Horde ship) crew on Orgrim's Hammer
-                "kor'kron battle-mage", "kor'kron primalist",
-                "kor'kron defender", "kor'kron invoker",
-            }
             for _, gparts, _ in segment:
                 if gparts[0] == UNIT_DIED_EVENT and len(gparts) >= 6:
-                    if gparts[5].strip('"').strip().lower() in _gunship_crew:
+                    if gparts[5].strip('"').strip().lower() in GUNSHIP_CREW_NAMES:
                         outcome = "KILL"
                         break
 
@@ -1067,16 +1083,10 @@ class CombatLogParser:
         # Gunship Battle: ends via scripted ship destruction — no single boss UNIT_DIED.
         # KILL = any crew member died. Horde log: Skybreaker crew. Alliance log: Kor'kron crew.
         if "gunship" in bn:
-            _gunship_crew = {
-                "muradin bronzebeard", "high captain justin bartlett",
-                "skybreaker sorcerer", "skybreaker rifleman", "skybreaker sergeant",
-                "kor'kron battle-mage", "kor'kron primalist",
-                "kor'kron defender", "kor'kron invoker",
-            }
             for _, parts, _ in segment:
                 if parts[0] == UNIT_DIED_EVENT and len(parts) >= 6:
                     name = parts[5].strip('"').strip().lower()
-                    if name in _gunship_crew:
+                    if name in GUNSHIP_CREW_NAMES:
                         return "KILL"
             return "WIPE"
 

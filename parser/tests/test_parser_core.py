@@ -12,6 +12,7 @@ import pytest
 from parser_core import (
     CombatLogParser, ParsedEncounter, DMG_EVENTS,
     UNIT_DIED_EVENT, ENCOUNTER_START, ENCOUNTER_END,
+    GUNSHIP_CREW_NAMES,
     _decode_difficulty, _is_player,
 )
 from bosses import lookup_boss
@@ -256,6 +257,58 @@ def test_gunship_kill_from_encounter_end_success():
     enc = parser._aggregate_segment(seg, {})
     assert enc is not None
     assert enc.outcome == "KILL"
+
+
+# ── Gunship crew name coverage ───────────────────────────────────────────────
+
+_ALL_GUNSHIP_CREW_NAMES = [
+    # Horde log: Skybreaker (Alliance ship) crew
+    "Muradin Bronzebeard",
+    "High Captain Justin Bartlett",
+    "Skybreaker Sorcerer",
+    "Skybreaker Rifleman",
+    "Skybreaker Sergeant",
+    "Skybreaker Mortar Soldier",
+    "Skybreaker Vindicator",
+    "Skybreaker Marksman",
+    # Alliance log: Kor'kron (Horde ship) crew
+    "Kor'kron Battle-Mage",
+    "Kor'kron Primalist",
+    "Kor'kron Defender",
+    "Kor'kron Invoker",
+    "Kor'kron Reaver",
+    "Kor'kron Sergeant",
+]
+
+
+@pytest.mark.parametrize("crew_name", _ALL_GUNSHIP_CREW_NAMES)
+def test_gunship_kill_all_crew_names(crew_name):
+    """Any crew member dying during Gunship produces KILL outcome."""
+    seg = make_gunship_segment(crew_death=crew_name, encounter_end_success=0)
+    p = CombatLogParser()
+    enc = p._aggregate_segment(seg, {})
+    assert enc is not None
+    assert enc.outcome == "KILL", (
+        f"Expected KILL when '{crew_name}' dies, got {enc.outcome}"
+    )
+
+
+def test_gunship_wipe_no_crew_deaths():
+    """No crew deaths + ENCOUNTER_END success=0 → WIPE."""
+    ts = 46800.0
+    seg = [
+        ("4/19 13:00:00.000", [ENCOUNTER_START, "1234", '"Gunship Battle"', "4", "25"], ts),
+        ("4/19 13:01:00.000",
+         _spell_damage_parts(PLAYER_GUID, "Phyre", NPC_GUID, "Gunship Battle", 50_000),
+         ts + 60),
+        ("4/19 13:02:30.000",
+         [ENCOUNTER_END, "1234", '"Gunship Battle"', "4", "25", "0"],
+         ts + 150),
+    ]
+    p = CombatLogParser()
+    enc = p._aggregate_segment(seg, {})
+    assert enc is not None
+    assert enc.outcome == "WIPE", f"Expected WIPE, got {enc.outcome}"
 
 
 # ── Gunship difficulty: session-level normalization ────────────────────────────
