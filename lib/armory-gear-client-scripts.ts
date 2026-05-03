@@ -282,64 +282,6 @@ export function buildUserscript(): string {
       });
     };
 
-    // Wowhead slotbak number → WoW INVTYPE_* string (matches lib/gearscore.ts WOWHEAD_INVENTORY_TYPES)
-    const SLOT_MAP: Record<number, string> = {
-      1: "INVTYPE_HEAD", 2: "INVTYPE_NECK", 3: "INVTYPE_SHOULDER", 4: "INVTYPE_BODY",
-      5: "INVTYPE_CHEST", 6: "INVTYPE_WAIST", 7: "INVTYPE_LEGS", 8: "INVTYPE_FEET",
-      9: "INVTYPE_WRIST", 10: "INVTYPE_HAND", 11: "INVTYPE_FINGER", 12: "INVTYPE_TRINKET",
-      13: "INVTYPE_WEAPON", 14: "INVTYPE_SHIELD", 15: "INVTYPE_RANGED", 16: "INVTYPE_CLOAK",
-      17: "INVTYPE_2HWEAPON", 20: "INVTYPE_ROBE", 21: "INVTYPE_WEAPONMAINHAND",
-      22: "INVTYPE_WEAPONOFFHAND", 23: "INVTYPE_HOLDABLE", 25: "INVTYPE_THROWN",
-      26: "INVTYPE_RANGEDRIGHT", 28: "INVTYPE_RELIC",
-    };
-
-    // Use GM_xmlhttpRequest when available so Wowhead isn't blocked by CORS/Cloudflare.
-    const gmFetch = function gmFetch(url: string): Promise<string> {
-      const gm = (globalThis as any).GM_xmlhttpRequest;
-      if (gm) {
-        return new Promise((resolve, reject) => {
-          gm({
-            method: "GET",
-            url,
-            headers: { Accept: "application/json" },
-            timeout: 8000,
-            onload:   (r: any) => resolve(r.responseText),
-            onerror:  (r: any) => reject(new Error(`GM_xmlhttpRequest error: ${r.statusText}`)),
-            ontimeout: ()      => reject(new Error("GM_xmlhttpRequest timeout")),
-          });
-        });
-      }
-      return fetch(url, { headers: { Accept: "application/json" } }).then(r => r.text());
-    };
-
-    // Enrich each gear item with itemLevel, equipLoc, and iconUrl from Wowhead tooltip JSON.
-    // Railway is Cloudflare-blocked by Wowhead, so enrichment must happen browser-side here.
-    const enrichItemsWithWowhead = async function enrichItemsWithWowhead(equipment: any[]): Promise<any[]> {
-      const out: any[] = [];
-      for (const item of equipment) {
-        if (!item || !item.item) { out.push(item); continue; }
-        try {
-          const text = await gmFetch(`https://www.wowhead.com/wotlk/tooltip/item/${item.item}`);
-          const json = JSON.parse(text);
-          const jsonequip = (json.jsonequip && typeof json.jsonequip === "object") ? json.jsonequip : {};
-          const slotbak: number | undefined = typeof jsonequip.slotbak === "number" ? jsonequip.slotbak : undefined;
-          const ilMatch = typeof json.tooltip === "string"
-            ? json.tooltip.match(/Item Level\s*(?:<!--[^-]*-->)?\s*(\d+)/i)
-            : null;
-          out.push({
-            ...item,
-            itemLevel: ilMatch ? Number(ilMatch[1]) : item.itemLevel,
-            equipLoc:  slotbak !== undefined ? SLOT_MAP[slotbak] : item.equipLoc,
-            iconUrl:   json.icon ? `https://wow.zamimg.com/images/wow/icons/large/${json.icon}.jpg` : item.iconUrl,
-          });
-        } catch {
-          out.push(item);
-        }
-        await wait(300);
-      }
-      return out;
-    };
-
     const importPlayer = async function importPlayer(player: { characterName: string; realm: string }, secret: string) {
       let lastError = "Unknown error";
 
@@ -350,13 +292,6 @@ export function buildUserscript(): string {
           });
           const warmaneData = await response.json();
           if (!response.ok || warmaneData.error) throw new Error(warmaneData.error || `Warmane HTTP ${response.status}`);
-
-          // Enrich gear with Wowhead tooltip data (itemLevel, equipLoc, iconUrl) before posting.
-          // This must happen client-side because Railway's server IPs are blocked by Cloudflare.
-          if (Array.isArray(warmaneData.equipment) && warmaneData.equipment.length > 0) {
-            setStatus(`Enriching ${player.characterName} (${warmaneData.equipment.length} items)...`);
-            warmaneData.equipment = await enrichItemsWithWowhead(warmaneData.equipment);
-          }
 
           await postJson(`${pizzaLogsOrigin}/api/admin/armory-gear/import`, {
             secret,
@@ -441,7 +376,7 @@ export function buildUserscript(): string {
     "// ==UserScript==",
     "// @name         Pizza Logs Warmane Gear Auto Sync",
     "// @namespace    https://pizza-logs-production.up.railway.app",
-    "// @version      1.4.0",
+    "// @version      1.5.0",
     "// @description  Automatically sync Pizza Logs gear cache from Warmane Armory pages.",
     "// @match        https://armory.warmane.com/character/*",
     "// @match        http://armory.warmane.com/character/*",
