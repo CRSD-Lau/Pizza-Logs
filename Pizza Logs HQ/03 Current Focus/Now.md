@@ -2,7 +2,7 @@
 
 ## Status
 
-**Gear icon DOM fallback fix implemented locally.** Gear cards with AzerothCore stats but missing icons were traced to Warmane API omitting icon fields for deterministic items; the browser page still exposes item icons in HTML, so the userscript now fetches queued players' pages and merges DOM icons into each import payload.
+**Gear sync queue cap fix implemented locally.** Gear cards with AzerothCore stats but missing icons were traced to Warmane API omitting icon fields for deterministic items; the userscript can now fetch queued players' pages and merge DOM icons, but Maxximusboom exposed a follow-up queue bug where the missing API only inspected the first 100 player/roster candidates before filtering.
 
 ---
 
@@ -10,10 +10,10 @@
 
 | Task | Type | Notes |
 |------|------|-------|
-| Deploy icon DOM fallback fix | DEPLOY | Push `main` to `origin`; Railway auto-deploys |
-| Install/update Gear Sync `1.7.0` | VERIFY | Open `/admin` and install/update hosted Warmane Gear Sync userscript |
+| Deploy missing-queue cap fix | DEPLOY | Maxximusboom was outside the first 100 pre-filtered candidates, so `/api/admin/armory-gear/missing` never queued him |
+| Install/update Gear Sync `1.7.0` | VERIFY | Open `/admin` and install/update hosted Warmane Gear Sync userscript if Tampermonkey has not picked up the latest version |
 | Run Warmane Gear Sync once | VERIFY | Script fetches queued players' Warmane pages and writes missing `iconName` values without visiting each player |
-| Verify Lausudo icons | VERIFY | Check Blightborne Warplate `50024`, Legguards of Lost Hope `49964`, Juggernaut Band `49985` |
+| Verify Maxximusboom icons | VERIFY | Confirm Lasherweave pieces are queued and update after one bulk sync |
 | Fix stale unrelated tests | TEST | Guild roster admin panel and deprecated Wowhead tests have old assertions |
 | Stats / Analytics page | FEATURE | Brainstorm first, then design, then build |
 | Verify Skada numbers in-game | VERIFY | Neil to do manually |

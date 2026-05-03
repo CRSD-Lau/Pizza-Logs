@@ -68,6 +68,14 @@
 
 **Operational note:** Deploy the fix, install/update Gear Sync `1.7.0`, then run Warmane Gear Sync once from any Warmane character page so production can populate missing icon slugs for queued players.
 
+### Follow-up: Maxximusboom not appearing in missing queue
+
+**Problem:** Maxximusboom still showed icon gaps after other audited players were fixed, but `/api/admin/armory-gear/missing` did not return him.
+
+**Root cause:** The missing-gear endpoint queried only the first 100 players and first 100 roster rows before filtering for missing gear. Players outside that pre-filter window could be broken but never queued.
+
+**Fix:** Remove pre-filter `take: 100` from player/roster candidate queries and keep the existing post-filter batch limit. The sync still returns at most 100 missing players per run, but it now computes that batch from the full candidate set.
+
 ## Fixed (2026-05-02)
 
 ### [H3/H4] 25H/10H bosses showing as 25N/10N

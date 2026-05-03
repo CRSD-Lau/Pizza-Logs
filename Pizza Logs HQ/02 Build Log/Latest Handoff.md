@@ -34,10 +34,24 @@
   - Regression coverage: generated userscript merges a DOM-derived icon URL into a Warmane API payload before posting to Pizza Logs.
   - Regression coverage: generated userscript fetches queued players' HTML pages and uses those page-specific icons during bulk sync.
 
+### Maxximusboom missing from gear sync queue
+
+**Problem:** After the userscript `1.7.0` fix, audited players were enriching correctly, but Maxximusboom still showed deterministic icon gaps and did not appear in `/api/admin/armory-gear/missing`.
+
+**Root cause:** The missing-gear API route queried only the first 100 `player` rows and first 100 guild roster rows before calling `getMissingArmoryGearPlayers`. A player outside that pre-filter window could have stale or incomplete gear but never be returned to the Warmane sync queue.
+
+**Changes:**
+- `app/api/admin/armory-gear/missing/route.ts`
+  - Removed the pre-filter `take: 100` from player and roster candidate queries.
+  - Kept the existing post-filter `.slice(0, MAX_PLAYERS)` response limit, so each sync still processes at most 100 missing players per run.
+- `tests/armory-gear-missing-route.test.ts`
+  - Added a route-level regression that puts Maxximusboom after 120 fresh cached players and verifies he is still returned as missing.
+
 ---
 
 ## Verification
 
+- `tests/armory-gear-missing-route.test.ts` failed before the route fix with `payload.players = []`, then passed after removing the pre-filter limits.
 - `tests/item-template.test.ts` passed
 - `tests/warmane-armory-cache.test.ts` passed
 - `tests/warmane-armory-import.test.ts` passed
@@ -56,10 +70,10 @@ Full ad hoc test sweep still has unrelated pre-existing test drift:
 
 - **Live app:** https://pizza-logs-production.up.railway.app
 - **Local branch:** `main`
-- **Railway DB:** item `50024` exists with AzerothCore metadata; `iconName` still needs verification/backfill on production after deploy + browser sync.
+- **Railway DB:** item `50024` exists with AzerothCore metadata; missing icons now depend on queued Warmane gear sync runs being able to see every incomplete player.
 
 ---
 
 ## Exact Next Step
 
-Deploy this fix, update/install Warmane Gear Sync userscript `1.7.0` from `/admin`, then run Warmane Gear Sync once from any Warmane character page. The script should fetch queued players' pages, merge page-specific icons, and populate missing `wow_items.iconName` values without visiting each player manually.
+Deploy the missing-queue cap fix, confirm Maxximusboom appears in `/api/admin/armory-gear/missing`, then run Warmane Gear Sync once from any Warmane character page. The script should fetch queued players' pages, merge page-specific icons, and populate missing `wow_items.iconName` values without visiting each player manually.

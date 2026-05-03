@@ -54,7 +54,6 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
 
   const players = await db.player.findMany({
     orderBy: { name: "asc" },
-    take: MAX_PLAYERS,
     include: {
       realm: { select: { name: true } },
     },
@@ -68,7 +67,6 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
       { rankOrder: "asc" },
       { characterName: "asc" },
     ],
-    take: MAX_PLAYERS,
     select: {
       characterName: true,
       normalizedCharacterName: true,
