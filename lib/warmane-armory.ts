@@ -502,7 +502,10 @@ export async function getWarmaneCharacterGear(
   const cacheIsFresh = cachedGear && !shouldRefreshArmoryGearCache({ cachedGear, now: new Date() });
 
   if (cachedGear && cacheIsFresh) {
-    return { ok: true, gear: cachedGear };
+    // Always re-enrich details from local template at read time (fast batch lookup,
+    // ensures AzerothCore stats are current regardless of what's stored in the cache blob)
+    const freshItems = await enrichGearWithLocalTemplate(cachedGear.items);
+    return { ok: true, gear: { ...cachedGear, items: normalizeArmoryGearSlots(freshItems) } };
   }
 
   const liveResult = await fetchWarmaneGearLive(sanitizedName, sanitizedRealm);
@@ -513,7 +516,12 @@ export async function getWarmaneCharacterGear(
     await markRefreshFailed(sanitizedName, sanitizedRealm, sourceUrl, liveResult.message);
   }
 
-  return resolveArmoryGearResult({ cachedGear, liveResult });
+  const baseResult = resolveArmoryGearResult({ cachedGear, liveResult });
+  if (baseResult.ok && baseResult.gear) {
+    const freshItems = await enrichGearWithLocalTemplate(baseResult.gear.items);
+    return { ...baseResult, gear: { ...baseResult.gear, items: normalizeArmoryGearSlots(freshItems) } };
+  }
+  return baseResult;
 }
 
 export function shouldRefreshArmoryGearCache({
