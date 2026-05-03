@@ -4,12 +4,15 @@
 
 **Codex modernization is live on `origin/main`, and the vault docs have been synced after the push.** The repo is Codex-first, tracked Claude-specific artifacts were removed, stale Wowhead runtime code was deleted, admin auth is safer in production, compose admin remains usable with local-only overrides, and the Maxximusboom missing-gear queue fix from main was preserved.
 
+**Local favicon update is ready on `codex/pizza-logs-modernization`.** `app/icon.svg` now uses the same SVG mark as the navigation logo, and `public/favicon.ico` fixes the legacy `/favicon.ico` 404 reported from production. This change is not committed or pushed yet.
+
 ---
 
 ## Next Up
 
 | Task | Type | Notes |
 |------|------|-------|
+| Commit/deploy favicon update | DEPLOY | Includes `app/icon.svg`, `public/favicon.ico`, and vault handoff updates; verified with XML/ICO inspection, type check, production build, local `/favicon.ico` HTTP 200, and local `/icon.svg` HTTP 200 |
 | Verify production admin config | DEPLOY | Confirm Railway Web Service has `ADMIN_SECRET`; do not set `ADMIN_COOKIE_SECURE=false` in Railway |
 | Verify Railway deploy logs | DEPLOY | Use Railway dashboard/CLI; local Railway CLI is not installed |
 | Install/update Gear Sync `1.7.0` | VERIFY | Open `/admin` and install/update hosted Warmane Gear Sync userscript |

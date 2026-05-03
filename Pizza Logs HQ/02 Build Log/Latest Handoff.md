@@ -4,12 +4,19 @@
 2026-05-03
 
 ## Git
-**Branch:** `main`
-**Latest pushed commit:** `3b98665`
+**Branch:** `codex/pizza-logs-modernization`
+**Latest pushed commit before favicon work:** `add925a` on `origin/main`
 
 ---
 
 ## What Was Done This Session
+
+### Favicon aligned with the in-app logo mark
+
+- Added `app/icon.svg` using the existing `PizzaIcon` SVG geometry and gold color from `components/layout/Nav.tsx`.
+- Added `public/favicon.ico` from the same SVG geometry so legacy browser requests to `/favicon.ico` no longer 404.
+- Did not use the attached raster image; both favicon assets mirror the logo mark already rendered by the web app.
+- Left parser behavior, admin flows, database schema, and Railway config untouched.
 
 ### Codex modernization and repository cleanup
 
@@ -70,6 +77,16 @@ Preserved the main-branch queue fix while merging modernization:
 
 ## Verification
 
+- Favicon update:
+  - Reproduced the reported issue locally: `http://127.0.0.1:3000/favicon.ico` returned **404** before adding the ICO.
+  - Reproduced the reported issue on production before deploy: `https://pizza-logs-production.up.railway.app/favicon.ico` returned **404**.
+  - Production also returned **404** for `https://pizza-logs-production.up.railway.app/icon.svg` before deploy because the favicon assets were not deployed yet.
+  - `app/icon.svg` XML parse: **passed**
+  - `public/favicon.ico` inspection: **passed**, ICO with `16x16`, `32x32`, and `48x48` sizes
+  - TypeScript: bundled Node running `node_modules/typescript/bin/tsc --noEmit` -> **passed**
+  - Production build: bundled Node running `node_modules/next/dist/bin/next build` -> **passed**, and build output includes static route `/icon.svg`
+  - Local built app: `http://127.0.0.1:3000/favicon.ico` returned HTTP 200 with `image/x-icon`
+  - Local built app: `http://127.0.0.1:3000/icon.svg` returned HTTP 200 with `image/svg+xml`
 - Modernization branch gates before merge:
   - Parser tests: `python -m pytest tests/ -v` from `parser/` using bundled Python -> **123 passed**
   - TypeScript test sweep: `ts-node --project tsconfig.seed.json tests/*.test.ts` with JSX compiler options -> **13 passed**
@@ -97,6 +114,9 @@ Preserved the main-branch queue fix while merging modernization:
 
 ## Current State
 
+- Local favicon/vault-doc changes are present on `codex/pizza-logs-modernization` and have not been committed or pushed yet.
+- `app/icon.svg` is now the app metadata icon generated from the existing navigation logo SVG.
+- `public/favicon.ico` now covers the legacy root favicon request that Chrome reported as 404 in production.
 - `codex/pizza-logs-modernization` is committed at `2360f64`.
 - `main` was pushed to `origin/main` at `3b98665`; this docs-only sync updates the vault after that push.
 - Parser behavior is preserved; parser fixture suite passes.
@@ -107,4 +127,4 @@ Preserved the main-branch queue fix while merging modernization:
 
 ## Exact Next Step
 
-Manual production checks remain: confirm Railway Web Service has `ADMIN_SECRET`, inspect Railway deploy logs from a machine with Railway CLI/dashboard access, install or update Warmane Gear Sync `1.7.0`, run it once, then verify Maxximusboom and Lausudo gear icons.
+Commit and deploy the favicon update when ready. Manual production checks also remain: confirm Railway Web Service has `ADMIN_SECRET`, inspect Railway deploy logs from a machine with Railway CLI/dashboard access, install or update Warmane Gear Sync `1.7.0`, run it once, then verify Maxximusboom and Lausudo gear icons.
