@@ -18,8 +18,10 @@ declare const GM_setValue: (key: string, value: unknown) => void;
 export function buildPlayerPortraitUserscript(): string {
   const script = function pizzaLogsWarmanePortraits() {
     const cacheKey = "pizzaLogsWarmanePortraitCache";
+    const targetKey = "pizzaLogsWarmanePortraitTarget";
     const disabledKey = "pizzaLogsWarmanePortraitsDisabled";
     const cacheTtlMs = 7 * 24 * 60 * 60 * 1000;
+    const targetTtlMs = 5 * 60 * 1000;
     const warmaneOrigin = "https://armory.warmane.com";
     const portraitHints = /(avatar|character|model|portrait|profile|render|thumbnail)/i;
     const nonPortraitUrl = /(?:\/icons\/|\/item(?:[/?=]|$)|cavernoftime|achievement_|ability_|classicon_|inv_|spell_|trade_)/i;
@@ -97,6 +99,49 @@ export function buildPlayerPortraitUserscript(): string {
       const key = `${realm.toLowerCase()}:${name.toLowerCase()}`;
       cache[key] = { url, fetchedAt: Date.now() };
       writeCache(cache);
+    };
+
+    const writeRecentWarmaneTarget = function writeRecentWarmaneTarget(identity: { name: string; realm: string }) {
+      const serialized = JSON.stringify({ ...identity, writtenAt: Date.now() });
+      try {
+        if (typeof GM_setValue === "function") GM_setValue(targetKey, serialized);
+      } catch {
+        // Ignore GM storage failures and still try localStorage below.
+      }
+
+      try {
+        localStorage.setItem(targetKey, serialized);
+      } catch {
+        // Target handoff is an optimization for modelviewer frames.
+      }
+    };
+
+    const readRecentWarmaneTarget = function readRecentWarmaneTarget() {
+      let raw = "";
+      try {
+        if (typeof GM_getValue === "function") raw = GM_getValue<string>(targetKey, "");
+      } catch {
+        raw = "";
+      }
+
+      if (!raw) {
+        try {
+          raw = localStorage.getItem(targetKey) || "";
+        } catch {
+          raw = "";
+        }
+      }
+
+      if (!raw) return null;
+
+      try {
+        const parsed = JSON.parse(raw) as { name?: unknown; realm?: unknown; writtenAt?: unknown };
+        if (typeof parsed.name !== "string" || typeof parsed.realm !== "string") return null;
+        if (typeof parsed.writtenAt !== "number" || Date.now() - parsed.writtenAt > targetTtlMs) return null;
+        return { name: parsed.name, realm: parsed.realm };
+      } catch {
+        return null;
+      }
     };
 
     const normalizeUrl = function normalizeUrl(value: string | null | undefined, baseUrl: string) {
@@ -185,13 +230,30 @@ export function buildPlayerPortraitUserscript(): string {
       return `${warmaneOrigin}/character/${encodeURIComponent(name)}/${encodeURIComponent(realm || "Lordaeron")}/summary`;
     };
 
-    const warmanePageIdentity = function warmanePageIdentity() {
-      const match = location.pathname.match(/^\/character\/([^/]+)\/([^/]+)(?:\/(?:summary|profile))?\/?$/i);
+    const warmaneIdentityFromUrl = function warmaneIdentityFromUrl(value: string) {
+      let parsed: URL;
+      try {
+        parsed = new URL(value, location.href);
+      } catch {
+        return null;
+      }
+
+      if (parsed.hostname !== "armory.warmane.com") return null;
+
+      const match = parsed.pathname.match(/^\/character\/([^/]+)\/([^/]+)(?:\/(?:summary|profile))?\/?$/i);
       if (!match) return null;
       return {
         name: decodeURIComponent(match[1]),
         realm: decodeURIComponent(match[2] || "Lordaeron"),
       };
+    };
+
+    const warmanePageIdentity = function warmanePageIdentity() {
+      return warmaneIdentityFromUrl(location.href);
+    };
+
+    const warmaneReferrerIdentity = function warmaneReferrerIdentity() {
+      return warmaneIdentityFromUrl(document.referrer || "");
     };
 
     const captureRenderedCanvas = function captureRenderedCanvas() {
@@ -211,8 +273,10 @@ export function buildPlayerPortraitUserscript(): string {
       return null;
     };
 
-    const captureWarmanePagePortrait = function captureWarmanePagePortrait(attempt = 0) {
-      const identity = warmanePageIdentity();
+    const capturePortraitForIdentity = function capturePortraitForIdentity(
+      identity: { name: string; realm: string } | null,
+      attempt = 0,
+    ) {
       if (!identity) return;
 
       const html = document.documentElement?.outerHTML || "";
@@ -224,8 +288,18 @@ export function buildPlayerPortraitUserscript(): string {
       }
 
       if (attempt < 8) {
-        setTimeout(() => captureWarmanePagePortrait(attempt + 1), 750);
+        setTimeout(() => capturePortraitForIdentity(identity, attempt + 1), 750);
       }
+    };
+
+    const captureWarmanePagePortrait = function captureWarmanePagePortrait() {
+      const identity = warmanePageIdentity();
+      if (identity) writeRecentWarmaneTarget(identity);
+      capturePortraitForIdentity(identity);
+    };
+
+    const captureModelViewerFramePortrait = function captureModelViewerFramePortrait() {
+      capturePortraitForIdentity(warmaneReferrerIdentity() || readRecentWarmaneTarget());
     };
 
     const classIconUrl = function classIconUrl(className: string | undefined) {
@@ -407,11 +481,28 @@ export function buildPlayerPortraitUserscript(): string {
       return location.hostname === "armory.warmane.com" && Boolean(warmanePageIdentity());
     };
 
+    const isWowheadModelViewerFrame = function isWowheadModelViewerFrame() {
+      const hostname = location.hostname.toLowerCase();
+      const pathname = location.pathname.toLowerCase();
+      const isWowhead = hostname === "wowhead.com" || hostname.endsWith(".wowhead.com");
+      const isZamimg = hostname === "wow.zamimg.com";
+      return (isWowhead || isZamimg) && pathname.includes("modelviewer") && Boolean(warmaneReferrerIdentity() || readRecentWarmaneTarget());
+    };
+
     if (isWarmaneCharacterPage()) {
       if (document.readyState === "loading") {
         document.addEventListener("DOMContentLoaded", runWarmaneCapture, { once: true });
       } else {
         runWarmaneCapture();
+      }
+      return;
+    }
+
+    if (isWowheadModelViewerFrame()) {
+      if (document.readyState === "loading") {
+        document.addEventListener("DOMContentLoaded", captureModelViewerFramePortrait, { once: true });
+      } else {
+        captureModelViewerFramePortrait();
       }
       return;
     }
@@ -429,13 +520,17 @@ export function buildPlayerPortraitUserscript(): string {
     "// ==UserScript==",
     "// @name         Pizza Logs Warmane Portraits",
     "// @namespace    https://pizza-logs-production.up.railway.app",
-    "// @version      0.2.0",
+    "// @version      0.3.0",
     "// @description  Replaces Pizza Logs character initials with Warmane Armory portraits or cached rendered character faces when available.",
     "// @match        https://pizza-logs-production.up.railway.app/*",
     "// @match        http://localhost:3000/*",
     "// @match        http://127.0.0.1:3000/*",
     "// @match        https://armory.warmane.com/character/*",
     "// @match        http://armory.warmane.com/character/*",
+    "// @match        https://www.wowhead.com/modelviewer*",
+    "// @match        https://www.wowhead.com/wotlk/modelviewer*",
+    "// @match        https://wowhead.com/modelviewer*",
+    "// @match        https://wow.zamimg.com/modelviewer*",
     "// Update the @match lines above if your Pizza Logs URL or local port changes.",
     `// @downloadURL   ${PORTRAIT_USERSCRIPT_URL}`,
     `// @updateURL     ${PORTRAIT_USERSCRIPT_URL}`,
