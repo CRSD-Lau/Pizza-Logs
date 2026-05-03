@@ -29,6 +29,67 @@ export function buildBookmarklet(): string {
       return new Promise((resolve) => setTimeout(resolve, ms));
     };
 
+    const normalizePageIconUrl = function normalizePageIconUrl(value: string | null | undefined) {
+      if (!value) return null;
+      const raw = String(value).trim();
+      if (!raw) return null;
+      if (raw.startsWith("//")) return `https:${raw}`;
+      if (raw.startsWith("/") && raw.includes("/images/wow/icons/")) {
+        return `https://wow.zamimg.com${raw}`;
+      }
+      try {
+        const parsed = new URL(raw, location.href);
+        if (parsed.pathname.includes("/images/wow/icons/")) {
+          return `https://wow.zamimg.com${parsed.pathname}`;
+        }
+        return parsed.href;
+      } catch {
+        return null;
+      }
+    };
+
+    const itemIdFromHref = function itemIdFromHref(href: string | null | undefined) {
+      if (!href) return null;
+      const match = href.match(/\/item\/(\d+)|[?&]item=(\d+)|item=(\d+)/i);
+      return match?.[1] ?? match?.[2] ?? match?.[3] ?? null;
+    };
+
+    const readPageItemIcons = function readPageItemIcons() {
+      const byId: Record<string, string> = {};
+      document.querySelectorAll("a[href*='/item/'], a[href*='item=']").forEach((link) => {
+        const anchor = link as HTMLAnchorElement;
+        const itemId = itemIdFromHref(anchor.href);
+        if (!itemId || byId[itemId]) return;
+        const image = anchor.querySelector("img[src]") as HTMLImageElement | null;
+        const iconUrl = normalizePageIconUrl(image?.getAttribute("src") ?? image?.src);
+        if (iconUrl) byId[itemId] = iconUrl;
+      });
+      return byId;
+    };
+
+    const mergePageIconsIntoWarmaneData = function mergePageIconsIntoWarmaneData(data: Record<string, unknown>) {
+      const iconsByItemId = readPageItemIcons();
+      const patchItems = function patchItems(items: unknown) {
+        if (!Array.isArray(items)) return items;
+        return items.map((raw) => {
+          if (!raw || typeof raw !== "object") return raw;
+          const item = raw as Record<string, unknown>;
+          if (item.icon || item.iconUrl) return item;
+          const itemId = typeof item.item === "string" || typeof item.item === "number"
+            ? String(item.item)
+            : typeof item.itemId === "string" || typeof item.itemId === "number"
+              ? String(item.itemId)
+              : "";
+          const iconUrl = itemId ? iconsByItemId[itemId] : undefined;
+          return iconUrl ? { ...item, iconUrl } : item;
+        });
+      };
+
+      if (Array.isArray(data.equipment)) return { ...data, equipment: patchItems(data.equipment) };
+      if (Array.isArray(data.items)) return { ...data, items: patchItems(data.items) };
+      return data;
+    };
+
     const importPlayer = async function importPlayer(player: { characterName: string; realm: string }) {
       let lastError = "Unknown error";
 
@@ -39,10 +100,11 @@ export function buildBookmarklet(): string {
           });
           const warmaneData = await response.json();
           if (!response.ok || warmaneData.error) throw new Error(warmaneData.error || `Warmane HTTP ${response.status}`);
+          const enrichedWarmaneData = mergePageIconsIntoWarmaneData(warmaneData);
 
           await postJson(`${pizzaLogsOrigin}/api/admin/armory-gear/import`, {
             secret,
-            ...warmaneData,
+            ...enrichedWarmaneData,
             characterName: warmaneData.name || player.characterName,
             realm: warmaneData.realm || player.realm,
             sourceUrl: `https://armory.warmane.com/character/${encodeURIComponent(player.characterName)}/${encodeURIComponent(player.realm)}/summary`,
@@ -114,6 +176,67 @@ export function buildSingleBookmarklet(): string {
       return new Promise((resolve) => setTimeout(resolve, ms));
     };
 
+    const normalizePageIconUrl = function normalizePageIconUrl(value: string | null | undefined) {
+      if (!value) return null;
+      const raw = String(value).trim();
+      if (!raw) return null;
+      if (raw.startsWith("//")) return `https:${raw}`;
+      if (raw.startsWith("/") && raw.includes("/images/wow/icons/")) {
+        return `https://wow.zamimg.com${raw}`;
+      }
+      try {
+        const parsed = new URL(raw, location.href);
+        if (parsed.pathname.includes("/images/wow/icons/")) {
+          return `https://wow.zamimg.com${parsed.pathname}`;
+        }
+        return parsed.href;
+      } catch {
+        return null;
+      }
+    };
+
+    const itemIdFromHref = function itemIdFromHref(href: string | null | undefined) {
+      if (!href) return null;
+      const match = href.match(/\/item\/(\d+)|[?&]item=(\d+)|item=(\d+)/i);
+      return match?.[1] ?? match?.[2] ?? match?.[3] ?? null;
+    };
+
+    const readPageItemIcons = function readPageItemIcons() {
+      const byId: Record<string, string> = {};
+      document.querySelectorAll("a[href*='/item/'], a[href*='item=']").forEach((link) => {
+        const anchor = link as HTMLAnchorElement;
+        const itemId = itemIdFromHref(anchor.href);
+        if (!itemId || byId[itemId]) return;
+        const image = anchor.querySelector("img[src]") as HTMLImageElement | null;
+        const iconUrl = normalizePageIconUrl(image?.getAttribute("src") ?? image?.src);
+        if (iconUrl) byId[itemId] = iconUrl;
+      });
+      return byId;
+    };
+
+    const mergePageIconsIntoWarmaneData = function mergePageIconsIntoWarmaneData(data: Record<string, unknown>) {
+      const iconsByItemId = readPageItemIcons();
+      const patchItems = function patchItems(items: unknown) {
+        if (!Array.isArray(items)) return items;
+        return items.map((raw) => {
+          if (!raw || typeof raw !== "object") return raw;
+          const item = raw as Record<string, unknown>;
+          if (item.icon || item.iconUrl) return item;
+          const itemId = typeof item.item === "string" || typeof item.item === "number"
+            ? String(item.item)
+            : typeof item.itemId === "string" || typeof item.itemId === "number"
+              ? String(item.itemId)
+              : "";
+          const iconUrl = itemId ? iconsByItemId[itemId] : undefined;
+          return iconUrl ? { ...item, iconUrl } : item;
+        });
+      };
+
+      if (Array.isArray(data.equipment)) return { ...data, equipment: patchItems(data.equipment) };
+      if (Array.isArray(data.items)) return { ...data, items: patchItems(data.items) };
+      return data;
+    };
+
     const importCharacter = async function importCharacter() {
       let lastError = "Unknown error";
 
@@ -124,13 +247,14 @@ export function buildSingleBookmarklet(): string {
           });
           const warmaneData = await warmaneResponse.json();
           if (!warmaneResponse.ok || warmaneData.error) throw new Error(warmaneData.error || `Warmane HTTP ${warmaneResponse.status}`);
+          const enrichedWarmaneData = mergePageIconsIntoWarmaneData(warmaneData);
 
           const response = await fetch(`${pizzaLogsOrigin}/api/admin/armory-gear/import`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
               secret,
-              ...warmaneData,
+              ...enrichedWarmaneData,
               characterName: warmaneData.name || characterName,
               realm: warmaneData.realm || realm,
               sourceUrl: location.href,
@@ -282,6 +406,67 @@ export function buildUserscript(): string {
       });
     };
 
+    const normalizePageIconUrl = function normalizePageIconUrl(value: string | null | undefined) {
+      if (!value) return null;
+      const raw = String(value).trim();
+      if (!raw) return null;
+      if (raw.startsWith("//")) return `https:${raw}`;
+      if (raw.startsWith("/") && raw.includes("/images/wow/icons/")) {
+        return `https://wow.zamimg.com${raw}`;
+      }
+      try {
+        const parsed = new URL(raw, location.href);
+        if (parsed.pathname.includes("/images/wow/icons/")) {
+          return `https://wow.zamimg.com${parsed.pathname}`;
+        }
+        return parsed.href;
+      } catch {
+        return null;
+      }
+    };
+
+    const itemIdFromHref = function itemIdFromHref(href: string | null | undefined) {
+      if (!href) return null;
+      const match = href.match(/\/item\/(\d+)|[?&]item=(\d+)|item=(\d+)/i);
+      return match?.[1] ?? match?.[2] ?? match?.[3] ?? null;
+    };
+
+    const readPageItemIcons = function readPageItemIcons() {
+      const byId: Record<string, string> = {};
+      document.querySelectorAll("a[href*='/item/'], a[href*='item=']").forEach((link) => {
+        const anchor = link as HTMLAnchorElement;
+        const itemId = itemIdFromHref(anchor.href);
+        if (!itemId || byId[itemId]) return;
+        const image = anchor.querySelector("img[src]") as HTMLImageElement | null;
+        const iconUrl = normalizePageIconUrl(image?.getAttribute("src") ?? image?.src);
+        if (iconUrl) byId[itemId] = iconUrl;
+      });
+      return byId;
+    };
+
+    const mergePageIconsIntoWarmaneData = function mergePageIconsIntoWarmaneData(data: Record<string, unknown>) {
+      const iconsByItemId = readPageItemIcons();
+      const patchItems = function patchItems(items: unknown) {
+        if (!Array.isArray(items)) return items;
+        return items.map((raw) => {
+          if (!raw || typeof raw !== "object") return raw;
+          const item = raw as Record<string, unknown>;
+          if (item.icon || item.iconUrl) return item;
+          const itemId = typeof item.item === "string" || typeof item.item === "number"
+            ? String(item.item)
+            : typeof item.itemId === "string" || typeof item.itemId === "number"
+              ? String(item.itemId)
+              : "";
+          const iconUrl = itemId ? iconsByItemId[itemId] : undefined;
+          return iconUrl ? { ...item, iconUrl } : item;
+        });
+      };
+
+      if (Array.isArray(data.equipment)) return { ...data, equipment: patchItems(data.equipment) };
+      if (Array.isArray(data.items)) return { ...data, items: patchItems(data.items) };
+      return data;
+    };
+
     const importPlayer = async function importPlayer(player: { characterName: string; realm: string }, secret: string) {
       let lastError = "Unknown error";
 
@@ -292,10 +477,11 @@ export function buildUserscript(): string {
           });
           const warmaneData = await response.json();
           if (!response.ok || warmaneData.error) throw new Error(warmaneData.error || `Warmane HTTP ${response.status}`);
+          const enrichedWarmaneData = mergePageIconsIntoWarmaneData(warmaneData);
 
           await postJson(`${pizzaLogsOrigin}/api/admin/armory-gear/import`, {
             secret,
-            ...warmaneData,
+            ...enrichedWarmaneData,
             characterName: warmaneData.name || player.characterName,
             realm: warmaneData.realm || player.realm,
             sourceUrl: `https://armory.warmane.com/character/${encodeURIComponent(player.characterName)}/${encodeURIComponent(player.realm)}/summary`,
@@ -376,7 +562,7 @@ export function buildUserscript(): string {
     "// ==UserScript==",
     "// @name         Pizza Logs Warmane Gear Auto Sync",
     "// @namespace    https://pizza-logs-production.up.railway.app",
-    "// @version      1.5.0",
+    "// @version      1.6.0",
     "// @description  Automatically sync Pizza Logs gear cache from Warmane Armory pages.",
     "// @match        https://armory.warmane.com/character/*",
     "// @match        http://armory.warmane.com/character/*",
