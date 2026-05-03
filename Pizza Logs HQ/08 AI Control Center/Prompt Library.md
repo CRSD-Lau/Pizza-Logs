@@ -1,11 +1,11 @@
 # Prompt Library
 
-> Reusable prompts for common operations. Copy-paste into Claude.
+> Reusable prompts for common operations. Copy-paste into Codex.
 
 ---
 
 ## Start a Session (full)
-See [[Claude Resume Prompt]] — paste that directly.
+See [[Codex Resume Prompt]] — paste that directly.
 
 ---
 
@@ -30,11 +30,10 @@ Update the vault for this session:
 ## Clear the DB
 
 ```
-Clear the DB using the standard pattern:
-1. Deploy temp reset-db endpoint
-2. Poll until live, then wipe
-3. Delete the endpoint
-Auto-execute, don't ask for confirmation.
+Clear upload-derived data only after Neil explicitly approves destructive DB work.
+Prefer existing admin controls or Railway shell/SQL. Do not create or deploy a
+temporary reset endpoint unless specifically requested, and never commit a reset
+secret.
 ```
 
 ---

@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { verifyAdminSecret } from "./actions";
+import { loginAdmin } from "./actions";
 
 export default function AdminLoginPage() {
   const [secret, setSecret] = useState("");
@@ -14,10 +14,9 @@ export default function AdminLoginPage() {
     if (!secret.trim()) return;
 
     setLoading(true);
-    const valid = await verifyAdminSecret(secret.trim());
+    const valid = await loginAdmin(secret.trim());
 
     if (valid) {
-      document.cookie = `x-admin-secret=${secret.trim()}; path=/; SameSite=Strict`;
       window.location.href = "/admin";
     } else {
       setError(true);

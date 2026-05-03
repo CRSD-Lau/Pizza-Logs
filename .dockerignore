@@ -5,3 +5,12 @@ uploads
 *.log
 .git
 README.md
+.claude
+.codex
+.pytest_cache
+.sync-agent-logs
+.sync-agent-dist
+WoWCombatLog
+tmp-mobile-check
+tsconfig.tsbuildinfo
+Pizza Logs HQ

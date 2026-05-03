@@ -1785,7 +1785,7 @@ def test_encounter_damage_includes_mechanic_unit_damage():
 #   - Judgement of Light (Paladin passive proc — commented-out in Tables.lua)
 #   - Improved Leader of the Pack (Druid passive talent proc)
 
-def test_vampiric_embrace_excluded_from_healing():
+def test_vampiric_embrace_included_in_healing():
     """Vampiric Embrace heals count toward total_healing (not excluded).
 
     Skada-WotLK counts VE as healing done. With the correct effective-heal
@@ -1813,7 +1813,7 @@ def test_vampiric_embrace_excluded_from_healing():
     )
 
 
-def test_judgement_of_light_excluded_from_healing():
+def test_judgement_of_light_included_in_healing():
     """Judgement of Light heals count toward total_healing (not excluded).
 
     Source: Skada-WoTLK Skada/Core/Tables.lua — there is no ignored_spells.heal
@@ -1837,7 +1837,7 @@ def test_judgement_of_light_excluded_from_healing():
     )
 
 
-def test_improved_leader_of_the_pack_excluded_from_healing():
+def test_improved_leader_of_the_pack_included_in_healing():
     """Improved Leader of the Pack heals count toward total_healing (not excluded).
 
     Skada-WotLK counts ILotP as healing done.

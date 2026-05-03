@@ -7,6 +7,14 @@
 
 ---
 
+## Codex-First Maintenance
+
+Pizza Logs uses Codex as the canonical agent workflow. `AGENTS.md` is the source of truth for repo-specific agent rules: read the vault startup files first, protect parser correctness, update the vault after changes, and run deployment gates before pushing `main`.
+
+For significant changes, request review with `@codex review` on GitHub if configured. See `docs/code-review.md` for the parser, upload, admin, Railway, secret, stale-code, and dependency review checklist.
+
+---
+
 ## Gear Display
 
 Player gear is displayed on profile pages using data from two sources:
@@ -108,6 +116,13 @@ cd parser
 pytest tests/ -v
 ```
 
+**Web validation:**
+```bash
+npm run type-check
+npm run lint
+npm run build
+```
+
 **Adding a new fixture:**
 See `parser/tests/fixtures/README.md` for the full process. Short version: add
 `combatlog.txt` + `expected.json` to a new subdirectory under `parser/tests/fixtures/`,
@@ -146,6 +161,7 @@ npm install
 ```bash
 cp .env.example .env.local
 # Set DATABASE_URL and PARSER_SERVICE_URL
+# Set ADMIN_SECRET for admin routes; production requires it
 ```
 
 ### 3. Database
@@ -278,8 +294,10 @@ Rank thresholds tracked per boss per difficulty per metric (DPS/HPS):
 │   ├── schema.prisma            full data model
 │   └── seed.ts                  boss + realm seeding
 ├── middleware.ts                admin auth cookie check
-├── start.sh                     Railway startup (prisma db push + next start)
+├── start.sh                     Railway startup (prisma migrate deploy + node server.js)
 ├── docker-compose.yml
 ├── SECURITY.md
+├── AGENTS.md                    Codex workflow and parser safety rules
+├── docs/code-review.md          Codex review checklist
 └── Pizza Logs HQ/               Obsidian project vault (docs, decisions, handoffs)
 ```

@@ -1,7 +1,18 @@
 "use server";
 
-export async function verifyAdminSecret(secret: string): Promise<boolean> {
-  const configured = process.env.ADMIN_SECRET;
-  if (!configured) return true; // dev: no secret set → allow
-  return secret === configured;
+import { cookies } from "next/headers";
+import { shouldUseSecureAdminCookie, verifyAdminSecretValue } from "@/lib/admin-auth";
+
+export async function loginAdmin(secret: string): Promise<boolean> {
+  if (!verifyAdminSecretValue(secret)) return false;
+
+  const cookieStore = await cookies();
+  cookieStore.set("x-admin-secret", secret, {
+    httpOnly: true,
+    sameSite: "strict",
+    secure: shouldUseSecureAdminCookie(),
+    path: "/",
+  });
+
+  return true;
 }

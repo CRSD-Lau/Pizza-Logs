@@ -11,7 +11,9 @@ Data stored: WoW combat logs, player names (in-game names only), and parsed raid
 
 ## Admin Access
 
-The `/admin` page is protected by a server-side secret configured via environment variable (`ADMIN_SECRET`). Do not share this value.
+The `/admin` page and admin import APIs are protected by a server-side secret configured via environment variable (`ADMIN_SECRET`). Do not share this value. Production fails closed if `ADMIN_SECRET` is missing.
+
+Browser-assisted Warmane userscripts may temporarily hold the admin secret in the admin's browser so they can post imported data back to Pizza Logs. Treat that browser storage as sensitive local state.
 
 ## Reporting a Vulnerability
 

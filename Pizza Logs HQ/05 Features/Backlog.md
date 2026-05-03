@@ -55,9 +55,9 @@ See [[Feature Status]] for full shipped feature list.
 | Gunship Battle detection | Impossible |
 | Sprint / agile tooling | One person, no need |
 ### AI Control Center
-- [[Claude Resume Prompt]] — paste this to start a session
+- [[Codex Resume Prompt]] — paste this to start a session
 - [[Prompt Library]] — reusable prompts for common ops
 - [[Repeated Fixes & Gotchas]] — don't solve the same bug twice
-- [[What Claude Forgets]] — things to remind Claude every session
+- [[Codex Gotchas]] — things to remind Codex every session
 - [[AI Operating System]]  
-- [[Superpowers Index]]
+- [[Codex Skills Index]]

@@ -8,6 +8,8 @@
 |---|---|---|
 | `DATABASE_URL` | `postgresql://postgres:...@postgres.railway.internal:5432/railway?sslmode=disable` | Auto-set by Railway |
 | `PARSER_SERVICE_URL` | `http://parser-py.railway.internal:8000` | Internal Railway hostname |
+| `ADMIN_SECRET` | long random secret | Required in production; admin fails closed if missing |
+| `ADMIN_COOKIE_SECURE` | omit | Optional; only set `false` for local HTTP compose |
 | `DEFAULT_REALM_NAME` | `Lordaeron` | Default realm for uploads |
 | `DEFAULT_REALM_HOST` | `warmane` | Default host |
 | `MAX_FILE_SIZE_BYTES` | `1073741824` | 1 GB |
@@ -27,6 +29,7 @@
 ```
 DATABASE_URL="postgresql://..."
 PARSER_SERVICE_URL="http://localhost:8000"
+ADMIN_SECRET="local-dev-secret"
 ```
 
 Run parser locally:
@@ -42,8 +45,8 @@ cd parser && uvicorn main:app --reload --port 8000
 
 - `.env.local`
 - Anything with `DATABASE_URL`
-- Reset-DB secret (`pizza-reset-now`) — rotate if endpoint is ever left deployed
-- Future: `ADMIN_SECRET` for admin auth (see [[Security Checklist]])
+- One-time reset/recovery secrets, if Neil explicitly requests a temporary recovery endpoint
+- `ADMIN_SECRET` for admin auth (see [[Security Checklist]])
 
 ---
 

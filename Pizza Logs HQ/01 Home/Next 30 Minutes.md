@@ -8,7 +8,7 @@
 
 | If you have… | Do this |
 |---|---|
-| 30 min | Open [[Latest Handoff]], paste [[Claude Resume Prompt]] into Claude, continue exact next step |
+| 30 min | Open [[Latest Handoff]], paste [[Codex Resume Prompt]] into Codex, continue exact next step |
 | 15 min | Open [[Known Issues]], fix or document one bug |
 | 10 min | Open [[Backlog]], groom one item (clarify, prioritize, delete) |
 | 5 min | Open [[Now]], update it to reflect reality |

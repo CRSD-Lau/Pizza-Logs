@@ -17,7 +17,7 @@ PRISMA_BIN=$(node -e "
   const rel = typeof bin === 'string' ? bin : (bin.prisma || bin['prisma']);
   console.log('./node_modules/prisma/' + rel);
 ")
-node "$PRISMA_BIN" db push --skip-generate
+node "$PRISMA_BIN" migrate deploy
 ```
 
 ### nextjs user can't write Prisma engine files
@@ -28,7 +28,7 @@ node "$PRISMA_BIN" db push --skip-generate
 ### DB not reachable locally
 **Symptom:** Can't run migrations or reset DB locally  
 **Cause:** `postgres.railway.internal` only reachable from inside Railway network  
-**Fix:** Deploy temp `POST /api/admin/reset-db` endpoint → hit it → delete it
+**Fix:** Use Railway shell or dashboard SQL. Do not deploy a temporary reset endpoint unless Neil explicitly requests it for that recovery.
 
 ---
 
@@ -90,13 +90,6 @@ setState({ stage: "idle", progress: 0, message: "", elapsed: 0, stalled: false }
 
 ---
 
-## DB Reset (repeated operation)
+## DB Reset
 
-```bash
-# 1. Create file: app/api/admin/reset-db/route.ts (with x-reset-secret: pizza-reset-now check)
-# 2. git add + commit + push
-# 3. Poll until live:
-until curl -s -X POST https://pizza-logs-production.up.railway.app/api/admin/reset-db \
-  -H "x-reset-secret: pizza-reset-now" | grep -q "DB cleared"; do sleep 5; done
-# 4. git rm + commit + push
-```
+There is no committed reset endpoint. Use existing admin cleanup actions for upload-derived data, or Railway shell/dashboard SQL for approved destructive recovery. Never commit a reset secret.

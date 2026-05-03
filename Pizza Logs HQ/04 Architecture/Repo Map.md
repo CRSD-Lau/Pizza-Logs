@@ -54,8 +54,8 @@ prisma/
   seed.ts                   ← seeds Boss table from bosses.ts
 
 Pizza Logs HQ/              ← this Obsidian vault (committed to repo)
-CLAUDE.md                   ← instructs Claude to read vault at session start
-start.sh                    ← Railway startup: prisma db push → node server.js
+AGENTS.md                   ← instructs Codex to read vault at session start
+start.sh                    <- Railway startup: prisma migrate deploy -> node server.js
 Dockerfile                  ← multi-stage; --chown=nextjs:nodejs on prisma dirs
 ```
 

@@ -3,14 +3,14 @@ import {
   calculateGearScore,
   calculateGearScoreForItem,
   getGearScoreQuality,
-  mapWowheadInventoryTypeToEquipLoc,
+  mapInventoryTypeToEquipLoc,
 } from "../lib/gearscore";
 import type { GearScoreEquipLoc } from "../lib/gearscore";
 
-assert.equal(mapWowheadInventoryTypeToEquipLoc(1), "INVTYPE_HEAD");
-assert.equal(mapWowheadInventoryTypeToEquipLoc(17), "INVTYPE_2HWEAPON");
-assert.equal(mapWowheadInventoryTypeToEquipLoc(26), "INVTYPE_RANGEDRIGHT");
-assert.equal(mapWowheadInventoryTypeToEquipLoc(19), undefined);
+assert.equal(mapInventoryTypeToEquipLoc(1), "INVTYPE_HEAD");
+assert.equal(mapInventoryTypeToEquipLoc(17), "INVTYPE_2HWEAPON");
+assert.equal(mapInventoryTypeToEquipLoc(26), "INVTYPE_RANGEDRIGHT");
+assert.equal(mapInventoryTypeToEquipLoc(19), undefined);
 
 assert.equal(
   calculateGearScoreForItem({

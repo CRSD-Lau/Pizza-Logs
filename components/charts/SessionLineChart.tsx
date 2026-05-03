@@ -29,8 +29,33 @@ interface Props {
   metric:  "DPS" | "HPS";
 }
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-function CustomTooltip({ active, payload, label, metric }: any) {
+type TooltipPayload = {
+  value: number | null;
+  name?: string;
+  color?: string;
+};
+
+type TooltipEntry = {
+  value: number;
+  name: string;
+  color: string;
+};
+
+function isTooltipEntry(entry: TooltipPayload): entry is TooltipEntry {
+  return entry.value != null && !!entry.name && !!entry.color;
+}
+
+function CustomTooltip({
+  active,
+  payload,
+  label,
+  metric,
+}: {
+  active?: boolean;
+  payload?: TooltipPayload[];
+  label?: string;
+  metric: "DPS" | "HPS";
+}) {
   if (!active || !payload?.length) return null;
   return (
     <div style={{
@@ -42,9 +67,9 @@ function CustomTooltip({ active, payload, label, metric }: any) {
     }}>
       <p style={{ color: "#c8a84b", fontWeight: 700, marginBottom: 4 }}>{label}</p>
       {payload
-        .filter((e: { value: number | null }) => e.value != null)
-        .sort((a: { value: number }, b: { value: number }) => b.value - a.value)
-        .map((e: { name: string; value: number; color: string }) => (
+        .filter(isTooltipEntry)
+        .sort((a, b) => b.value - a.value)
+        .map((e) => (
           <p key={e.name} style={{ color: e.color, margin: "2px 0" }}>
             <span style={{ fontWeight: 600 }}>{e.name}</span>
             {" — "}

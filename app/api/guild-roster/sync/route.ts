@@ -1,10 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { DEFAULT_GUILD_NAME, DEFAULT_GUILD_REALM, syncGuildRoster } from "@/lib/warmane-guild-roster";
+import { verifyAdminSecretValue } from "@/lib/admin-auth";
 
 function verifyAdmin(secret: unknown): boolean {
-  const configured = process.env.ADMIN_SECRET;
-  if (!configured) return true;
-  return typeof secret === "string" && secret === configured;
+  return verifyAdminSecretValue(secret);
 }
 
 export async function POST(req: NextRequest): Promise<NextResponse> {

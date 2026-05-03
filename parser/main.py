@@ -443,17 +443,6 @@ async def parse_log_stream(
     queue: asyncio.Queue[Optional[dict]] = asyncio.Queue()
 
     async def event_stream() -> AsyncGenerator[str, None]:
-        # ── Phase 2: count lines ──────────────────────────────────
-        yield _sse({"type": "progress", "pct": 28, "msg": "Counting lines…"})
-        try:
-            with open(tmp_path, "r", encoding="utf-8", errors="replace") as fh:
-                total_lines = sum(1 for _ in fh)
-        except Exception as exc:
-            os.unlink(tmp_path)
-            yield _sse({"type": "error", "msg": f"Line count failed: {exc}"})
-            return
-
-        yield _sse({"type": "progress", "pct": 33, "msg": "Parser reading combat events…"})
 
         # ── Phase 2: count lines (fast sequential scan) ───────────
         yield _sse({"type": "progress", "pct": 28, "msg": "Counting lines…"})

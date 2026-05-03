@@ -45,8 +45,12 @@ WoWCombatLog/
 # parser diagnostic/debug scripts
 parser/diag_*.py
 
-# claude worktrees
+# local agent worktrees
 .claude/worktrees/
+.codex/worktrees/
+
+# temporary screenshots
+tmp-mobile-check/
 
 # sync agent
 .env.sync-agent

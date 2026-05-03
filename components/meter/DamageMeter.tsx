@@ -21,9 +21,7 @@ interface Participant {
   deaths:        number;
   critPct:       number;
   role:          string;
-  // Prisma returns JsonValue for Json fields — we cast at usage
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  spellBreakdown?: any;
+  spellBreakdown?: unknown;
   /** Boss-only damage (pre-computed from targetBreakdown filtered to boss mob) */
   bossDmg?: number;
 }
@@ -129,7 +127,7 @@ export function DamageMeter({ participants, metric = "dps" }: DamageMeterProps) 
               </div>
 
               {/* Expanded spell breakdown */}
-              {isActive && p.spellBreakdown && (
+              {isActive && isSpellBreakdown(p.spellBreakdown) && (
                 <SpellBreakdown breakdown={p.spellBreakdown} totalVal={rawVal} />
               )}
             </div>
@@ -138,6 +136,10 @@ export function DamageMeter({ participants, metric = "dps" }: DamageMeterProps) 
       </div>
     </div>
   );
+}
+
+function isSpellBreakdown(value: unknown): value is Record<string, SpellEntry> {
+  return !!value && typeof value === "object" && !Array.isArray(value);
 }
 
 function SpellBreakdown({

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { normalizeImportedGuildRoster, writeGuildRosterMembers } from "@/lib/warmane-guild-roster";
+import { verifyAdminSecretValue } from "@/lib/admin-auth";
 
 function corsHeaders(origin: string | null): HeadersInit {
   const allowedOrigin = origin === "https://armory.warmane.com"
@@ -16,9 +17,7 @@ function corsHeaders(origin: string | null): HeadersInit {
 }
 
 function verifyAdmin(secret: unknown): boolean {
-  const configured = process.env.ADMIN_SECRET;
-  if (!configured) return true;
-  return typeof secret === "string" && secret === configured;
+  return verifyAdminSecretValue(secret);
 }
 
 export async function OPTIONS(req: NextRequest): Promise<NextResponse> {

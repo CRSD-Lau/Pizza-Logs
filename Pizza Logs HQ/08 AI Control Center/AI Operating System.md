@@ -1,11 +1,11 @@
 # AI Operating System
 
 ## Core Notes
-- [[Superpowers Index]]
-- [[Claude Prompts]]
-- [[Claude Resume Prompt]]
+- [[Codex Skills Index]]
+- [[Codex Prompts]]
+- [[Codex Resume Prompt]]
 - [[Prompt Library]]
-- [[What Claude Forgets]]
+- [[Codex Gotchas]]
 - [[Repeated Fixes & Gotchas]]
 - [[Dashboard]]
 
@@ -24,4 +24,4 @@ Use [[Executing Plans]]
 Use [[Requesting Code Review]]
 
 ### Need Resume Context
-Use [[Claude Resume Prompt]]
+Use [[Codex Resume Prompt]]

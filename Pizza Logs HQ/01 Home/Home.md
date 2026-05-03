@@ -6,7 +6,7 @@
 
 ## Quick Links
 - [[Dashboard]] ← full navigation hub
-- [[Claude Resume Prompt]] ← paste this to start a Claude session
+- [[Codex Resume Prompt]] ← paste this to start a Codex session
 - [[Prompt Library]] ← common reusable prompts
 - [[Latest Handoff]] ← last session state
 - [[Now]] ← current focus

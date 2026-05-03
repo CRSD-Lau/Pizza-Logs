@@ -21,6 +21,8 @@
 Canonical remote: `origin` -> `https://github.com/CRSD-Lau/Pizza-Logs.git`.
 When Neil asks to push, deploy, publish, or make changes live, push `main` to `origin` so Railway picks up the deployment. Do not ask for the repo URL; it is the canonical remote above. If `git` is missing from PATH on Neil's Windows machine, use `C:\Program Files\Git\cmd\git.exe`.
 
+Before pushing, verify the Web Service has `ADMIN_SECRET` configured. Production admin routes fail closed without it. Do not set `ADMIN_COOKIE_SECURE=false` in Railway; that override is only for local HTTP compose.
+
 ```bash
 git push origin main
 # Railway auto-deploys on push to main
@@ -36,32 +38,26 @@ Deploy takes ~2-3 min (Next.js), ~1 min (parser). DB doesn't redeploy unless Pos
 
 `start.sh` runs at container start:
 1. Detects prisma entry point dynamically (avoids `.bin/prisma` wasm issue)
-2. Runs `prisma db push --skip-generate`
-3. Starts `node server.js`
+2. Resolves historical migrations that were previously applied by `db push`
+3. Runs `prisma migrate deploy`
+4. Starts `node server.js`
 
-**If startup fails:** Check Railway logs for prisma error. Common cause: schema change requiring manual migration (column rename, type change). Use `prisma db push --force-reset` as last resort (destructive — wipes data).
+**If startup fails:** Check Railway logs for Prisma migration errors. Do not use destructive reset commands unless Neil explicitly approves data loss.
 
 ---
 
 ## Reset Database
 
-```bash
-# 1. Create app/api/admin/reset-db/route.ts (see [[Repeated Fixes & Gotchas]] for template)
-# 2. git add + commit + push
-# 3. Poll until live, then wipe:
-until curl -s -X POST https://pizza-logs-production.up.railway.app/api/admin/reset-db \
-  -H "x-reset-secret: pizza-reset-now" | grep -q "DB cleared"; do sleep 5; done
-# 4. git rm + commit + push
-```
+There is no committed reset endpoint. Prefer Railway dashboard SQL or a Railway shell for destructive recovery. If a temporary endpoint is absolutely required, use a one-time secret from the environment, remove the endpoint in the same recovery window, and never commit the secret value.
 
-**Alternative (no endpoint):** Railway dashboard → Postgres → Connect → open shell → SQL
+**Alternative:** Railway dashboard -> Postgres -> Connect -> open shell -> SQL
 
 ---
 
 ## Reseed Bosses (after DB reset)
 
 ```bash
-railway run --service "Web Service" npx tsx prisma/seed.ts
+railway run --service "Web Service" npm run db:seed
 ```
 
 ---
@@ -69,9 +65,8 @@ railway run --service "Web Service" npx tsx prisma/seed.ts
 ## Local → Railway DB Access
 
 `postgres.railway.internal` is not reachable locally. Options:
-1. Deploy temp reset-db endpoint (standard pattern above)
-2. `railway shell --service "Web Service"` — opens shell inside Railway environment
-3. Railway dashboard → Postgres → Settings → Enable TCP Proxy → use `DATABASE_PUBLIC_URL`
+1. `railway shell --service "Web Service"` - opens shell inside Railway environment
+2. Railway dashboard → Postgres → Settings → Enable TCP Proxy → use `DATABASE_PUBLIC_URL`
 
 ---
 
@@ -83,7 +78,7 @@ railway logs --service "parser-py" -n 100
 ```
 
 **Common log patterns:**
-- `[start] Running prisma db push...` — startup working
+- `[start] Running prisma migrate deploy...` — startup working
 - `[upload] unhandled error:` — upload route crashed
 - `TypeError: terminated` — parser connection dropped mid-stream
 
@@ -105,7 +100,7 @@ railway logs --service "parser-py" -n 100
 After editing `prisma/schema.prisma`:
 ```bash
 npx prisma generate        # update local client (no DB needed)
-# On Railway: just push — start.sh runs prisma db push at startup
+# On Railway: just push after validation - start.sh runs prisma migrate deploy at startup
 ```
 
 ---
@@ -136,5 +131,5 @@ curl https://pizza-logs-production.up.railway.app        # app responding?
 
 ## Related
 - [[Environment Variables]] — all env vars with exact values
-- [[Repeated Fixes & Gotchas]] — reset-db template + common deploy failures
+- [[Repeated Fixes & Gotchas]] — admin recovery notes + common deploy failures
 - [[Security Checklist]] — what's protected, what's not

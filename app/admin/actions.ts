@@ -4,13 +4,12 @@ import { cookies } from "next/headers";
 import { revalidatePath } from "next/cache";
 import { db } from "@/lib/db";
 import { syncGuildRoster } from "@/lib/warmane-guild-roster";
+import { verifyAdminSecretValue } from "@/lib/admin-auth";
 
 async function verifyAdmin(): Promise<boolean> {
-  const secret = process.env.ADMIN_SECRET;
-  if (!secret) return true; // no secret configured → open
   const cookieStore = await cookies();
   const provided = cookieStore.get("x-admin-secret")?.value;
-  return provided === secret;
+  return verifyAdminSecretValue(provided);
 }
 
 export async function clearDatabase(): Promise<{ ok: true } | { ok: false; error: string }> {

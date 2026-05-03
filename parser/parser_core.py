@@ -944,7 +944,8 @@ class CombatLogParser:
                 a.wow_class = SPELL_CLASS_MAP[spell_name]
 
             if is_heal:
-                # Skip spells in Skada's ignored_spells.heal (Tables.lua).
+                # Skada has no ignored_spells.heal table, so this set should
+                # remain empty unless a future Skada source citation proves otherwise.
                 if spell_name in PASSIVE_HEAL_EXCLUSIONS:
                     continue
                 a.total_healing += eff_amount

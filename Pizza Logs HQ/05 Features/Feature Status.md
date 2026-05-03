@@ -22,8 +22,8 @@
 | Valithria Dreamwalker KILL detection | Green Dragon Combat Trigger death |
 | KILL duration accuracy | Uses boss death timestamp, not post-fight tail |
 | Boss sort order (ICC first) | sortOrder field, ICC=10-40, Naxx=700-741 |
-| Obsidian vault | Pizza Logs HQ/ in repo, Claude reads on session start |
-| CLAUDE.md | Session instructions committed to repo root |
+| Obsidian vault | Pizza Logs HQ/ in repo, Codex reads on session start |
+| AGENTS.md | Session instructions committed to repo root |
 | Parser — Skada-WoTLK alignment | DMG_EVENTS, HEAL_EVENTS, heal formula all match Skada source exactly |
 | Heal formula fix | effective = max(0, parts[10] - parts[11]) — gross minus overheal per Skada |
 | Heroic difficulty normalization | 25N encounters in confirmed 25H sessions promoted via `_normalize_session_difficulty` |

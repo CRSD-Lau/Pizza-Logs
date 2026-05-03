@@ -13,7 +13,8 @@ const markup = renderToStaticMarkup(
 assert.match(markup, /Roster Members/);
 assert.match(markup, /42/);
 assert.match(markup, /Warmane/);
-assert.match(markup, /guild_roster_members/);
+assert.match(markup, /Browser Roster Import/);
+assert.match(markup, /userscript\.user\.js/);
 assert.match(markup, /View public roster/);
 
 console.log("guild-roster-admin-panel tests passed");

@@ -128,7 +128,7 @@ const SLOT_FALLBACK_EQUIP_LOCS: Record<string, GearScoreEquipLoc | undefined> = 
   "ranged/relic": "INVTYPE_RANGEDRIGHT",
 };
 
-const WOWHEAD_INVENTORY_TYPES: Record<number, GearScoreEquipLoc | undefined> = {
+const INVENTORY_TYPE_EQUIP_LOCS: Record<number, GearScoreEquipLoc | undefined> = {
   1: "INVTYPE_HEAD",
   2: "INVTYPE_NECK",
   3: "INVTYPE_SHOULDER",
@@ -155,8 +155,8 @@ const WOWHEAD_INVENTORY_TYPES: Record<number, GearScoreEquipLoc | undefined> = {
   28: "INVTYPE_RELIC",
 };
 
-export function mapWowheadInventoryTypeToEquipLoc(value: number | undefined): GearScoreEquipLoc | undefined {
-  return value === undefined ? undefined : WOWHEAD_INVENTORY_TYPES[value];
+export function mapInventoryTypeToEquipLoc(value: number | undefined): GearScoreEquipLoc | undefined {
+  return value === undefined ? undefined : INVENTORY_TYPE_EQUIP_LOCS[value];
 }
 
 function getEquipLoc(item: GearScoreItemInput): GearScoreEquipLoc | undefined {

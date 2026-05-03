@@ -15,13 +15,6 @@
       }
     },
     {
-      "query": "path: \"11 AI Knowledge/Superpowers Skills\" tag:#1s line:()",
-      "color": {
-        "a": 1,
-        "rgb": 14725458
-      }
-    },
-    {
       "query": "path:\"01 Home\"  ",
       "color": {
         "a": 1,

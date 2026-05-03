@@ -3,6 +3,7 @@ import { Readable } from "node:stream";
 import { createInterface } from "node:readline";
 import { Prisma, PrismaClient } from "@prisma/client";
 import { parseSqlTuple, QUALITY_MAP, INVENTORY_TYPE_MAP, buildStatsFromTemplate } from "@/lib/item-template";
+import { verifyAdminSecretValue } from "@/lib/admin-auth";
 
 // Allow up to 5 minutes for the import
 export const maxDuration = 300;
@@ -126,9 +127,7 @@ async function upsertBatch(db: PrismaClient, batch: ItemRow[]): Promise<number> 
 }
 
 function verifyAdmin(secret: unknown): boolean {
-  const configured = process.env.ADMIN_SECRET;
-  if (!configured) return true;
-  return typeof secret === "string" && secret === configured;
+  return verifyAdminSecretValue(secret);
 }
 
 export async function GET(req: NextRequest): Promise<NextResponse> {

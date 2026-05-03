@@ -20,8 +20,8 @@ services:
 
   parser:
     build:
-      context: ./parser
-      dockerfile: Dockerfile
+      context: .
+      dockerfile: parser/Dockerfile
     restart: unless-stopped
     ports:
       - "8000:8000"
@@ -44,6 +44,8 @@ services:
       DATABASE_URL:        postgresql://pizzalogs:pizzalogs@postgres:5432/pizzalogs?schema=public
       PARSER_SERVICE_URL:  http://parser:8000
       UPLOAD_DIR:          /app/uploads
+      ADMIN_SECRET:        ${ADMIN_SECRET:-local-dev-admin-secret}
+      ADMIN_COOKIE_SECURE: false
       NODE_ENV:            production
     volumes:
       - uploads_data:/app/uploads
