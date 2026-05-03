@@ -5,7 +5,7 @@
 
 ## Git
 **Branch:** `codex/pizza-logs-modernization`
-**Latest pushed commit before favicon work:** `add925a` on `origin/main`
+**Latest favicon asset commit:** `527c883` on `origin/main`
 
 ---
 
@@ -87,6 +87,9 @@ Preserved the main-branch queue fix while merging modernization:
   - Production build: bundled Node running `node_modules/next/dist/bin/next build` -> **passed**, and build output includes static route `/icon.svg`
   - Local built app: `http://127.0.0.1:3000/favicon.ico` returned HTTP 200 with `image/x-icon`
   - Local built app: `http://127.0.0.1:3000/icon.svg` returned HTTP 200 with `image/svg+xml`
+  - Production after deploy: `https://pizza-logs-production.up.railway.app/favicon.ico` returned HTTP 200 with `image/x-icon`
+  - Production after deploy: `https://pizza-logs-production.up.railway.app/icon.svg` returned HTTP 200 with `image/svg+xml`
+  - Production player page check: `https://pizza-logs-production.up.railway.app/players/Lichkingspet` returned HTTP 200
 - Modernization branch gates before merge:
   - Parser tests: `python -m pytest tests/ -v` from `parser/` using bundled Python -> **123 passed**
   - TypeScript test sweep: `ts-node --project tsconfig.seed.json tests/*.test.ts` with JSX compiler options -> **13 passed**
@@ -114,9 +117,9 @@ Preserved the main-branch queue fix while merging modernization:
 
 ## Current State
 
-- Local favicon/vault-doc changes are present on `codex/pizza-logs-modernization` and have not been committed or pushed yet.
 - `app/icon.svg` is now the app metadata icon generated from the existing navigation logo SVG.
 - `public/favicon.ico` now covers the legacy root favicon request that Chrome reported as 404 in production.
+- Favicon assets were pushed to `origin/main` in `527c883`, and production returned HTTP 200 for both `/favicon.ico` and `/icon.svg` after the Railway deploy.
 - `codex/pizza-logs-modernization` is committed at `2360f64`.
 - `main` was pushed to `origin/main` at `3b98665`; this docs-only sync updates the vault after that push.
 - Parser behavior is preserved; parser fixture suite passes.
@@ -127,4 +130,4 @@ Preserved the main-branch queue fix while merging modernization:
 
 ## Exact Next Step
 
-Commit and deploy the favicon update when ready. Manual production checks also remain: confirm Railway Web Service has `ADMIN_SECRET`, inspect Railway deploy logs from a machine with Railway CLI/dashboard access, install or update Warmane Gear Sync `1.7.0`, run it once, then verify Maxximusboom and Lausudo gear icons.
+Manual production checks remain: confirm Railway Web Service has `ADMIN_SECRET`, inspect Railway deploy logs from a machine with Railway CLI/dashboard access, install or update Warmane Gear Sync `1.7.0`, run it once, then verify Maxximusboom and Lausudo gear icons.

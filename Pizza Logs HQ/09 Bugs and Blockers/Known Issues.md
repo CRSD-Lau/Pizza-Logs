@@ -18,7 +18,7 @@
 
 | Bug | Fix | Commit |
 |---|---|---|
-| Browser console logged `/favicon.ico` 404 on production player pages | Generated `public/favicon.ico` from the existing navigation logo SVG and kept `app/icon.svg` for Next metadata icons | TBD |
+| Browser console logged `/favicon.ico` 404 on production player pages | Generated `public/favicon.ico` from the existing navigation logo SVG and kept `app/icon.svg` for Next metadata icons | 527c883 |
 | Roster Sync userscript appeared on Warmane character pages where Gear Sync was expected | Gear userscript now matches/runs only on `/character/*`; roster userscript now matches/runs only on `/guild/*`; both bumped to v1.0.4 with runtime path guards | 1844c36 |
 | Warmane Gear Sync userscript panel hidden after installing roster userscript | Roster userscript panel now docks above the Gear Sync panel instead of sharing `bottom:16px`; roster userscript bumped to v1.0.3 | 50d3d04 |
 | Warriors with two two-handed weapons double-counted both weapon GearScores | `INVTYPE_2HWEAPON` normalization now assigns the first 2H to `Main Hand` and the second 2H to `Off Hand`, allowing the existing Titan Grip half-score modifier to apply | bd6dd3b |
