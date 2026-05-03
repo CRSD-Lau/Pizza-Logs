@@ -51,6 +51,37 @@ if (apiResult.ok) {
   assert.equal(apiResult.gear.items[0].itemUrl, undefined);
 }
 
+const warmaneCdnIconResult = normalizeImportedArmoryGear({
+  name: "Lausudo",
+  realm: "Lordaeron",
+  equipment: [
+    {
+      name: "Blightborne Warplate",
+      item: "50024",
+      iconUrl: "http://cdn.warmane.com/wotlk/icons/large/inv_chest_plate_25.jpg",
+    },
+  ],
+});
+
+assert.equal(warmaneCdnIconResult.ok, true);
+if (warmaneCdnIconResult.ok) {
+  assert.equal(
+    warmaneCdnIconResult.gear.items[0].iconUrl,
+    "https://cdn.warmane.com/wotlk/icons/large/inv_chest_plate_25.jpg",
+  );
+}
+
+assert.equal(
+  normalizeArmoryGearSlots([
+    {
+      slot: "Chest",
+      name: "Cached Blightborne Warplate",
+      iconUrl: "http://cdn.warmane.com/wotlk/icons/large/inv_chest_plate_25.jpg",
+    },
+  ])[0].iconUrl,
+  "https://cdn.warmane.com/wotlk/icons/large/inv_chest_plate_25.jpg",
+);
+
 assert.deepEqual(
   normalizeArmoryGearSlots([
     { slot: "Trinket 1", name: "Archus, Greatstaff of Antonidas", equipLoc: "INVTYPE_2HWEAPON" },

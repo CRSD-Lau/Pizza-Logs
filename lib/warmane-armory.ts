@@ -121,6 +121,20 @@ function asString(value: unknown): string | undefined {
   return typeof value === "string" && value.trim().length > 0 ? value.trim() : undefined;
 }
 
+function normalizeExternalIconUrl(value: unknown): string | undefined {
+  const raw = asString(value);
+  if (!raw) return undefined;
+
+  try {
+    const parsed = new URL(raw.startsWith("//") ? `https:${raw}` : raw);
+    if (!/^https?:$/.test(parsed.protocol)) return undefined;
+    if (parsed.protocol === "http:") parsed.protocol = "https:";
+    return parsed.toString();
+  } catch {
+    return undefined;
+  }
+}
+
 function asNumber(value: unknown): number | undefined {
   const parsed = typeof value === "number" ? value : Number(value);
   return Number.isFinite(parsed) && parsed > 0 ? parsed : undefined;
@@ -187,9 +201,8 @@ function normalizeEquipment(items: unknown): ArmoryGearItem[] {
 
       const itemId = asString(item.item);
       const iconSlug = asString(item.icon);
-      const directIcon = asString(item.iconUrl)
+      const directIcon = normalizeExternalIconUrl(item.iconUrl)
         ?? (iconSlug ? `https://wow.zamimg.com/images/wow/icons/large/${iconSlug}.jpg` : undefined);
-      const iconUrl = directIcon?.startsWith("http") ? directIcon : undefined;
 
       return {
         slot: EQUIPMENT_SLOTS[index] ?? `Slot ${index + 1}`,
@@ -197,7 +210,7 @@ function normalizeEquipment(items: unknown): ArmoryGearItem[] {
         itemId,
         quality: asString(item.quality),
         itemLevel: asNumber(item.itemLevel) ?? asNumber(item.itemlevel),
-        iconUrl,
+        iconUrl: directIcon,
         itemUrl: undefined,
         equipLoc: asGearScoreEquipLoc(item.equipLoc) ?? asGearScoreEquipLoc(item.itemEquipLoc),
         enchant: asString(item.enchant),
@@ -337,7 +350,9 @@ export function normalizeArmoryGearSlots(items: ArmoryGearItem[]): ArmoryGearIte
         break;
     }
 
-    return slot === item.slot ? item : { ...item, slot };
+    const iconUrl = normalizeExternalIconUrl(item.iconUrl) ?? item.iconUrl;
+    if (slot === item.slot && iconUrl === item.iconUrl) return item;
+    return { ...item, slot, iconUrl };
   });
 }
 

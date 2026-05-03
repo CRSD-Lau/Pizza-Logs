@@ -17,7 +17,7 @@ declare const GM_setValue: (key: string, value: unknown) => void;
 
 export function buildPlayerPortraitUserscript(): string {
   const script = function pizzaLogsWarmanePortraits() {
-    const cacheKey = "pizzaLogsWarmanePortraitCacheV2";
+    const cacheKey = "pizzaLogsWarmanePortraitCacheV3";
     const targetKey = "pizzaLogsWarmanePortraitTarget";
     const disabledKey = "pizzaLogsWarmanePortraitsDisabled";
     const cacheTtlMs = 7 * 24 * 60 * 60 * 1000;
@@ -259,13 +259,17 @@ export function buildPlayerPortraitUserscript(): string {
 
     const canvasHasVisibleContent = function canvasHasVisibleContent(canvas: HTMLCanvasElement) {
       try {
-        const context = canvas.getContext?.("2d");
-        if (!context) return null;
-
         const width = Math.min(canvas.width, 96);
         const height = Math.min(canvas.height, 96);
         if (width <= 0 || height <= 0) return false;
 
+        const sampleCanvas = document.createElement("canvas");
+        sampleCanvas.width = width;
+        sampleCanvas.height = height;
+        const context = sampleCanvas.getContext("2d", { willReadFrequently: true });
+        if (!context) return false;
+
+        context.drawImage(canvas, 0, 0, width, height);
         const pixels = context.getImageData(0, 0, width, height).data;
         let opaquePixels = 0;
         let brightPixels = 0;
@@ -282,7 +286,7 @@ export function buildPlayerPortraitUserscript(): string {
 
         return opaquePixels > totalPixels * 0.05 && brightPixels > totalPixels * 0.015;
       } catch {
-        return null;
+        return false;
       }
     };
 
@@ -552,7 +556,7 @@ export function buildPlayerPortraitUserscript(): string {
     "// ==UserScript==",
     "// @name         Pizza Logs Warmane Portraits",
     "// @namespace    https://pizza-logs-production.up.railway.app",
-    "// @version      0.4.0",
+    "// @version      0.5.0",
     "// @description  Replaces Pizza Logs character initials with Warmane Armory portraits or cached rendered character faces when available.",
     "// @match        https://pizza-logs-production.up.railway.app/*",
     "// @match        http://localhost:3000/*",

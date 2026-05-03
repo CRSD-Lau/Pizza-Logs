@@ -8,11 +8,33 @@ import {
 
 const userscript = buildPlayerPortraitUserscript();
 const fakePortraitDataUrl = (fill = "a") => "data:image/png;base64," + fill.repeat(9000);
+const visibleCanvasPixels = () => {
+  const pixels = new Uint8ClampedArray(96 * 96 * 4);
+  for (let index = 0; index < pixels.length; index += 4) {
+    pixels[index] = 90;
+    pixels[index + 1] = 72;
+    pixels[index + 2] = 54;
+    pixels[index + 3] = 255;
+  }
+  return pixels;
+};
+const canvasElementFactory = (pixels = visibleCanvasPixels()) => (tagName: string) => {
+  assert.equal(tagName, "canvas");
+  return {
+    width: 0,
+    height: 0,
+    getContext: () => ({
+      drawImage() {},
+      getImageData: () => ({ data: pixels }),
+    }),
+  };
+};
 
 assert.equal(PORTRAIT_USERSCRIPT_PATH, "/api/player-portraits/userscript.user.js");
 assert.equal(PORTRAIT_USERSCRIPT_URL, "https://pizza-logs-production.up.railway.app/api/player-portraits/userscript.user.js");
 assert.match(userscript, /\/\/ ==UserScript==/);
 assert.match(userscript, /\/\/ @name\s+Pizza Logs Warmane Portraits/);
+assert.match(userscript, /\/\/ @version\s+0\.5\.0/);
 assert.match(userscript, /\/\/ @match\s+https:\/\/pizza-logs-production\.up\.railway\.app\/\*/);
 assert.match(userscript, /\/\/ @match\s+http:\/\/localhost:3000\/\*/);
 assert.match(userscript, /\/\/ @match\s+http:\/\/127\.0\.0\.1:3000\/\*/);
@@ -25,6 +47,7 @@ assert.match(userscript, /\/\/ @grant\s+GM_setValue/);
 assert.match(userscript, /data-pizza-avatar/);
 assert.match(userscript, /findPortraitUrl/);
 assert.match(userscript, /pizzaLogsWarmanePortraitCache/);
+assert.match(userscript, /pizzaLogsWarmanePortraitCacheV3/);
 assert.match(userscript, /toDataURL/);
 
 async function verifyUserscriptReplacesInitialsWithFetchedPortrait() {
@@ -257,6 +280,7 @@ async function verifyUserscriptCachesWarmaneCanvasForPizzaLogsPages() {
       readyState: "complete",
       addEventListener() {},
       documentElement: { outerHTML: "<html></html>" },
+      createElement: canvasElementFactory(),
       querySelectorAll: (selector: string) => {
         if (selector === "canvas") {
           return [{
@@ -393,6 +417,7 @@ async function verifyUserscriptCachesWowheadFrameCanvasUsingWarmaneReferrer() {
       referrer: "https://armory.warmane.com/character/Lausudo/Lordaeron/profile",
       addEventListener() {},
       documentElement: { outerHTML: "<html></html>" },
+      createElement: canvasElementFactory(),
       querySelectorAll: (selector: string) => {
         if (selector === "canvas") {
           return [{
@@ -572,6 +597,7 @@ async function verifyUserscriptCachesModelViewerCanvasUsingRecentWarmaneTargetWh
       referrer: "",
       addEventListener() {},
       documentElement: { outerHTML: "<html></html>" },
+      createElement: canvasElementFactory(),
       querySelectorAll: (selector: string) => {
         if (selector === "canvas") {
           return [{
@@ -599,7 +625,7 @@ async function verifyUserscriptCachesModelViewerCanvasUsingRecentWarmaneTargetWh
     await Promise.resolve();
   }
 
-  const cache = JSON.parse(gmStorage.get("pizzaLogsWarmanePortraitCacheV2") ?? "{}");
+  const cache = JSON.parse(gmStorage.get("pizzaLogsWarmanePortraitCacheV3") ?? "{}");
   assert.match(cache["lordaeron:lausudo"]?.url ?? "", /^data:image\/png;base64,/);
 }
 
@@ -633,6 +659,7 @@ async function verifyUserscriptRejectsBlankModelViewerCanvas() {
       referrer: "https://armory.warmane.com/character/Lausudo/Lordaeron/profile",
       addEventListener() {},
       documentElement: { outerHTML: "<html></html>" },
+      createElement: canvasElementFactory(blankPixels),
       querySelectorAll: (selector: string) => {
         if (selector === "canvas") {
           return [{
@@ -664,7 +691,80 @@ async function verifyUserscriptRejectsBlankModelViewerCanvas() {
     await Promise.resolve();
   }
 
-  const cache = JSON.parse(gmStorage.get("pizzaLogsWarmanePortraitCacheV2") ?? "{}");
+  const cache = JSON.parse(gmStorage.get("pizzaLogsWarmanePortraitCacheV3") ?? "{}");
+  assert.equal(cache["lordaeron:lausudo"], undefined);
+}
+
+async function verifyUserscriptRejectsBlankWebglModelViewerCanvas() {
+  const gmStorage = new Map<string, string>();
+  const timers: Promise<void>[] = [];
+  const blankPixels = new Uint8ClampedArray(96 * 96 * 4);
+
+  const modelViewerContext = {
+    console: { info() {}, warn() {}, error() {} },
+    URL,
+    location: {
+      hostname: "wow.zamimg.com",
+      pathname: "/modelviewer/live/viewer.html",
+      href: "https://wow.zamimg.com/modelviewer/live/viewer.html?model=humanmale",
+    },
+    setTimeout: (callback: () => void) => {
+      const promise = Promise.resolve().then(callback);
+      timers.push(promise);
+      return 1;
+    },
+    localStorage: {
+      getItem: (key: string) => gmStorage.get(`local:${key}`) ?? null,
+      setItem: (key: string, value: string) => gmStorage.set(`local:${key}`, value),
+      removeItem: (key: string) => gmStorage.delete(`local:${key}`),
+    },
+    GM_getValue: (key: string, fallback: string) => gmStorage.get(key) ?? fallback,
+    GM_setValue: (key: string, value: string) => gmStorage.set(key, value),
+    document: {
+      readyState: "complete",
+      referrer: "https://armory.warmane.com/character/Lausudo/Lordaeron/profile",
+      addEventListener() {},
+      documentElement: { outerHTML: "<html></html>" },
+      createElement: (tagName: string) => {
+        assert.equal(tagName, "canvas");
+        return {
+          width: 0,
+          height: 0,
+          getContext: () => ({
+            drawImage() {},
+            getImageData: () => ({ data: blankPixels }),
+          }),
+        };
+      },
+      querySelectorAll: (selector: string) => {
+        if (selector === "canvas") {
+          return [{
+            width: 512,
+            height: 512,
+            toDataURL: () => fakePortraitDataUrl("0"),
+            getContext: () => null,
+          }];
+        }
+        return [];
+      },
+    },
+    DOMParser: class {
+      parseFromString() {
+        return {
+          querySelector: () => null,
+          querySelectorAll: () => [],
+        };
+      }
+    },
+  };
+
+  vm.runInNewContext(userscript, modelViewerContext);
+  await Promise.all(timers);
+  for (let i = 0; i < 5; i++) {
+    await Promise.resolve();
+  }
+
+  const cache = JSON.parse(gmStorage.get("pizzaLogsWarmanePortraitCacheV3") ?? "{}");
   assert.equal(cache["lordaeron:lausudo"], undefined);
 }
 
@@ -675,6 +775,7 @@ Promise.all([
   verifyUserscriptCachesWowheadFrameCanvasUsingWarmaneReferrer(),
   verifyUserscriptCachesModelViewerCanvasUsingRecentWarmaneTargetWhenReferrerIsBlank(),
   verifyUserscriptRejectsBlankModelViewerCanvas(),
+  verifyUserscriptRejectsBlankWebglModelViewerCanvas(),
 ])
   .then(() => console.log("player-portrait-client-scripts tests passed"))
   .catch((error) => {
