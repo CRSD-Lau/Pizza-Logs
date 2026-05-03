@@ -38,4 +38,36 @@ assert.deepEqual(missing, [
   { characterName: "Maximusboom", realm: "Lordaeron" },
 ]);
 
+const missingIconOnly = getMissingArmoryGearPlayers({
+  players: [
+    { name: "Lausudo", realm: { name: "Lordaeron" } },
+  ],
+  rosterMembers: [],
+  cachedRows: [
+    {
+      characterKey: "lausudo",
+      realm: "Lordaeron",
+      gear: {
+        characterName: "Lausudo",
+        realm: "Lordaeron",
+        sourceUrl: "https://armory.warmane.com/character/Lausudo/Lordaeron/summary",
+        fetchedAt: "2026-05-01T12:00:00.000Z",
+        items: [{
+          slot: "Chest",
+          name: "Blightborne Warplate",
+          itemId: "50024",
+          quality: "epic",
+          itemLevel: 264,
+          equipLoc: "INVTYPE_CHEST",
+          details: ["2641 Armor", "+207 Stamina"],
+        }],
+      },
+    },
+  ],
+});
+
+assert.deepEqual(missingIconOnly, [
+  { characterName: "Lausudo", realm: "Lordaeron" },
+]);
+
 console.log("armory-gear-queue tests passed");

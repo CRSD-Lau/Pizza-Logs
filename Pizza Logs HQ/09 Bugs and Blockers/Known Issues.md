@@ -9,7 +9,7 @@
 | Blocker | Impact | Status |
 |---|---|---|
 | Warmane Armory returned Cloudflare/403 to direct server requests during gear and guild-roster feature work | Gear section shows unavailable state until a character has a cached snapshot; roster sync may fail from server/Railway, but `/guild-roster` still reads previously synced DB rows | Design written for laptop-primary Warmane sync agent so Railway no longer needs to fetch Warmane live. Existing hosted userscripts remain the temporary fallback. |
-| Warmane API omits rich item details | Native gear cards need a second source for icons, item level, quality, and tooltip text | Wowhead WotLK page enrichment added during cache writes; older cached rows are now re-queued for enrichment |
+| Warmane API omits rich item details | Native gear cards need a second source for item stats and tooltip text | AzerothCore `item_template` backs item details; icon slugs still come from Warmane/Tampermonkey and are backfilled into `wow_items.iconName` when available |
 | Manual Warmane roster/gear sync is operationally fragile | App data can become stale or incomplete if the admin forgets to run userscripts or if a partial source response is imported | Planned fix: local automated sync agent plus stricter snapshot validation that preserves last known good roster/gear data |
 
 ---
@@ -57,6 +57,16 @@
 **Icon source:** zamimg CDN (`wow.zamimg.com`) — static, not a Wowhead API call. Icon slugs come from Warmane's API response.
 
 **Known remaining gap:** Items not in `wow_items` table fall back gracefully to Warmane-supplied data rather than showing missing metadata.
+
+## Fixed (2026-05-03): Gear cards with details but missing icons
+
+**Problem:** Some player gear cards had item level, GearScore, and AzerothCore tooltip details, but no icon. Lausudo examples: `50024` Blightborne Warplate, `49964` Legguards of Lost Hope, `49985` Juggernaut Band.
+
+**Root cause:** AzerothCore `item_template` has no icon slug. Icons only come from Warmane/Tampermonkey (`icon`/`iconUrl`) or previously seeded `wow_items.iconName`. The gear queue considered cached gear complete when `itemId`, `itemLevel`, and `equipLoc` existed, so icon-only gaps were not re-synced.
+
+**Fix:** Missing `iconUrl` now marks cached gear as needing enrichment. Imported gear backfills `wow_items.iconName` from valid Zamimg URLs, preserving AzerothCore metadata.
+
+**Operational note:** Deploy the fix, then run Warmane Gear Sync again so production can populate missing icon slugs.
 
 ## Fixed (2026-05-02)
 

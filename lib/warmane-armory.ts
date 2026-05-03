@@ -58,6 +58,15 @@ export type ImportedArmoryGearPayload = {
   equipment?: unknown;
 };
 
+export type WowItemIconBackfill = {
+  itemId: string;
+  name: string;
+  itemLevel: number | null;
+  quality: string | null;
+  equipLoc: string | null;
+  iconName: string;
+};
+
 const DEFAULT_REALM = "Lordaeron";
 const CACHE_SECONDS = 60 * 60 * 12;
 const CACHE_MS = CACHE_SECONDS * 1000;
@@ -164,7 +173,7 @@ function isArmoryCharacterGear(value: unknown): value is ArmoryCharacterGear {
 
 export function gearNeedsEnrichment(gear: unknown): boolean {
   if (!isArmoryCharacterGear(gear)) return true;
-  return gear.items.some(item => !item.itemId || !item.itemLevel || !item.equipLoc);
+  return gear.items.some(item => !item.itemId || !item.itemLevel || !item.equipLoc || !item.iconUrl);
 }
 
 function normalizeEquipment(items: unknown): ArmoryGearItem[] {
@@ -196,6 +205,62 @@ function normalizeEquipment(items: unknown): ArmoryGearItem[] {
       };
     })
     .filter((item): item is ArmoryGearItem => Boolean(item));
+}
+
+function iconNameFromZamimgUrl(iconUrl: string | undefined): string | null {
+  if (!iconUrl) return null;
+
+  try {
+    const parsed = new URL(iconUrl);
+    if (parsed.hostname !== "wow.zamimg.com") return null;
+    const match = parsed.pathname.match(/\/images\/wow\/icons\/(?:large|medium|small)\/([^/.]+)\.jpg$/i);
+    return match ? match[1].toLowerCase() : null;
+  } catch {
+    return null;
+  }
+}
+
+export function collectWowItemIconBackfills(items: ArmoryGearItem[]): WowItemIconBackfill[] {
+  const backfills = new Map<string, WowItemIconBackfill>();
+
+  for (const item of items) {
+    if (!item.itemId || !item.name) continue;
+    const iconName = iconNameFromZamimgUrl(item.iconUrl);
+    if (!iconName) continue;
+
+    backfills.set(item.itemId, {
+      itemId: item.itemId,
+      name: item.name,
+      itemLevel: item.itemLevel ?? null,
+      quality: item.quality ?? null,
+      equipLoc: item.equipLoc ?? null,
+      iconName,
+    });
+  }
+
+  return Array.from(backfills.values());
+}
+
+async function backfillWowItemIcons(items: ArmoryGearItem[]): Promise<void> {
+  const backfills = collectWowItemIconBackfills(items);
+  if (backfills.length === 0) return;
+
+  for (const item of backfills) {
+    await db.wowItem.upsert({
+      where: { itemId: item.itemId },
+      create: {
+        itemId: item.itemId,
+        name: item.name,
+        itemLevel: item.itemLevel,
+        quality: item.quality,
+        equipLoc: item.equipLoc,
+        iconName: item.iconName,
+      },
+      update: {
+        iconName: item.iconName,
+      },
+    });
+  }
 }
 
 export function normalizeArmoryGearSlots(items: ArmoryGearItem[]): ArmoryGearItem[] {
@@ -400,6 +465,7 @@ export async function writeCachedGear(
       ? normalizeArmoryGearSlots(await enrichGearWithLocalTemplate(gear.items))
       : normalizeArmoryGearSlots(gear.items),
   };
+  await backfillWowItemIcons(enrichedGear.items);
 
   // Snapshot preservation: don't overwrite a healthy cache with a degraded fetch
   const existing = await db.armoryGearCache.findUnique({

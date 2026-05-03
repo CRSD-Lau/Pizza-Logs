@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { gearNeedsEnrichment, normalizeArmoryGearSlots, normalizeImportedArmoryGear } from "../lib/warmane-armory";
+import { collectWowItemIconBackfills, gearNeedsEnrichment, normalizeArmoryGearSlots, normalizeImportedArmoryGear } from "../lib/warmane-armory";
 
 const result = normalizeImportedArmoryGear({
   characterName: "Ashien",
@@ -105,6 +105,41 @@ assert.equal(
     ],
   }),
   false,
+);
+
+assert.deepEqual(
+  collectWowItemIconBackfills([
+    {
+      slot: "Chest",
+      name: "Blightborne Warplate",
+      itemId: "50024",
+      itemLevel: 264,
+      quality: "epic",
+      equipLoc: "INVTYPE_CHEST",
+      iconUrl: "https://wow.zamimg.com/images/wow/icons/large/inv_chest_plate_26.jpg",
+    },
+    {
+      slot: "Legs",
+      name: "Legguards of Lost Hope",
+      itemId: "49964",
+      iconUrl: "https://example.com/not-a-wow-icon.jpg",
+    },
+    {
+      slot: "Finger 1",
+      name: "Juggernaut Band",
+      iconUrl: "https://wow.zamimg.com/images/wow/icons/large/inv_jewelry_ring_85.jpg",
+    },
+  ]),
+  [
+    {
+      itemId: "50024",
+      name: "Blightborne Warplate",
+      itemLevel: 264,
+      quality: "epic",
+      equipLoc: "INVTYPE_CHEST",
+      iconName: "inv_chest_plate_26",
+    },
+  ],
 );
 
 console.log("warmane-armory-import tests passed");
