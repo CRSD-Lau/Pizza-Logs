@@ -12,6 +12,36 @@
 
 ## What Was Done This Session
 
+### Upload cinematic fan-art pass
+
+- Reworked the upload-only cinematic into a larger original frozen raid-boss splash:
+  - distant back-facing silhouette for the tundra approach,
+  - front-detail reveal during the aggro turn,
+  - larger crown/pauldrons/cape silhouette,
+  - glowing original rune core and vertical blade shapes,
+  - ice spires, frost-fire, snow, whiteout, and stronger camera push.
+- Kept the art original and CSS/SVG-only. The attached reference was used only as broad mood direction; no Blizzard, Warcraft, Lich King, Frostmourne, logos, music, sound, external images, video, WebGL, Three.js, framer-motion, or new dependencies were added.
+- Moved the overlay through a `document.body` portal so it is not trapped under the layout stacking context. This makes the cinematic truly full-screen and keeps `Skip` visible above the sticky site header.
+- Added source coverage for the body portal, stronger cinematic classes, front-detail reveal, ice spires, frost-fire, aura, camera push, and reduced-motion behavior.
+
+### Verification for fan-art pass
+
+- Focused upload cinematic source test: passed.
+- TypeScript: bundled Node running `node_modules/typescript/bin/tsc --noEmit` -> passed.
+- ESLint: bundled Node running `node_modules/eslint/bin/eslint.js . --max-warnings=0` -> passed.
+- Full standalone TypeScript test sweep: 27/27 tests passed with JSX and alias support in the local runner.
+- `git diff --check` -> passed.
+- Production build from the main checkout: bundled Node running `node_modules/next/dist/bin/next build` -> passed after clearing ignored `.next/` build output.
+- Browser/CDP checks against the built app on `http://127.0.0.1:3007` passed:
+  - Upload route shows the cinematic, full-screen overlay, and visible `Skip`.
+  - `Skip` unmounts the overlay and the character input remains usable.
+  - Refresh shows the intro again.
+  - Escape skips the intro.
+  - `/players` does not mount the intro.
+  - Returning to `/` shows the intro again.
+  - Reduced-motion hides the cinematic figure and unmounts quickly.
+  - Mobile viewport keeps `Skip` visible, avoids horizontal overflow, and leaves the upload input usable after skip.
+
 ### Upload-page cinematic intro MVP
 
 - Replaced the global `FrozenLogbookIntro` mount in `app/layout.tsx` with an upload-page-only `UploadCinematicIntro` mounted from `app/page.tsx`.
