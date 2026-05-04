@@ -11,6 +11,39 @@
 
 ## What Was Done This Session
 
+### ICC boss display ordering
+
+- Added a single ICC progression-order source in `lib/constants/bosses.ts`:
+  - `ICC_BOSS_ORDER_NAMES`
+  - `ICC_BOSS_ORDER`
+  - `normalizeIccBossName`
+  - `sortByICCOrder`
+  - `sortBossesByICCOrder`
+- The helper keeps known Icecrown Citadel bosses in kill order from Lord Marrowgar through The Lich King, puts unknown/non-ICC bosses after known ICC bosses, and preserves original order for duplicates and other fallback ties.
+- Added normalization for common non-canonical labels:
+  - `Gunship`
+  - `Gunship Battle - Alliance`
+  - `Gunship Battle - Horde`
+  - `Skybreaker`
+  - `The Skybreaker`
+  - `Orgrim's Hammer`
+  - `Lich King`
+  - `Arthas`
+  - `Blood Queen Lanathel` variants
+- `/leaderboards` no longer orders boss boards alphabetically. It fetches bosses by seeded `sortOrder` and applies the shared ICC sorter before building DPS/HPS boards.
+- Raid session encounter displays now apply the shared ICC sorter in:
+  - `app/uploads/[id]/sessions/[sessionIdx]/page.tsx`
+  - `app/uploads/[id]/sessions/[sessionIdx]/players/[playerName]/page.tsx`
+  - the `/raids/...` routes re-export those pages.
+- Parser output was inspected: `parser/bosses.py` emits canonical ICC boss names matching `WOTLK_BOSSES`, and uploads map parser `bossName` to the normalized `bosses` table by name.
+- No parser behavior, Prisma schema, or UI structure was changed.
+
+### Codex push expectation
+
+- Updated `AGENTS.md` to record that Neil does not test local-only changes.
+- Future validated change sessions should commit and push scoped changes to Git unless Neil explicitly asks to keep work local.
+- Ordinary branch work should push the current branch; deploy/live/publish/main requests still follow Railway rules and push `origin/main` only after the required gates pass.
+
 ### Global player search
 
 - Added a reusable `PlayerSearch` client component for the global header.
@@ -184,6 +217,13 @@ Preserved the main-branch queue fix while merging modernization:
 
 ## Verification
 
+- ICC boss ordering:
+  - `tests/boss-order.test.ts` -> passed after first failing on missing exports.
+  - TypeScript: bundled Node running `node_modules/typescript/bin/tsc --noEmit` -> passed.
+  - Full ESLint: bundled Node running `node_modules/eslint/bin/eslint.js . --max-warnings=0` -> passed.
+  - Production build: bundled Node running `node_modules/next/dist/bin/next build` -> passed.
+  - Parser tests: bundled Python running `python -m pytest tests/ -v` from `parser/` -> 123 passed.
+  - `git diff --check` -> passed.
 - Global player search:
   - `tests/player-search.test.ts` -> passed.
   - `tests/player-search-route.test.ts` -> passed.

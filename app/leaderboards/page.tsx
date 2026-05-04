@@ -5,6 +5,7 @@ import { DatabaseUnavailable } from "@/components/ui/DatabaseUnavailable";
 import { EmptyState } from "@/components/ui/EmptyState";
 import Link from "next/link";
 import { isDatabaseConnectionError } from "@/lib/database-errors";
+import { sortBossesByICCOrder } from "@/lib/constants/bosses";
 
 export const metadata: Metadata = { title: "Leaderboards" };
 export const dynamic = "force-dynamic";
@@ -12,12 +13,13 @@ export const dynamic = "force-dynamic";
 async function getLeaderboardBoards() {
   const bossesWithKills = await db.boss.findMany({
     where:   { encounters: { some: { outcome: "KILL" } } },
-    orderBy: { name: "asc" },
+    orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
     select:  { id: true, name: true, slug: true, raid: true },
   });
+  const orderedBosses = sortBossesByICCOrder(bossesWithKills);
 
   const boards = await Promise.all(
-    bossesWithKills.map(async boss => {
+    orderedBosses.map(async boss => {
       const [dpsRows, hpsRows] = await Promise.all([
         db.participant.findMany({
           where:    { encounter: { bossId: boss.id, outcome: "KILL" }, dps: { gt: 0 } },

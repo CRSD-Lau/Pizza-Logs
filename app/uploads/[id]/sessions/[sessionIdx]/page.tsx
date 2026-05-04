@@ -7,6 +7,7 @@ import { PlayerAvatar } from "@/components/players/PlayerAvatar";
 import { AccordionSection } from "@/components/ui/AccordionSection";
 import { StatCard } from "@/components/ui/StatCard";
 import { getClassColor } from "@/lib/constants/classes";
+import { sortByICCOrder } from "@/lib/constants/bosses";
 import { getClassIconUrl } from "@/lib/warmane-portrait";
 import { cn, formatDuration, formatNumber } from "@/lib/utils";
 
@@ -48,14 +49,16 @@ export default async function SessionDetailPage({ params }: Props) {
 
   if (encounters.length === 0) notFound();
 
-  const kills = encounters.filter(e => e.outcome === "KILL").length;
-  const wipes = encounters.filter(e => e.outcome === "WIPE").length;
-  const totalHeal = encounters.reduce((sum, e) => sum + e.totalHealing, 0);
-  const totalSecs = encounters.reduce((sum, e) => sum + e.durationSeconds, 0);
+  const orderedEncounters = sortByICCOrder(encounters, enc => enc.boss.name);
+
+  const kills = orderedEncounters.filter(e => e.outcome === "KILL").length;
+  const wipes = orderedEncounters.filter(e => e.outcome === "WIPE").length;
+  const totalHeal = orderedEncounters.reduce((sum, e) => sum + e.totalHealing, 0);
+  const totalSecs = orderedEncounters.reduce((sum, e) => sum + e.durationSeconds, 0);
 
   const sessionDmgMap = (upload.sessionDamage ?? {}) as Record<string, number>;
   const fullSessionDmg = sessionDmgMap[String(sessionIndex)];
-  const totalDmg = fullSessionDmg ?? encounters.reduce((sum, e) => sum + e.totalDamage, 0);
+  const totalDmg = fullSessionDmg ?? orderedEncounters.reduce((sum, e) => sum + e.totalDamage, 0);
   const startedAt = encounters[0].startedAt;
   const endedAt = encounters[encounters.length - 1].endedAt;
 
@@ -65,7 +68,7 @@ export default async function SessionDetailPage({ params }: Props) {
   }).then(r => r.length);
 
   const playerSet = new Map<string, string | null>();
-  for (const enc of encounters) {
+  for (const enc of orderedEncounters) {
     for (const p of enc.participants) {
       if (!playerSet.has(p.player.name)) playerSet.set(p.player.name, p.player.class ?? null);
     }
@@ -95,7 +98,7 @@ export default async function SessionDetailPage({ params }: Props) {
     byPlayer: Map<string, { damage: number; hits: number; crits: number; playerClass: string | null }>;
   }>();
 
-  for (const enc of encounters) {
+  for (const enc of orderedEncounters) {
     for (const p of enc.participants) {
       if (!p.targetBreakdown) continue;
       const td = p.targetBreakdown as Record<string, { damage: number; hits: number; crits: number }>;
@@ -137,7 +140,7 @@ export default async function SessionDetailPage({ params }: Props) {
     }));
 
   const raidGroups = new Map<string, typeof encounters>();
-  for (const enc of encounters) {
+  for (const enc of orderedEncounters) {
     const arr = raidGroups.get(enc.boss.raid) ?? [];
     arr.push(enc);
     raidGroups.set(enc.boss.raid, arr);

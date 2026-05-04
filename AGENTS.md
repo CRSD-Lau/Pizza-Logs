@@ -20,6 +20,8 @@ After every change session, update:
 
 Include vault updates in the same commit as code/docs changes.
 
+The user does not test local-only changes. After validation, commit and push scoped changes to Git unless the user explicitly asks to keep the work local. For ordinary branch work, push the current branch. For deploy/live/publish/main requests, follow the Railway deployment rules and push `origin/main` after the required gates pass.
+
 ## Project Overview
 
 Pizza Logs is a Warmane / WotLK 3.3.5a combat-log parser and leaderboard app for PizzaWarriors. Users upload `WoWCombatLog.txt`; the app parses boss encounters, writes reports to PostgreSQL, and shows DPS/HPS rankings, boss history, player profiles, gear, and admin diagnostics.

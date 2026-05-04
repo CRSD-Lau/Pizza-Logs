@@ -81,6 +81,96 @@ export const WOTLK_BOSSES: BossDefinition[] = [
   { name: "Kel'Thuzad",           slug: "kelthuzad",            raid: "Naxxramas",                  raidSlug: "naxxramas",                  wowBossId: 15990, sortOrder: 741, aliases: ["Kel'Thuzad"] },
 ];
 
+// ICC boss displays must follow raid progression; alphabetical order puts later wings first.
+export const ICC_BOSS_ORDER_NAMES = [
+  "Lord Marrowgar",
+  "Lady Deathwhisper",
+  "Gunship Battle",
+  "Deathbringer Saurfang",
+  "Festergut",
+  "Rotface",
+  "Professor Putricide",
+  "Blood Prince Council",
+  "Blood-Queen Lana'thel",
+  "Valithria Dreamwalker",
+  "Sindragosa",
+  "The Lich King",
+] as const;
+
+export type IccBossName = typeof ICC_BOSS_ORDER_NAMES[number];
+
+export const ICC_BOSS_ORDER: Record<IccBossName, number> = ICC_BOSS_ORDER_NAMES.reduce(
+  (acc, name, index) => {
+    acc[name] = index + 1;
+    return acc;
+  },
+  {} as Record<IccBossName, number>
+);
+
+const ICC_BOSS_NAME_ALIASES: ReadonlyArray<readonly [string, IccBossName]> = [
+  ["Gunship", "Gunship Battle"],
+  ["Gunship Battle - Alliance", "Gunship Battle"],
+  ["Gunship Battle - Horde", "Gunship Battle"],
+  ["Skybreaker", "Gunship Battle"],
+  ["The Skybreaker", "Gunship Battle"],
+  ["Orgrim's Hammer", "Gunship Battle"],
+  ["Blood Queen Lana'thel", "Blood-Queen Lana'thel"],
+  ["Blood Queen Lanathel", "Blood-Queen Lana'thel"],
+  ["Blood-Queen Lanathel", "Blood-Queen Lana'thel"],
+  ["Lich King", "The Lich King"],
+  ["Arthas", "The Lich King"],
+];
+
+const ICC_BOSS_NAME_BY_LOOKUP = new Map<string, IccBossName>([
+  ...ICC_BOSS_ORDER_NAMES.map((name) => [normalizeBossLookupKey(name), name] as const),
+  ...ICC_BOSS_NAME_ALIASES.map(([alias, canonical]) => [normalizeBossLookupKey(alias), canonical] as const),
+]);
+
+function normalizeBossLookupKey(name: string): string {
+  return name
+    .trim()
+    .replace(/[`\u2019]/g, "'")
+    .replace(/\s+/g, " ")
+    .replace(/\s*-\s*(alliance|horde)$/i, "")
+    .toLowerCase();
+}
+
+export function normalizeIccBossName(name: string): string {
+  const trimmed = name.trim();
+  return ICC_BOSS_NAME_BY_LOOKUP.get(normalizeBossLookupKey(trimmed)) ?? trimmed;
+}
+
+export function getIccBossOrder(name: string): number | null {
+  const normalizedName = normalizeIccBossName(name);
+  return Object.prototype.hasOwnProperty.call(ICC_BOSS_ORDER, normalizedName)
+    ? ICC_BOSS_ORDER[normalizedName as IccBossName]
+    : null;
+}
+
+export function compareBossNamesByICCOrder(a: string, b: string): number {
+  const aOrder = getIccBossOrder(a);
+  const bOrder = getIccBossOrder(b);
+
+  if (aOrder !== null && bOrder !== null) return aOrder - bOrder;
+  if (aOrder !== null) return -1;
+  if (bOrder !== null) return 1;
+  return 0;
+}
+
+export function sortByICCOrder<T>(items: readonly T[], getBossName: (item: T) => string): T[] {
+  return items
+    .map((item, index) => ({ item, index }))
+    .sort((a, b) => (
+      compareBossNamesByICCOrder(getBossName(a.item), getBossName(b.item))
+      || a.index - b.index
+    ))
+    .map(({ item }) => item);
+}
+
+export function sortBossesByICCOrder<T extends { name: string }>(bosses: readonly T[]): T[] {
+  return sortByICCOrder(bosses, boss => boss.name);
+}
+
 // Lookup maps for fast parser access
 export const BOSS_BY_NAME = new Map(
   WOTLK_BOSSES.map(b => [b.name.toLowerCase(), b])

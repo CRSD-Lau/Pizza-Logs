@@ -8,6 +8,7 @@ import { SessionLineChart } from "@/components/charts/SessionLineChart";
 import type { ChartPoint, PlayerLine } from "@/components/charts/SessionLineChart";
 import { StatCard } from "@/components/ui/StatCard";
 import { getClassColor } from "@/lib/constants/classes";
+import { sortByICCOrder } from "@/lib/constants/bosses";
 import { getClassIconUrl } from "@/lib/warmane-portrait";
 import { cn, formatDps, formatDuration } from "@/lib/utils";
 
@@ -41,6 +42,8 @@ export default async function SessionPlayerPage({ params }: Props) {
 
   if (encounters.length === 0) notFound();
 
+  const orderedEncounters = sortByICCOrder(encounters, enc => enc.boss.name);
+
   const firstParticipation = encounters
     .flatMap(e => e.participants)
     .find(p => p.player.name === name);
@@ -68,7 +71,7 @@ export default async function SessionPlayerPage({ params }: Props) {
     },
   });
 
-  const myStats = encounters
+  const myStats = orderedEncounters
     .map((enc) => {
       const p = enc.participants.find(part => part.player.name === name);
       if (!p) return null;
@@ -115,7 +118,7 @@ export default async function SessionPlayerPage({ params }: Props) {
 
   const allPlayers = [name, ...Array.from(classmateNames)];
 
-  const chartData: ChartPoint[] = encounters.map((enc) => {
+  const chartData: ChartPoint[] = orderedEncounters.map((enc) => {
     const point: ChartPoint = { bossName: enc.boss.name };
     for (const pName of allPlayers) {
       const p = enc.participants.find(part => part.player.name === pName);
