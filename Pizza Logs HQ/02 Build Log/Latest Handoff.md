@@ -309,6 +309,9 @@ Preserved the main-branch queue fix while merging modernization:
     - automatic completion unmounts and writes the same key,
     - reduced-motion hides particles, disables overlay animation, and unmounts quickly,
     - mobile `/players` at `390x844` has no horizontal overflow and keeps the mobile nav/search available.
+  - Pushed `main` to `origin/main` at `8a6de54`.
+  - Production poll confirmed Railway deployed the new client bundle when `/_next/static/chunks/app/layout-f6656fa126cc1614.js` contained `pizzaLogsFrozenIntroSeen` after one transient 502 during deploy.
+  - Production headless Chrome check confirmed first-visit intro, skip/localStorage behavior, and mobile `/players` nav/search/no-horizontal-overflow on `https://pizza-logs-production.up.railway.app`.
 - GearScore display repair:
   - `tests/gearscore-lite.test.ts` -> passed, including hunter dual heroic Scourgeborne Waraxe card and contribution scores of `531`/`531`
   - `tests/item-template.test.ts` -> passed, including corrected `InventoryType` 25/26/28 mapping
@@ -458,7 +461,7 @@ Preserved the main-branch queue fix while merging modernization:
 
 ## Current State
 
-- MVP animation pass is implemented and validated for `origin/main` deployment.
+- MVP animation pass is implemented, pushed to `origin/main` at `8a6de54`, and verified on production after Railway deployed the new client bundle.
 - Intro reset for testing: run `localStorage.removeItem("pizzaLogsFrozenIntroSeen")` in the browser console, then reload.
 - Raid session encounter displays now preserve parsed/session timestamp order when `startedAt` values are available. The existing ICC progression order remains the fallback for boss displays that do not have encounter timestamps, such as leaderboard boss-board ordering.
 - Gear card item-level and visible per-item `GS` display now distinguish raw item score from character contribution, and hunter one-hand weapons now count at normal item score in the total. This fixes Notlich-style hunter dual Scourgeborne Waraxe cards showing `168` instead of `531` each and removes the hunter weighting that kept Notlich's total below the in-game value.
