@@ -1,4 +1,4 @@
-# Codex Gotchas
+﻿# Codex Gotchas
 
 > Project-specific reminders for Codex or any future agent working on Pizza Logs.
 
@@ -8,7 +8,7 @@
 - Update Latest Handoff and Now.md before committing.
 - Upload status must be set to `DONE` before `computeMilestones`.
 - Do not build a Railway residential proxy or Cloudflare-bypass path. Railway should serve cached snapshots and receive imports; it should not depend on live Warmane requests during normal page render.
-- Local-only noise can include `.env.local`, `.env.sync-agent`, `.next/`, `.pytest_cache/`, `.sync-agent-logs/`, `tmp-mobile-check/`, and `WoWCombatLog/`.
+- Local-only noise can include `.env.local`, `.env.sync-agent`, `.next/`, `.pytest_cache/`, `.sync-agent-logs/`, `animations/`, and `WoWCombatLog/`.
 
 ## Recurring Misunderstandings
 

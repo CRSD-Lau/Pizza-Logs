@@ -1,24 +1,26 @@
-# HD Cinematic Intro Asset Implementation Plan
+﻿# HD Cinematic Intro Asset Implementation Plan
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Create a review-only high-definition cinematic intro asset package for Pizza Logs without integrating it into the website.
 
-**Architecture:** Generate new HD cinematic key art from the approved storyboard direction, then assemble it into a short review animation package isolated under `tmp-mobile-check/hd_cinematic_intro/`. The repo app code remains untouched; the output is a visual approval artifact only.
+**Current note:** This plan is historical. The live intro is now integrated and the retained local render workspace is `animations/hd_cinematic_intro/`, with the current crisp renderer at `animations/hd_cinematic_intro/render_web_cinematic_crisp.py`. The older `render_hd_cinematic.py`, `rendered/`, frame dumps, and site-integration screenshot folders were cleaned up after the later responsive/crisp render passes.
 
-**Tech Stack:** Image generation for HD key shots, Python/Pillow/numpy/imageio-ffmpeg for compositing and video output, local files under `tmp-mobile-check/`.
+**Architecture:** Generate new HD cinematic key art from the approved storyboard direction, then assemble it into a short review animation package isolated under `animations/hd_cinematic_intro/`. The repo app code remains untouched; the output is a visual approval artifact only.
+
+**Tech Stack:** Image generation for HD key shots, Python/Pillow/numpy/imageio-ffmpeg for compositing and video output, local files under `animations/`.
 
 ---
 
 ### Task 1: Generate HD Key Shot Set
 
 **Files:**
-- Create: `tmp-mobile-check/hd_cinematic_intro/key_shots/shot_01_snowfield.png`
-- Create: `tmp-mobile-check/hd_cinematic_intro/key_shots/shot_02_approach_back.png`
-- Create: `tmp-mobile-check/hd_cinematic_intro/key_shots/shot_03_shoulder_turn.png`
-- Create: `tmp-mobile-check/hd_cinematic_intro/key_shots/shot_04_eye_ignite.png`
-- Create: `tmp-mobile-check/hd_cinematic_intro/key_shots/shot_05_closeup_hold.png`
-- Create: `tmp-mobile-check/hd_cinematic_intro/key_shots/shot_06_fade_plate.png`
+- Create: `animations/hd_cinematic_intro/key_shots/shot_01_snowfield.png`
+- Create: `animations/hd_cinematic_intro/key_shots/shot_02_approach_back.png`
+- Create: `animations/hd_cinematic_intro/key_shots/shot_03_shoulder_turn.png`
+- Create: `animations/hd_cinematic_intro/key_shots/shot_04_eye_ignite.png`
+- Create: `animations/hd_cinematic_intro/key_shots/shot_05_closeup_hold.png`
+- Create: `animations/hd_cinematic_intro/key_shots/shot_06_fade_plate.png`
 
 - [ ] **Step 1: Generate six original cinematic key shots**
 
@@ -50,7 +52,7 @@ Open the six saved images and reject any shot that has visible text, UI, logos, 
 ### Task 2: Create Compositor Script
 
 **Files:**
-- Create: `tmp-mobile-check/hd_cinematic_intro/render_hd_cinematic.py`
+- Create: `animations/hd_cinematic_intro/render_hd_cinematic.py`
 
 - [ ] **Step 1: Write compositor script**
 
@@ -184,17 +186,17 @@ if __name__ == "__main__":
 ### Task 3: Render Review Animation
 
 **Files:**
-- Create: `tmp-mobile-check/hd_cinematic_intro/rendered/intro_hd_cinematic_review.mp4`
-- Create: `tmp-mobile-check/hd_cinematic_intro/rendered/intro_hd_cinematic_review.webm`
-- Create: `tmp-mobile-check/hd_cinematic_intro/rendered/poster.jpg`
-- Create: `tmp-mobile-check/hd_cinematic_intro/rendered/frame_0001.jpg` through `frame_0300.jpg`
+- Create: `animations/hd_cinematic_intro/rendered/intro_hd_cinematic_review.mp4`
+- Create: `animations/hd_cinematic_intro/rendered/intro_hd_cinematic_review.webm`
+- Create: `animations/hd_cinematic_intro/rendered/poster.jpg`
+- Create: `animations/hd_cinematic_intro/rendered/frame_0001.jpg` through `frame_0300.jpg`
 
 - [ ] **Step 1: Run the compositor**
 
 Run:
 
 ```powershell
-& 'C:\Users\neil_\.cache\codex-runtimes\codex-primary-runtime\dependencies\python\python.exe' 'C:\Users\neil_\OneDrive\Desktop\PizzaLogs\tmp-mobile-check\hd_cinematic_intro\render_hd_cinematic.py'
+& 'C:\Users\neil_\.cache\codex-runtimes\codex-primary-runtime\dependencies\python\python.exe' 'C:\Users\neil_\OneDrive\Desktop\PizzaLogs\animations\hd_cinematic_intro\render_hd_cinematic.py'
 ```
 
 Expected:
@@ -212,7 +214,7 @@ Run:
 @'
 from pathlib import Path
 import imageio.v2 as imageio
-base = Path(r"C:\Users\neil_\OneDrive\Desktop\PizzaLogs\tmp-mobile-check\hd_cinematic_intro\rendered")
+base = Path(r"C:\Users\neil_\OneDrive\Desktop\PizzaLogs\animations\hd_cinematic_intro\rendered")
 for name in ["intro_hd_cinematic_review.mp4", "intro_hd_cinematic_review.webm"]:
     reader = imageio.get_reader(base / name)
     print(name, reader.get_meta_data())
@@ -233,7 +235,7 @@ frames 300
 ### Task 4: Review Package
 
 **Files:**
-- Create: `tmp-mobile-check/hd_cinematic_intro/rendered/review_contact_sheet.jpg`
+- Create: `animations/hd_cinematic_intro/rendered/review_contact_sheet.jpg`
 
 - [ ] **Step 1: Create a contact sheet**
 
@@ -243,7 +245,7 @@ Run:
 @'
 from pathlib import Path
 from PIL import Image
-base = Path(r"C:\Users\neil_\OneDrive\Desktop\PizzaLogs\tmp-mobile-check\hd_cinematic_intro\rendered")
+base = Path(r"C:\Users\neil_\OneDrive\Desktop\PizzaLogs\animations\hd_cinematic_intro\rendered")
 indices = [1, 30, 60, 90, 120, 150, 180, 210, 240, 270, 285, 300]
 sheet = Image.new("RGB", (480 * 4, 270 * 3), (0, 0, 0))
 for slot, index in enumerate(indices):
@@ -270,6 +272,6 @@ git status --short --branch
 Expected:
 
 ```text
-Only pre-existing tracked changes outside tmp-mobile-check appear.
-All new cinematic asset files are under tmp-mobile-check/hd_cinematic_intro/.
+Only pre-existing tracked changes outside animations appear.
+All new cinematic asset files are under animations/hd_cinematic_intro/.
 ```

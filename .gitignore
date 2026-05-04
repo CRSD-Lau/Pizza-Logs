@@ -49,8 +49,9 @@ parser/diag_*.py
 .claude/worktrees/
 .codex/worktrees/
 
-# temporary screenshots
+# temporary screenshots and local animation render workspaces
 tmp-mobile-check/
+animations/
 
 # sync agent
 .env.sync-agent

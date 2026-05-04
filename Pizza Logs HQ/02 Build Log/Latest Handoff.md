@@ -1,4 +1,4 @@
-# Latest Handoff
+﻿# Latest Handoff
 
 ## Date
 2026-05-04
@@ -12,44 +12,54 @@
 
 ## What Was Done This Session
 
-### Responsive cinematic intro asset ladder
+### Crisp cinematic intro pass
 
-- Added three new generated intro renditions while keeping the accepted 1440p desktop and 1080p portrait mobile passes:
-  - desktop fallback WebM/MP4/poster: `1920x1080`, `60fps`, `5.2s`, `312` rendered frames,
-  - desktop 4K WebM/MP4/poster: `3840x2160`, `60fps`, `5.2s`, `312` rendered frames,
-  - mobile 4K portrait WebM/MP4/poster: `2160x3840`, `60fps`, `5.2s`, `312` rendered frames.
-- New public assets:
+- Rebuilt the public intro asset ladder with a smoother, cleaner render pass:
+  - desktop fallback WebM/MP4/poster: `1920x1080`, `60fps`, `6.4s`, `384` rendered frames,
+  - desktop QHD WebM/MP4/poster: `2560x1440`, `60fps`, `6.4s`, `384` rendered frames,
+  - desktop 4K WebM/MP4/poster: `3840x2160`, `60fps`, `6.4s`, `384` rendered frames,
+  - mobile portrait WebM/MP4/poster: `1080x1920`, `60fps`, `6.4s`, `384` rendered frames,
+  - mobile 4K portrait WebM/MP4/poster: `2160x3840`, `60fps`, `6.4s`, `384` rendered frames.
+- Root cause for the choppy feel was not nominal FPS; the older render had visible camera/key-shot discontinuities and heavy snow/compression grain from low-resolution generated stills. The new render uses continuous camera interpolation, lighter snow, denoise/sharpen preprocessing, and lower-compression video output.
+- Measured 1080p frame-delta spike improved from old public max `17.819` to new max `1.983`.
+- Public assets replaced:
+  - `public/intro/pizza-logs-cinematic-intro.webm`
+  - `public/intro/pizza-logs-cinematic-intro.mp4`
+  - `public/intro/pizza-logs-cinematic-poster.jpg`
   - `public/intro/pizza-logs-cinematic-intro-1080p.webm`
   - `public/intro/pizza-logs-cinematic-intro-1080p.mp4`
   - `public/intro/pizza-logs-cinematic-poster-1080p.jpg`
   - `public/intro/pizza-logs-cinematic-intro-4k.webm`
   - `public/intro/pizza-logs-cinematic-intro-4k.mp4`
   - `public/intro/pizza-logs-cinematic-poster-4k.jpg`
+  - `public/intro/pizza-logs-cinematic-intro-mobile.webm`
+  - `public/intro/pizza-logs-cinematic-intro-mobile.mp4`
+  - `public/intro/pizza-logs-cinematic-poster-mobile.jpg`
   - `public/intro/pizza-logs-cinematic-intro-mobile-4k.webm`
   - `public/intro/pizza-logs-cinematic-intro-mobile-4k.mp4`
   - `public/intro/pizza-logs-cinematic-poster-mobile-4k.jpg`
-- Existing asset names remain stable:
-  - `pizza-logs-cinematic-intro.webm/mp4` stays the `2560x1440` desktop pass,
-  - `pizza-logs-cinematic-intro-mobile.webm/mp4` stays the `1080x1920` mobile pass.
-- Updated `FrozenLogbookIntro` to render an ordered responsive source ladder:
+- `FrozenLogbookIntro` still renders the ordered responsive source ladder:
   - high-density mobile gets the 4K portrait source,
   - normal mobile gets the 1080p portrait source,
   - large/high-density desktop gets the 4K landscape source,
   - QHD/high-density desktop gets the existing 1440p landscape source,
   - plain desktop falls back to 1080p landscape.
 - Poster selection now follows the same media-query ladder for reduced-motion mode and video poster display.
-- Temporary render driver and review output remain under ignored `tmp-mobile-check/hd_cinematic_intro/`; no temp frames/logs were promoted.
+- Intro timeout was extended to `6400ms` to match the new render.
+- The ignored local render workspace was renamed from `tmp-mobile-check/` to `animations/`. Stale strip previews, old render passes, old site-integration screenshots, frame dumps, logs, and superseded scripts were removed; the retained local workspace is `animations/hd_cinematic_intro/` with key shots, the crisp renderer, final review assets, and contact sheets only.
+- `/bosses` was intentionally left untouched in this pass because the mobile fix is already in and responsive behavior is good.
 - No parser behavior, Prisma schema, DB queries, upload logic, admin gates, or Railway config were changed.
 - Validation completed before push:
   - `tests/frozen-intro-source.test.ts` -> passed,
-  - video/poster metadata inspection -> every public intro video is `60fps`, `5.2s`, and at its intended dimensions,
+  - media metadata inspection -> every public intro video is `60fps`, `6.4s`, `384` frames, and at its intended dimensions,
+  - poster metadata inspection -> every public poster matches its intended dimensions,
+  - 1080p public motion diagnostic -> MP4 max frame delta `2.900`, WebM max frame delta `3.152`,
   - TypeScript -> passed,
   - ESLint -> passed,
   - parser suite -> `123 passed`,
   - `git diff --check` -> passed,
   - production build -> passed,
-  - local built app served the new public intro assets with HTTP 200,
-  - headless Edge confirmed the hydrated intro overlay includes the full responsive `<source>` ladder on desktop and high-density mobile.
+  - local built app served the refreshed public intro assets with HTTP 200.
 
 ### Cinematic intro quality and mobile polish
 
@@ -71,11 +81,7 @@
   - mobile now uses boss summary cards instead of forcing the desktop grid,
   - boss cards use the shared `getRevealClassName` / `getRevealStyle` animation style,
   - narrow mobile metric cells now have overflow/min-width guards.
-- Review artifacts were generated under ignored temp output:
-  - `tmp-mobile-check/hd_cinematic_intro/rendered_v2/`
-  - `tmp-mobile-check/hd_cinematic_intro/site_integration/local-intro-desktop-final.png`
-  - `tmp-mobile-check/hd_cinematic_intro/site_integration/local-intro-mobile-final.png`
-  - `tmp-mobile-check/hd_cinematic_intro/site_integration/local-bosses-mobile-500-final.png`
+- Review artifacts from this older pass were generated under ignored temp output and later cleaned up after the crisp render replaced them.
 - No parser behavior, Prisma schema, DB queries, upload logic, admin gates, or Railway config were changed.
 - Deployed to `origin/main` at `0ad6231`.
 - Production verification after Railway deploy:
@@ -84,9 +90,7 @@
   - `/intro/pizza-logs-cinematic-poster-mobile.jpg` returned HTTP 200 with the expected `558,062` byte length,
   - `/bosses` server-rendered markup includes `reveal-item boss-reveal-item`, `md:hidden`, `boss summary`, and `overflow-hidden` markers,
   - Edge headless production screenshots confirmed mobile intro media and `/bosses` mobile cards.
-- Production screenshots:
-  - `tmp-mobile-check/hd_cinematic_intro/site_integration/production-intro-mobile-final.png`
-  - `tmp-mobile-check/hd_cinematic_intro/site_integration/production-bosses-mobile-500-final.png`
+- Production screenshots from this older pass were local review artifacts and were later cleaned up.
 
 ### HD cinematic intro design spec
 
@@ -104,12 +108,7 @@
   - `docs/superpowers/specs/2026-05-04-hd-cinematic-intro-design.md`
 - Added implementation plan:
   - `docs/superpowers/plans/2026-05-04-hd-cinematic-intro-asset.md`
-- Built a review-only HD cinematic proof under ignored temp output:
-  - `tmp-mobile-check/hd_cinematic_intro/key_shots/source_contact_sheet.png`
-  - `tmp-mobile-check/hd_cinematic_intro/render_hd_cinematic.py`
-  - `tmp-mobile-check/hd_cinematic_intro/rendered/intro_hd_cinematic_review.mp4`
-  - `tmp-mobile-check/hd_cinematic_intro/rendered/intro_hd_cinematic_review.webm`
-  - `tmp-mobile-check/hd_cinematic_intro/rendered/review_contact_sheet.jpg`
+- Built a review-only HD cinematic proof under ignored temp output; this was later superseded by the retained crisp renderer and final review assets under `animations/hd_cinematic_intro/`.
 - Review render uses newly generated HD key art, not the old frame strips, and does not include mock website UI.
 - Verified review render:
   - 6 key shots sliced from generated contact sheet,
@@ -125,7 +124,7 @@
   - `public/intro/pizza-logs-cinematic-intro.webm`
   - `public/intro/pizza-logs-cinematic-intro.mp4`
   - `public/intro/pizza-logs-cinematic-poster.jpg`
-- Intro behavior now:
+- Original integration behavior:
   - plays on hard page load as the site intro,
   - uses WebM first with MP4 fallback,
   - keeps an always-available `Skip` button,
@@ -133,9 +132,7 @@
   - avoids replaying on every client-side route change because a five-second movie on every navigation is too intrusive,
   - respects `prefers-reduced-motion` by showing the poster briefly and closing after `350ms`.
 - Updated the source regression so the app cannot silently fall back to the old CSS particle intro.
-- Browser review artifacts are under ignored temp output:
-  - `tmp-mobile-check/hd_cinematic_intro/site_integration/desktop-intro-latest-edge.png`
-  - `tmp-mobile-check/hd_cinematic_intro/site_integration/desktop-after-latest-edge.png`
+- Browser review artifacts from this older integration pass were later cleaned up.
 - Deployed to `origin/main` at `5a6ef83`.
 - Production verification after Railway deploy:
   - `/intro/pizza-logs-cinematic-intro.webm` returned HTTP 200 with `video/webm`,
@@ -143,9 +140,7 @@
   - `/intro/pizza-logs-cinematic-poster.jpg` returned HTTP 200 with `image/jpeg`,
   - production layout bundle contained `pizza-logs-cinematic-intro.webm` and no `frozen-intro-particle` marker,
   - Edge headless production screenshots confirmed the cinematic overlay and post-fade app reveal.
-- Production screenshots:
-  - `tmp-mobile-check/hd_cinematic_intro/site_integration/production-intro-edge.png`
-  - `tmp-mobile-check/hd_cinematic_intro/site_integration/production-after-edge.png`
+- Production screenshots from this older integration pass were later cleaned up.
 - No parser behavior, Prisma schema, DB queries, upload logic, admin gates, or Railway config were changed.
 
 ### MVP animation pass
@@ -631,8 +626,8 @@ Preserved the main-branch queue fix while merging modernization:
 
 ## Current State
 
-- HD cinematic intro integration now has a responsive public asset ladder: `1920x1080`, `2560x1440`, and `3840x2160` desktop landscape plus `1080x1920` and `2160x3840` mobile portrait, all at `60fps` and `5.2s`.
-- Intro behavior: `FrozenLogbookIntro` now plays the HD cinematic on hard page load, uses WebM with MP4 fallback, selects mobile/desktop resolutions through ordered `<source media>` entries, lasts up to `5200ms`, exits on video end, keeps `Skip`, and avoids replaying on every internal route change. Reduced-motion users get the matching poster through the same media-query ladder and a short `350ms` timeout.
+- HD cinematic intro integration now has a crisp responsive public asset ladder: `1920x1080`, `2560x1440`, and `3840x2160` desktop landscape plus `1080x1920` and `2160x3840` mobile portrait, all at `60fps`, `6.4s`, and `384` frames.
+- Intro behavior: `FrozenLogbookIntro` now plays the HD cinematic on hard page load, uses WebM with MP4 fallback, selects mobile/desktop resolutions through ordered `<source media>` entries, lasts up to `6400ms`, exits on video end, keeps `Skip`, and avoids replaying on every internal route change. Reduced-motion users get the matching poster through the same media-query ladder and a short `350ms` timeout.
 - `/bosses` now has a mobile-native boss card layout with the same shared reveal animation style used on the other table/card pages. The desktop table grid is preserved for medium-and-up screens.
 - Raid session encounter displays now preserve parsed/session timestamp order when `startedAt` values are available. The existing ICC progression order remains the fallback for boss displays that do not have encounter timestamps, such as leaderboard boss-board ordering.
 - Gear card item-level and visible per-item `GS` display now distinguish raw item score from character contribution, and hunter one-hand weapons now count at normal item score in the total. This fixes Notlich-style hunter dual Scourgeborne Waraxe cards showing `168` instead of `531` each and removes the hunter weighting that kept Notlich's total below the in-game value.
@@ -656,9 +651,9 @@ Preserved the main-branch queue fix while merging modernization:
 
 ## Exact Next Step
 
-For cinematic intro: after this responsive asset ladder deploy, hard-refresh production in normal desktop, 1440p/4K, and phone-sized browsers to judge playback smoothness/taste and try the Skip button manually.
+For cinematic intro: after this crisp asset ladder deploy, hard-refresh production in normal desktop, 1440p/4K, and phone-sized browsers to judge playback smoothness/taste and try the Skip button manually. If the asset still feels soft, the next quality step is higher-resolution key art, because the retained source key shots are much lower resolution than the 4K output ladder.
 
-For `/bosses`: production markup and mobile screenshot are verified. A human phone-sized browser pass is still useful to confirm the boss cards animate in without horizontal overflow in a normal browser.
+For `/bosses`: Neil confirmed the mobile fix is in and responsiveness is good. Leave it alone unless a new regression is reported.
 
 For GearScore: after deploy, spot-check `/players/Notlich`; both heroic Scourgeborne Waraxe cards should show `GS 531`, and the summary should be much closer to the in-game `6237` because hunter weapon weighting is no longer applied.
 

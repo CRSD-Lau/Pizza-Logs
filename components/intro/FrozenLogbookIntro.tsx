@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { Button } from "@/components/ui/Button";
 
-export const INTRO_DURATION_MS = 5200;
+export const INTRO_DURATION_MS = 6400;
 const REDUCED_MOTION_DURATION_MS = 350;
 
 const INTRO_VIDEO_1080_WEBM = "/intro/pizza-logs-cinematic-intro-1080p.webm";

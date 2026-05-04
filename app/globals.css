@@ -157,7 +157,7 @@
     min-height: 100vh;
     min-height: 100lvh;
     background: linear-gradient(180deg, #132435 0%, #07111a 62%, #02040a 100%);
-    animation: frozenIntroOverlay 5.2s ease both;
+    animation: frozenIntroOverlay 6.4s ease both;
   }
 
   .frozen-intro-video,
@@ -205,7 +205,7 @@
     opacity: 0;
     text-align: center;
     pointer-events: none;
-    animation: frozenIntroBrand 5.2s ease both;
+    animation: frozenIntroBrand 6.4s ease both;
   }
 
   .frozen-intro-brand span {

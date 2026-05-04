@@ -1,8 +1,8 @@
-# Now
+﻿# Now
 
 ## Status
 
-**HD cinematic intro now has a responsive resolution ladder.** The strip-derived previews were rejected as too low quality, so the approved direction uses a generated pre-rendered HD cinematic: ICC/WotLK-inspired frost-armored raid boss, blizzard approach, blue-eye reveal, close-up hold, and a clean fade into the real Pizza Logs page. The app now serves desktop `1920x1080`, `2560x1440`, and `3840x2160` WebM/MP4/poster assets plus mobile portrait `1080x1920` and `2160x3840` WebM/MP4/poster assets, all at `60fps`, `5.2s`, and `312` rendered frames. `FrozenLogbookIntro` plays the cinematic on hard page load, picks mobile/desktop resolutions through ordered `<source media>` entries, keeps `Skip`, exits on video end or after `5200ms`, and gives reduced-motion users the matching poster through the same media-query ladder with a short `350ms` timeout.
+**HD cinematic intro now has a crisper responsive resolution ladder.** The strip-derived previews were rejected as too low quality, so the approved direction uses a generated pre-rendered HD cinematic: ICC/WotLK-inspired frost-armored raid boss, blizzard approach, blue-eye reveal, close-up hold, and a clean fade into the real Pizza Logs page. The app now serves desktop `1920x1080`, `2560x1440`, and `3840x2160` WebM/MP4/poster assets plus mobile portrait `1080x1920` and `2160x3840` WebM/MP4/poster assets, all at `60fps`, `6.4s`, and `384` rendered frames. `FrozenLogbookIntro` plays the cinematic on hard page load, picks mobile/desktop resolutions through ordered `<source media>` entries, keeps `Skip`, exits on video end or after `6400ms`, and gives reduced-motion users the matching poster through the same media-query ladder with a short `350ms` timeout. The latest render pass reduced camera/key-shot discontinuities, reduced snow grain, sharpened/denoised the source stills, and moved the ignored render workspace from `tmp-mobile-check/` to `animations/`.
 
 **`/bosses` mobile layout is fixed and deployed.** Desktop keeps the dense table-style grid, while mobile now uses boss summary cards with the same shared reveal animation classes used elsewhere. Narrow metric cells have overflow guards so long values cannot push the page sideways.
 
@@ -12,7 +12,7 @@
 
 **Raid session boss display now preserves parsed timestamp order when available.** `orderBossDisplayEntries` sorts timestamped encounter rows by `startedAt` and falls back to the existing ICC progression helper only when timestamp/order data is unavailable. Leaderboard boss boards still use ICC progression order because they are aggregate boss boards, not a single timestamped raid session.
 
-**Cinematic intro verification passed locally for the responsive ladder.** Focused red/green source test covers the responsive video sources, poster fallback, skip, reduced-motion handling, and removal of the old particle intro. Video/poster metadata inspection confirmed every public intro video is `60fps`, `5.2s`, and at the intended dimensions. TypeScript, ESLint, `git diff --check`, production `next build`, parser tests, local media route checks, and Edge headless hydrated DOM checks passed. Browser review artifacts and generated frame output remain under ignored `tmp-mobile-check/hd_cinematic_intro/`.
+**Cinematic intro verification passed locally for the crisp ladder.** Focused source tests cover the responsive video sources, poster fallback, skip, reduced-motion handling, and removal of the old particle intro. Media metadata inspection confirmed every public intro video is `60fps`, `6.4s`, `384` frames, and at the intended dimensions; poster metadata also matches. TypeScript, ESLint, `git diff --check`, production `next build`, parser tests, local media route checks, and a 1080p frame-delta diagnostic passed. Browser review artifacts and final generated review assets remain under ignored `animations/hd_cinematic_intro/`; stale strip previews, frame dumps, old render passes, old site-integration screenshots, logs, and superseded scripts were cleaned up.
 
 **Desktop checkout started clean from public `main`; animation work was developed on `codex/pizza-logs-animation-mvp` before main deployment.** The old `PizzaLogs-main-queue-fix` worktree folder and stale Git metadata are removed, the local modernization/Claude branches are deleted, and the remote `codex/pizza-logs-modernization` branch was deleted after confirming it matched `main`.
 
@@ -48,8 +48,8 @@
 
 | Task | Type | Notes |
 |------|------|-------|
-| Human-pass HD cinematic intro | VERIFY | After responsive ladder deploy, hard-refresh production in normal desktop, 1440p/4K, and phone-sized browsers to judge playback smoothness/taste and try the Skip button manually |
-| Verify `/bosses` mobile cards | VERIFY | Production markup/screenshot verified; open `/bosses` on a normal phone-sized viewport and confirm animated boss cards fit without horizontal overflow |
+| Human-pass HD cinematic intro | VERIFY | After crisp ladder deploy, hard-refresh production in normal desktop, 1440p/4K, and phone-sized browsers to judge playback smoothness/taste and try the Skip button manually |
+| Verify `/bosses` mobile cards | DONE | Neil confirmed the boss page mobile fix is in and responsiveness is good; leave `/bosses` alone unless a new regression appears |
 | Verify Notlich gear cards | VERIFY | After deploy, `/players/Notlich` should show both heroic Scourgeborne Waraxes as `GS 531` |
 | Verify production admin config | DEPLOY | Confirm Railway Web Service has `ADMIN_SECRET`; do not set `ADMIN_COOKIE_SECURE=false` in Railway |
 | Verify Railway deploy logs | DEPLOY | Use Railway dashboard/CLI; local Railway CLI is not installed |
