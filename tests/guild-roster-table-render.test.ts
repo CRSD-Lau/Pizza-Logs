@@ -48,5 +48,7 @@ assert.match(markup, /data-character-name="Azyva"/);
 assert.match(markup, /data-character-realm="Lordaeron"/);
 assert.match(markup, /data-character-race="Night Elf"/);
 assert.match(markup, /classicon_druid/);
+assert.match(markup, /reveal-item/);
+assert.match(markup, /--reveal-index:0/);
 
 console.log("guild-roster-table-render tests passed");

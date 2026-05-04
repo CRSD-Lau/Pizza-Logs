@@ -5,6 +5,7 @@ import { useCallback, useEffect, useState } from "react";
 import { Button } from "@/components/ui/Button";
 
 export const FROZEN_INTRO_STORAGE_KEY = "pizzaLogsFrozenIntroSeen";
+export const INTRO_REPLAY_PARAM = "intro";
 export const INTRO_DURATION_MS = 2300;
 
 const PARTICLES = [
@@ -37,6 +38,11 @@ function hasSeenIntro(): boolean {
   }
 }
 
+function shouldReplayIntro(): boolean {
+  const searchParams = new URLSearchParams(window.location.search);
+  return searchParams.get(INTRO_REPLAY_PARAM) === "1";
+}
+
 function markIntroSeen() {
   try {
     window.localStorage.setItem(FROZEN_INTRO_STORAGE_KEY, "1");
@@ -55,7 +61,7 @@ export function FrozenLogbookIntro() {
   }, []);
 
   useEffect(() => {
-    if (hasSeenIntro()) {
+    if (hasSeenIntro() && !shouldReplayIntro()) {
       setReady(true);
       return;
     }

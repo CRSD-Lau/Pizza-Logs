@@ -44,6 +44,17 @@
 - No parser behavior, Prisma schema, DB queries, navigation structure, layout structure, copyrighted images, audio, 3D, WebGL, or external assets were added.
 - Count-up number animation was intentionally not added; there was no existing safe utility, and data accuracy/readability is more important for this MVP.
 
+### Animation visibility follow-up
+
+- User reported the intro only appeared briefly once while navigating to Guild and that the other animations were not obvious.
+- Root cause:
+  - the intro behaved as coded, but one-time `localStorage` had no easy replay path,
+  - reveal animations were too subtle at `260ms` with `45ms` stagger,
+  - Guild roster rows were not included in the reveal wiring even though the user landed there.
+- Added `?intro=1` support so the intro can be replayed without clearing localStorage.
+- Increased shared reveal timing to `420ms` with `70ms` stagger and a slightly larger upward motion so row/card reveals are visible but still lightweight.
+- Wired Guild roster table rows into the shared reveal helper.
+
 ### Desktop branch/worktree cleanup
 
 - Confirmed `C:\Users\neil_\OneDrive\Desktop\PizzaLogs` is the active project checkout.
@@ -312,6 +323,15 @@ Preserved the main-branch queue fix while merging modernization:
   - Pushed `main` to `origin/main` at `8a6de54`.
   - Production poll confirmed Railway deployed the new client bundle when `/_next/static/chunks/app/layout-f6656fa126cc1614.js` contained `pizzaLogsFrozenIntroSeen` after one transient 502 during deploy.
   - Production headless Chrome check confirmed first-visit intro, skip/localStorage behavior, and mobile `/players` nav/search/no-horizontal-overflow on `https://pizza-logs-production.up.railway.app`.
+- Animation visibility follow-up:
+  - `tests/frozen-intro-source.test.ts` -> failed first on missing `INTRO_REPLAY_PARAM`, then passed.
+  - `tests/ui-animation.test.ts` -> failed first on the old `260ms` / `45ms` reveal timing, then passed.
+  - `tests/guild-roster-table-render.test.ts` -> failed first because Guild roster rows did not render `reveal-item`, then passed.
+  - TypeScript: bundled Node running `node_modules/typescript/bin/tsc --noEmit` -> passed.
+  - Full ESLint: bundled Node running `node_modules/eslint/bin/eslint.js . --max-warnings=0` -> passed.
+  - `git diff --check` -> passed.
+  - Production build: bundled Node running `node_modules/next/dist/bin/next build` -> passed.
+  - Local headless Chrome check against `http://127.0.0.1:3006` confirmed `?intro=1` replays the intro even with `pizzaLogsFrozenIntroSeen = "1"`, Skip still unmounts the overlay, and a normal refresh does not replay it.
 - GearScore display repair:
   - `tests/gearscore-lite.test.ts` -> passed, including hunter dual heroic Scourgeborne Waraxe card and contribution scores of `531`/`531`
   - `tests/item-template.test.ts` -> passed, including corrected `InventoryType` 25/26/28 mapping
@@ -461,8 +481,8 @@ Preserved the main-branch queue fix while merging modernization:
 
 ## Current State
 
-- MVP animation pass is implemented, pushed to `origin/main` at `8a6de54`, and verified on production after Railway deployed the new client bundle.
-- Intro reset for testing: run `localStorage.removeItem("pizzaLogsFrozenIntroSeen")` in the browser console, then reload.
+- MVP animation pass is implemented, pushed to `origin/main` at `8a6de54`, and verified on production after Railway deployed the new client bundle. A visibility follow-up is implemented on `codex/pizza-logs-animation-visibility`.
+- Intro replay for testing: add `?intro=1` to any Pizza Logs URL, for example `https://pizza-logs-production.up.railway.app/?intro=1`. Full reset still works with `localStorage.removeItem("pizzaLogsFrozenIntroSeen")`.
 - Raid session encounter displays now preserve parsed/session timestamp order when `startedAt` values are available. The existing ICC progression order remains the fallback for boss displays that do not have encounter timestamps, such as leaderboard boss-board ordering.
 - Gear card item-level and visible per-item `GS` display now distinguish raw item score from character contribution, and hunter one-hand weapons now count at normal item score in the total. This fixes Notlich-style hunter dual Scourgeborne Waraxe cards showing `168` instead of `531` each and removes the hunter weighting that kept Notlich's total below the in-game value.
 - Existing `wow_items` rows affected by the old ranged/relic map are repaired by migration `20260504120000_repair_wow_item_ranged_relic_equip_locs`.

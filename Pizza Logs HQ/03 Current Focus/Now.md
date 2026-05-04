@@ -4,6 +4,8 @@
 
 **MVP animation pass is live on production.** The app now has a first-visit CSS-only Frozen Logbook intro, subtle reveal animations for boss/player/leaderboard rows, and a shared `lib/ui-animation.ts` helper. The intro uses `localStorage` key `pizzaLogsFrozenIntroSeen`; clear it with `localStorage.removeItem("pizzaLogsFrozenIntroSeen")` to retest the first-visit flow.
 
+**Animation visibility follow-up is implemented on `codex/pizza-logs-animation-visibility`.** After user feedback that the animation only flashed once and was not obvious, the follow-up adds `?intro=1` replay support, makes shared reveal timing more visible (`420ms` / `70ms` stagger), and includes Guild roster rows in the reveal wiring.
+
 **Raid session boss display now preserves parsed timestamp order when available.** `orderBossDisplayEntries` sorts timestamped encounter rows by `startedAt` and falls back to the existing ICC progression helper only when timestamp/order data is unavailable. Leaderboard boss boards still use ICC progression order because they are aggregate boss boards, not a single timestamped raid session.
 
 **Animation verification passed locally and on production.** Focused red/green tests covered the intro source and reusable reveal/order helper. TypeScript, ESLint, `git diff --check`, and `next build` passed. A headless Chrome DevTools check confirmed first-visit intro, skip, refresh suppression, auto-complete, reduced-motion behavior, and mobile `/players` overflow/search/nav behavior on `http://127.0.0.1:3005`. After push, production served a new layout chunk containing `pizzaLogsFrozenIntroSeen`, and a production headless Chrome check confirmed first-visit intro, skip/localStorage, and mobile `/players` behavior.

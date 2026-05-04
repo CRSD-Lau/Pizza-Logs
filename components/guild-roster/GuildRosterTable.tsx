@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { PlayerAvatar } from "../players/PlayerAvatar";
 import { getClassColor } from "../../lib/constants/classes";
+import { getRevealClassName, getRevealStyle } from "../../lib/ui-animation";
 import { getClassIconUrl } from "../../lib/warmane-portrait";
 
 export type GuildRosterTableMember = {
@@ -79,11 +80,17 @@ export function GuildRosterTable({ members }: { members: GuildRosterTableMember[
           </tr>
         </thead>
         <tbody>
-          {members.map((member) => {
+          {members.map((member, index) => {
             const classColor = getClassColor(member.className ?? member.characterName);
 
             return (
-              <tr key={member.id} className="border-t border-gold-dim/70 hover:bg-bg-card/60 transition-colors">
+              <tr
+                key={member.id}
+                className={getRevealClassName({
+                  className: "border-t border-gold-dim/70 hover:bg-bg-card/60 transition-colors",
+                })}
+                style={getRevealStyle(index)}
+              >
                 <td className="px-4 py-3">
                   <div className="flex items-center gap-3">
                     <PlayerAvatar

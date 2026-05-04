@@ -1,9 +1,18 @@
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
+import path from "node:path";
 import {
   getRevealClassName,
   getRevealStyle,
   orderBossDisplayEntries,
 } from "../lib/ui-animation";
+
+const root = process.cwd();
+const globals = readFileSync(path.join(root, "app", "globals.css"), "utf8");
+
+assert.match(globals, /animation: revealItem 420ms ease-out both/);
+assert.match(globals, /var\(--reveal-index, 0\) \* 70ms/);
+assert.match(globals, /translateY\(14px\)/);
 
 const revealStyle = getRevealStyle(7);
 assert.equal(revealStyle["--reveal-index"], 7);

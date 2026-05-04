@@ -11,6 +11,9 @@ assert.match(component, /FROZEN_INTRO_STORAGE_KEY = "pizzaLogsFrozenIntroSeen"/)
 assert.match(component, /INTRO_DURATION_MS = 2300/);
 assert.match(component, /localStorage\.getItem\(FROZEN_INTRO_STORAGE_KEY\)/);
 assert.match(component, /localStorage\.setItem\(FROZEN_INTRO_STORAGE_KEY, "1"\)/);
+assert.match(component, /INTRO_REPLAY_PARAM = "intro"/);
+assert.match(component, /URLSearchParams\(window\.location\.search\)/);
+assert.match(component, /searchParams\.get\(INTRO_REPLAY_PARAM\) === "1"/);
 assert.match(component, />\s*Skip\s*</);
 assert.match(component, /Raid data, forged from combat logs\./);
 
