@@ -128,54 +128,107 @@ export function UploadCinematicIntro() {
       <div className="frozen-aggro-figure" aria-hidden="true">
         <div className="frozen-aggro-boss-aura" />
         <div className="frozen-aggro-shadow" />
-        <svg viewBox="0 0 260 330" className="frozen-aggro-warlord">
+        <svg viewBox="0 0 360 470" className="frozen-aggro-warlord">
           <defs>
-            <linearGradient id="frozenArmorGradient" x1="0" x2="1" y1="0" y2="1">
-              <stop offset="0%" stopColor="#102f45" />
-              <stop offset="52%" stopColor="#071421" />
-              <stop offset="100%" stopColor="#02050a" />
+            <filter id="frozenPaintEdge" x="-18%" y="-18%" width="136%" height="136%">
+              <feTurbulence baseFrequency="0.012" numOctaves="2" seed="12" type="fractalNoise" result="grain" />
+              <feDisplacementMap in="SourceGraphic" in2="grain" scale="1.8" />
+            </filter>
+            <filter id="frozenSoftGlow" x="-30%" y="-30%" width="160%" height="160%">
+              <feGaussianBlur stdDeviation="3.5" />
+            </filter>
+            <linearGradient id="frozenArmorGradient" x1="0.08" x2="0.96" y1="0.04" y2="0.98">
+              <stop offset="0%" stopColor="#174a61" />
+              <stop offset="38%" stopColor="#071929" />
+              <stop offset="100%" stopColor="#01040a" />
+            </linearGradient>
+            <linearGradient id="frozenCapeGradient" x1="0.5" x2="0.5" y1="0" y2="1">
+              <stop offset="0%" stopColor="#123449" />
+              <stop offset="42%" stopColor="#04111d" />
+              <stop offset="100%" stopColor="#010307" />
             </linearGradient>
             <linearGradient id="frozenBladeGradient" x1="0" x2="0" y1="0" y2="1">
               <stop offset="0%" stopColor="#e9fbff" />
               <stop offset="45%" stopColor="#4cd5f5" />
               <stop offset="100%" stopColor="#071421" />
             </linearGradient>
-            <radialGradient id="frozenRuneGradient" cx="50%" cy="44%" r="62%">
+            <radialGradient id="frozenRuneGradient" cx="50%" cy="46%" r="62%">
               <stop offset="0%" stopColor="#f2fcff" />
               <stop offset="44%" stopColor="#40d8f8" />
               <stop offset="100%" stopColor="#0a293c" />
             </radialGradient>
+            <radialGradient id="frozenFurGradient" cx="50%" cy="36%" r="68%">
+              <stop offset="0%" stopColor="#d8f7ff" stopOpacity="0.88" />
+              <stop offset="44%" stopColor="#6fdaf0" stopOpacity="0.34" />
+              <stop offset="100%" stopColor="#0a1624" stopOpacity="0.08" />
+            </radialGradient>
           </defs>
-          <path d="M130 50C76 84 45 153 49 326h162c5-172-27-241-81-276Z" className="frozen-aggro-cape" />
-          <path d="M30 135 78 86l32 42-31 69-52-14-17-29 20-19Z" className="frozen-aggro-pauldron" />
-          <path d="M230 135 182 86l-32 42 31 69 52-14 17-29-20-19Z" className="frozen-aggro-pauldron" />
-          <path d="M130 6 143 46 160 24 158 68 190 52 163 94H97L70 52l32 16-2-44 17 22 13-40Z" className="frozen-aggro-crown" />
-          <path d="M130 10 103 45l10 34h34l10-34-27-35Z" className="frozen-aggro-helm" />
-          <path d="M103 45 83 63l26 13-12-21 6-10Z" className="frozen-aggro-helm-wing" />
-          <path d="M157 45 177 63l-26 13 12-21-6-10Z" className="frozen-aggro-helm-wing" />
-          <path
-            d="M83 114c11-32 27-48 47-48s36 16 47 48l-16 38 12 142H87l12-142-16-38Z"
-            className="frozen-aggro-body"
-          />
-          <g className="frozen-aggro-front-details">
-            <circle cx="70" cy="133" r="16" className="frozen-aggro-shoulder-rune" />
-            <circle cx="190" cy="133" r="16" className="frozen-aggro-shoulder-rune" />
-            <path d="M62 128h16M70 120v25M182 128h16M190 120v25" className="frozen-aggro-armor-line" />
-            <path d="M106 122h48l-10 56h-28l-10-56Z" className="frozen-aggro-chest" />
-            <path d="M130 133 148 164 130 213 112 164 130 133Z" className="frozen-aggro-rune-core" />
-            <path d="M130 91 115 257l15 58 15-58-15-166Z" className="frozen-aggro-standing-blade" />
-          </g>
-          <path d="M95 280 76 326h39l15-46H95Z" className="frozen-aggro-leg" />
-          <path d="M165 280 184 326h-39l-15-46h35Z" className="frozen-aggro-leg" />
-          <path d="M66 187 93 162l21 31-19 43-37 5-17-20 25-34Z" className="frozen-aggro-gauntlet" />
-          <path d="M194 187 167 162l-21 31 19 43 37 5 17-20-25-34Z" className="frozen-aggro-gauntlet" />
-          <g className="frozen-aggro-front-details">
-            <path d="M125 84h11" className="frozen-aggro-eye-line frozen-aggro-eyes" />
-            <path d="M103 84h11" className="frozen-aggro-eye-line frozen-aggro-eyes" />
-            <path d="M130 73 119 106h22l-11-33Z" className="frozen-aggro-face-rune" />
-            <path d="M130 102 121 190h18l-9-88Z" className="frozen-aggro-rune-blade" />
-            <path d="M117 190h26l7 12-20 15-20-15 7-12Z" className="frozen-aggro-blade-hilt" />
-            <path d="M93 151 111 182M167 151 149 182M105 220h50M99 248h62" className="frozen-aggro-armor-line" />
+          <g className="frozen-aggro-painted-figure" filter="url(#frozenPaintEdge)">
+            <path
+              d="M180 58C121 88 80 154 58 283c-8 47-13 105-14 174h272c-1-69-6-127-14-174-22-129-63-195-122-225Z"
+              className="frozen-aggro-cape"
+            />
+            <path d="M84 274c-12 51-18 105-18 183h50c1-77-5-136-32-183Z" className="frozen-aggro-cloak-tear" />
+            <path d="M276 274c12 51 18 105 18 183h-50c-1-77 5-136 32-183Z" className="frozen-aggro-cloak-tear" />
+            <path d="M180 94c-52 32-84 102-91 224h182c-7-122-39-192-91-224Z" className="frozen-aggro-back-shadow" />
+            <path
+              d="M34 190c12-47 53-82 101-88l34 57-43 98-78-4-31-31 17-32Z"
+              className="frozen-aggro-pauldron"
+            />
+            <path
+              d="M326 190c-12-47-53-82-101-88l-34 57 43 98 78-4 31-31-17-32Z"
+              className="frozen-aggro-pauldron"
+            />
+            <path d="M45 191 11 151l67 16 43-55 17 47-52 79-41-47Z" className="frozen-aggro-shoulder-spike" />
+            <path d="M315 191 349 151l-67 16-43-55-17 47 52 79 41-47Z" className="frozen-aggro-shoulder-spike" />
+            <path
+              d="M180 6l17 62 34-43-3 69 59-35-48 76H121L73 59l59 35-3-69 34 43 17-62Z"
+              className="frozen-aggro-crown"
+            />
+            <path d="M180 17c-28 30-45 67-42 104l20 46h44l20-46c3-37-14-74-42-104Z" className="frozen-aggro-helm" />
+            <path d="M137 89 92 116l59 20-18-33 4-14Z" className="frozen-aggro-helm-wing" />
+            <path d="M223 89l45 27-59 20 18-33-4-14Z" className="frozen-aggro-helm-wing" />
+            <path
+              d="M104 164c20-36 45-54 76-54s56 18 76 54l-21 73 15 211H110l15-211-21-73Z"
+              className="frozen-aggro-body"
+            />
+            <path
+              d="M93 150c28-30 58-45 87-45s59 15 87 45c-18 20-45 31-87 31s-69-11-87-31Z"
+              className="frozen-aggro-fur-mantle"
+            />
+            <path d="M116 170c16 14 37 21 64 21s48-7 64-21l-13 62H129l-13-62Z" className="frozen-aggro-plate" />
+            <g className="frozen-aggro-front-details">
+              <path
+                d="M151 105c8-20 17-34 29-43 12 9 21 23 29 43l-10 48h-38l-10-48Z"
+                className="frozen-aggro-mask-plate"
+              />
+              <path d="M164 134h32l12 18-28 24-28-24 12-18Z" className="frozen-aggro-mask-shadow" />
+              <path d="M164 126h-23l-19 22 37 5 5-27ZM196 126h23l19 22-37 5-5-27Z" className="frozen-aggro-cheek-plate" />
+              <path d="M180 83 164 129h32L180 83Z" className="frozen-aggro-face-rune" />
+              <path d="M158 122h16" className="frozen-aggro-eye-line frozen-aggro-eyes" />
+              <path d="M186 122h16" className="frozen-aggro-eye-line frozen-aggro-eyes" />
+              <circle cx="94" cy="183" r="23" className="frozen-aggro-shoulder-rune" />
+              <circle cx="266" cy="183" r="23" className="frozen-aggro-shoulder-rune" />
+              <path
+                d="M82 183h24M94 169v28M254 183h24M266 169v28"
+                className="frozen-aggro-armor-line"
+              />
+              <path d="M143 210h74l-16 84h-42l-16-84Z" className="frozen-aggro-chest" />
+              <path d="M180 212 207 258 180 333 153 258 180 212Z" className="frozen-aggro-rune-core" />
+              <path
+                d="M180 150 160 374l20 86 20-86-20-224Z"
+                className="frozen-aggro-standing-blade"
+              />
+              <path
+                d="M126 218c18 20 31 33 54 33s36-13 54-33M126 267c22 18 36 28 54 28s32-10 54-28M139 318h82M131 354h98"
+                className="frozen-aggro-rune-veins"
+              />
+            </g>
+            <path d="M127 385 103 457h55l22-72h-53Z" className="frozen-aggro-leg" />
+            <path d="M233 385 257 457h-55l-22-72h53Z" className="frozen-aggro-leg" />
+            <path d="M80 255 121 223l31 40-29 61-61 10-28-27 46-52Z" className="frozen-aggro-gauntlet" />
+            <path d="M280 255 239 223l-31 40 29 61 61 10 28-27-46-52Z" className="frozen-aggro-gauntlet" />
+            <path d="M71 277c19 17 43 28 70 31M289 277c-19 17-43 28-70 31" className="frozen-aggro-armor-line" />
           </g>
         </svg>
       </div>

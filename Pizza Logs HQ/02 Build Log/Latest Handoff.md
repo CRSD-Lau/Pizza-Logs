@@ -12,6 +12,38 @@
 
 ## What Was Done This Session
 
+### Upload cinematic painted-warrior follow-up
+
+- User rejected the prior blocky-looking figure and asked to use the attached fan-art mood reference.
+- Did not add the attached image to the repo, because the project requirement remains no external/copyrighted image assets. The reference was used as mood direction only.
+- Replaced the weak geometric warlord SVG with a more detailed original CSS/SVG figure:
+  - roughened SVG edge filter,
+  - layered cape and cloak tears,
+  - larger jagged ice crown and shoulder silhouette,
+  - mask plates and cheek plates,
+  - fur/ice mantle,
+  - heavier pauldrons/gauntlets,
+  - glowing rune blade, rune core, and rune-vein linework.
+- Kept the upload-page-only mount, body portal, Skip button, Escape skip, reduced-motion fallback, and no-localStorage replay behavior.
+
+### Verification for painted-warrior follow-up
+
+- Red source test first: `tests/frozen-intro-source.test.ts` failed on missing `frozen-aggro-painted-figure`.
+- Focused upload cinematic source test after implementation: passed.
+- TypeScript: bundled Node running `node_modules/typescript/bin/tsc --noEmit` -> passed.
+- ESLint: bundled Node running `node_modules/eslint/bin/eslint.js . --max-warnings=0` -> passed.
+- Full standalone TypeScript test sweep: 27/27 tests passed with JSX and alias support in the local runner.
+- `git diff --check` -> passed.
+- Production build from the main checkout: bundled Node running `node_modules/next/dist/bin/next build` -> passed.
+- Browser/IAB automation still failed with Windows OS access denied, so Chrome/CDP fallback verified against the built app on `http://127.0.0.1:3007`:
+  - painted SVG layers mount on Upload,
+  - `Skip` unmounts and upload input remains usable,
+  - refresh replays the intro,
+  - Escape skips the intro,
+  - `/players` does not show the intro,
+  - reduced-motion hides the figure and unmounts quickly,
+  - mobile keeps `Skip` visible and avoids horizontal overflow.
+
 ### Upload cinematic fan-art pass
 
 - Reworked the upload-only cinematic into a larger original frozen raid-boss splash:
