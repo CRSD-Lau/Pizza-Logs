@@ -12,6 +12,33 @@
 
 ## What Was Done This Session
 
+### Cinematic intro quality and mobile polish
+
+- Re-rendered the cinematic intro as a sharper web asset set:
+  - desktop WebM/MP4: `2560x1440`, `60fps`, `5.2s`, `312` generated frames,
+  - mobile WebM/MP4: `1080x1920`, `60fps`, `5.2s`, `312` generated frames,
+  - desktop and mobile posters.
+- Replaced the public desktop intro files and added mobile-specific files:
+  - `public/intro/pizza-logs-cinematic-intro.webm`
+  - `public/intro/pizza-logs-cinematic-intro.mp4`
+  - `public/intro/pizza-logs-cinematic-poster.jpg`
+  - `public/intro/pizza-logs-cinematic-intro-mobile.webm`
+  - `public/intro/pizza-logs-cinematic-intro-mobile.mp4`
+  - `public/intro/pizza-logs-cinematic-poster-mobile.jpg`
+- Updated `FrozenLogbookIntro` to select portrait video sources at `(max-width: 640px)` and use the matching mobile poster for reduced-motion/mobile poster display.
+- Tightened intro mobile chrome sizing and full-screen CSS so the brand/skip button remain composed on narrow viewports.
+- Fixed `/bosses` mobile layout:
+  - desktop keeps the dense table-style grid,
+  - mobile now uses boss summary cards instead of forcing the desktop grid,
+  - boss cards use the shared `getRevealClassName` / `getRevealStyle` animation style,
+  - narrow mobile metric cells now have overflow/min-width guards.
+- Review artifacts were generated under ignored temp output:
+  - `tmp-mobile-check/hd_cinematic_intro/rendered_v2/`
+  - `tmp-mobile-check/hd_cinematic_intro/site_integration/local-intro-desktop-final.png`
+  - `tmp-mobile-check/hd_cinematic_intro/site_integration/local-intro-mobile-final.png`
+  - `tmp-mobile-check/hd_cinematic_intro/site_integration/local-bosses-mobile-500-final.png`
+- No parser behavior, Prisma schema, DB queries, upload logic, admin gates, or Railway config were changed.
+
 ### HD cinematic intro design spec
 
 - User rejected the strip-derived previews as too low quality for a modern website intro.
@@ -555,8 +582,9 @@ Preserved the main-branch queue fix while merging modernization:
 
 ## Current State
 
-- HD cinematic intro integration is live on production at `5a6ef83`. The old CSS-only particle/title intro has been replaced by the generated cinematic video assets in `public/intro/`.
-- Intro behavior: `FrozenLogbookIntro` now plays the HD cinematic on hard page load, uses WebM with MP4 fallback, lasts up to `5200ms`, exits on video end, keeps `Skip`, and avoids replaying on every internal route change. Reduced-motion users get the static poster and a short `350ms` timeout.
+- HD cinematic intro integration is live on production at `5a6ef83`, and this branch now contains a higher-resolution replacement pass ready for deploy. The old CSS-only particle/title intro has been replaced by generated cinematic video assets in `public/intro/`.
+- Intro behavior: `FrozenLogbookIntro` now plays the HD cinematic on hard page load, uses WebM with MP4 fallback, selects portrait mobile WebM/MP4 sources at `(max-width: 640px)`, lasts up to `5200ms`, exits on video end, keeps `Skip`, and avoids replaying on every internal route change. Reduced-motion users get the matching desktop/mobile poster and a short `350ms` timeout.
+- `/bosses` now has a mobile-native boss card layout with the same shared reveal animation style used on the other table/card pages. The desktop table grid is preserved for medium-and-up screens.
 - Raid session encounter displays now preserve parsed/session timestamp order when `startedAt` values are available. The existing ICC progression order remains the fallback for boss displays that do not have encounter timestamps, such as leaderboard boss-board ordering.
 - Gear card item-level and visible per-item `GS` display now distinguish raw item score from character contribution, and hunter one-hand weapons now count at normal item score in the total. This fixes Notlich-style hunter dual Scourgeborne Waraxe cards showing `168` instead of `531` each and removes the hunter weighting that kept Notlich's total below the in-game value.
 - Existing `wow_items` rows affected by the old ranged/relic map are repaired by migration `20260504120000_repair_wow_item_ranged_relic_equip_locs`.
@@ -579,7 +607,9 @@ Preserved the main-branch queue fix while merging modernization:
 
 ## Exact Next Step
 
-For cinematic intro: production is deployed and verified with headless screenshots. A human visual pass in a normal browser is still useful to judge taste and playback smoothness outside headless capture.
+For cinematic intro: deploy the higher-resolution desktop/mobile asset pass, then hard-refresh production in a normal browser to judge playback smoothness/taste and try the Skip button manually.
+
+For `/bosses`: after deploy, open `/bosses` on a phone-sized viewport with real production data and confirm the mobile boss cards animate in without horizontal overflow.
 
 For GearScore: after deploy, spot-check `/players/Notlich`; both heroic Scourgeborne Waraxe cards should show `GS 531`, and the summary should be much closer to the in-game `6237` because hunter weapon weighting is no longer applied.
 

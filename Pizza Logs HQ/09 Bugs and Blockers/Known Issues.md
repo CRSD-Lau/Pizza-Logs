@@ -19,6 +19,7 @@
 
 | Bug | Fix | Commit |
 |---|---|---|
+| `/bosses` forced a desktop-style grid on mobile and did not use the shared reveal animation style | Added a mobile boss-card layout, preserved the desktop grid for medium-and-up screens, wired shared reveal helpers, and added overflow/min-width guards for narrow metric cells | this commit |
 | Frozen Logbook intro was easy to miss because it only showed once per browser | Removed the normal `localStorage` gate, increased the normal duration to `3000ms`, and tied the overlay to `usePathname()` so it appears on initial load and every client-side route change | a499de0 |
 | Shared reveal animations did not run in production because Tailwind purged dynamic helper classes | Added a Tailwind safelist for `reveal-item` and `boss-reveal-item`, plus source coverage in `tests/ui-animation.test.ts` | this commit |
 | Player Recent Encounters and weekly Boss Kills This Week did not use ICC kill order | Added `buildPlayerRecentEncounters` and `buildWeeklyBossKills`; player recent encounters, `/weekly`, and `/api/weekly` now use the shared ICC progression order | this commit |

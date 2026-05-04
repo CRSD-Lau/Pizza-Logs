@@ -2,7 +2,9 @@
 
 ## Status
 
-**HD cinematic intro is live on production at `5a6ef83`.** The strip-derived previews were rejected as too low quality, so the approved direction uses a generated pre-rendered HD cinematic: ICC/WotLK-inspired frost-armored raid boss, blizzard approach, blue-eye reveal, close-up hold, and a clean fade into the real Pizza Logs page. The app now serves `public/intro/pizza-logs-cinematic-intro.webm`, MP4 fallback, and poster art. `FrozenLogbookIntro` plays the cinematic on hard page load, keeps `Skip`, exits on video end or after `5200ms`, and gives reduced-motion users the poster with a short `350ms` timeout.
+**HD cinematic intro is live on production at `5a6ef83`, and a higher-resolution replacement pass is ready on the current branch.** The strip-derived previews were rejected as too low quality, so the approved direction uses a generated pre-rendered HD cinematic: ICC/WotLK-inspired frost-armored raid boss, blizzard approach, blue-eye reveal, close-up hold, and a clean fade into the real Pizza Logs page. The app now serves sharper desktop `2560x1440` WebM/MP4 assets plus portrait mobile `1080x1920` WebM/MP4 assets, all at `60fps`, `5.2s`, and `312` rendered frames. `FrozenLogbookIntro` plays the cinematic on hard page load, picks mobile sources at `(max-width: 640px)`, keeps `Skip`, exits on video end or after `5200ms`, and gives reduced-motion users the matching desktop/mobile poster with a short `350ms` timeout.
+
+**`/bosses` mobile layout is fixed on the current branch.** Desktop keeps the dense table-style grid, while mobile now uses boss summary cards with the same shared reveal animation classes used elsewhere. Narrow metric cells have overflow guards so long values cannot push the page sideways.
 
 **The old CSS-only intro is superseded by the cinematic intro.** Production assets and layout bundle were verified after Railway deploy. The shared reveal animations for boss/player/leaderboard rows and `lib/ui-animation.ts` remain in place.
 
@@ -46,7 +48,8 @@
 
 | Task | Type | Notes |
 |------|------|-------|
-| Human-pass HD cinematic intro | VERIFY | Production is deployed and headless-verified; hard-refresh production in a normal browser to judge playback smoothness/taste and try the Skip button manually |
+| Human-pass HD cinematic intro | VERIFY | After this higher-resolution pass deploys, hard-refresh production in a normal browser to judge playback smoothness/taste and try the Skip button manually |
+| Verify `/bosses` mobile cards | VERIFY | After deploy, open `/bosses` on a phone-sized viewport and confirm animated boss cards fit without horizontal overflow |
 | Verify Notlich gear cards | VERIFY | After deploy, `/players/Notlich` should show both heroic Scourgeborne Waraxes as `GS 531` |
 | Verify production admin config | DEPLOY | Confirm Railway Web Service has `ADMIN_SECRET`; do not set `ADMIN_COOKIE_SECURE=false` in Railway |
 | Verify Railway deploy logs | DEPLOY | Use Railway dashboard/CLI; local Railway CLI is not installed |
