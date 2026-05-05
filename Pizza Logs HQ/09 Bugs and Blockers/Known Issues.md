@@ -19,7 +19,7 @@
 
 | Bug | Fix | Commit |
 |---|---|---|
-| Local test server was split across stale Next listeners and a generated `.next/` cache that hit OneDrive `readlink` failures | Stopped stale local Next listeners on `3000`, `3005`, and `3006`, cleared generated `.next/`, and restarted the local stack on `.env.local` ports: app `3001`, parser `8000`, PostgreSQL `5432` | local setup |
+| Local test server was split across stale Next listeners and a generated `.next/` cache that hit OneDrive `readlink` failures, and it would not persist after reboot | Stopped stale local Next listeners on `3000`, `3005`, and `3006`, cleared generated `.next/`, added repo-local start/stop scripts, and registered Windows Task Scheduler task `PizzaLogsLocalTestServer` to start the app/parser at logon and watch every 5 minutes | local setup |
 | Cinematic intro still had blunt still-to-still switching and soft downscaled detail | Replaced the public intro ladder with a continuity-first 4K-master render: 16:9 and 9:16 masters are rendered first, downscaled into viewport-specific MP4/WebM assets, and the intro timeout was updated to `7200ms` | this commit |
 | `/bosses` forced a desktop-style grid on mobile and did not use the shared reveal animation style | Added a mobile boss-card layout, preserved the desktop grid for medium-and-up screens, wired shared reveal helpers, and added overflow/min-width guards for narrow metric cells | this commit |
 | Frozen Logbook intro was easy to miss because it only showed once per browser | Removed the normal `localStorage` gate, increased the normal duration to `3000ms`, and tied the overlay to `usePathname()` so it appears on initial load and every client-side route change | a499de0 |

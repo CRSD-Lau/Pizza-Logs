@@ -36,6 +36,32 @@
   - public pages and `/admin` did not render `Database unavailable` or parser-unreachable warnings.
 - The local DB is ready but empty for raid/player data until a combat log is uploaded or sample data is imported.
 
+### Persistent local test server after reboot
+
+- Added repo-local PowerShell helpers:
+  - `scripts/start-local-test-server.ps1`
+  - `scripts/stop-local-test-server.ps1`
+- The startup helper is idempotent:
+  - starts PostgreSQL service `postgresql-x64-16` if Windows reports it stopped,
+  - starts the parser on `127.0.0.1:8000` only when that port is not already listening,
+  - starts Next.js dev on `127.0.0.1:3001` only when that port is not already listening,
+  - verifies parser `/health` and app `/` before exiting,
+  - writes local ignored logs to `.next-local-test-server.log`, `.next-parser-test-server.*.log`, and `.next-test-server-3001.*.log`.
+- Registered Windows Task Scheduler task `PizzaLogsLocalTestServer`:
+  - runs at Neil's Windows logon,
+  - repeats every 5 minutes as a watchdog,
+  - uses `StartWhenAvailable`,
+  - uses least-privileged interactive user context,
+  - runs `powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts/start-local-test-server.ps1`.
+- Verification completed:
+  - manual startup helper run while servers were already running exited `0` and did not duplicate listeners,
+  - stopped parser/web with `scripts/stop-local-test-server.ps1`,
+  - triggered `PizzaLogsLocalTestServer` manually,
+  - task returned `LastTaskResult: 0`,
+  - parser and web came back on `127.0.0.1:8000` and `127.0.0.1:3001`,
+  - watchdog run at the next 5-minute interval detected existing listeners and did not duplicate them,
+  - HTTP checks returned 200 for `http://127.0.0.1:3001/`, `http://127.0.0.1:8000/health`, and `http://127.0.0.1:3001/api/bosses`.
+
 ### 4K-master responsive intro deployment
 
 - Promoted the approved continuity review ladder into `public/intro/` for deployment.
@@ -692,7 +718,7 @@ Preserved the main-branch queue fix while merging modernization:
 
 ## Current State
 
-- Local test server is running correctly on `http://127.0.0.1:3001`, with the Python parser on `http://127.0.0.1:8000` and PostgreSQL 16 running on `localhost:5432`. The local database has seeded boss/realm/item metadata, but no uploads, encounters, or players yet.
+- Local test server is running correctly on `http://127.0.0.1:3001`, with the Python parser on `http://127.0.0.1:8000` and PostgreSQL 16 running on `localhost:5432`. Windows Task Scheduler task `PizzaLogsLocalTestServer` now restarts the local test stack at logon and checks it every 5 minutes. The local database has seeded boss/realm/item metadata, but no uploads, encounters, or players yet.
 - HD cinematic intro integration now has a 4K-master responsive public asset ladder: `1920x1080`, `2560x1440`, and `3840x2160` desktop landscape plus `1080x1920` and `2160x3840` mobile portrait, all at `60fps`, `7.2s`, and `432` frames.
 - Intro behavior: `FrozenLogbookIntro` now plays the HD cinematic on hard page load, uses WebM with MP4 fallback, selects mobile/desktop resolutions through ordered `<source media>` entries, lasts up to `7200ms`, exits on video end, keeps `Skip`, and avoids replaying on every internal route change. Reduced-motion users get the matching poster through the same media-query ladder and a short `350ms` timeout.
 - `/bosses` now has a mobile-native boss card layout with the same shared reveal animation style used on the other table/card pages. The desktop table grid is preserved for medium-and-up screens.
@@ -718,7 +744,7 @@ Preserved the main-branch queue fix while merging modernization:
 
 ## Exact Next Step
 
-For local testing: use `http://127.0.0.1:3001`. Upload `C:/Users/neil_/OneDrive/Desktop/PizzaLogs/WoWCombatLog/WoWCombatLog.txt` or run the relevant import/sync flow to populate the fresh local DB before judging player, raid, search, or leaderboard data.
+For local testing: use `http://127.0.0.1:3001`. The scheduled task `PizzaLogsLocalTestServer` should keep the app/parser alive after reboot/logon and restart them within 5 minutes if either exits. Upload `C:/Users/neil_/OneDrive/Desktop/PizzaLogs/WoWCombatLog/WoWCombatLog.txt` or run the relevant import/sync flow to populate the fresh local DB before judging player, raid, search, or leaderboard data.
 
 For cinematic intro: after this 4K-master asset ladder deploy, hard-refresh production in normal desktop, 1440p/4K, and phone-sized browsers to judge playback smoothness/taste and try the Skip button manually. If the asset still feels soft, the next quality step is higher-resolution key art, because the retained source key shots are still much lower resolution than the 4K output ladder.
 

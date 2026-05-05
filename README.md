@@ -199,6 +199,17 @@ python main.py                 # runs on :8000
 npm run dev                    # runs on :3000
 ```
 
+### Windows persistent local test server
+
+Neil's desktop checkout uses `.env.local` with the web app on `http://127.0.0.1:3001`, the parser on `http://127.0.0.1:8000`, and local PostgreSQL on `localhost:5432`.
+
+```powershell
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\start-local-test-server.ps1
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\stop-local-test-server.ps1
+```
+
+The startup script is idempotent: it starts missing services and leaves already-running listeners alone. On Neil's machine, Windows Task Scheduler task `PizzaLogsLocalTestServer` runs it at logon and every 5 minutes as a watchdog.
+
 ---
 
 ## Supported Content

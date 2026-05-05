@@ -6,6 +6,8 @@
 
 **Local server smoke checks passed.** Parser `/health`, the main public pages, `/admin/login`, `/admin`, and the database-backed APIs all returned HTTP 200. The local DB has `53` bosses, `4` realms, and `38,610` item rows, but no players, uploads, or encounters yet.
 
+**Local test server now persists after reboot/logon.** Repo scripts `scripts/start-local-test-server.ps1` and `scripts/stop-local-test-server.ps1` manage the local app/parser stack. Windows Task Scheduler task `PizzaLogsLocalTestServer` runs the startup helper at Neil's logon and every 5 minutes as a watchdog. Verification stopped the current web/parser processes, manually triggered the scheduled task, confirmed `LastTaskResult: 0`, and rechecked HTTP 200 for the app, parser health, and `/api/bosses`.
+
 **HD cinematic intro now has a 4K-master responsive resolution ladder.** The strip-derived previews were rejected as too low quality, so the approved direction uses a generated pre-rendered HD cinematic: ICC/WotLK-inspired frost-armored raid boss, blizzard approach, blue-eye reveal, close-up hold, and a clean fade into the real Pizza Logs page. The app now serves desktop `1920x1080`, `2560x1440`, and `3840x2160` WebM/MP4/poster assets plus mobile portrait `1080x1920` and `2160x3840` WebM/MP4/poster assets, all at `60fps`, `7.2s`, and `432` rendered frames. `FrozenLogbookIntro` plays the cinematic on hard page load, picks mobile/desktop resolutions through ordered `<source media>` entries, keeps `Skip`, exits on video end or after `7200ms`, and gives reduced-motion users the matching poster through the same media-query ladder with a short `350ms` timeout. The latest deployment pass renders from 4K masters first, then downscales per viewport, with the review source retained under ignored `animations/hd_cinematic_intro/continuity_review/responsive_4k_ladder_review/`.
 
 **`/bosses` mobile layout is fixed and deployed.** Desktop keeps the dense table-style grid, while mobile now uses boss summary cards with the same shared reveal animation classes used elsewhere. Narrow metric cells have overflow guards so long values cannot push the page sideways.
@@ -56,7 +58,7 @@
 
 | Task | Type | Notes |
 |------|------|-------|
-| Use local test server | VERIFY | App is live at `http://127.0.0.1:3001`; parser is `http://127.0.0.1:8000`; local DB is seeded but empty for raid/player data |
+| Use local test server | VERIFY | App is live at `http://127.0.0.1:3001`; parser is `http://127.0.0.1:8000`; scheduled task `PizzaLogsLocalTestServer` restarts them at logon and checks every 5 minutes |
 | Human-pass HD cinematic intro | VERIFY | After 4K-master ladder deploy, hard-refresh production in normal desktop, 1440p/4K, and phone-sized browsers to judge playback smoothness/taste and try the Skip button manually |
 | Verify `/bosses` mobile cards | DONE | Neil confirmed the boss page mobile fix is in and responsiveness is good; leave `/bosses` alone unless a new regression appears |
 | Verify Notlich gear cards | VERIFY | After deploy, `/players/Notlich` should show both heroic Scourgeborne Waraxes as `GS 531` |
