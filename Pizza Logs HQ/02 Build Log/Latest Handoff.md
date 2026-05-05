@@ -12,6 +12,30 @@
 
 ## What Was Done This Session
 
+### 4K-master responsive intro deployment
+
+- Promoted the approved continuity review ladder into `public/intro/` for deployment.
+- New public asset ladder is generated from 4K masters first:
+  - desktop fallback WebM/MP4/poster: `1920x1080`, `60fps`, `7.2s`, `432` rendered frames,
+  - desktop QHD WebM/MP4/poster: `2560x1440`, `60fps`, `7.2s`, `432` rendered frames,
+  - desktop 4K WebM/MP4/poster: `3840x2160`, `60fps`, `7.2s`, `432` rendered frames,
+  - mobile portrait WebM/MP4/poster: `1080x1920`, `60fps`, `7.2s`, `432` rendered frames,
+  - mobile 4K portrait WebM/MP4/poster: `2160x3840`, `60fps`, `7.2s`, `432` rendered frames.
+- The render source remains the continuity-first storm-wipe pass under ignored `animations/hd_cinematic_intro/continuity_review/responsive_4k_ladder_review/`.
+- WebM files were regenerated from the promoted MP4s so the existing browser source ladder keeps WebM-first playback with MP4 fallback.
+- `FrozenLogbookIntro` timeout and intro CSS animations were extended to `7200ms` / `7.2s`.
+- `/bosses`, parser behavior, Prisma schema, DB queries, upload logic, admin gates, and Railway config were not changed.
+- Validation completed before push:
+  - `tests/frozen-intro-source.test.ts` -> passed,
+  - media metadata inspection -> every public intro video is `60fps`, `7.2s`, `432` frames, and at its intended dimensions,
+  - poster metadata inspection -> every public poster matches its intended dimensions,
+  - TypeScript -> passed,
+  - ESLint -> passed,
+  - parser suite -> `123 passed`,
+  - `git diff --check` -> passed,
+  - production build -> passed,
+  - local built app served the refreshed public intro assets with HTTP 200.
+
 ### Crisp cinematic intro pass
 
 - Rebuilt the public intro asset ladder with a smoother, cleaner render pass:
@@ -634,8 +658,8 @@ Preserved the main-branch queue fix while merging modernization:
 
 ## Current State
 
-- HD cinematic intro integration now has a crisp responsive public asset ladder: `1920x1080`, `2560x1440`, and `3840x2160` desktop landscape plus `1080x1920` and `2160x3840` mobile portrait, all at `60fps`, `6.4s`, and `384` frames.
-- Intro behavior: `FrozenLogbookIntro` now plays the HD cinematic on hard page load, uses WebM with MP4 fallback, selects mobile/desktop resolutions through ordered `<source media>` entries, lasts up to `6400ms`, exits on video end, keeps `Skip`, and avoids replaying on every internal route change. Reduced-motion users get the matching poster through the same media-query ladder and a short `350ms` timeout.
+- HD cinematic intro integration now has a 4K-master responsive public asset ladder: `1920x1080`, `2560x1440`, and `3840x2160` desktop landscape plus `1080x1920` and `2160x3840` mobile portrait, all at `60fps`, `7.2s`, and `432` frames.
+- Intro behavior: `FrozenLogbookIntro` now plays the HD cinematic on hard page load, uses WebM with MP4 fallback, selects mobile/desktop resolutions through ordered `<source media>` entries, lasts up to `7200ms`, exits on video end, keeps `Skip`, and avoids replaying on every internal route change. Reduced-motion users get the matching poster through the same media-query ladder and a short `350ms` timeout.
 - `/bosses` now has a mobile-native boss card layout with the same shared reveal animation style used on the other table/card pages. The desktop table grid is preserved for medium-and-up screens.
 - Raid session encounter displays now preserve parsed/session timestamp order when `startedAt` values are available. The existing ICC progression order remains the fallback for boss displays that do not have encounter timestamps, such as leaderboard boss-board ordering.
 - Gear card item-level and visible per-item `GS` display now distinguish raw item score from character contribution, and hunter one-hand weapons now count at normal item score in the total. This fixes Notlich-style hunter dual Scourgeborne Waraxe cards showing `168` instead of `531` each and removes the hunter weighting that kept Notlich's total below the in-game value.
@@ -659,7 +683,7 @@ Preserved the main-branch queue fix while merging modernization:
 
 ## Exact Next Step
 
-For cinematic intro: after this crisp asset ladder deploy, hard-refresh production in normal desktop, 1440p/4K, and phone-sized browsers to judge playback smoothness/taste and try the Skip button manually. If the asset still feels soft, the next quality step is higher-resolution key art, because the retained source key shots are much lower resolution than the 4K output ladder.
+For cinematic intro: after this 4K-master asset ladder deploy, hard-refresh production in normal desktop, 1440p/4K, and phone-sized browsers to judge playback smoothness/taste and try the Skip button manually. If the asset still feels soft, the next quality step is higher-resolution key art, because the retained source key shots are still much lower resolution than the 4K output ladder.
 
 For `/bosses`: Neil confirmed the mobile fix is in and responsiveness is good. Leave it alone unless a new regression is reported.
 

@@ -7,7 +7,7 @@ const component = readFileSync(path.join(root, "components", "intro", "FrozenLog
 const globals = readFileSync(path.join(root, "app", "globals.css"), "utf8");
 const layout = readFileSync(path.join(root, "app", "layout.tsx"), "utf8");
 
-assert.match(component, /INTRO_DURATION_MS = 6400/);
+assert.match(component, /INTRO_DURATION_MS = 7200/);
 assert.match(component, /INTRO_VIDEO_1080_WEBM = "\/intro\/pizza-logs-cinematic-intro-1080p.webm"/);
 assert.match(component, /INTRO_VIDEO_1080_MP4 = "\/intro\/pizza-logs-cinematic-intro-1080p.mp4"/);
 assert.match(component, /INTRO_VIDEO_1440_WEBM = "\/intro\/pizza-logs-cinematic-intro.webm"/);
@@ -52,8 +52,8 @@ assert.match(globals, /\.frozen-intro-video/);
 assert.match(globals, /\.frozen-intro-vignette/);
 assert.match(globals, /\.frozen-intro-brand/);
 assert.match(globals, /100lvh/);
-assert.match(globals, /frozenIntroOverlay 6\.4s/);
-assert.match(globals, /frozenIntroBrand 6\.4s/);
+assert.match(globals, /frozenIntroOverlay 7\.2s/);
+assert.match(globals, /frozenIntroBrand 7\.2s/);
 assert.match(globals, /@media \(max-width: 640px\)[\s\S]*\.frozen-intro-brand span/);
 assert.match(globals, /@media \(max-width: 640px\)[\s\S]*\.frozen-intro-skip/);
 assert.doesNotMatch(globals, /\.frozen-intro-particle/);

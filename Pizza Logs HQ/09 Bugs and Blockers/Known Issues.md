@@ -19,6 +19,7 @@
 
 | Bug | Fix | Commit |
 |---|---|---|
+| Cinematic intro still had blunt still-to-still switching and soft downscaled detail | Replaced the public intro ladder with a continuity-first 4K-master render: 16:9 and 9:16 masters are rendered first, downscaled into viewport-specific MP4/WebM assets, and the intro timeout was updated to `7200ms` | this commit |
 | `/bosses` forced a desktop-style grid on mobile and did not use the shared reveal animation style | Added a mobile boss-card layout, preserved the desktop grid for medium-and-up screens, wired shared reveal helpers, and added overflow/min-width guards for narrow metric cells | this commit |
 | Frozen Logbook intro was easy to miss because it only showed once per browser | Removed the normal `localStorage` gate, increased the normal duration to `3000ms`, and tied the overlay to `usePathname()` so it appears on initial load and every client-side route change | a499de0 |
 | Shared reveal animations did not run in production because Tailwind purged dynamic helper classes | Added a Tailwind safelist for `reveal-item` and `boss-reveal-item`, plus source coverage in `tests/ui-animation.test.ts` | this commit |
