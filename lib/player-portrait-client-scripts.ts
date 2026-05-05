@@ -346,8 +346,16 @@ export function buildPlayerPortraitUserscript(options: PlayerPortraitUserscriptO
       capturePortraitForIdentity(identity);
     };
 
-    const captureModelViewerFramePortrait = function captureModelViewerFramePortrait() {
-      capturePortraitForIdentity(warmaneReferrerIdentity() || readRecentWarmaneTarget());
+    const captureModelViewerFramePortrait = function captureModelViewerFramePortrait(attempt = 0) {
+      const identity = warmaneReferrerIdentity() || readRecentWarmaneTarget();
+      if (!identity) {
+        if (attempt < 12) {
+          setTimeout(() => captureModelViewerFramePortrait(attempt + 1), 500);
+        }
+        return;
+      }
+
+      capturePortraitForIdentity(identity);
     };
 
     const classIconUrl = function classIconUrl(className: string | undefined) {
@@ -534,7 +542,7 @@ export function buildPlayerPortraitUserscript(options: PlayerPortraitUserscriptO
       const pathname = location.pathname.toLowerCase();
       const isWowhead = hostname === "wowhead.com" || hostname.endsWith(".wowhead.com");
       const isZamimg = hostname === "wow.zamimg.com";
-      return (isWowhead || isZamimg) && pathname.includes("modelviewer") && Boolean(warmaneReferrerIdentity() || readRecentWarmaneTarget());
+      return (isWowhead || isZamimg) && pathname.includes("modelviewer");
     };
 
     if (isWarmaneCharacterPage()) {
@@ -548,7 +556,7 @@ export function buildPlayerPortraitUserscript(options: PlayerPortraitUserscriptO
 
     if (isWowheadModelViewerFrame()) {
       if (document.readyState === "loading") {
-        document.addEventListener("DOMContentLoaded", captureModelViewerFramePortrait, { once: true });
+        document.addEventListener("DOMContentLoaded", () => captureModelViewerFramePortrait(), { once: true });
       } else {
         captureModelViewerFramePortrait();
       }
@@ -568,7 +576,7 @@ export function buildPlayerPortraitUserscript(options: PlayerPortraitUserscriptO
     "// ==UserScript==",
     `// @name         Pizza Logs Warmane Portraits${nameSuffix}`,
     `// @namespace    ${pizzaLogsOrigin}`,
-    "// @version      0.5.0",
+    "// @version      0.5.1",
     "// @description  Replaces Pizza Logs character initials with Warmane Armory portraits or cached rendered character faces when available.",
     "// @match        https://pizza-logs-production.up.railway.app/*",
     "// @match        http://localhost:3000/*",

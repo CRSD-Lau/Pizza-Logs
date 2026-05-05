@@ -2,7 +2,7 @@
 
 ## Active Focus
 
-Local Warmane import scripts are ready for laptop testing through the `codex-dev -> main` PR.
+Fixing the Warmane portrait userscript so rendered faces can be captured more reliably.
 
 ## Current Branch Rule
 
@@ -10,6 +10,8 @@ Codex works on `codex-dev`, pushes `origin/codex-dev`, and opens PRs into `main`
 
 ## This Session
 
+- Fixed the portrait userscript modelviewer handoff race that caused rendered portrait capture to be skipped when the iframe loaded before the Warmane parent page wrote the character target.
+- Bumped the portrait userscript to `0.5.1`.
 - Added local userscript builders and install endpoints for gear, guild roster, and player portraits.
 - Added local install links and URL fields on `/admin` for browser-assisted local imports.
 - Kept production userscript URLs unchanged for Railway production.
@@ -24,11 +26,12 @@ Codex works on `codex-dev`, pushes `origin/codex-dev`, and opens PRs into `main`
 | Add local gear userscript | DONE | `http://127.0.0.1:3001/api/admin/armory-gear/userscript.local.user.js` |
 | Add local roster userscript | DONE | `http://127.0.0.1:3001/api/admin/guild-roster/userscript.local.user.js` |
 | Add local portrait userscript | DONE | `http://127.0.0.1:3001/api/player-portraits/userscript.local.user.js` |
+| Fix portrait capture race | DONE | Modelviewer frames now retry until Warmane target handoff is available |
 | Run validation | DONE | Focused tests, lint, type-check, build, and live local endpoint checks passed |
 | Recover local 3001 server | DONE | Cleared generated `.next`, restarted `PizzaLogsLocalTestServer`, verified `/` and local userscript endpoint return 200 |
-| Branch publication | DONE | `codex-dev` pushed to `origin/codex-dev` |
-| PR creation | NEEDS NEIL | Codex GitHub connector returned 403; open `https://github.com/CRSD-Lau/Pizza-Logs/compare/main...codex-dev?expand=1` |
-| Human review | NEXT | Neil installs local scripts from `/admin` and uses them when targeting the laptop DB |
+| Branch publication | NEXT | Commit and push `codex-dev` |
+| PR creation | NEXT | Use `C:\Program Files\GitHub CLI\gh.exe`; connector still lacks PR write permission |
+| Human review | NEXT | Neil updates portrait userscript from `/admin` and tests by visiting Warmane character pages |
 
 ## Open Follow-Ups
 

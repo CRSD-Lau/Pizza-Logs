@@ -37,6 +37,7 @@ No confirmed app-breaking bugs are active as of the documentation audit.
 | Favicon 404 | Added `public/favicon.ico` and `app/icon.svg` |
 | Local dev DB outage crashed pages | Public/admin pages catch DB connection failures and show warnings |
 | Local 3001 server missing `.next` chunks | Stopped stale Next process, removed generated `.next`, restarted `PizzaLogsLocalTestServer`, and verified local page/scripts return 200 |
+| Portrait userscript stayed on class icons when modelviewer loaded before Warmane handoff | Modelviewer frames now retry for the Tampermonkey character handoff before giving up |
 
 ## Not Bugs
 

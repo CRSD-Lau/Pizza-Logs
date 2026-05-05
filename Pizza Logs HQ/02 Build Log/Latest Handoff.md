@@ -15,6 +15,7 @@
 - Live app: https://pizza-logs-production.up.railway.app
 - Local app target for Neil's laptop: http://127.0.0.1:3001
 - Local Git executable fallback: `C:\Program Files\Git\cmd\git.exe`
+- GitHub CLI executable: `C:\Program Files\GitHub CLI\gh.exe`
 - Parser correctness remains the highest-risk area.
 
 ## Current Implementation Snapshot
@@ -31,6 +32,8 @@
 
 ## Local Userscript Changes This Session
 
+- Fixed a portrait userscript race where Wowhead/Zamimg modelviewer frames could load before the Warmane parent page wrote the character handoff into Tampermonkey storage. The frame now treats modelviewer pages as relevant immediately and retries for the handoff before giving up.
+- Bumped the portrait userscript to `0.5.1`.
 - Added local install endpoints:
   - `http://127.0.0.1:3001/api/admin/armory-gear/userscript.local.user.js`
   - `http://127.0.0.1:3001/api/admin/guild-roster/userscript.local.user.js`
@@ -65,6 +68,7 @@ PowerShell/npm shims in `node_modules/.bin` hit OneDrive reparse-point `Access i
 | `tests/gear-import-bookmarklet.test.ts` | Passed |
 | `tests/guild-roster-admin-panel.test.ts` | Passed |
 | `tests/local-userscript-routes.test.ts` | Passed |
+| `tests/warmane-portrait.test.ts` | Passed |
 | ESLint via bundled Node | Passed |
 | TypeScript `tsc --noEmit` via bundled Node | Passed |
 | Next production build via bundled Node | Passed |
@@ -81,8 +85,4 @@ PowerShell/npm shims in `node_modules/.bin` hit OneDrive reparse-point `Access i
 
 ## Exact Next Step
 
-`codex-dev` is pushed to GitHub. Open the PR manually because the GitHub connector returned 403 when Codex tried to create it:
-
-https://github.com/CRSD-Lau/Pizza-Logs/compare/main...codex-dev?expand=1
-
-After the PR is open, use the local install links from `/admin` when importing into the laptop database.
+Commit and push the portrait userscript race fix on `codex-dev`, open a PR with `C:\Program Files\GitHub CLI\gh.exe`, and have Neil reinstall or update the portrait userscript from `/admin`.

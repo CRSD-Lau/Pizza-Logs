@@ -45,7 +45,7 @@ assert.match(userscript, /\/\/ @name\s+Pizza Logs Warmane Portraits/);
 assert.match(localUserscript, /\/\/ @name\s+Pizza Logs Warmane Portraits \(Local\)/);
 assert.match(localUserscript, new RegExp(`// @namespace\\s+${PIZZA_LOGS_LOCAL_ORIGIN.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}`));
 assert.match(localUserscript, new RegExp(`// @downloadURL\\s+${LOCAL_PORTRAIT_USERSCRIPT_URL.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}`));
-assert.match(userscript, /\/\/ @version\s+0\.5\.0/);
+assert.match(userscript, /\/\/ @version\s+0\.5\.1/);
 assert.match(userscript, /\/\/ @match\s+https:\/\/pizza-logs-production\.up\.railway\.app\/\*/);
 assert.match(userscript, /\/\/ @match\s+http:\/\/localhost:3000\/\*/);
 assert.match(userscript, /\/\/ @match\s+http:\/\/127\.0\.0\.1:3000\/\*/);
@@ -642,6 +642,74 @@ async function verifyUserscriptCachesModelViewerCanvasUsingRecentWarmaneTargetWh
   assert.match(cache["lordaeron:lausudo"]?.url ?? "", /^data:image\/png;base64,/);
 }
 
+async function verifyModelViewerFrameWaitsForWarmaneTargetHandoff() {
+  const gmStorage = new Map<string, string>();
+  const timers: Array<() => void> = [];
+
+  const modelViewerContext = {
+    console: { info() {}, warn() {}, error() {} },
+    URL,
+    location: {
+      hostname: "wow.zamimg.com",
+      pathname: "/modelviewer/live/viewer.html",
+      href: "https://wow.zamimg.com/modelviewer/live/viewer.html?model=humanfemale",
+    },
+    setTimeout: (callback: () => void) => {
+      timers.push(callback);
+      return timers.length;
+    },
+    localStorage: {
+      getItem: (key: string) => gmStorage.get(`local:${key}`) ?? null,
+      setItem: (key: string, value: string) => gmStorage.set(`local:${key}`, value),
+      removeItem: (key: string) => gmStorage.delete(`local:${key}`),
+    },
+    GM_getValue: (key: string, fallback: string) => gmStorage.get(key) ?? fallback,
+    GM_setValue: (key: string, value: string) => gmStorage.set(key, value),
+    document: {
+      readyState: "complete",
+      referrer: "",
+      addEventListener() {},
+      documentElement: { outerHTML: "<html></html>" },
+      createElement: canvasElementFactory(),
+      querySelectorAll: (selector: string) => {
+        if (selector === "canvas") {
+          return [{
+            width: 512,
+            height: 512,
+            toDataURL: () => fakePortraitDataUrl("d"),
+          }];
+        }
+        return [];
+      },
+    },
+    DOMParser: class {
+      parseFromString() {
+        return {
+          querySelector: () => null,
+          querySelectorAll: () => [],
+        };
+      }
+    },
+  };
+
+  vm.runInNewContext(userscript, modelViewerContext);
+
+  gmStorage.set("pizzaLogsWarmanePortraitTarget", JSON.stringify({
+    name: "Lausudo",
+    realm: "Lordaeron",
+    writtenAt: Date.now(),
+  }));
+
+  for (let i = 0; i < 5 && timers.length > 0; i++) {
+    const callback = timers.shift();
+    callback?.();
+    await Promise.resolve();
+  }
+
+  const cache = JSON.parse(gmStorage.get("pizzaLogsWarmanePortraitCacheV3") ?? "{}");
+  assert.match(cache["lordaeron:lausudo"]?.url ?? "", /^data:image\/png;base64,/);
+}
+
 async function verifyUserscriptRejectsBlankModelViewerCanvas() {
   const gmStorage = new Map<string, string>();
   const timers: Promise<void>[] = [];
@@ -787,6 +855,7 @@ Promise.all([
   verifyUserscriptCachesWarmaneCanvasForPizzaLogsPages(),
   verifyUserscriptCachesWowheadFrameCanvasUsingWarmaneReferrer(),
   verifyUserscriptCachesModelViewerCanvasUsingRecentWarmaneTargetWhenReferrerIsBlank(),
+  verifyModelViewerFrameWaitsForWarmaneTargetHandoff(),
   verifyUserscriptRejectsBlankModelViewerCanvas(),
   verifyUserscriptRejectsBlankWebglModelViewerCanvas(),
 ])
