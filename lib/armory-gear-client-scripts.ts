@@ -1,6 +1,15 @@
 export const PIZZA_LOGS_ORIGIN = "https://pizza-logs-production.up.railway.app";
+export const PIZZA_LOGS_LOCAL_ORIGIN = "http://127.0.0.1:3001";
 export const USERSCRIPT_PATH = "/api/admin/armory-gear/userscript.user.js";
+export const LOCAL_USERSCRIPT_PATH = "/api/admin/armory-gear/userscript.local.user.js";
 export const USERSCRIPT_URL = `${PIZZA_LOGS_ORIGIN}${USERSCRIPT_PATH}`;
+export const LOCAL_USERSCRIPT_URL = `${PIZZA_LOGS_LOCAL_ORIGIN}${LOCAL_USERSCRIPT_PATH}`;
+
+type UserscriptOptions = {
+  pizzaLogsOrigin?: string;
+  userscriptUrl?: string;
+  nameSuffix?: string;
+};
 
 export function buildBookmarklet(): string {
   const script = function pizzaLogsGearImport() {
@@ -304,7 +313,10 @@ export function buildSingleBookmarklet(): string {
   return `javascript:(${script.toString().replace("__PIZZA_LOGS_ORIGIN__", PIZZA_LOGS_ORIGIN)})()`;
 }
 
-export function buildUserscript(): string {
+export function buildUserscript(options: UserscriptOptions = {}): string {
+  const pizzaLogsOrigin = options.pizzaLogsOrigin ?? PIZZA_LOGS_ORIGIN;
+  const userscriptUrl = options.userscriptUrl ?? USERSCRIPT_URL;
+  const nameSuffix = options.nameSuffix ?? "";
   const script = function pizzaLogsWarmaneAutoSync() {
     const pizzaLogsOrigin = "__PIZZA_LOGS_ORIGIN__";
     const secretKey = "pizzaLogsAdminSecret";
@@ -596,18 +608,18 @@ export function buildUserscript(): string {
 
   return [
     "// ==UserScript==",
-    "// @name         Pizza Logs Warmane Gear Auto Sync",
-    "// @namespace    https://pizza-logs-production.up.railway.app",
+    `// @name         Pizza Logs Warmane Gear Auto Sync${nameSuffix}`,
+    `// @namespace    ${pizzaLogsOrigin}`,
     "// @version      1.7.0",
     "// @description  Automatically sync Pizza Logs gear cache from Warmane Armory pages.",
     "// @match        https://armory.warmane.com/character/*",
     "// @match        http://armory.warmane.com/character/*",
-    `// @downloadURL   ${USERSCRIPT_URL}`,
-    `// @updateURL     ${USERSCRIPT_URL}`,
+    `// @downloadURL   ${userscriptUrl}`,
+    `// @updateURL     ${userscriptUrl}`,
     "// @run-at       document-idle",
     "// @grant        GM_xmlhttpRequest",
     "// ==/UserScript==",
     "",
-    `(${script.toString().replace("__PIZZA_LOGS_ORIGIN__", PIZZA_LOGS_ORIGIN)})();`,
+    `(${script.toString().replace("__PIZZA_LOGS_ORIGIN__", pizzaLogsOrigin)})();`,
   ].join("\n");
 }

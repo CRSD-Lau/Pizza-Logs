@@ -1,5 +1,8 @@
 import Link from "next/link";
-import { GUILD_ROSTER_USERSCRIPT_URL } from "../../lib/guild-roster-client-scripts";
+import {
+  GUILD_ROSTER_USERSCRIPT_URL,
+  LOCAL_GUILD_ROSTER_USERSCRIPT_URL,
+} from "../../lib/guild-roster-client-scripts";
 
 export function GuildRosterSyncPanel({
   rosterCount,
@@ -45,14 +48,35 @@ export function GuildRosterSyncPanel({
             The floating Pizza Logs Roster Sync button will import the full roster into Pizza Logs.
           </p>
         </div>
-        <a
-          href={GUILD_ROSTER_USERSCRIPT_URL}
-          target="_blank"
-          rel="noreferrer"
-          className="inline-flex rounded border border-gold-dim px-4 py-2 text-sm text-gold transition-colors hover:border-gold hover:text-gold-light"
-        >
-          Install / Update Roster Userscript
-        </a>
+        <div className="flex flex-wrap gap-2">
+          <a
+            href={GUILD_ROSTER_USERSCRIPT_URL}
+            target="_blank"
+            rel="noreferrer"
+            className="inline-flex rounded border border-gold-dim px-4 py-2 text-sm text-gold transition-colors hover:border-gold hover:text-gold-light"
+          >
+            Install / Update Roster Userscript
+          </a>
+          <a
+            href={LOCAL_GUILD_ROSTER_USERSCRIPT_URL}
+            target="_blank"
+            rel="noreferrer"
+            className="inline-flex rounded border border-gold-dim px-4 py-2 text-sm text-gold transition-colors hover:border-gold hover:text-gold-light"
+          >
+            Install Local Roster Userscript
+          </a>
+        </div>
+        <div className="space-y-2">
+          <label className="block text-xs font-bold uppercase tracking-widest text-text-dim">
+            Roster local install URL
+          </label>
+          <textarea
+            readOnly
+            rows={2}
+            value={LOCAL_GUILD_ROSTER_USERSCRIPT_URL}
+            className="w-full rounded border border-gold-dim bg-bg-deep p-3 font-mono text-xs text-text-secondary"
+          />
+        </div>
         <div className="space-y-2">
           <label className="block text-xs font-bold uppercase tracking-widest text-text-dim">
             Warmane guild page

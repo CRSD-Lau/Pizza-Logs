@@ -1,5 +1,5 @@
-import { USERSCRIPT_URL } from "../../lib/armory-gear-client-scripts";
-import { PORTRAIT_USERSCRIPT_URL } from "../../lib/player-portrait-client-scripts";
+import { LOCAL_USERSCRIPT_URL, USERSCRIPT_URL } from "../../lib/armory-gear-client-scripts";
+import { LOCAL_PORTRAIT_USERSCRIPT_URL, PORTRAIT_USERSCRIPT_URL } from "../../lib/player-portrait-client-scripts";
 
 export function GearImportBookmarklet() {
   return (
@@ -20,14 +20,24 @@ export function GearImportBookmarklet() {
         <li>After that, visiting Warmane Armory will auto-sync at most once per hour.</li>
       </ol>
       <div className="space-y-2">
-        <a
-          href={USERSCRIPT_URL}
-          target="_blank"
-          rel="noreferrer"
-          className="inline-flex rounded border border-gold-dim px-4 py-2 text-sm text-gold transition-colors hover:border-gold hover:text-gold-light"
-        >
-          Install / Update Gear Userscript
-        </a>
+        <div className="flex flex-wrap gap-2">
+          <a
+            href={USERSCRIPT_URL}
+            target="_blank"
+            rel="noreferrer"
+            className="inline-flex rounded border border-gold-dim px-4 py-2 text-sm text-gold transition-colors hover:border-gold hover:text-gold-light"
+          >
+            Install / Update Gear Userscript
+          </a>
+          <a
+            href={LOCAL_USERSCRIPT_URL}
+            target="_blank"
+            rel="noreferrer"
+            className="inline-flex rounded border border-gold-dim px-4 py-2 text-sm text-gold transition-colors hover:border-gold hover:text-gold-light"
+          >
+            Install Local Gear Userscript
+          </a>
+        </div>
         <label className="block text-xs font-bold uppercase tracking-widest text-text-dim">
           Gear hosted install URL
         </label>
@@ -35,6 +45,15 @@ export function GearImportBookmarklet() {
           readOnly
           rows={2}
           value={USERSCRIPT_URL}
+          className="w-full rounded border border-gold-dim bg-bg-deep p-3 font-mono text-xs text-text-secondary"
+        />
+        <label className="block text-xs font-bold uppercase tracking-widest text-text-dim">
+          Gear local install URL
+        </label>
+        <textarea
+          readOnly
+          rows={2}
+          value={LOCAL_USERSCRIPT_URL}
           className="w-full rounded border border-gold-dim bg-bg-deep p-3 font-mono text-xs text-text-secondary"
         />
       </div>
@@ -50,14 +69,24 @@ export function GearImportBookmarklet() {
           </p>
         </div>
         <div className="space-y-2">
-          <a
-            href={PORTRAIT_USERSCRIPT_URL}
-            target="_blank"
-            rel="noreferrer"
-            className="inline-flex rounded border border-gold-dim px-4 py-2 text-sm text-gold transition-colors hover:border-gold hover:text-gold-light"
-          >
-            Install / Update Portrait Userscript
-          </a>
+          <div className="flex flex-wrap gap-2">
+            <a
+              href={PORTRAIT_USERSCRIPT_URL}
+              target="_blank"
+              rel="noreferrer"
+              className="inline-flex rounded border border-gold-dim px-4 py-2 text-sm text-gold transition-colors hover:border-gold hover:text-gold-light"
+            >
+              Install / Update Portrait Userscript
+            </a>
+            <a
+              href={LOCAL_PORTRAIT_USERSCRIPT_URL}
+              target="_blank"
+              rel="noreferrer"
+              className="inline-flex rounded border border-gold-dim px-4 py-2 text-sm text-gold transition-colors hover:border-gold hover:text-gold-light"
+            >
+              Install Local Portrait Userscript
+            </a>
+          </div>
           <label className="block text-xs font-bold uppercase tracking-widest text-text-dim">
             Portrait hosted install URL
           </label>
@@ -65,6 +94,15 @@ export function GearImportBookmarklet() {
             readOnly
             rows={2}
             value={PORTRAIT_USERSCRIPT_URL}
+            className="w-full rounded border border-gold-dim bg-bg-deep p-3 font-mono text-xs text-text-secondary"
+          />
+          <label className="block text-xs font-bold uppercase tracking-widest text-text-dim">
+            Portrait local install URL
+          </label>
+          <textarea
+            readOnly
+            rows={2}
+            value={LOCAL_PORTRAIT_USERSCRIPT_URL}
             className="w-full rounded border border-gold-dim bg-bg-deep p-3 font-mono text-xs text-text-secondary"
           />
         </div>

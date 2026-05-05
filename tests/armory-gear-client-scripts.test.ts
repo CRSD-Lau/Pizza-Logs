@@ -1,17 +1,39 @@
 import assert from "node:assert/strict";
 import vm from "node:vm";
 import { buildGuildRosterUserscript } from "../lib/guild-roster-client-scripts";
-import { buildUserscript, PIZZA_LOGS_ORIGIN, USERSCRIPT_PATH, USERSCRIPT_URL } from "../lib/armory-gear-client-scripts";
+import {
+  buildUserscript,
+  LOCAL_USERSCRIPT_PATH,
+  LOCAL_USERSCRIPT_URL,
+  PIZZA_LOGS_LOCAL_ORIGIN,
+  PIZZA_LOGS_ORIGIN,
+  USERSCRIPT_PATH,
+  USERSCRIPT_URL,
+} from "../lib/armory-gear-client-scripts";
 
 const userscript = buildUserscript();
+const localUserscript = buildUserscript({
+  pizzaLogsOrigin: PIZZA_LOGS_LOCAL_ORIGIN,
+  userscriptUrl: LOCAL_USERSCRIPT_URL,
+  nameSuffix: " (Local)",
+});
 
 assert.equal(PIZZA_LOGS_ORIGIN, "https://pizza-logs-production.up.railway.app");
+assert.equal(PIZZA_LOGS_LOCAL_ORIGIN, "http://127.0.0.1:3001");
 assert.equal(USERSCRIPT_PATH, "/api/admin/armory-gear/userscript.user.js");
+assert.equal(LOCAL_USERSCRIPT_PATH, "/api/admin/armory-gear/userscript.local.user.js");
 assert.equal(USERSCRIPT_URL, `${PIZZA_LOGS_ORIGIN}/api/admin/armory-gear/userscript.user.js`);
+assert.equal(LOCAL_USERSCRIPT_URL, `${PIZZA_LOGS_LOCAL_ORIGIN}/api/admin/armory-gear/userscript.local.user.js`);
 assert.match(userscript, /\/\/ ==UserScript==/);
 assert.match(userscript, /\/\/ @name\s+Pizza Logs Warmane Gear Auto Sync/);
 assert.match(userscript, new RegExp(`// @downloadURL\\s+${USERSCRIPT_URL.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}`));
 assert.match(userscript, new RegExp(`// @updateURL\\s+${USERSCRIPT_URL.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}`));
+assert.match(localUserscript, /\/\/ @name\s+Pizza Logs Warmane Gear Auto Sync \(Local\)/);
+assert.match(localUserscript, new RegExp(`// @namespace\\s+${PIZZA_LOGS_LOCAL_ORIGIN.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}`));
+assert.match(localUserscript, new RegExp(`// @downloadURL\\s+${LOCAL_USERSCRIPT_URL.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}`));
+assert.match(localUserscript, new RegExp(`// @updateURL\\s+${LOCAL_USERSCRIPT_URL.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}`));
+assert.match(localUserscript, new RegExp(`const pizzaLogsOrigin = "${PIZZA_LOGS_LOCAL_ORIGIN.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}";`));
+assert.match(localUserscript, /\/api\/admin\/armory-gear\/import/);
 assert.match(userscript, /\/\/ @version\s+1\.7\.0/);
 assert.match(userscript, /\/\/ @match\s+https:\/\/armory\.warmane\.com\/character\/\*/);
 assert.match(userscript, /\/\/ @match\s+http:\/\/armory\.warmane\.com\/character\/\*/);

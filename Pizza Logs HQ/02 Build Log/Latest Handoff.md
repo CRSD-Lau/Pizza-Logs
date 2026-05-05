@@ -13,6 +13,7 @@
 - Pizza Logs is Codex-first: work happens on `codex-dev`, then PRs go into `main`.
 - Railway production deploys from `main` after Neil merges a PR.
 - Live app: https://pizza-logs-production.up.railway.app
+- Local app target for Neil's laptop: http://127.0.0.1:3001
 - Local Git executable fallback: `C:\Program Files\Git\cmd\git.exe`
 - Parser correctness remains the highest-risk area.
 
@@ -26,8 +27,19 @@
 - Warmane heroic/Gunship behavior is handled with marker/session/crew-death evidence where available, but some cases remain impossible to prove from logs alone.
 - Gear pages read cached Warmane snapshots, enrich from local AzerothCore `wow_items`, and attempt Warmane live fetches only as best effort.
 - Supported roster/gear/portrait refresh path is browser-assisted userscripts from `/admin`.
+- Production userscripts still post to Railway production; local userscripts post to `http://127.0.0.1:3001`.
 
-## Documentation Audit Changes This Session
+## Local Userscript Changes This Session
+
+- Added local install endpoints:
+  - `http://127.0.0.1:3001/api/admin/armory-gear/userscript.local.user.js`
+  - `http://127.0.0.1:3001/api/admin/guild-roster/userscript.local.user.js`
+  - `http://127.0.0.1:3001/api/player-portraits/userscript.local.user.js`
+- Added local install buttons and URL fields on the admin gear/portrait and guild roster panels.
+- Local gear and roster scripts still run on Warmane Armory pages, but they post imports into the laptop dev server instead of production.
+- Local portrait script also matches `localhost:3001` and `127.0.0.1:3001` Pizza Logs pages.
+
+## Recent Documentation Audit Changes
 
 - Rewrote root README, contributor workflow, security policy, branch workflow docs, and review checklist around the current `codex-dev -> PR -> main` process.
 - Removed duplicate or historical-only docs:
@@ -41,19 +53,25 @@
 - Corrected stale claims that heroic and Gunship behavior are completely undetectable.
 - Documented open repo issues found during audit: upload lacks hard server-side size enforcement, and some env/example variables had drifted from actual code usage.
 
-## Verification To Run Before PR
+## Verification This Session
 
-`npm` is not on PATH in this Windows shell, so equivalent bundled Node/Python entry points were used.
+PowerShell/npm shims in `node_modules/.bin` hit OneDrive reparse-point `Access is denied`, so equivalent bundled Node entry points were used for the same tools.
 
 | Check | Result |
 |---|---|
+| `tests/armory-gear-client-scripts.test.ts` | Passed |
+| `tests/guild-roster-client-scripts.test.ts` | Passed |
+| `tests/player-portrait-client-scripts.test.ts` | Passed |
+| `tests/gear-import-bookmarklet.test.ts` | Passed |
+| `tests/guild-roster-admin-panel.test.ts` | Passed |
+| `tests/local-userscript-routes.test.ts` | Passed |
 | ESLint via bundled Node | Passed |
 | TypeScript `tsc --noEmit` via bundled Node | Passed |
-| Parser tests via bundled Python | 123 passed |
 | Next production build via bundled Node | Passed |
-| Markdown stale-reference scan | No broken wiki links; only valid `do not push main` guardrail remained |
-| `git diff --check` | Passed |
+| Local `3001` gear userscript endpoint | 200, contained local origin and local script name |
+| Local `3001` roster userscript endpoint | 200, contained local origin and local script name |
+| Local `3001` portrait userscript endpoint | 200, contained local origin and local script name |
 
 ## Exact Next Step
 
-Review the `codex-dev -> main` documentation cleanup PR and merge when ready. If the branch has not yet been published in the current run, commit the scoped cleanup, push `origin/codex-dev`, and open that PR first.
+Commit and push the local userscript endpoint/UI changes on `codex-dev`, then use the local install links from `/admin` when importing into the laptop database.

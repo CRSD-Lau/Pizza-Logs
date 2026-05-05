@@ -2,11 +2,18 @@ import assert from "node:assert/strict";
 import vm from "node:vm";
 import {
   buildPlayerPortraitUserscript,
+  LOCAL_PORTRAIT_USERSCRIPT_URL,
   PORTRAIT_USERSCRIPT_PATH,
   PORTRAIT_USERSCRIPT_URL,
 } from "../lib/player-portrait-client-scripts";
+import { PIZZA_LOGS_LOCAL_ORIGIN } from "../lib/armory-gear-client-scripts";
 
 const userscript = buildPlayerPortraitUserscript();
+const localUserscript = buildPlayerPortraitUserscript({
+  pizzaLogsOrigin: PIZZA_LOGS_LOCAL_ORIGIN,
+  userscriptUrl: LOCAL_PORTRAIT_USERSCRIPT_URL,
+  nameSuffix: " (Local)",
+});
 const fakePortraitDataUrl = (fill = "a") => "data:image/png;base64," + fill.repeat(9000);
 const visibleCanvasPixels = () => {
   const pixels = new Uint8ClampedArray(96 * 96 * 4);
@@ -32,12 +39,18 @@ const canvasElementFactory = (pixels = visibleCanvasPixels()) => (tagName: strin
 
 assert.equal(PORTRAIT_USERSCRIPT_PATH, "/api/player-portraits/userscript.user.js");
 assert.equal(PORTRAIT_USERSCRIPT_URL, "https://pizza-logs-production.up.railway.app/api/player-portraits/userscript.user.js");
+assert.equal(LOCAL_PORTRAIT_USERSCRIPT_URL, "http://127.0.0.1:3001/api/player-portraits/userscript.local.user.js");
 assert.match(userscript, /\/\/ ==UserScript==/);
 assert.match(userscript, /\/\/ @name\s+Pizza Logs Warmane Portraits/);
+assert.match(localUserscript, /\/\/ @name\s+Pizza Logs Warmane Portraits \(Local\)/);
+assert.match(localUserscript, new RegExp(`// @namespace\\s+${PIZZA_LOGS_LOCAL_ORIGIN.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}`));
+assert.match(localUserscript, new RegExp(`// @downloadURL\\s+${LOCAL_PORTRAIT_USERSCRIPT_URL.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}`));
 assert.match(userscript, /\/\/ @version\s+0\.5\.0/);
 assert.match(userscript, /\/\/ @match\s+https:\/\/pizza-logs-production\.up\.railway\.app\/\*/);
 assert.match(userscript, /\/\/ @match\s+http:\/\/localhost:3000\/\*/);
 assert.match(userscript, /\/\/ @match\s+http:\/\/127\.0\.0\.1:3000\/\*/);
+assert.match(userscript, /\/\/ @match\s+http:\/\/localhost:3001\/\*/);
+assert.match(userscript, /\/\/ @match\s+http:\/\/127\.0\.0\.1:3001\/\*/);
 assert.match(userscript, /\/\/ @match\s+https:\/\/armory\.warmane\.com\/character\/\*/);
 assert.match(userscript, /\/\/ @match\s+https:\/\/www\.wowhead\.com\/modelviewer\*/);
 assert.match(userscript, /\/\/ @match\s+https:\/\/wow\.zamimg\.com\/modelviewer\*/);

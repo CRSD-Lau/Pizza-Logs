@@ -1,12 +1,20 @@
-import { PIZZA_LOGS_ORIGIN } from "./armory-gear-client-scripts";
+import { PIZZA_LOGS_LOCAL_ORIGIN, PIZZA_LOGS_ORIGIN } from "./armory-gear-client-scripts";
 
 export const GUILD_ROSTER_USERSCRIPT_PATH = "/api/admin/guild-roster/userscript.user.js";
+export const LOCAL_GUILD_ROSTER_USERSCRIPT_PATH = "/api/admin/guild-roster/userscript.local.user.js";
 export const GUILD_ROSTER_USERSCRIPT_URL = `${PIZZA_LOGS_ORIGIN}${GUILD_ROSTER_USERSCRIPT_PATH}`;
+export const LOCAL_GUILD_ROSTER_USERSCRIPT_URL = `${PIZZA_LOGS_LOCAL_ORIGIN}${LOCAL_GUILD_ROSTER_USERSCRIPT_PATH}`;
 const WARMANE_GUILD_NAME = "Pizza+Warriors";
 const DISPLAY_GUILD_NAME = "PizzaWarriors";
 const WARMANE_REALM = "Lordaeron";
 
-function buildRosterScriptBody(autoRun: boolean): string {
+type GuildRosterUserscriptOptions = {
+  pizzaLogsOrigin?: string;
+  userscriptUrl?: string;
+  nameSuffix?: string;
+};
+
+function buildRosterScriptBody(autoRun: boolean, pizzaLogsOrigin = PIZZA_LOGS_ORIGIN): string {
   const script = function pizzaLogsRosterSync() {
     const pizzaLogsOrigin = "__PIZZA_LOGS_ORIGIN__";
     const guildName = "__DISPLAY_GUILD_NAME__";
@@ -184,7 +192,7 @@ function buildRosterScriptBody(autoRun: boolean): string {
   };
 
   return `(${script.toString()
-    .replace("__PIZZA_LOGS_ORIGIN__", PIZZA_LOGS_ORIGIN)
+    .replace("__PIZZA_LOGS_ORIGIN__", pizzaLogsOrigin)
     .replaceAll("__DISPLAY_GUILD_NAME__", DISPLAY_GUILD_NAME)
     .replaceAll("__WARMANE_GUILD_NAME__", WARMANE_GUILD_NAME)
     .replaceAll("__WARMANE_REALM__", WARMANE_REALM)
@@ -198,21 +206,25 @@ export function buildGuildRosterBookmarklet(): string {
   return `javascript:${buildRosterScriptBody(true)}`;
 }
 
-export function buildGuildRosterUserscript(): string {
+export function buildGuildRosterUserscript(options: GuildRosterUserscriptOptions = {}): string {
+  const pizzaLogsOrigin = options.pizzaLogsOrigin ?? PIZZA_LOGS_ORIGIN;
+  const userscriptUrl = options.userscriptUrl ?? GUILD_ROSTER_USERSCRIPT_URL;
+  const nameSuffix = options.nameSuffix ?? "";
+
   return [
     "// ==UserScript==",
-    "// @name         Pizza Logs Warmane Guild Roster Sync",
-    "// @namespace    https://pizza-logs-production.up.railway.app",
+    `// @name         Pizza Logs Warmane Guild Roster Sync${nameSuffix}`,
+    `// @namespace    ${pizzaLogsOrigin}`,
     "// @version      1.0.4",
     "// @description  Sync Pizza Logs guild roster from Warmane Armory in-browser.",
     "// @match        https://armory.warmane.com/guild/*",
     "// @match        http://armory.warmane.com/guild/*",
-    `// @downloadURL   ${GUILD_ROSTER_USERSCRIPT_URL}`,
-    `// @updateURL     ${GUILD_ROSTER_USERSCRIPT_URL}`,
+    `// @downloadURL   ${userscriptUrl}`,
+    `// @updateURL     ${userscriptUrl}`,
     "// @run-at       document-idle",
     "// @grant        none",
     "// ==/UserScript==",
     "",
-    buildRosterScriptBody(false),
+    buildRosterScriptBody(false, pizzaLogsOrigin),
   ].join("\n");
 }

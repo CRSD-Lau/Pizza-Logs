@@ -2,7 +2,7 @@
 
 ## Active Focus
 
-Documentation freshness audit is ready to review through the `codex-dev -> main` PR.
+Local Warmane import scripts are ready for laptop testing through the `codex-dev -> main` PR.
 
 ## Current Branch Rule
 
@@ -10,23 +10,22 @@ Codex works on `codex-dev`, pushes `origin/codex-dev`, and opens PRs into `main`
 
 ## This Session
 
-- Synced `codex-dev` with `origin/main`.
-- Inventoried Markdown files and implementation source.
-- Deleted obsolete/duplicate docs.
-- Rewrote current setup, deployment, parser, security, workflow, and vault notes.
-- Kept parser fixture notes and community docs where they are still useful.
-- Added parser pytest coverage to GitHub Actions so CI matches parser-critical docs.
-- Validation passed locally with bundled runtimes: lint, type-check, production build, and 123 parser tests.
+- Added local userscript builders and install endpoints for gear, guild roster, and player portraits.
+- Added local install links and URL fields on `/admin` for browser-assisted local imports.
+- Kept production userscript URLs unchanged for Railway production.
+- Verified the three local endpoints on `http://127.0.0.1:3001`.
+- Validation passed locally with bundled runtimes: focused userscript/admin tests, lint, type-check, and production build.
 
 ## Next Actions
 
 | Task | Status | Notes |
 |---|---|---|
-| Finish doc rewrites | DONE | Docs are concise and code-backed |
-| Run validation | DONE | Lint, type-check, build, parser tests passed |
-| Review final diff | DONE | Confirmed intended docs, env example, PR template, and CI metadata only |
-| Branch publication | HANDOFF | Push/open PR if not already done; target is `main` |
-| Human review | NEXT | Neil reviews the documentation cleanup PR and merges when ready |
+| Add local gear userscript | DONE | `http://127.0.0.1:3001/api/admin/armory-gear/userscript.local.user.js` |
+| Add local roster userscript | DONE | `http://127.0.0.1:3001/api/admin/guild-roster/userscript.local.user.js` |
+| Add local portrait userscript | DONE | `http://127.0.0.1:3001/api/player-portraits/userscript.local.user.js` |
+| Run validation | DONE | Focused tests, lint, type-check, build, and live local endpoint checks passed |
+| Branch publication | NEXT | Commit and push `codex-dev` |
+| Human review | NEXT | Neil installs local scripts from `/admin` and uses them when targeting the laptop DB |
 
 ## Open Follow-Ups
 
@@ -34,6 +33,7 @@ Codex works on `codex-dev`, pushes `origin/codex-dev`, and opens PRs into `main`
 - Decide whether app-level upload rate limiting is needed or Railway-level controls are enough.
 - Continue using browser-assisted Warmane imports until a local automated sync agent is built.
 - Absorbs remain future parser work.
+- If the laptop port changes from `3001`, add matching local userscript variants or update the local constants.
 
 ## Reference
 
