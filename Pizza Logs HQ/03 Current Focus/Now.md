@@ -25,7 +25,7 @@ Codex works on `codex-dev`, pushes `origin/codex-dev`, and opens PRs into `main`
 - Validation passed: full parser pytest suite, TypeScript type-check, ESLint, Next production build, and `git diff --check`.
 - Set up and validated `C:\Projects\PizzaLogs` as the local working checkout.
 - Copied local env files into the local checkout, installed dependencies, generated Prisma Client, and created a parser Python 3.12 virtualenv.
-- Retargeted the desktop Start/Stop launchers and `scripts/desktop/*.cmd` templates to `C:\Projects\PizzaLogs`.
+- Moved the Start/Stop launchers into `C:\Projects\PizzaLogs` and made them path-relative to the repo root.
 - Verified `http://127.0.0.1:3001/` and `http://127.0.0.1:8000/health` from the new checkout.
 
 ## Next Actions
@@ -42,7 +42,7 @@ Codex works on `codex-dev`, pushes `origin/codex-dev`, and opens PRs into `main`
 | Heroic-to-normal regression | DONE | Later normal kills stay normal without direct heroic evidence |
 | Documentation update | DONE | README, parser contract, vault parser docs, security, decision log, known issues |
 | Validation | DONE | Parser tests, type-check, lint, build, diff check |
-| Local checkout migration | DONE | `C:\Projects\PizzaLogs` validated; launchers retargeted |
+| Local checkout migration | DONE | `C:\Projects\PizzaLogs` validated; launchers live in repo root |
 | Branch publication | DONE | Local checkout migration committed and ready to push on `codex-dev` |
 | PR update | DONE | Draft PR #11 opened from `codex-dev` into `main` |
 
@@ -55,7 +55,7 @@ Codex works on `codex-dev`, pushes `origin/codex-dev`, and opens PRs into `main`
 - Add more encounter-specific useful-damage exclusions as real Skada comparison data becomes available.
 - Add anonymized larger upload fixtures if Neil can provide safe samples.
 - If the laptop port changes from `3001`, add matching local roster/gear userscript variants or update the local constants.
-- If the Desktop launcher copies drift, update `scripts/desktop/*.cmd` and copy them back to `C:\Users\neil_\OneDrive\Desktop`.
+- If the local launchers need edits, update `C:\Projects\PizzaLogs\Start Pizza Logs Local.cmd` and `C:\Projects\PizzaLogs\Stop Pizza Logs Local.cmd`.
 - If DB-backed local routes return 500, start PostgreSQL service `postgresql-x64-16` from an elevated shell or by running the Start launcher as administrator.
 
 ## Reference

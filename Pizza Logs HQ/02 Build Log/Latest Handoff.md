@@ -18,11 +18,11 @@
 - Local Git executable fallback: `C:\Program Files\Git\cmd\git.exe`
 - GitHub CLI executable: `C:\Program Files\GitHub CLI\gh.exe`
 - Parser correctness remains the highest-risk area.
-- Local desktop launchers:
-  - `C:\Users\neil_\OneDrive\Desktop\Start Pizza Logs Local.cmd`
-  - `C:\Users\neil_\OneDrive\Desktop\Stop Pizza Logs Local.cmd`
-- The desktop launchers now point to `C:\Projects\PizzaLogs`; the old OneDrive checkout can stay as a temporary fallback.
-- The repeating `PizzaLogsLocalTestServer` scheduled task is disabled; use the desktop launchers instead.
+- Local repo-root launchers:
+  - `C:\Projects\PizzaLogs\Start Pizza Logs Local.cmd`
+  - `C:\Projects\PizzaLogs\Stop Pizza Logs Local.cmd`
+- The old Desktop launcher copies were moved into the repo root; the old OneDrive checkout can stay as a temporary fallback.
+- The repeating `PizzaLogsLocalTestServer` scheduled task is disabled; use the repo-root launchers instead.
 
 ## Current Implementation Snapshot
 
@@ -77,7 +77,7 @@ PowerShell/npm shims in `node_modules/.bin` hit OneDrive reparse-point `Access i
 - Copied local-only `.env.local` and `.env.sync-agent` from the OneDrive checkout into `C:\Projects\PizzaLogs`.
 - Installed web dependencies and generated Prisma Client in the local checkout.
 - Created the parser virtualenv with bundled Python 3.12 because system Python 3.14 could not install pinned `pydantic-core` without MSVC build tools.
-- Retargeted both desktop launcher files and repo launcher templates from the OneDrive checkout to `C:\Projects\PizzaLogs`.
+- Moved the Start/Stop launcher files from the Desktop into `C:\Projects\PizzaLogs` and made them resolve the repo path from their own location.
 - Verified the local web server returned 200 at `http://127.0.0.1:3001/` and parser health returned 200 at `http://127.0.0.1:8000/health`.
 - PostgreSQL service `postgresql-x64-16` was stopped and could not be started from the non-admin Codex process; run the Start launcher as administrator if DB-backed routes return 500 locally.
 

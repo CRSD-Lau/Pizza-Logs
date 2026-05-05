@@ -182,11 +182,11 @@ Docker compose is available for a local production-style stack:
 docker compose up --build
 ```
 
-On Neil's Windows desktop, the preferred local workflow is the two Desktop launchers:
+On Neil's Windows laptop, the preferred local workflow is the two launchers in the repo root:
 
 ```powershell
-C:\Users\neil_\OneDrive\Desktop\Start Pizza Logs Local.cmd
-C:\Users\neil_\OneDrive\Desktop\Stop Pizza Logs Local.cmd
+C:\Projects\PizzaLogs\Start Pizza Logs Local.cmd
+C:\Projects\PizzaLogs\Stop Pizza Logs Local.cmd
 ```
 
 The launchers call repo scripts that manage the local web app on `127.0.0.1:3001`, the parser on `127.0.0.1:8000`, and the local PostgreSQL service. They also keep the old repeating `PizzaLogsLocalTestServer` scheduled task disabled so PowerShell does not pop up every few minutes.
