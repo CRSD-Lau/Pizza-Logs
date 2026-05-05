@@ -12,7 +12,6 @@ type PlayerAvatarProps = {
   raceName?: string | null;
   guildName?: string | null;
   color: string;
-  portraitUrl?: string | null;
   fallbackIconUrl?: string | null;
   size?: PlayerAvatarSize;
   className?: string;
@@ -31,22 +30,14 @@ export function PlayerAvatar({
   raceName,
   guildName,
   color,
-  portraitUrl,
   fallbackIconUrl,
   size = "sm",
   className,
 }: PlayerAvatarProps) {
-  const [portraitFailed, setPortraitFailed] = useState(false);
-  const [fallbackIconFailed, setFallbackIconFailed] = useState(false);
+  const [iconFailed, setIconFailed] = useState(false);
   const initials = getInitials(name);
-  const imageUrl = !portraitFailed && portraitUrl
-    ? portraitUrl
-    : !fallbackIconFailed && fallbackIconUrl
-      ? fallbackIconUrl
-      : null;
-  const state = imageUrl
-    ? imageUrl === portraitUrl ? "portrait" : "fallback-icon"
-    : "initials";
+  const imageUrl = !iconFailed && fallbackIconUrl ? fallbackIconUrl : null;
+  const state = imageUrl ? "fallback-icon" : "initials";
 
   return (
     <div
@@ -64,25 +55,18 @@ export function PlayerAvatar({
       data-character-race={raceName ?? ""}
       data-character-guild={guildName ?? ""}
       data-initials={initials}
-      data-portrait-url={portraitUrl ?? ""}
       data-fallback-icon-url={fallbackIconUrl ?? ""}
       style={{ background: `${color}22`, color, border: `1px solid ${color}44` }}
     >
       {imageUrl ? (
-        // eslint-disable-next-line @next/next/no-img-element -- Warmane/Tampermonkey avatar URLs are external and not known at build time.
+        // eslint-disable-next-line @next/next/no-img-element -- Class icon URLs are external and not known at build time.
         <img
           data-pizza-avatar-image="true"
           src={imageUrl}
           alt={`${name} avatar`}
           className="h-full w-full object-cover"
           referrerPolicy="no-referrer"
-          onError={() => {
-            if (imageUrl === portraitUrl) {
-              setPortraitFailed(true);
-            } else {
-              setFallbackIconFailed(true);
-            }
-          }}
+          onError={() => setIconFailed(true)}
         />
       ) : (
         <span data-pizza-avatar-initials="true">{initials}</span>

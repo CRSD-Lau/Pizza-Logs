@@ -12,8 +12,7 @@ No confirmed app-breaking bugs are active as of the documentation audit.
 | Upload rate limiting is not implemented | Abuse could create parser/DB load | Prefer Railway-level controls first; add app logic only if needed |
 | Absorbs are not implemented | Disc priest contribution can be lower than Skada combined healing+absorbs views | Future parser work based on Skada `Absorbs.lua`; keep separate from healing done |
 | Role detection is rough | Hybrids/self-healing classes can be mislabeled; tanks are not inferred | Replace upload-time heal/damage ratio with better class/spec/combat evidence |
-| Warmane direct server fetches can fail with Cloudflare/403 | Gear/roster/portrait refreshes are unreliable from Railway | Supported path is browser-assisted userscripts and cached DB snapshots |
-| Warmane portraits may not expose readable static images | Exact faces may fall back to class icons/initials | Portrait userscript caches static URLs or readable rendered canvases when the browser allows |
+| Warmane direct server fetches can fail with Cloudflare/403 | Gear/roster refreshes are unreliable from Railway | Supported path is browser-assisted userscripts and cached DB snapshots |
 | Some heroic/Gunship difficulty evidence is absent | Certain pulls cannot be classified perfectly from logs alone | Use marker/session evidence where available; document uncertainty |
 | Orphaned pets can remain unmatched | Small DPS mismatches when pets were active before log start | Keep Skada-aligned owner remap when summon evidence exists |
 
@@ -37,9 +36,10 @@ No confirmed app-breaking bugs are active as of the documentation audit.
 | Favicon 404 | Added `public/favicon.ico` and `app/icon.svg` |
 | Local dev DB outage crashed pages | Public/admin pages catch DB connection failures and show warnings |
 | Local 3001 server missing `.next` chunks | Stopped stale Next process, removed generated `.next`, restarted `PizzaLogsLocalTestServer`, and verified local page/scripts return 200 |
+| Portrait userscript stayed on class icons or caused hydration warnings | Retired active portrait capture and standardized avatars on class icons; old userscript URLs now serve no-op compatibility updates |
 
 ## Not Bugs
 
 - uwu-logs differences are expected when uwu uses different encounter windows or damage math.
 - Warmane live fetch failure is expected; cached/browser-assisted import is the supported path.
-- Missing rendered portraits are expected when Warmane/Wowhead canvases are tainted or unreadable.
+- Rendered portraits are intentionally not used; class icons are the supported avatar path.

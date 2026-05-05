@@ -6,7 +6,7 @@ import { EmptyState } from "@/components/ui/EmptyState";
 import { PlayerAvatar } from "@/components/players/PlayerAvatar";
 import { WOW_CLASSES } from "@/lib/constants/classes";
 import { getClassColor } from "@/lib/constants/classes";
-import { getClassIconUrl } from "@/lib/warmane-portrait";
+import { getClassIconUrl } from "@/lib/class-icons";
 import { formatDps } from "@/lib/utils";
 import { cn } from "@/lib/utils";
 import { isDatabaseConnectionError } from "@/lib/database-errors";
@@ -291,7 +291,6 @@ export default async function PlayersPage({ searchParams }: Props) {
                   realmName={p.realm?.name}
                   characterClass={p.class}
                   color={color}
-                  portraitUrl={null}
                   fallbackIconUrl={getClassIconUrl(p.class)}
                   size="sm"
                 />

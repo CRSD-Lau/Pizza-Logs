@@ -8,7 +8,7 @@ import { SessionLineChart } from "@/components/charts/SessionLineChart";
 import type { ChartPoint, PlayerLine } from "@/components/charts/SessionLineChart";
 import { StatCard } from "@/components/ui/StatCard";
 import { getClassColor } from "@/lib/constants/classes";
-import { getClassIconUrl } from "@/lib/warmane-portrait";
+import { getClassIconUrl } from "@/lib/class-icons";
 import { getRevealClassName, getRevealStyle, orderBossDisplayEntries } from "@/lib/ui-animation";
 import { cn, formatDps, formatDuration } from "@/lib/utils";
 
@@ -167,7 +167,6 @@ export default async function SessionPlayerPage({ params }: Props) {
           raceName={rosterMember?.raceName}
           guildName={rosterMember?.guildName ?? upload?.guild?.name}
           color={classColor}
-          portraitUrl={null}
           fallbackIconUrl={getClassIconUrl(playerClass ?? rosterMember?.className)}
           size="lg"
         />

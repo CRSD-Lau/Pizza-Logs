@@ -7,7 +7,7 @@ import { PlayerAvatar } from "@/components/players/PlayerAvatar";
 import { AccordionSection } from "@/components/ui/AccordionSection";
 import { StatCard } from "@/components/ui/StatCard";
 import { getClassColor } from "@/lib/constants/classes";
-import { getClassIconUrl } from "@/lib/warmane-portrait";
+import { getClassIconUrl } from "@/lib/class-icons";
 import { getRevealClassName, getRevealStyle, orderBossDisplayEntries } from "@/lib/ui-animation";
 import { cn, formatDuration, formatNumber } from "@/lib/utils";
 
@@ -303,7 +303,6 @@ export default async function SessionDetailPage({ params }: Props) {
                     raceName={rosterMember?.raceName}
                     guildName={rosterMember?.guildName ?? guildName}
                     color={classColor}
-                    portraitUrl={null}
                     fallbackIconUrl={getClassIconUrl(characterClass)}
                     size="xs"
                   />

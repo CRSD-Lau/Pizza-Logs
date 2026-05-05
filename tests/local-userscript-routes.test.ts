@@ -58,6 +58,8 @@ async function main() {
   assert.match(portrait, /Pizza Logs Warmane Portraits \(Local\)/);
   assert.match(portrait, new RegExp(LOCAL_PORTRAIT_USERSCRIPT_URL.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")));
   assert.match(portrait, new RegExp(PIZZA_LOGS_LOCAL_ORIGIN.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")));
+  assert.match(portrait, /Deprecated no-op compatibility update/);
+  assert.doesNotMatch(portrait, /GM_xmlhttpRequest|pizzaPortraitQueued|data-pizza-portrait-queued/);
 
   console.log("local-userscript-routes tests passed");
 }

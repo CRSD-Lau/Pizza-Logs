@@ -2,7 +2,7 @@ import Link from "next/link";
 import { PlayerAvatar } from "../players/PlayerAvatar";
 import { getClassColor } from "../../lib/constants/classes";
 import { getRevealClassName, getRevealStyle } from "../../lib/ui-animation";
-import { getClassIconUrl } from "../../lib/warmane-portrait";
+import { getClassIconUrl } from "../../lib/class-icons";
 
 export type GuildRosterTableMember = {
   id: string;
@@ -100,7 +100,6 @@ export function GuildRosterTable({ members }: { members: GuildRosterTableMember[
                       raceName={member.raceName}
                       guildName={member.guildName}
                       color={classColor}
-                      portraitUrl={null}
                       fallbackIconUrl={getClassIconUrl(member.className)}
                       size="xs"
                     />

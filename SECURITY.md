@@ -19,7 +19,7 @@ The `/admin` page, admin upload history, cleanup actions, and import APIs are pr
 
 - `/api/upload` does not yet enforce a hard server-side byte limit while streaming to the parser.
 - Upload rate limiting is not implemented in app code.
-- Warmane roster/gear/portrait flows depend on browser-assisted imports because direct server fetches can hit Cloudflare/403 behavior.
+- Warmane roster and gear flows depend on browser-assisted imports because direct server fetches can hit Cloudflare/403 behavior.
 
 ## Reporting A Vulnerability
 

@@ -14,8 +14,9 @@ Live app: https://pizza-logs-production.up.railway.app
 - Milestones for all-time DPS/HPS records.
 - Admin-only diagnostics, upload history, cleanup controls, and import helpers.
 - Header player search across combat-log players and PizzaWarriors/Lordaeron roster-only members.
-- Browser-assisted Warmane guild roster, gear, and portrait import flows.
+- Browser-assisted Warmane guild roster and gear import flows.
 - Gear display backed by cached Warmane equipment plus local AzerothCore item metadata.
+- Player avatars use WoW class icons, falling back to initials when class data or icon loading is unavailable.
 - Railway production deployment with separate web and parser services.
 
 ## Supported Assumptions
@@ -108,7 +109,8 @@ Warmane live server fetches are best-effort and may fail from Railway or local s
 
 - Warmane Gear Sync userscript for character equipment and icon backfill.
 - Warmane Guild Roster userscript for roster rank, class, race, professions, and member rows.
-- Warmane Portrait userscript for best-effort cached character portraits.
+
+Player avatars intentionally use class icons instead of Warmane-rendered character portraits. The old portrait userscript URL remains only as a no-op compatibility update for existing installs.
 
 Item names, item levels, stats, slot metadata, and GearScoreLite inputs come from the local AzerothCore `item_template` import:
 

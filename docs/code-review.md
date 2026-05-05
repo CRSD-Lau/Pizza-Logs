@@ -17,7 +17,7 @@ Ask for findings first, with exact file and line references.
 - Upload flow, duplicate handling, saved report shape, and milestone timing.
 - Admin-only access control and destructive admin actions.
 - Public routes not exposing upload telemetry, secrets, reset controls, or raw admin data.
-- Warmane roster/gear/portrait cache behavior and browser import safety.
+- Warmane roster/gear cache behavior and browser import safety.
 - Railway startup, Prisma migration, and deployment risk.
 - Accidental secret exposure.
 - Stale-code or stale-doc deletion without proof.

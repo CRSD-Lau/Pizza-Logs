@@ -37,7 +37,8 @@ public/               Favicon, icons, intro media
 | `lib/warmane-guild-roster.ts` | Guild roster import/sync/read helpers |
 | `lib/armory-gear-client-scripts.ts` | Gear userscript/bookmarklet source |
 | `lib/guild-roster-client-scripts.ts` | Roster userscript/bookmarklet source |
-| `lib/player-portrait-client-scripts.ts` | Portrait userscript source |
+| `lib/player-portrait-client-scripts.ts` | Deprecated no-op portrait userscript compatibility update |
+| `lib/class-icons.ts` | WoW class icon URL helper for player avatars |
 | `lib/gearscore.ts` | GearScoreLite score calculation |
 | `lib/item-template.ts` | AzerothCore item metadata import/enrichment helpers |
 | `prisma/schema.prisma` | Database schema |

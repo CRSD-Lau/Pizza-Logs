@@ -14,6 +14,7 @@ const sessionDetailPage = fs.readFileSync(
 
 assert.match(sessionPlayerPage, /PlayerAvatar/);
 assert.match(sessionPlayerPage, /getClassIconUrl/);
+assert.match(sessionPlayerPage, /class-icons/);
 assert.match(sessionPlayerPage, /realmName=/);
 assert.match(sessionPlayerPage, /raceName=/);
 

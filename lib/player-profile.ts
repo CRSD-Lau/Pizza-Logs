@@ -25,7 +25,6 @@ export type PlayerProfile = {
   raceName: string | null;
   level: number | null;
   rankName: string | null;
-  portraitUrl: string | null;
   isRosterOnly: boolean;
   milestones: unknown[];
 };
@@ -67,7 +66,6 @@ export function resolvePlayerProfile({
     raceName: rosterMember?.raceName ?? null,
     level: rosterMember?.level ?? null,
     rankName: rosterMember?.rankName ?? null,
-    portraitUrl: null,
     isRosterOnly: !player,
     milestones: player?.milestones ?? [],
   };

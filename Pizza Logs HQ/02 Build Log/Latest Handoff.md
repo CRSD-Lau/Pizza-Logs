@@ -15,6 +15,7 @@
 - Live app: https://pizza-logs-production.up.railway.app
 - Local app target for Neil's laptop: http://127.0.0.1:3001
 - Local Git executable fallback: `C:\Program Files\Git\cmd\git.exe`
+- GitHub CLI executable: `C:\Program Files\GitHub CLI\gh.exe`
 - Parser correctness remains the highest-risk area.
 
 ## Current Implementation Snapshot
@@ -26,18 +27,25 @@
 - Parser supports both encounter marker and heuristic segmentation paths.
 - Warmane heroic/Gunship behavior is handled with marker/session/crew-death evidence where available, but some cases remain impossible to prove from logs alone.
 - Gear pages read cached Warmane snapshots, enrich from local AzerothCore `wow_items`, and attempt Warmane live fetches only as best effort.
-- Supported roster/gear/portrait refresh path is browser-assisted userscripts from `/admin`.
+- Supported roster/gear refresh path is browser-assisted userscripts from `/admin`.
+- Player avatars intentionally use class icons, with initials fallback when class data or icon loading is unavailable.
 - Production userscripts still post to Railway production; local userscripts post to `http://127.0.0.1:3001`.
 
-## Local Userscript Changes This Session
+## Class Icon Avatar Cleanup This Session
 
+- Retired active Warmane/Wowhead/Zamimg portrait capture and standardized player avatars on built-in class icons.
+- Removed the portrait install UI from `/admin`.
+- Removed stale `portraitUrl` plumbing from player profiles, player lists, session pages, and roster rows.
+- Replaced stale portrait parsing helpers with `lib/class-icons.ts`.
+- Kept the old `/api/player-portraits/...` userscript URLs as no-op compatibility updates so existing Tampermonkey installs can self-update to harmless code.
+- Bumped the no-op compatibility portrait userscript to `0.6.0`.
 - Added local install endpoints:
   - `http://127.0.0.1:3001/api/admin/armory-gear/userscript.local.user.js`
   - `http://127.0.0.1:3001/api/admin/guild-roster/userscript.local.user.js`
   - `http://127.0.0.1:3001/api/player-portraits/userscript.local.user.js`
-- Added local install buttons and URL fields on the admin gear/portrait and guild roster panels.
+- Added local install buttons and URL fields on the admin gear and guild roster panels.
 - Local gear and roster scripts still run on Warmane Armory pages, but they post imports into the laptop dev server instead of production.
-- Local portrait script also matches `localhost:3001` and `127.0.0.1:3001` Pizza Logs pages.
+- Local portrait script is compatibility-only and does not mutate Pizza Logs, Warmane, or modelviewer pages.
 
 ## Recent Documentation Audit Changes
 
@@ -64,13 +72,18 @@ PowerShell/npm shims in `node_modules/.bin` hit OneDrive reparse-point `Access i
 | `tests/player-portrait-client-scripts.test.ts` | Passed |
 | `tests/gear-import-bookmarklet.test.ts` | Passed |
 | `tests/guild-roster-admin-panel.test.ts` | Passed |
+| `tests/guild-roster-table-render.test.ts` | Passed with JSX-aware `ts-node` options |
 | `tests/local-userscript-routes.test.ts` | Passed |
+| `tests/class-icons.test.ts` | Passed |
+| `tests/player-profile.test.ts` | Passed |
+| `tests/session-avatar-source.test.ts` | Passed |
 | ESLint via bundled Node | Passed |
 | TypeScript `tsc --noEmit` via bundled Node | Passed |
 | Next production build via bundled Node | Passed |
+| Local `3001` app root | 200, contained `Pizza Logs` |
 | Local `3001` gear userscript endpoint | 200, contained local origin and local script name |
 | Local `3001` roster userscript endpoint | 200, contained local origin and local script name |
-| Local `3001` portrait userscript endpoint | 200, contained local origin and local script name |
+| Local `3001` portrait userscript endpoint | 200, contained local origin, version `0.6.0`, deprecation text, and no active DOM/GM/canvas code |
 
 ## Local Server Recovery
 
@@ -78,11 +91,9 @@ PowerShell/npm shims in `node_modules/.bin` hit OneDrive reparse-point `Access i
 - Root cause was a mixed `.next` cache: the running dev server loaded a webpack runtime expecting chunks at `.next\server\5611.js`, while the actual chunks were under `.next\server\chunks\5611.js`.
 - Likely trigger: running a production `next build` while the long-running local dev server was still active.
 - Recovery performed: stopped the stale Next process, removed only the generated `.next` folder, restarted the existing `PizzaLogsLocalTestServer` scheduled task, and verified `/` plus the local gear userscript endpoint returned 200.
+- After the hydration fix build, the same generated-cache pattern briefly recurred with a missing `vendor-chunks/lucide-react.js`. Recovery was the same: fully stop repo Next processes, remove only generated `.next`, restart `PizzaLogsLocalTestServer`, then verify `/` and local userscript endpoints return 200.
+- During the class-icon cleanup, `next build` first compiled then hit stale `.next` route module state for admin API routes. Removing generated `.next`, rerunning the build, then restarting the local test server manually through `scripts/start-local-test-server.ps1` restored `http://127.0.0.1:3001`.
 
 ## Exact Next Step
 
-`codex-dev` is pushed to GitHub. Open the PR manually because the GitHub connector returned 403 when Codex tried to create it:
-
-https://github.com/CRSD-Lau/Pizza-Logs/compare/main...codex-dev?expand=1
-
-After the PR is open, use the local install links from `/admin` when importing into the laptop database.
+Push the updated `codex-dev` commit into draft PR #8. After merge, no portrait userscript update is needed for normal use because class icons are built into the app; existing old portrait userscript installs can be removed, or allowed to auto-update to the no-op compatibility script.

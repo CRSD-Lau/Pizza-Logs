@@ -11,7 +11,7 @@ import { PlayerGearSection, PlayerGearSectionSkeleton } from "@/components/playe
 import { getWarmaneCharacterGear } from "@/lib/warmane-armory";
 import { DEFAULT_GUILD_NAME, DEFAULT_GUILD_REALM } from "@/lib/warmane-guild-roster";
 import { buildPlayerPerBossSummary, buildPlayerRecentEncounters, resolvePlayerProfile } from "@/lib/player-profile";
-import { getClassIconUrl } from "@/lib/warmane-portrait";
+import { getClassIconUrl } from "@/lib/class-icons";
 import { formatDps } from "@/lib/utils";
 import { getClassColor } from "@/lib/constants/classes";
 import { getRevealClassName, getRevealStyle } from "@/lib/ui-animation";
@@ -102,7 +102,6 @@ export default async function PlayerPage({ params }: Props) {
           raceName={profile.raceName}
           guildName={profile.guildName}
           color={color}
-          portraitUrl={profile.portraitUrl}
           fallbackIconUrl={getClassIconUrl(profile.className)}
           size="lg"
         />
