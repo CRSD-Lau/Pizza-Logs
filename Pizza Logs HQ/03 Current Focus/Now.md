@@ -14,6 +14,8 @@
 
 **Cinematic intro verification passed locally for the 4K-master ladder.** Focused source tests cover the responsive video sources, poster fallback, skip, reduced-motion handling, and removal of the old particle intro. Media metadata inspection confirmed every public intro video is `60fps`, `7.2s`, `432` frames, and at the intended dimensions; poster metadata also matches. TypeScript, ESLint, `git diff --check`, production `next build`, parser tests, and local media route checks passed. Browser review artifacts and final generated review assets remain under ignored `animations/hd_cinematic_intro/`.
 
+**4K-master intro assets are deployed and verified on production.** After pushing `980352c` to `origin/main`, Railway served the refreshed public WebM/MP4/poster files with expected byte lengths for desktop 1080p, desktop 1440p, desktop 4K, mobile 1080p, mobile 4K, and the mobile 4K poster.
+
 **Crisp intro assets are deployed and verified on production.** After pushing `7fa25c5` to `origin/main`, Railway served the refreshed public WebM/poster files with expected byte lengths for desktop 1080p, desktop 1440p, desktop 4K, mobile 1080p, mobile 4K, and the mobile 4K poster.
 
 **Desktop checkout started clean from public `main`; animation work was developed on `codex/pizza-logs-animation-mvp` before main deployment.** The old `PizzaLogs-main-queue-fix` worktree folder and stale Git metadata are removed, the local modernization/Claude branches are deleted, and the remote `codex/pizza-logs-modernization` branch was deleted after confirming it matched `main`.

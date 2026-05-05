@@ -35,6 +35,16 @@
   - `git diff --check` -> passed,
   - production build -> passed,
   - local built app served the refreshed public intro assets with HTTP 200.
+- Deployed to `origin/main` at `980352c`.
+- Production verification after Railway deploy:
+  - `/intro/pizza-logs-cinematic-intro-1080p.webm` returned HTTP 200 with the expected `2,498,195` byte length,
+  - `/intro/pizza-logs-cinematic-intro.webm` returned HTTP 200 with the expected `3,716,858` byte length,
+  - `/intro/pizza-logs-cinematic-intro-4k.webm` returned HTTP 200 with the expected `6,836,123` byte length,
+  - `/intro/pizza-logs-cinematic-intro-mobile.webm` returned HTTP 200 with the expected `2,218,430` byte length,
+  - `/intro/pizza-logs-cinematic-intro-mobile-4k.webm` returned HTTP 200 with the expected `6,317,633` byte length,
+  - `/intro/pizza-logs-cinematic-intro-4k.mp4` returned HTTP 200 with the expected `42,626,329` byte length,
+  - `/intro/pizza-logs-cinematic-intro-mobile-4k.mp4` returned HTTP 200 with the expected `40,468,420` byte length,
+  - `/intro/pizza-logs-cinematic-poster-mobile-4k.jpg` returned HTTP 200 with the expected `611,836` byte length.
 
 ### Crisp cinematic intro pass
 
