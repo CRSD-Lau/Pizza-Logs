@@ -23,6 +23,7 @@
   - `C:\Projects\PizzaLogs\Stop Pizza Logs Local.cmd`
 - The old Desktop launcher copies were moved into the repo root; the old OneDrive checkout can stay as a temporary fallback.
 - The repeating `PizzaLogsLocalTestServer` scheduled task is disabled; use the repo-root launchers instead.
+- Imported local Codex discussion history now lives under `Pizza Logs HQ/08 AI Control Center/Imported Codex Chats/`.
 
 ## Current Implementation Snapshot
 
@@ -80,6 +81,13 @@ PowerShell/npm shims in `node_modules/.bin` hit OneDrive reparse-point `Access i
 - Moved the Start/Stop launcher files from the Desktop into `C:\Projects\PizzaLogs` and made them resolve the repo path from their own location.
 - Verified the local web server returned 200 at `http://127.0.0.1:3001/` and parser health returned 200 at `http://127.0.0.1:8000/health`.
 - PostgreSQL service `postgresql-x64-16` was stopped and could not be started from the non-admin Codex process; run the Start launcher as administrator if DB-backed routes return 500 locally.
+
+## Chat History Import This Session
+
+- Imported 17 local Codex chats from `C:\Users\neil_\.codex\sessions` into the committed vault.
+- Index file: `Pizza Logs HQ/08 AI Control Center/Imported Codex Chats/Imported Codex Chats Index.md`.
+- Imported notes keep user messages and assistant final replies, while omitting raw JSONL, tool payloads, encrypted reasoning payloads, and `.env*` contents.
+- Secret-like values were redacted during import, and the imported vault notes were checked with `git grep --untracked` for obvious database URLs, tokens, and private-key patterns.
 
 ## Remaining Risks
 

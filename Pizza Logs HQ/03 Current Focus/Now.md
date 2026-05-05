@@ -27,6 +27,9 @@ Codex works on `codex-dev`, pushes `origin/codex-dev`, and opens PRs into `main`
 - Copied local env files into the local checkout, installed dependencies, generated Prisma Client, and created a parser Python 3.12 virtualenv.
 - Moved the Start/Stop launchers into `C:\Projects\PizzaLogs` and made them path-relative to the repo root.
 - Verified `http://127.0.0.1:3001/` and `http://127.0.0.1:8000/health` from the new checkout.
+- Imported 17 local Codex chats into `Pizza Logs HQ/08 AI Control Center/Imported Codex Chats/` so the new `C:\Projects\PizzaLogs` checkout carries the prior discussion history.
+- Kept the import as readable vault digests, not raw JSONL; tool logs, encrypted reasoning payloads, and `.env*` contents were omitted.
+- Ran an untracked secret-pattern scan against the imported notes after redaction.
 
 ## Next Actions
 
@@ -43,6 +46,7 @@ Codex works on `codex-dev`, pushes `origin/codex-dev`, and opens PRs into `main`
 | Documentation update | DONE | README, parser contract, vault parser docs, security, decision log, known issues |
 | Validation | DONE | Parser tests, type-check, lint, build, diff check |
 | Local checkout migration | DONE | `C:\Projects\PizzaLogs` validated; launchers live in repo root |
+| Codex chat import | DONE | 17 readable vault digests under `Pizza Logs HQ/08 AI Control Center/Imported Codex Chats/` |
 | Branch publication | DONE | Local checkout migration committed and ready to push on `codex-dev` |
 | PR update | DONE | Draft PR #11 opened from `codex-dev` into `main` |
 
