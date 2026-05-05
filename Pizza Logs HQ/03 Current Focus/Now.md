@@ -15,6 +15,7 @@ Codex works on `codex-dev`, pushes `origin/codex-dev`, and opens PRs into `main`
 - Kept production userscript URLs unchanged for Railway production.
 - Verified the three local endpoints on `http://127.0.0.1:3001`.
 - Validation passed locally with bundled runtimes: focused userscript/admin tests, lint, type-check, and production build.
+- Recovered the local `3001` dev server after a stale `.next` cache caused `Cannot find module './5611.js'`.
 
 ## Next Actions
 
@@ -24,6 +25,7 @@ Codex works on `codex-dev`, pushes `origin/codex-dev`, and opens PRs into `main`
 | Add local roster userscript | DONE | `http://127.0.0.1:3001/api/admin/guild-roster/userscript.local.user.js` |
 | Add local portrait userscript | DONE | `http://127.0.0.1:3001/api/player-portraits/userscript.local.user.js` |
 | Run validation | DONE | Focused tests, lint, type-check, build, and live local endpoint checks passed |
+| Recover local 3001 server | DONE | Cleared generated `.next`, restarted `PizzaLogsLocalTestServer`, verified `/` and local userscript endpoint return 200 |
 | Branch publication | DONE | `codex-dev` pushed to `origin/codex-dev` |
 | PR creation | NEEDS NEIL | Codex GitHub connector returned 403; open `https://github.com/CRSD-Lau/Pizza-Logs/compare/main...codex-dev?expand=1` |
 | Human review | NEXT | Neil installs local scripts from `/admin` and uses them when targeting the laptop DB |

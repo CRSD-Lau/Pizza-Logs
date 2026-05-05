@@ -72,6 +72,13 @@ PowerShell/npm shims in `node_modules/.bin` hit OneDrive reparse-point `Access i
 | Local `3001` roster userscript endpoint | 200, contained local origin and local script name |
 | Local `3001` portrait userscript endpoint | 200, contained local origin and local script name |
 
+## Local Server Recovery
+
+- A runtime error appeared on `http://127.0.0.1:3001`: `Cannot find module './5611.js'`.
+- Root cause was a mixed `.next` cache: the running dev server loaded a webpack runtime expecting chunks at `.next\server\5611.js`, while the actual chunks were under `.next\server\chunks\5611.js`.
+- Likely trigger: running a production `next build` while the long-running local dev server was still active.
+- Recovery performed: stopped the stale Next process, removed only the generated `.next` folder, restarted the existing `PizzaLogsLocalTestServer` scheduled task, and verified `/` plus the local gear userscript endpoint returned 200.
+
 ## Exact Next Step
 
 `codex-dev` is pushed to GitHub. Open the PR manually because the GitHub connector returned 403 when Codex tried to create it:
