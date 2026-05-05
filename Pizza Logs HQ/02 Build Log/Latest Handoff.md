@@ -12,6 +12,30 @@
 
 ## What Was Done This Session
 
+### Local test server setup
+
+- Corrected the local test-server state on this checkout.
+- Existing stale Next.js listeners were stopped on `127.0.0.1:3000`, `127.0.0.1:3005`, and `127.0.0.1:3006`.
+- Removed generated `.next/` after the local dev server hit the known OneDrive `readlink` failure against generated Next files.
+- Started the full local stack on the ports configured by `.env.local`:
+  - web app: `http://127.0.0.1:3001`
+  - parser service: `http://127.0.0.1:8000`
+  - PostgreSQL: `localhost:5432`
+- Parser dependencies are available through the bundled Python runtime; no parser virtualenv was required for this run.
+- Local database verification:
+  - `bosses`: `53`
+  - `realms`: `4`
+  - `wow_items`: `38,610`
+  - `players`: `0`
+  - `uploads`: `0`
+  - `encounters`: `0`
+- Local HTTP smoke checks passed:
+  - parser `/health` returned HTTP 200 with `status: ok`,
+  - `/`, `/players`, `/raids`, `/leaderboards`, `/bosses`, `/guild-roster`, `/weekly`, and `/admin/login` returned HTTP 200,
+  - `/api/bosses`, `/api/leaderboard`, `/api/weekly`, `/api/guild-roster`, and `/api/uploads` returned HTTP 200,
+  - public pages and `/admin` did not render `Database unavailable` or parser-unreachable warnings.
+- The local DB is ready but empty for raid/player data until a combat log is uploaded or sample data is imported.
+
 ### 4K-master responsive intro deployment
 
 - Promoted the approved continuity review ladder into `public/intro/` for deployment.
@@ -668,6 +692,7 @@ Preserved the main-branch queue fix while merging modernization:
 
 ## Current State
 
+- Local test server is running correctly on `http://127.0.0.1:3001`, with the Python parser on `http://127.0.0.1:8000` and PostgreSQL 16 running on `localhost:5432`. The local database has seeded boss/realm/item metadata, but no uploads, encounters, or players yet.
 - HD cinematic intro integration now has a 4K-master responsive public asset ladder: `1920x1080`, `2560x1440`, and `3840x2160` desktop landscape plus `1080x1920` and `2160x3840` mobile portrait, all at `60fps`, `7.2s`, and `432` frames.
 - Intro behavior: `FrozenLogbookIntro` now plays the HD cinematic on hard page load, uses WebM with MP4 fallback, selects mobile/desktop resolutions through ordered `<source media>` entries, lasts up to `7200ms`, exits on video end, keeps `Skip`, and avoids replaying on every internal route change. Reduced-motion users get the matching poster through the same media-query ladder and a short `350ms` timeout.
 - `/bosses` now has a mobile-native boss card layout with the same shared reveal animation style used on the other table/card pages. The desktop table grid is preserved for medium-and-up screens.
@@ -692,6 +717,8 @@ Preserved the main-branch queue fix while merging modernization:
 ---
 
 ## Exact Next Step
+
+For local testing: use `http://127.0.0.1:3001`. Upload `C:/Users/neil_/OneDrive/Desktop/PizzaLogs/WoWCombatLog/WoWCombatLog.txt` or run the relevant import/sync flow to populate the fresh local DB before judging player, raid, search, or leaderboard data.
 
 For cinematic intro: after this 4K-master asset ladder deploy, hard-refresh production in normal desktop, 1440p/4K, and phone-sized browsers to judge playback smoothness/taste and try the Skip button manually. If the asset still feels soft, the next quality step is higher-resolution key art, because the retained source key shots are still much lower resolution than the 4K output ladder.
 
