@@ -44,7 +44,10 @@ inactivity window closes the encounter.
 
 ### Minimum event floor
 
-Segments with fewer than 10 events are discarded as noise (trash, pre-pull).
+Heuristic segments with fewer than 10 events are discarded as noise (trash,
+pre-pull). Explicit `ENCOUNTER_START` / `ENCOUNTER_END` marker windows are
+trusted even when short, so partial logs and very quick wipes can still produce
+an encounter.
 
 ---
 
@@ -112,10 +115,13 @@ If any of the following spell names appear in the segment AND difficulty is curr
 
 ### Step 3: Session normalization
 
-- Gunship Battle: always inherits session difficulty (no heroic-exclusive spells)
-- 25N encounter in a confirmed 25H session: promoted to 25H
-  (covers Sindragosa + BPC whose markers were removed in Step 2)
-- 10N encounters: never promoted (group-size detection is reliable for 10-player)
+- Gunship Battle: can inherit session heroic difficulty because Warmane provides
+  no reliable Gunship-only heroic marker.
+- Non-Gunship `25N` attempts are not promoted solely because another pull in the
+  same session was heroic. This prevents heroic wipes followed by a normal kill
+  from being bucketed under heroic.
+- Sindragosa and Blood Prince Council without direct heroic evidence remain
+  normal because their ambiguous Warmane spells also appear in 10N.
 
 ---
 
@@ -141,7 +147,8 @@ parts[10] = amount
 parts[11] = overkill
 parts[15] = absorbed
 ```
-Effective damage = `max(0, amount - overkill)`
+Stored encounter damage = `max(0, amount - overkill - absorbed)`.
+Full-session `sessionDamage` uses `amount + absorbed`.
 
 **SWING_DAMAGE** (no spell fields — indices shift by 3):
 ```
@@ -149,7 +156,8 @@ parts[7] = amount
 parts[8] = overkill
 parts[12] = absorbed
 ```
-Effective damage = `max(0, amount - overkill)`
+Stored encounter damage = `max(0, amount - overkill - absorbed)`.
+Full-session `sessionDamage` uses `amount + absorbed`.
 
 ### Add-wave filtering
 
@@ -267,7 +275,8 @@ A GUID is considered a player if it matches any of:
 2. **Gunship Battle**: Warmane always emits success=0 for Gunship; crew death override
    is required.
 3. **Difficulty undetectable cases**: Sindragosa, Blood Prince Council (heroic markers
-   removed due to Warmane 10N false positives); these rely on session promotion.
+   removed due to Warmane 10N false positives); absent direct evidence they stay
+   normal rather than inheriting heroic from another pull.
 4. **Absorbs not tracked**: PW:S and other absorb shields not yet implemented.
 5. **Post-death events**: Some servers log damage/heal events after player/boss death;
    not explicitly filtered (negligible impact on totals).
@@ -275,13 +284,16 @@ A GUID is considered a player if it matches any of:
 7. **Overkill not surfaced**: Tracked internally but not displayed separately in UI.
 8. **No ENCOUNTER_START on all Warmane bosses**: Not all Warmane bosses emit these;
    heuristic path is used as fallback throughout.
+9. **Malformed-line reporting is aggregate only**: uploads surface counts of malformed
+   lines as warnings, not every skipped line.
 
 ---
 
-## Values Expected to Match Skada Exactly
+## Values Expected to Match Skada Closely
 
 - Total healing (effective heal = gross - overheal, no spell exclusions)
-- Total damage (same event set as Skada, same overkill subtraction)
+- Stored encounter damage uses the Skada damage event set, then excludes overkill
+  and absorbed shield damage for Pizza Logs leaderboard stability.
 - DPS (same encounter duration rule: boss death timestamp for kills)
 - HPS (same rule)
 - Pet attribution (owner gets credit)

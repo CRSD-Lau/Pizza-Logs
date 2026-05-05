@@ -6,6 +6,7 @@ Run from the parser/ directory:
 """
 import sys
 import os
+import io
 sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
 
 import pytest
@@ -127,6 +128,10 @@ def make_gunship_segment(
     ]
 
 
+def _log_line(ts: str, parts: list[str]) -> str:
+    return f"{ts}  {','.join(parts)}\n"
+
+
 # ── DMG_EVENTS membership — sourced from Skada Damage.lua RegisterForCL ───────
 #
 # Skada registers: SPELL_DAMAGE, SWING_DAMAGE, RANGE_DAMAGE, SPELL_PERIODIC_DAMAGE,
@@ -156,6 +161,42 @@ def test_core_dmg_events_present():
 
 
 # ── Difficulty decoding ────────────────────────────────────────────────────────
+
+def test_short_explicit_marker_encounter_is_parsed():
+    """ENCOUNTER_START/END is authoritative even when a partial log has few events."""
+    log = "".join([
+        _log_line("4/19 13:00:00.000", [ENCOUNTER_START, "36612", '"Lord Marrowgar"', "4", "25"]),
+        _log_line(
+            "4/19 13:00:01.000",
+            _spell_damage_parts(PLAYER_GUID, "Phyre", NPC_GUID, "Lord Marrowgar", 1234),
+        ),
+        _log_line("4/19 13:00:02.000", _unit_died_parts("Lord Marrowgar")),
+        _log_line("4/19 13:00:02.100", [ENCOUNTER_END, "36612", '"Lord Marrowgar"', "4", "25", "1"]),
+    ])
+
+    encounters = CombatLogParser().parse_file(io.StringIO(log))
+
+    assert len(encounters) == 1
+    assert encounters[0].boss_name == "Lord Marrowgar"
+    assert encounters[0].outcome == "KILL"
+    assert encounters[0].total_damage == 1234
+
+
+def test_malformed_lines_are_counted_and_warned():
+    """Bad input lines should be counted and reported without crashing parsing."""
+    parser = CombatLogParser()
+    encounters = parser.parse_file(io.StringIO("\n".join([
+        "this is not a combat log line",
+        "4/19 13:00:01.000  SPELL_DAMAGE",
+        "",
+    ])))
+
+    assert encounters == []
+    assert parser.skipped_line_count == 2
+    assert parser.skipped_line_reasons["missing_timestamp_separator"] == 1
+    assert parser.skipped_line_reasons["too_few_fields"] == 1
+    assert "Skipped 2 malformed combat-log lines." in parser.warnings
+
 
 def test_decode_difficulty_25h():
     assert _decode_difficulty(6, 25) == "25H"
@@ -348,16 +389,8 @@ def test_gunship_difficulty_unchanged_in_all_normal_session():
     assert gunship.difficulty == "25N"
 
 
-def test_25n_in_25h_session_promoted_by_normalization():
-    """Any 25N encounter inside a confirmed 25H session must be promoted to 25H.
-
-    In ICC (and all WotLK raids) 25N and 25H share a single lockout — you cannot
-    mix difficulties within a session.  So if Marrowgar is detected as 25H (via
-    'Bone Slice' marker), every other 25N encounter in the same session is actually
-    heroic and should be promoted.  This handles bosses whose heroic markers were
-    removed because they also fire in 10N on Warmane (Sindragosa, BPC).
-    10N encounters are intentionally left alone.
-    """
+def test_25n_non_gunship_in_25h_session_is_not_promoted_without_evidence():
+    """Normal-looking non-Gunship attempts must not inherit heroic session state."""
     encounters = [
         make_encounter("Lord Marrowgar", difficulty="25H", session_index=0),
         make_encounter("Lady Deathwhisper", difficulty="25N", session_index=0),
@@ -365,9 +398,24 @@ def test_25n_in_25h_session_promoted_by_normalization():
     ]
     CombatLogParser._normalize_session_difficulty(encounters)
     dw = next(e for e in encounters if "deathwhisper" in e.boss_name.lower())
-    assert dw.difficulty == "25H", (
-        f"Lady Deathwhisper 25N in a 25H session must be promoted to '25H', got '{dw.difficulty}'"
+    gunship = next(e for e in encounters if "gunship" in e.boss_name.lower())
+    assert dw.difficulty == "25N", (
+        f"Lady Deathwhisper without direct heroic evidence must stay '25N', got '{dw.difficulty}'"
     )
+    assert gunship.difficulty == "25H"
+
+
+def test_heroic_wipe_then_normal_kill_keeps_normal_difficulty():
+    """A later normal kill after heroic wipes must not inherit heroic session state."""
+    encounters = [
+        make_encounter("Lord Marrowgar", difficulty="25H", session_index=0, outcome="WIPE"),
+        make_encounter("Lord Marrowgar", difficulty="25N", session_index=0, outcome="KILL"),
+    ]
+
+    CombatLogParser._normalize_session_difficulty(encounters)
+
+    assert encounters[0].difficulty == "25H"
+    assert encounters[1].difficulty == "25N"
 
 
 def test_gunship_difficulty_not_cross_contaminated_across_sessions():
@@ -1931,21 +1979,17 @@ def test_bpc_10n_empowered_shock_vortex_does_not_upgrade_to_heroic():
     )
 
 
-def test_normalize_session_difficulty_upgrades_25n_sindragosa_to_25h():
+def test_normalize_session_difficulty_keeps_25n_sindragosa_without_direct_evidence():
     """
-    When a session has other 25H encounters (detected via reliable markers like
-    'Bone Slice' on Marrowgar), any 25N encounter in the same session must be
-    upgraded to 25H by _normalize_session_difficulty.
-
-    This handles Sindragosa and BPC in a 25H session where their own heroic
-    spell markers have been removed (they fire in 10N too on Warmane).
+    Sindragosa has Warmane marker ambiguity, so absent direct proof is reported
+    as normal instead of guessing heroic from another encounter in the session.
     """
     marrowgar_25h = make_encounter("Lord Marrowgar", difficulty="25H", session_index=0)
     sindragosa_25n = make_encounter("Sindragosa", difficulty="25N", session_index=0)
     encounters = [marrowgar_25h, sindragosa_25n]
     CombatLogParser._normalize_session_difficulty(encounters)
-    assert sindragosa_25n.difficulty == "25H", (
-        f"Sindragosa 25N in a 25H session must be upgraded to '25H', "
+    assert sindragosa_25n.difficulty == "25N", (
+        f"Sindragosa without direct heroic evidence must stay '25N', "
         f"got '{sindragosa_25n.difficulty}'"
     )
 

@@ -12,7 +12,7 @@
 | SQL injection | Low risk | Prisma parameterizes DB queries |
 | XSS | Low risk | React escapes output; avoid adding raw HTML rendering |
 | Secrets in repo | Guarded | `.env*`, logs, caches, uploads, and combat logs are ignored |
-| Upload file type validation | Partial | Client accepts `.txt`/`.log`; parser `/parse-stream` needs stricter server-side validation |
+| Upload file type validation | Improved | Parser `/parse`, `/parse-debug`, and `/parse-stream` reject non-`.txt`/`.log` filenames; `/api/upload` still forwards accepted browser uploads |
 | Upload size enforcement | Open | UI says 1 GB, but `/api/upload` does not enforce a hard server-side limit |
 | Rate limiting | Open | No app-level upload rate limiting |
 
@@ -26,7 +26,7 @@
 ## Priority Fixes
 
 1. Enforce upload size while streaming or before forwarding to the parser.
-2. Add server-side upload file type/content checks for `/api/upload` and parser `/parse-stream`.
+2. Add deeper content sniffing if filename validation proves insufficient.
 3. Decide whether Railway-level rate limiting is sufficient.
 
 ## Threat Model

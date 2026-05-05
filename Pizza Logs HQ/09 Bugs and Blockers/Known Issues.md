@@ -13,7 +13,7 @@ No confirmed app-breaking bugs are active as of the documentation audit.
 | Absorbs are not implemented | Disc priest contribution can be lower than Skada combined healing+absorbs views | Future parser work based on Skada `Absorbs.lua`; keep separate from healing done |
 | Role detection is rough | Hybrids/self-healing classes can be mislabeled; tanks are not inferred | Replace upload-time heal/damage ratio with better class/spec/combat evidence |
 | Warmane direct server fetches can fail with Cloudflare/403 | Gear/roster refreshes are unreliable from Railway | Supported path is browser-assisted userscripts and cached DB snapshots |
-| Some heroic/Gunship difficulty evidence is absent | Certain pulls cannot be classified perfectly from logs alone | Use marker/session evidence where available; document uncertainty |
+| Some heroic/Gunship difficulty evidence is absent | Certain pulls cannot be classified perfectly from logs alone | Use direct marker evidence first; keep normal-looking non-Gunship fallback attempts normal; document uncertainty |
 | Orphaned pets can remain unmatched | Small DPS mismatches when pets were active before log start | Keep Skada-aligned owner remap when summon evidence exists |
 
 ## Resolved Reference
@@ -38,6 +38,10 @@ No confirmed app-breaking bugs are active as of the documentation audit.
 | Local 3001 server missing `.next` chunks | Stopped stale Next process, removed generated `.next`, restarted `PizzaLogsLocalTestServer`, and verified local page/scripts return 200 |
 | Portrait userscript stayed on class icons or caused hydration warnings | Retired active portrait capture and standardized avatars on class icons; old userscript URLs now serve no-op compatibility updates |
 | Repeating local scheduled task caused recurring PowerShell popups | Disabled `PizzaLogsLocalTestServer`; added Desktop start/stop launchers for web, parser, and PostgreSQL |
+| Parser silently skipped malformed lines | Added tokenizer-level skipped-line accounting and aggregate parser warnings |
+| Parser `/parse-stream` accepted unsupported filenames | Added `.txt`/`.log` filename validation before temp-file handling |
+| Short explicit marker pulls could be discarded | Marker-based encounters now bypass the heuristic minimum-event floor |
+| Heroic wipes could promote later normal kills | Non-Gunship `25N` pulls no longer inherit heroic solely from same-session evidence |
 
 ## Not Bugs
 

@@ -31,8 +31,8 @@ Warmane logs often have missing or misleading encounter markers, so the heuristi
 
 - Encounter marker difficulty IDs map to `10N`, `25N`, `10H`, or `25H` when present.
 - Warmane may report heroic pulls as normal, so heroic marker spells are checked even when `ENCOUNTER_START` exists.
-- Session normalization can promote same-session `25N` encounters to `25H` when the session has reliable heroic evidence.
-- Some encounters do not expose enough evidence and remain normal unless session evidence proves otherwise.
+- Session normalization is intentionally narrow: Gunship can inherit heroic evidence, but normal-looking non-Gunship attempts are not promoted just because another pull in the session was heroic.
+- Some encounters do not expose enough evidence and remain normal rather than guessing from unrelated pulls.
 
 ## Damage Events
 
@@ -65,7 +65,8 @@ parts[12] absorbed
 parts[13] critical
 ```
 
-Effective damage subtracts overkill and absorbed amounts.
+Stored encounter damage subtracts overkill and absorbed amounts. Full-session
+`sessionDamage` counts `amount + absorbed` as total player output across the log.
 
 ## Healing Events
 
@@ -111,6 +112,10 @@ Skada has no `ignored_spells.heal`; every `SPELL_HEAL` and `SPELL_PERIODIC_HEAL`
 ## Performance
 
 - Lines are parsed with Python's CSV module.
+- Raw line tokenizing lives in `parser/combat_log_events.py`.
+- Damage/healing field extraction lives in `parser/combat_metrics.py`.
+- Malformed non-blank lines are counted and returned as aggregate parser warnings.
 - Boss-name sets are cached on parser initialization.
 - `/parse-stream` emits SSE progress while parsing and while Next.js writes DB rows.
+- `/parse-stream` rejects unsupported filename extensions before writing temp files.
 - Parser tests live under `parser/tests/`.

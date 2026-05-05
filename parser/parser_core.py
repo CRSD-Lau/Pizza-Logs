@@ -10,15 +10,21 @@ Supports:
 
 from __future__ import annotations
 
-import csv as _csv
 import hashlib
+import csv as _csv
 import re
-import io
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from typing import Generator, Optional, TextIO
 
 from bosses import BossDef, lookup_boss, lookup_boss_by_id, ALL_BOSS_NAMES
+from combat_log_events import parse_combat_log_line
+from combat_metrics import (
+    encounter_damage_amount,
+    extract_damage_fields,
+    extract_heal_fields,
+    session_damage_amount,
+)
 
 # ── Constants ─────────────────────────────────────────────────────
 
@@ -37,8 +43,8 @@ HEROIC_SPELL_MARKERS: frozenset[str] = frozenset({
     # NOTE: "backlash" (Sindragosa) and "empowered shock vortex" / "empowered shadow lance" /
     # "empowered blood" (Blood Prince Council) are intentionally EXCLUDED here.
     # On Warmane these spells also appear in 10N, so they cannot be used as heroic-exclusive
-    # markers.  Sindragosa and BPC in a 25H session instead inherit the session's heroic
-    # difficulty via _normalize_session_difficulty (25N → 25H promotion).
+    # markers.  Sindragosa and BPC without direct heroic evidence stay normal rather
+    # than inheriting heroic state from another pull in the same session.
 })
 
 # Gunship Battle: Warmane emits ENCOUNTER_END success=0 even on a genuine kill
@@ -325,6 +331,8 @@ class CombatLogParser:
         self.raw_count    = 0
         self.warnings: list[str] = []
         self.session_damage: dict[int, float] = {}
+        self.skipped_line_count = 0
+        self.skipped_line_reasons: dict[str, int] = {}
         # Cache boss name set once — this is hit millions of times during segmentation
         self._boss_name_set: set[str] = ALL_BOSS_NAMES
 
@@ -350,6 +358,10 @@ class CombatLogParser:
                 encounters.append(enc)
         self._assign_session_indices(encounters)
         self._normalize_session_difficulty(encounters)
+        if self.skipped_line_count:
+            self.warnings.append(
+                f"Skipped {self.skipped_line_count} malformed combat-log lines."
+            )
         return encounters
 
     @staticmethod
@@ -361,12 +373,9 @@ class CombatLogParser:
         1. Gunship Battle: Warmane emits difficultyID=4 (25N) even on heroic kills
            because the boss has no heroic-exclusive spells.  Always inherit from session.
 
-        2. 25N encounters in a confirmed 25H session: some bosses (Sindragosa, Blood Prince
-           Council) have spells that look heroic-exclusive but also appear in 10N on Warmane,
-           so their markers were removed from HEROIC_SPELL_MARKERS.  In a 25H session (where
-           other bosses confirmed heroic via reliable markers like Marrowgar "Bone Slice" or
-           Saurfang "Rune of Blood") any remaining 25N encounter is promoted to 25H.
-           10N encounters are never promoted — group-size detection is reliable.
+        Do not broadly promote normal-looking attempts to heroic based only on another
+        heroic encounter in the same session. Warmane raids can wipe on heroic and then
+        kill on normal; cross-attempt promotion would bucket that normal kill under heroic.
         """
         by_session: dict[int, list["ParsedEncounter"]] = {}
         for enc in encounters:
@@ -385,11 +394,6 @@ class CombatLogParser:
                 if "gunship" in bn:
                     # Gunship: always inherit session difficulty
                     enc.difficulty = heroic_diff
-                elif heroic_diff == "25H" and enc.difficulty == "25N":
-                    # 25N encounter in a confirmed 25H session → promote to 25H.
-                    # 10N encounters are intentionally left alone (10N and 10H can
-                    # coexist across sessions; group-size detection is reliable for 10).
-                    enc.difficulty = "25H"
 
     @staticmethod
     def _assign_session_indices(
@@ -431,23 +435,16 @@ class CombatLogParser:
             self.raw_count += 1
             if progress_cb and self.raw_count % _REPORT_EVERY == 0:
                 progress_cb(self.raw_count, total_lines)
-            line = raw_line.strip()
-            if not line:
+            result = parse_combat_log_line(raw_line)
+            if result.line is None:
+                reason = result.skip_reason or "unknown"
+                if reason != "blank":
+                    self.skipped_line_count += 1
+                    self.skipped_line_reasons[reason] = (
+                        self.skipped_line_reasons.get(reason, 0) + 1
+                    )
                 continue
-            # Split timestamp from the rest
-            space_idx = line.find("  ")
-            if space_idx == -1:
-                continue
-            ts_str = line[:space_idx].strip()
-            rest   = line[space_idx + 2:]
-            try:
-                parts = csv_split(rest)
-            except Exception:
-                continue
-            if len(parts) < 2:
-                continue
-            ts = parse_ts(ts_str)
-            yield ts_str, parts, ts
+            yield result.line.ts_str, result.line.parts, result.line.ts
 
     # ── Internal: segmentation ───────────────────────────────────
 
@@ -544,20 +541,10 @@ class CombatLogParser:
                         except (ValueError, TypeError):
                             pass
                 if (is_player or is_pet) and not _is_player(dst_guid):
-                    try:
-                        if event == "SWING_DAMAGE" and len(parts) >= 9:
-                            absorbed = _safe_float(parts[12]) if len(parts) > 12 else 0.0
-                            # Skada counts amount+absorbed without subtracting overkill
-                            eff = max(0.0, float(parts[7]) + absorbed)
-                        elif len(parts) >= 12:
-                            absorbed = _safe_float(parts[15]) if len(parts) > 15 else 0.0
-                            # Skada counts amount+absorbed without subtracting overkill
-                            eff = max(0.0, float(parts[10]) + absorbed)
-                        else:
-                            eff = 0.0
+                    fields = extract_damage_fields(parts)
+                    if fields:
+                        eff = session_damage_amount(fields)
                         _full_dmg[_full_session_idx] = _full_dmg.get(_full_session_idx, 0.0) + eff
-                    except (ValueError, IndexError):
-                        pass
 
             # ── SPELL_SUMMON: build pet→owner map (global, outside segments) ──
             if event == "SPELL_SUMMON" and len(parts) >= 5:
@@ -601,8 +588,7 @@ class CombatLogParser:
                 has_encounter_events = True
                 if current_segment:
                     current_segment.append((ts_str, parts, ts))
-                    if len(current_segment) >= MIN_ENCOUNTER_EVENTS:
-                        segments.append(current_segment)
+                    segments.append(current_segment)
                 current_segment = []
                 in_encounter = False
                 continue
@@ -646,7 +632,7 @@ class CombatLogParser:
 
         # Flush trailing segment
         if has_encounter_events:
-            if current_segment and len(current_segment) >= MIN_ENCOUNTER_EVENTS:
+            if current_segment:
                 segments.append(current_segment)
         else:
             if heuristic_segment and len(heuristic_segment) >= MIN_ENCOUNTER_EVENTS:
@@ -836,16 +822,17 @@ class CombatLogParser:
             # Fields: event,srcGUID,srcName,srcFlags,dstGUID,dstName,dstFlags,
             #   amount,overkill,school,resisted,blocked,absorbed,critical
             if event == "SWING_DAMAGE":
-                if len(parts) < 14:
+                fields = extract_damage_fields(parts)
+                if not fields:
                     continue
                 src_guid, src_name = parts[1], parts[2].strip('"').strip()
                 dst_guid, dst_name = parts[4], parts[5].strip('"').strip()
-                amount   = _safe_float(parts[7])
-                overkill = _safe_float(parts[8])
-                absorbed = _safe_float(parts[12]) if len(parts) > 12 else 0.0
-                school   = _safe_int(parts[9]) or 1
-                is_crit  = parts[13] == "1"
-                spell_name = "Auto Attack"
+                amount = fields.amount
+                overkill = fields.overkill
+                absorbed = fields.absorbed
+                school = fields.school
+                is_crit = fields.is_crit
+                spell_name = fields.spell_name
             elif is_heal:
                 # SPELL_HEAL / SPELL_PERIODIC_HEAL field layout (Warmane WotLK 3.3.5a):
                 #   event,srcGUID,srcName,srcFlags,dstGUID,dstName,dstFlags,
@@ -857,20 +844,19 @@ class CombatLogParser:
                 # parts[12] = absorbed — portion absorbed by absorb shields
                 # parts[13] = critical — "1" or nil
                 #
-                # Effective heal (HP actually restored) = amount - overheal - absorbed
-                # ≈ parts[10] - parts[11]  (parts[12] is 0 for player→player heals in practice)
-                if len(parts) < 11:
+                # Effective heal (HP actually restored) = gross - overheal.
+                # Absorbs are tracked separately by Skada, not added to healing done.
+                fields = extract_heal_fields(parts)
+                if not fields:
                     continue
                 src_guid, src_name = parts[1], parts[2].strip('"').strip()
                 dst_guid, dst_name = parts[4], parts[5].strip('"').strip()
-                spell_name = parts[8].strip('"').strip()
-                school     = _safe_int(parts[9]) or 2
-                gross      = _safe_float(parts[10])
-                overheal   = _safe_float(parts[11]) if len(parts) > 11 else 0.0
-                amount     = max(0.0, gross - overheal)   # effective HP restored
-                overkill   = 0.0
-                absorbed   = 0.0
-                is_crit    = len(parts) > 13 and parts[13] == "1"
+                spell_name = fields.spell_name
+                school = fields.school
+                amount = fields.effective
+                overkill = 0.0
+                absorbed = 0.0
+                is_crit = fields.is_crit
             else:
                 # All remaining events must be in DMG_EVENTS — defence-in-depth
                 # guard against any unrecognised events slipping through.
@@ -879,16 +865,17 @@ class CombatLogParser:
                 # SPELL_DAMAGE / SPELL_PERIODIC_DAMAGE / RANGE_DAMAGE etc.
                 # Fields: event,srcGUID,srcName,srcFlags,dstGUID,dstName,dstFlags,
                 #   spellID,spellName,spellSchool,amount,overkill,school,resisted,blocked,absorbed,??,critical
-                if len(parts) < 15:
+                fields = extract_damage_fields(parts)
+                if not fields:
                     continue
                 src_guid, src_name = parts[1], parts[2].strip('"').strip()
                 dst_guid, dst_name = parts[4], parts[5].strip('"').strip()
-                spell_name = parts[8].strip('"').strip()
-                school     = _safe_int(parts[9]) or 1
-                amount     = _safe_float(parts[10])
-                overkill   = _safe_float(parts[11])
-                absorbed   = _safe_float(parts[15]) if len(parts) > 15 else 0.0
-                is_crit    = len(parts) > 17 and parts[17] == "1"
+                spell_name = fields.spell_name
+                school = fields.school
+                amount = fields.amount
+                overkill = fields.overkill
+                absorbed = fields.absorbed
+                is_crit = fields.is_crit
 
             if amount <= 0:
                 continue
@@ -934,7 +921,11 @@ class CombatLogParser:
             # Saurfang blood barrier) — never reaches HP. UWU excludes both.
             # For heals, `amount` is already the effective value (gross - overheal),
             # computed above from parts[10] - parts[11].
-            eff_amount = max(0.0, amount - overkill - absorbed) if not is_heal else amount
+            eff_amount = (
+                amount
+                if is_heal
+                else encounter_damage_amount(fields)
+            )
 
             a = _get_actor(actors, src_name, src_guid)
             ss = a.spells.setdefault(spell_name, SpellStats(school=school))

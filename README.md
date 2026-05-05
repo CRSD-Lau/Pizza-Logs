@@ -89,12 +89,14 @@ Key rules:
 
 - Damage events match Skada `Damage.lua`: `SPELL_DAMAGE`, `SWING_DAMAGE`, `RANGE_DAMAGE`, `SPELL_PERIODIC_DAMAGE`, `DAMAGE_SHIELD`, `DAMAGE_SPLIT`, and `SPELL_BUILDING_DAMAGE`.
 - Healing events match Skada `Healing.lua`: `SPELL_HEAL` and `SPELL_PERIODIC_HEAL`.
+- Stored encounter damage is the app's useful/effective leaderboard value: `amount - overkill - absorbed`; full-session `sessionDamage` counts `amount + absorbed`.
 - Effective healing is `max(0, gross - overheal)`.
 - `SPELL_HEAL_ABSORBED` is not healing done in Skada.
 - `SWING_DAMAGE` uses shifted indexes because it has no spell fields.
 - KILL duration uses boss death time, not the last post-kill event.
 - Gunship kill detection has a Warmane crew-death override.
-- Heroic detection uses marker spells and session normalization where the log evidence supports it. Some encounters remain impossible to classify perfectly from Warmane logs alone.
+- Heroic detection uses encounter marker IDs, reliable marker spells, and narrow session normalization only where it cannot cross-contaminate normal fallback attempts. Some encounters remain impossible to classify perfectly from Warmane logs alone.
+- Malformed combat-log lines are counted and returned as parser warnings instead of crashing uploads.
 
 ## Player, Gear, And Roster Data
 
@@ -253,7 +255,7 @@ Production requirements:
 app/                 Next.js pages and API routes
 components/          UI, upload, meters, player gear, roster widgets
 lib/                 Prisma client, schemas, parser contracts, Warmane/item helpers
-parser/              FastAPI parser service and pytest suite
+parser/              FastAPI parser service, parser modules, and pytest suite
 parser/tests/fixtures/
                      Combat-log fixture inputs and expected outputs
 prisma/              Schema, migrations, and seed script

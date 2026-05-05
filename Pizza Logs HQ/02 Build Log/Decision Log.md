@@ -71,7 +71,7 @@
 
 **Decision:** Do not infer heroic difficulty from boss HP or total-damage thresholds.
 **Why:** Warmane evidence is inconsistent and HP/damage ratios are too noisy.
-**Status:** Still valid. Superseded detail: the parser now uses encounter marker difficulty when present, heroic-only marker spells where reliable, and session normalization for supported cases. Some Warmane pulls still cannot be proven heroic from logs alone.
+**Status:** Still valid. Superseded detail: the parser now uses encounter marker difficulty when present, heroic-only marker spells where reliable, and only narrow session normalization that cannot bucket a normal fallback attempt under heroic. Some Warmane pulls still cannot be proven heroic from logs alone.
 
 ---
 

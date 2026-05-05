@@ -415,6 +415,9 @@ async def parse_log_stream(
     FastAPI closes UploadFile when the endpoint function returns, so the async
     generator cannot read from `file` after that point.
     """
+    if file.filename and not file.filename.lower().endswith((".txt", ".log")):
+        raise HTTPException(400, "Only .txt and .log files are supported")
+
     # ── Write file to disk NOW (before returning StreamingResponse) ──
     sha256     = hashlib.sha256()
     first_chunk= b""

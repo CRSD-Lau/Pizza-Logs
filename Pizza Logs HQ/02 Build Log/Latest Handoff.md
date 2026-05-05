@@ -34,47 +34,28 @@
 - Supported roster/gear refresh path is browser-assisted userscripts from `/admin`.
 - Player avatars intentionally use class icons, with initials fallback when class data or icon loading is unavailable.
 - Production userscripts still post to Railway production; local userscripts post to `http://127.0.0.1:3001`.
+- Parser tokenization and combat math are now split into small Python modules under `parser/` so line parsing and metric extraction can be tested independently.
+- Parser warnings now report malformed combat-log lines instead of silently skipping them.
+- `/parse`, `/parse-debug`, and `/parse-stream` reject unsupported upload filenames before parsing.
+- Explicit `ENCOUNTER_START` / `ENCOUNTER_END` windows are preserved even when they are shorter than the heuristic minimum-event floor.
+- Difficulty normalization is evidence-first: non-Gunship normal-looking pulls are not promoted to heroic solely because a nearby pull in the same upload was heroic.
 
-## Class Icon Avatar Cleanup This Session
+## Parser Refactor This Session
 
-- Retired active Warmane/Wowhead/Zamimg portrait capture and standardized player avatars on built-in class icons.
-- Removed the portrait install UI from `/admin`.
-- Removed stale `portraitUrl` plumbing from player profiles, player lists, session pages, and roster rows.
-- Replaced stale portrait parsing helpers with `lib/class-icons.ts`.
-- Kept the old `/api/player-portraits/...` userscript URLs as no-op compatibility updates so existing Tampermonkey installs can self-update to harmless code.
-- Bumped the no-op compatibility portrait userscript to `0.6.0`.
-- Added local install endpoints:
-  - `http://127.0.0.1:3001/api/admin/armory-gear/userscript.local.user.js`
-  - `http://127.0.0.1:3001/api/admin/guild-roster/userscript.local.user.js`
-  - `http://127.0.0.1:3001/api/player-portraits/userscript.local.user.js`
-- Added local install buttons and URL fields on the admin gear and guild roster panels.
-- Local gear and roster scripts still run on Warmane Armory pages, but they post imports into the laptop dev server instead of production.
-- Local portrait script is compatibility-only and does not mutate Pizza Logs, Warmane, or modelviewer pages.
-
-## Local Service Launcher Changes This Session
-
-- Added repo-backed Desktop launcher templates:
-  - `scripts/desktop/Start Pizza Logs Local.cmd`
-  - `scripts/desktop/Stop Pizza Logs Local.cmd`
-- Copied those launchers to Neil's Desktop root.
-- `Start Pizza Logs Local.cmd` starts PostgreSQL if needed, parser on `127.0.0.1:8000`, and Next.js on `127.0.0.1:3001`.
-- `Stop Pizza Logs Local.cmd` stops the Pizza Logs web/parser ports and tries to stop the local PostgreSQL service. If Windows blocks PostgreSQL service control, run the stop launcher as administrator.
-- Both scripts keep the old repeating `PizzaLogsLocalTestServer` scheduled task disabled.
-- Validation note: non-elevated stop successfully stops web/parser; Windows denied stopping `postgresql-x64-16`, so full three-service stop requires running the stop launcher as administrator.
-
-## Recent Documentation Audit Changes
-
-- Rewrote root README, contributor workflow, security policy, branch workflow docs, and review checklist around the current `codex-dev -> PR -> main` process.
-- Removed duplicate or historical-only docs:
-  - blank vault inbox capture note;
-  - completed cinematic Superpowers spec and plan;
-  - duplicate AI prompt/skill reference notes;
-  - old growth/business note;
-  - separate backlog and technical-debt docs now consolidated into `Feature Status`.
-- Updated vault architecture, deployment, security, parser, current-focus, and known-issues notes to match current code.
-- Corrected stale direct-`main` deploy language.
-- Corrected stale claims that heroic and Gunship behavior are completely undetectable.
-- Documented open repo issues found during audit: upload lacks hard server-side size enforcement, and some env/example variables had drifted from actual code usage.
+- Added `docs/parser-audit.md` before changing parser behavior.
+- Audited the current upload path from `app/api/upload/route.ts` through parser `/parse-stream`, database persistence, player/session stats, and existing parser tests.
+- Studied local reference checkouts of `Ridepad/uwu-logs` and `bkader/Skada-WoTLK`; the audit cites the exact files/functions that influenced the refactor.
+- Added `parser/combat_log_events.py` for timestamp parsing, CSV-safe combat-log tokenization, skipped-line classification, and normalized line objects.
+- Added `parser/combat_metrics.py` for damage/healing field extraction and explicit encounter/session damage formulas.
+- Refactored `parser/parser_core.py` to use those helpers while preserving existing production-facing result shapes.
+- Kept stored encounter damage compatible with existing Pizza Logs behavior: `amount - overkill - absorbed`.
+- Kept full-session actor `sessionDamage` compatible with existing behavior: `amount + absorbed`.
+- Kept healing effective by default: gross heal minus overheal; absorbs remain separate future work.
+- Added parser warnings for malformed/truncated combat-log lines.
+- Fixed short explicit marker encounters being discarded by heuristic floors.
+- Fixed heroic-session bleed where a later normal kill could be promoted to heroic without direct evidence.
+- Added `/parse-stream` filename validation to match `/parse` and `/parse-debug`.
+- Updated README, parser contract docs, parser architecture notes, security notes, decision log, current-focus, and known-issues docs.
 
 ## Verification This Session
 
@@ -82,37 +63,19 @@ PowerShell/npm shims in `node_modules/.bin` hit OneDrive reparse-point `Access i
 
 | Check | Result |
 |---|---|
-| `tests/armory-gear-client-scripts.test.ts` | Passed |
-| `tests/guild-roster-client-scripts.test.ts` | Passed |
-| `tests/player-portrait-client-scripts.test.ts` | Passed |
-| `tests/gear-import-bookmarklet.test.ts` | Passed |
-| `tests/guild-roster-admin-panel.test.ts` | Passed |
-| `tests/guild-roster-table-render.test.ts` | Passed with JSX-aware `ts-node` options |
-| `tests/local-userscript-routes.test.ts` | Passed |
-| `tests/class-icons.test.ts` | Passed |
-| `tests/player-profile.test.ts` | Passed |
-| `tests/session-avatar-source.test.ts` | Passed |
+| `python -m pytest tests/ -v` from `parser/` | Passed, `133 passed, 1 warning` |
 | ESLint via bundled Node | Passed |
 | TypeScript `tsc --noEmit` via bundled Node | Passed |
 | Next production build via bundled Node | Passed |
-| Local `3001` app root | 200, contained `Pizza Logs` |
-| Local `3001` gear userscript endpoint | 200, contained local origin and local script name |
-| Local `3001` roster userscript endpoint | 200, contained local origin and local script name |
-| Local `3001` portrait userscript endpoint | 200, contained local origin, version `0.6.0`, deprecation text, and no active DOM/GM/canvas code |
-| Desktop launchers copied | `Start Pizza Logs Local.cmd` and `Stop Pizza Logs Local.cmd` exist on the Desktop root |
-| `PizzaLogsLocalTestServer` scheduled task | Disabled |
-| `scripts/stop-local-test-server.ps1 -DisableScheduledTask -StopPostgres` | Stopped web/parser; PostgreSQL stop denied without elevation as expected |
-| `scripts/start-local-test-server.ps1 -DisableScheduledTask` | Restarted web/parser with PostgreSQL running |
+| `git diff --check` | Passed |
 
-## Local Server Recovery
+## Remaining Risks
 
-- A runtime error appeared on `http://127.0.0.1:3001`: `Cannot find module './5611.js'`.
-- Root cause was a mixed `.next` cache: the running dev server loaded a webpack runtime expecting chunks at `.next\server\5611.js`, while the actual chunks were under `.next\server\chunks\5611.js`.
-- Likely trigger: running a production `next build` while the long-running local dev server was still active.
-- Recovery performed: stopped the stale Next process, removed only the generated `.next` folder, restarted the existing `PizzaLogsLocalTestServer` scheduled task, and verified `/` plus the local gear userscript endpoint returned 200.
-- After the hydration fix build, the same generated-cache pattern briefly recurred with a missing `vendor-chunks/lucide-react.js`. Recovery was the same: fully stop repo Next processes, remove only generated `.next`, restart `PizzaLogsLocalTestServer`, then verify `/` and local userscript endpoints return 200.
-- During the class-icon cleanup, `next build` first compiled then hit stale `.next` route module state for admin API routes. Removing generated `.next`, rerunning the build, then restarting the local test server manually through `scripts/start-local-test-server.ps1` restored `http://127.0.0.1:3001`.
+- Absorbs are still not implemented as healing; Skada treats them separately.
+- Some Warmane heroic/Gunship evidence is not present in every log, so ambiguous attempts stay conservative rather than guessed heroic.
+- Useful damage is documented and test-covered through existing encounter rules, but needs more encounter-specific exclusions over time.
+- Upload route still lacks hard server-side size enforcement; this remains the highest practical upload-flow follow-up.
 
 ## Exact Next Step
 
-Push the updated `codex-dev` commit into draft PR #8. After merge, no portrait userscript update is needed for normal use because class icons are built into the app; existing old portrait userscript installs can be removed, or allowed to auto-update to the no-op compatibility script.
+Push the parser refactor commit to `origin/codex-dev`, then open or update the PR into `main` for review. Do not merge or push `main` directly.
