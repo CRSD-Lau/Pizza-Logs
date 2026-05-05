@@ -74,7 +74,7 @@ setState({ stage: "idle", progress: 0, message: "", elapsed: 0, stalled: false }
 ## UI / React
 
 ### AccordionSection vs SectionHeader
-**What changed:** All data sections now use `AccordionSection` not `SectionHeader`  
+**Pattern:** Use `AccordionSection` for expandable report/data sections. `SectionHeader` is still fine for static admin/dashboard groups.
 **Pattern:**
 ```tsx
 <AccordionSection title="..." sub="..." count={n} defaultOpen={false}>

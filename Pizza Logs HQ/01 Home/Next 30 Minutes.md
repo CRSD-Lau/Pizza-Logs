@@ -1,29 +1,12 @@
 # Next 30 Minutes
 
-> Use this when you sit down and don't know where to start. Pick one row. Do it.
+Use this when there is no obvious next action.
 
----
-
-## The List (update this when Now changes)
-
-| If you have… | Do this |
+| Time | Action |
 |---|---|
-| 30 min | Open [[Latest Handoff]], paste [[Codex Resume Prompt]] into Codex, continue exact next step |
-| 15 min | Open [[Known Issues]], fix or document one bug |
-| 10 min | Open [[Backlog]], groom one item (clarify, prioritize, delete) |
-| 5 min | Open [[Now]], update it to reflect reality |
-| 2 min | Brain dump into [[00 Inbox/Capture]] — just write |
+| 30 min | Read [[Latest Handoff]] and complete the first concrete item in [[Now]] |
+| 15 min | Pick one open item from [[Known Issues]] and verify whether it is still true |
+| 10 min | Groom [[Feature Status]]: clarify, reprioritize, or delete one stale item |
+| 5 min | Update [[Now]] so it reflects reality |
 
----
-
-## Anti-Procrastination Rule
-
-If you're about to open a design tool, color picker, or rename a folder instead of coding: **close it and open VSCode.**
-
-The app ships features. The vault is a tool, not the work.
-
----
-
-## Current Exact Next Step
-
-→ See [[Latest Handoff]] → Exact Next Steps section
+Default rule: improve the running product before reorganizing the vault.

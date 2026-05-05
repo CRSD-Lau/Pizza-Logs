@@ -1,71 +1,68 @@
 # Feature Status
 
+This file is the single source for shipped features, active backlog, and technical debt. Keep roadmap items clearly separate from current functionality.
+
 ## Shipped
 
-| Feature | Notes |
+| Feature | Current state |
 |---|---|
-| File upload (drag + drop) | `UploadZone.tsx`, accepts `.txt`/`.log` uploads |
-| Streaming upload to parser | `duplex: "half"` - no buffering in Next.js |
-| SSE parser progress | Parser emits progress; browser reads event stream |
-| Browser notification on complete | Native Notification API, fires even if tab is backgrounded |
-| Boss encounter detection | Heuristic segmentation for Warmane logs without reliable encounter markers |
-| DPS / HPS aggregation | Per player per encounter |
-| Spell breakdown | Per spell: damage, healing, hits, crits, school |
-| Class detection | `SPELL_CLASS_MAP` maps common WotLK spells to classes |
-| WoW class colors | In meter, leaderboard, and weekly surfaces |
-| Weekly leaderboard (`/weekly`) | Top DPS/HPS per boss this week |
-| Boss leaderboards (`/bosses`) | All-time top per boss and difficulty |
-| Upload history | Public upload pages redirect to admin; upload telemetry lives under `/admin/uploads` |
-| Admin dashboard (`/admin`) | DB stats, service health, upload timings, errors, item import, gear/roster sync helpers |
+| Upload pipeline | Drag/drop `.txt`/`.log` upload, SSE progress, parser service, DB writes |
+| Parser | Skada-WoTLK-aligned damage/healing event handling with heuristic Warmane segmentation |
+| Raid sessions | Uploads split into sessions after long gaps; public session detail pages live under `/raids/...` |
+| Encounter pages | Boss pull meters, spell breakdowns, target breakdowns, roster data |
+| Leaderboards | Boss, global, weekly, and player profile summaries |
+| Milestones | Current all-time DPS/HPS ranks per boss/difficulty |
 | Admin auth | `/admin` and admin APIs require `ADMIN_SECRET`; production fails closed if missing |
-| Admin login cookie | Server action sets `x-admin-secret` as `HttpOnly`; secure by default in production |
-| Admin cleanup actions | Built into `/admin`; cleanup re-checks admin auth and retains persistent roster/gear/item-template data |
-| Deduplication | File-level SHA-256 plus encounter-level fingerprint |
-| Milestone tracking | New top records detected and shown after upload |
-| Valithria Dreamwalker KILL detection | Green Dragon Combat Trigger death |
-| KILL duration accuracy | Uses boss death timestamp, not post-fight tail |
-| Boss sort order | ICC first via `sortOrder` |
-| Obsidian vault | `Pizza Logs HQ/` is committed and read at session start |
-| Codex-first workflow | Claude docs removed; `AGENTS.md`, review guide, and vault prompts are current |
-| Parser Skada-WoTLK alignment | DMG_EVENTS, HEAL_EVENTS, and heal formula match Skada source |
-| Heal formula fix | Effective healing = `max(0, gross - overheal)` |
-| Heroic difficulty normalization | 25N encounters in confirmed 25H sessions promoted by session normalization |
-| Footer text | Footer now correctly says parsing is handled server-side on Railway |
-| AzerothCore item template enrichment | `wow_items` is backed by imported `item_template` data; no runtime Wowhead dependency |
-| Warmane Gear Sync icon backfill | Gear Sync `1.7.0` scrapes queued player DOM icons and posts them to Pizza Logs |
-| Full-player gear queue scan | Missing-gear endpoint filters all candidates before applying the 100-player response cap |
-| Global player search | Header autocomplete searches combat-log `players` plus PizzaWarriors/Lordaeron roster-only members via `/api/players/search` |
+| Admin diagnostics | Service health, DB counts, upload timings, upload history, cleanup controls |
+| Public upload telemetry removal | Upload history/detail moved behind admin; `/uploads` redirects to admin |
+| Guild roster | Cached PizzaWarriors/Lordaeron roster rows with rank/profession parsing |
+| Roster-only profiles | `/players/<name>` resolves roster members without combat-log rows |
+| Header search | Searches combat-log players plus roster-only members through `/api/players/search` |
+| Gear cache | Warmane snapshots cached in `armory_gear_cache`, with GearScoreLite display |
+| Item metadata | AzerothCore `item_template` import populates `wow_items`; no runtime Wowhead API dependency |
+| Gear/userscript import | Browser-assisted Warmane Gear Sync fills gear snapshots and icon gaps |
+| Portrait userscript | Best-effort Warmane/Wowhead/Zamimg portrait capture with class-icon/initial fallback |
+| ICC ordering | Shared helpers keep ICC boss displays in progression order where appropriate |
+| Local test server helpers | Windows scripts start/stop web and parser test servers |
+| Favicon/app icon | `public/favicon.ico` and `app/icon.svg` are present |
+| Documentation baseline | README, workflow docs, vault notes, and GitHub-facing docs refreshed around current code |
 
----
+## Active Work
 
-## In Progress
-
-| Feature | Status |
+| Item | Status |
 |---|---|
-| Warmane Gear Sync production backfill | Code is pushed to `origin/main`; production still needs one Gear Sync `1.7.0` run to backfill missing icon slugs for queued players such as Maxximusboom and Lausudo |
-| HPS accuracy vs Skada | Parser aligns with Skada-WoTLK heal rules. Remaining gap is likely PW:S absorbs, which Skada tracks separately |
-| Absorbs tracking (PW:S) | Future parser enhancement based on Skada `Absorbs.lua` |
+| Warmane production data freshness | Manual/browser-assisted until local automated sync agent exists |
+| Absorbs | Future parser work; not currently implemented |
 
----
+## Backlog
 
-## Planned / Backlog
-
-| Feature | Priority | Notes |
+| Priority | Item | Notes |
 |---|---|---|
-| Absorbs tracking | High | Add separate absorb metrics without mixing absorbs into healing |
-| Damage mitigation stats | Medium | `SPELL_MISSED` subtypes: ABSORB, BLOCK, PARRY, DODGE |
-| Consumable tracking | Medium | Known consumable buff applications |
-| Local Warmane sync agent | Medium | Reduce manual userscript dependency |
-| Guild comparison | Low | Compare guild members side-by-side |
-| Public guild pages | Low | Share leaderboards publicly |
-| Multiple guild support | Low | Already in schema (`Guild` table), needs UI |
-| Real-time parse speed display | Low | Show MB/s or lines/s during upload |
+| High | Absorbs tracking | Implement Skada `Absorbs.lua` style separate absorb metric, not healing |
+| High | Server-side upload size enforcement | Enforce a hard byte limit while streaming to parser |
+| Medium | Upload rate limiting | Prefer Railway-level controls first, app-level only if needed |
+| Medium | Local automated Warmane sync agent | Replace manual roster/gear userscript runs with low-risk local automation |
+| Medium | Damage mitigation stats | Track `SPELL_MISSED` subtypes such as ABSORB, BLOCK, PARRY, DODGE |
+| Medium | Consumable tracking | Known buff applications |
+| Low | Fastest kill records | Per boss/difficulty shortest duration kills |
+| Low | Attendance tracking | Per-player raid attendance |
+| Low | CSV export | Download encounter/player data |
+| Low | Branded 404 | Replace default Next.js 404 |
 
----
+## Technical Debt
 
-## Won't Do
+| Debt | Impact | Fix |
+|---|---|---|
+| Manual Warmane sync | Gear/roster can go stale | Local automated sync agent with snapshot validation |
+| Upload lacks hard size cap | Large uploads can waste resources | Enforce size during upload/forwarding |
+| Role inference is rough | Hybrids and tanks can be mislabeled | Use better class/spec/combat evidence |
+| Encounter detail links to global player profile | Different navigation from session pages | Pass upload/session context where needed |
 
-| Feature | Reason |
+## Won't Do / Not Current
+
+| Item | Reason |
 |---|---|
-| Heroic detection from Warmane logs alone | Warmane lacks reliable heroic-only IDs/markers in the target logs |
-| Gunship Battle as a separately detectable encounter marker | Warmane does not expose reliable encounter markers for it |
+| Direct Codex pushes to `main` | Production deploys only after Neil merges a PR |
+| Railway Warmane proxy / Cloudflare bypass | Production should serve cached snapshots and receive browser/local imports |
+| Runtime Wowhead API enrichment | Replaced by local AzerothCore item metadata |
+| Perfect heroic detection from logs alone | Some Warmane encounters lack reliable evidence; use marker/session evidence only where supported |

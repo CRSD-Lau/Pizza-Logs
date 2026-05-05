@@ -12,6 +12,7 @@
 - [ ] `npm run type-check --if-present` passes
 - [ ] `npm test --if-present` passes
 - [ ] `npm run build` passes
+- [ ] `cd parser && pytest tests/ -v` passes if parser behavior changed
 - [ ] Upload flow tested if upload/parser code changed
 - [ ] Global search tested if player/search/roster code changed
 - [ ] Local DB reset/seed tested if Prisma/schema/seed code changed

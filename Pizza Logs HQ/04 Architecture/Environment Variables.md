@@ -1,55 +1,52 @@
 # Environment Variables
 
----
+Source of truth for examples: `.env.example`, `docker-compose.yml`, `lib/admin-auth.ts`, and `app/api/upload/route.ts`.
 
-## Next.js App (Railway: "Web Service")
+## Web Service
 
-| Variable | Value | Notes |
+| Variable | Required | Notes |
 |---|---|---|
-| `DATABASE_URL` | `postgresql://postgres:...@postgres.railway.internal:5432/railway?sslmode=disable` | Auto-set by Railway |
-| `PARSER_SERVICE_URL` | `http://parser-py.railway.internal:8000` | Internal Railway hostname |
-| `ADMIN_SECRET` | long random secret | Required in production; admin fails closed if missing |
-| `ADMIN_COOKIE_SECURE` | omit | Optional; only set `false` for local HTTP compose |
-| `DEFAULT_REALM_NAME` | `Lordaeron` | Default realm for uploads |
-| `DEFAULT_REALM_HOST` | `warmane` | Default host |
-| `MAX_FILE_SIZE_BYTES` | `1073741824` | 1 GB |
-| `UPLOAD_DIR` | `./uploads` | Temp upload dir in container |
+| `DATABASE_URL` | Yes | Prisma/PostgreSQL connection string. Railway usually injects this from Postgres. |
+| `PARSER_SERVICE_URL` | Yes | Parser service URL. Local: `http://localhost:8000`; Railway: internal `parser-py` URL. |
+| `ADMIN_SECRET` | Yes in production | Protects `/admin` and admin import APIs. Production fails closed if missing. |
+| `ADMIN_COOKIE_SECURE` | No | Omit in Railway. Set `false` only for local HTTP production-mode compose. |
 
-## Python Parser (Railway: "parser-py")
+`NODE_ENV` is set by the runtime. Production admin auth uses it to fail closed when `ADMIN_SECRET` is missing.
 
-| Variable | Value | Notes |
+## Parser Service
+
+| Variable | Required | Notes |
 |---|---|---|
-| `PORT` | (Railway injects) | FastAPI binds to this |
+| `PORT` | Railway injects | Parser defaults to `8000` if unset. |
 
----
+## Local `.env.local`
 
-## Local Development
-
-`.env.local` in Next.js root:
-```
-DATABASE_URL="postgresql://..."
+```env
+DATABASE_URL="postgresql://pizzalogs:pizzalogs@localhost:5432/pizzalogs?schema=public"
 PARSER_SERVICE_URL="http://localhost:8000"
-ADMIN_SECRET="local-dev-secret"
+ADMIN_SECRET="local-dev-admin-secret"
 ```
 
-Run parser locally:
-```bash
-cd parser && uvicorn main:app --reload --port 8000
-```
+## Compose Defaults
 
-`postgres.railway.internal` is **not** reachable locally — Railway DB only accessible from inside Railway. See [[Railway Runbook]] for workarounds.
+`docker-compose.yml` provides local-only defaults:
 
----
+- `DATABASE_URL=postgresql://pizzalogs:pizzalogs@postgres:5432/pizzalogs?schema=public`
+- `PARSER_SERVICE_URL=http://parser:8000`
+- `ADMIN_SECRET=${ADMIN_SECRET:-local-dev-admin-secret}`
+- `ADMIN_COOKIE_SECURE=false`
 
-## Secrets — Never Commit
+## Drift Notes
 
+- The upload UI says files up to 1 GB are supported, but the upload route does not currently enforce a hard server-side size limit.
+- `UPLOAD_DIR`, `MAX_FILE_SIZE_BYTES`, `DEFAULT_REALM_NAME`, and `DEFAULT_REALM_HOST` were removed from `.env.example` because current app code does not actively use them for upload behavior.
+
+## Never Commit
+
+- `.env`
 - `.env.local`
-- Anything with `DATABASE_URL`
-- One-time reset/recovery secrets, if Neil explicitly requests a temporary recovery endpoint
-- `ADMIN_SECRET` for admin auth (see [[Security Checklist]])
-
----
-
-## Related
-- [[Railway Runbook]] — how to set vars, workarounds for local DB access
-- [[Security Checklist]] — which vars are security-sensitive
+- `.env.sync-agent`
+- Railway tokens
+- database URLs
+- `ADMIN_SECRET`
+- one-time recovery/reset secrets

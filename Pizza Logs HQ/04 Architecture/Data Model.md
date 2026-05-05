@@ -1,153 +1,101 @@
-# Data Model — Quick Reference
+# Data Model Quick Reference
 
-> Fast lookup. Full schema in `prisma/schema.prisma`.
+Source of truth: `prisma/schema.prisma`.
 
----
+## Core Relationships
 
-## Entity Map
-
+```text
+Realm --< Upload --< Encounter --< Participant >-- Player
+Realm --< Guild --< Upload
+Boss --< Encounter
+Player --< Milestone >-- Encounter
+GuildRosterMember  (independent Warmane roster cache)
+ArmoryGearCache    (independent Warmane gear cache)
+WowItem            (local AzerothCore item metadata)
+WeeklySummary      (materialized weekly aggregates)
 ```
-Realm ──< Upload ──< Encounter ──< Participant >── Player
-           │               │              │
-           └── Guild       └── Boss       └── Milestone
-                           └── Milestone
-```
 
----
+## Main Tables
 
-## Tables
+| Table | Purpose |
+|---|---|
+| `realms` | Realm identity such as Lordaeron/warmane/wotlk |
+| `guilds` | Guild identity scoped to a realm |
+| `uploads` | Uploaded log file metadata, hash, status, raw line count, session damage |
+| `encounters` | Parsed boss pulls with outcome, difficulty, duration, totals, and session index |
+| `participants` | Per-player encounter stats, role, DPS/HPS, deaths, spell/target JSON |
+| `players` | Combat-log player rows scoped to realm |
+| `bosses` | Seeded WotLK boss definitions, slugs, raids, sort order |
+| `milestones` | Current and superseded DPS/HPS record ranks |
+| `weekly_summaries` | Materialized weekly top DPS/HPS and boss-kill data |
+| `guild_roster_members` | Cached Warmane guild roster rows |
+| `armory_gear_cache` | Cached Warmane gear snapshots per character/realm |
+| `wow_items` | Static WotLK item metadata imported from AzerothCore `item_template` |
 
-### Realm
-| Field | Type | Notes |
-|---|---|---|
-| id | String (cuid) | PK |
-| name | String | e.g. "Lordaeron" |
-| host | String | e.g. "warmane" |
-| expansion | String | "wotlk" |
-| Unique: | (name, host) | |
+## Important Constraints
 
-### Upload
-| Field | Type | Notes |
-|---|---|---|
-| id | String (cuid) | PK |
-| filename | String | original filename |
-| fileHash | String (unique) | SHA-256 of file → dedup |
-| fileSize | Int | bytes |
-| status | Enum | PENDING / PARSING / DONE / FAILED / DUPLICATE |
-| rawLineCount | Int? | total log lines |
-| parsedAt | DateTime? | when processing completed |
-| realmId | String? | FK |
-| guildId | String? | FK |
+- `Realm`: unique `(name, host)`.
+- `Guild`: unique `(name, realmId)`.
+- `Upload.fileHash`: unique SHA-256 for file-level deduplication.
+- `Encounter.fingerprint`: unique encounter-level deduplication key.
+- `Participant`: unique `(encounterId, playerId)`.
+- `Player`: unique `(name, realmId)`.
+- `GuildRosterMember`: unique `(normalizedCharacterName, guildName, realm)`.
+- `ArmoryGearCache`: unique `(characterKey, realm)`.
+- `WowItem.itemId`: primary key as string.
 
-### Encounter
-| Field | Type | Notes |
-|---|---|---|
-| id | String (cuid) | PK |
-| uploadId | String | FK |
-| bossId | String | FK |
-| fingerprint | String (unique) | SHA-256 dedup hash |
-| outcome | Enum | KILL / WIPE / UNKNOWN |
-| difficulty | String | "10N" "10H" "25N" "25H" |
-| groupSize | Int | |
-| sessionIndex | Int | 0-based, >60 min gap = new session |
-| durationSeconds | Int | |
-| startedAt | DateTime | |
-| endedAt | DateTime | |
-| totalDamage | Float | |
-| totalHealing | Float | |
-| totalDamageTaken | Float | |
+## JSON Shapes
 
-### Participant
-| Field | Type | Notes |
-|---|---|---|
-| id | String (cuid) | PK |
-| encounterId | String | FK |
-| playerId | String | FK |
-| role | Enum | DPS / HEALER / TANK / UNKNOWN |
-| totalDamage | Float | |
-| totalHealing | Float | |
-| damageTaken | Float | |
-| dps | Float | |
-| hps | Float | |
-| deaths | Int | |
-| critPct | Float | 0-100 |
-| spellBreakdown | Json? | `{spellName: {damage, healing, hits, crits, school}}` |
-| targetBreakdown | Json? | `{mobName: {damage, hits, crits}}` |
-| Unique: | (encounterId, playerId) | |
+`Participant.spellBreakdown`:
 
-### Player
-| Field | Type | Notes |
-|---|---|---|
-| id | String (cuid) | PK |
-| name | String | character name |
-| class | String? | WoW class string |
-| realmId | String? | FK |
-| Unique: | (name, realmId) | |
-
-### GuildRosterMember
-| Field | Type | Notes |
-|---|---|---|
-| characterName | String | Warmane roster character name |
-| normalizedCharacterName | String | Lowercase lookup key used by roster sync and header search |
-| guildName | String | Currently PizzaWarriors for production search |
-| realm | String | Currently Lordaeron for production search |
-| className | String? | Warmane roster class |
-| raceName | String? | Warmane roster race |
-| level | Int? | Character level |
-| rankName | String? | Guild rank |
-| gearScore | Int? | Imported or cached Warmane gear score |
-| Unique: | (normalizedCharacterName, guildName, realm) | |
-
-### Player Search Source
-`GET /api/players/search?q=<query>` reads `players` and scoped PizzaWarriors/Lordaeron `guild_roster_members` rows directly with small selects and capped results. It does not call `readGuildRosterMembers()` because that helper also loads gear cache data for full roster pages.
-
-### Boss
-| Field | Type | Notes |
-|---|---|---|
-| id | String (cuid) | PK |
-| name | String (unique) | display name |
-| slug | String (unique) | URL slug |
-| raid | String | raid zone name |
-| sortOrder | Int | ICC=10-40, Naxx=700-741 |
-| wowBossId | Int? | NPC ID from log |
-
-### Milestone
-| Field | Type | Notes |
-|---|---|---|
-| id | String (cuid) | PK |
-| playerId | String | FK |
-| encounterId | String | FK |
-| metric | Enum | DPS / HPS |
-| value | Float | |
-| rank | Int | 1 = server best |
-| difficulty | String? | |
-| supersededAt | DateTime? | null = current record |
-
----
-
-## JSON Field Shapes
-
-### spellBreakdown
 ```json
 {
-  "Frost Strike": { "damage": 1234567, "healing": 0, "hits": 45, "crits": 12, "school": 16 },
-  "Obliterate":   { "damage": 987654,  "healing": 0, "hits": 30, "crits": 8,  "school": 1  }
+  "Frost Strike": {
+    "damage": 1234567,
+    "healing": 0,
+    "hits": 45,
+    "crits": 12,
+    "school": 16
+  }
 }
 ```
 
-### targetBreakdown
+`Participant.targetBreakdown`:
+
 ```json
 {
-  "Lord Marrowgar":     { "damage": 890000, "hits": 120, "crits": 34 },
-  "Bone Spike":         { "damage": 45000,  "hits": 15,  "crits": 4  }
+  "Lord Marrowgar": {
+    "damage": 890000,
+    "hits": 120,
+    "crits": 34
+  }
 }
 ```
 
----
+`ArmoryGearCache.gear` stores an `ArmoryCharacterGear` snapshot:
 
-## Key Constraints
+```json
+{
+  "characterName": "Example",
+  "realm": "Lordaeron",
+  "sourceUrl": "https://armory.warmane.com/character/Example/Lordaeron/summary",
+  "fetchedAt": "2026-05-05T00:00:00.000Z",
+  "items": [
+    {
+      "slot": "Head",
+      "name": "Item Name",
+      "itemId": "50000",
+      "itemLevel": 264,
+      "quality": "epic",
+      "equipLoc": "INVTYPE_HEAD",
+      "iconUrl": "https://wow.zamimg.com/images/wow/icons/large/inv_helmet_01.jpg"
+    }
+  ]
+}
+```
 
-- `Upload.fileHash` unique → file-level dedup
-- `Encounter.fingerprint` unique → encounter-level dedup
-- `Milestone.supersededAt = null` → current active records only
-- `Participant (encounterId, playerId)` unique → one row per player per fight
+## Operational Notes
+
+- Upload-derived data can be cleaned from admin controls; roster, gear cache, and item metadata are persistent support data.
+- `wow_items.iconName` is backfilled from Warmane/Zamimg icon data and should not be overwritten by the AzerothCore import.
+- Roster-only characters can have player pages even without a `players` row.

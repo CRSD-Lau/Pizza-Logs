@@ -1,49 +1,40 @@
 # Security Checklist
 
----
-
 ## Current Status
 
-| Item | Status | Notes |
+| Area | Status | Notes |
 |---|---|---|
-| Admin page auth | Done | `middleware.ts` + shared `lib/admin-auth.ts`; production fails closed without `ADMIN_SECRET` |
-| Admin login cookie | Done | `/admin/login` sets `x-admin-secret` server-side as `HttpOnly`; secure by default in production |
-| Admin cleanup actions | Done | `/admin` cleanup actions re-check admin auth and retain persistent roster/gear/item-template data |
-| File upload validation | Partial | Accepts only `.txt`/`.log` in UI; server-side content validation is still limited |
-| SQL injection | Safe | Prisma parameterizes queries |
-| XSS | Safe | React escapes by default; no `dangerouslySetInnerHTML` in app code |
-| Secrets in repo | Safe | `.env.local`, `.env.sync-agent`, logs, caches, and build outputs are ignored |
-| CORS | N/A | Not an API consumed by third parties |
-| Rate limiting | Open | Upload endpoint has no rate limit |
-| File size limit | Open | UI documents 1GB; server route should enforce `MAX_FILE_SIZE_BYTES` while streaming |
-
----
+| Admin page auth | Done | `middleware.ts` protects `/admin/:path*` except `/admin/login` |
+| Admin API auth | Done | Admin import and cleanup actions verify `ADMIN_SECRET` |
+| Admin login cookie | Done | `x-admin-secret` is `HttpOnly`; secure in production unless explicitly disabled |
+| Production secret fail-closed | Done | Missing `ADMIN_SECRET` denies admin access in production |
+| Public upload telemetry | Done | Upload history/detail moved behind admin |
+| SQL injection | Low risk | Prisma parameterizes DB queries |
+| XSS | Low risk | React escapes output; avoid adding raw HTML rendering |
+| Secrets in repo | Guarded | `.env*`, logs, caches, uploads, and combat logs are ignored |
+| Upload file type validation | Partial | Client accepts `.txt`/`.log`; parser `/parse-stream` needs stricter server-side validation |
+| Upload size enforcement | Open | UI says 1 GB, but `/api/upload` does not enforce a hard server-side limit |
+| Rate limiting | Open | No app-level upload rate limiting |
 
 ## Production Checks
 
-- Railway Web Service must define `ADMIN_SECRET`.
-- Railway Web Service must not set `ADMIN_COOKIE_SECURE=false`; that override is only for local HTTP compose.
-- `.env.local`, `.env.sync-agent`, Railway tokens, database URLs, API keys, and private keys must never be staged.
-
----
+- Railway Web Service has `ADMIN_SECRET`.
+- Railway Web Service does not set `ADMIN_COOKIE_SECURE=false`.
+- Railway env vars and database URLs are never committed.
+- Browser userscript admin secret storage is treated as sensitive local state.
 
 ## Priority Fixes
 
-### 1. Server-side file type and size validation
-
-Validate upload content and enforce `MAX_FILE_SIZE_BYTES` before or while forwarding to the parser. If validation fails, return a structured SSE error event.
-
-### 2. Upload rate limiting
-
-Consider Railway-level protection first. If app-level limiting is needed, keep it simple and avoid in-memory-only assumptions for multi-instance deployments.
-
----
+1. Enforce upload size while streaming or before forwarding to the parser.
+2. Add server-side upload file type/content checks for `/api/upload` and parser `/parse-stream`.
+3. Decide whether Railway-level rate limiting is sufficient.
 
 ## Threat Model
 
-| Threat | Likelihood | Impact | Mitigation |
+| Threat | Likelihood | Impact | Current mitigation |
 |---|---|---|---|
-| Someone uploads a huge file to waste resources | Medium | Parser/web resource exhaustion | Add hard server-side size enforcement and rate limiting |
-| Admin page scraped for internal info | Low | Minor | Admin auth is live; verify Railway has `ADMIN_SECRET` |
-| Malicious log file with injected data | Low | None | Parser treats logs as strings and does not execute content |
-| DB connection string exposed | Low | Critical | Keep secrets in Railway/local env only; never commit them |
+| Huge upload wastes resources | Medium | High | Open work: hard size cap and rate limiting |
+| Admin data exposed publicly | Low | Medium | Admin middleware and secret-protected APIs |
+| Secret committed to repo | Low | Critical | `.gitignore`, PR checklist, manual staged-secret review |
+| Malicious combat-log text | Low | Low | Parsed as strings; no code execution |
+| Warmane import abused cross-origin | Low | Medium | Admin secret plus Warmane origin checks on import APIs |

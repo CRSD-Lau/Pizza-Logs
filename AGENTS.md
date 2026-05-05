@@ -133,7 +133,7 @@ Update docs when behavior, commands, deployment, parser rules, or workflows chan
 - Review every modified, deleted, and untracked file before staging.
 - Stage source, tests, docs, config, fixtures, and lockfiles that belong to the change.
 - Do not stage `.env*`, logs, build outputs, caches, local screenshots, `node_modules`, `uploads`, combat logs, or personal machine state.
-- Expected local-only noise may include `.env.local`, `.env.sync-agent`, `.next/`, `.pytest_cache/`, `.sync-agent-logs/`, `WoWCombatLog/`, and `tmp-mobile-check/`.
+- Expected local-only noise may include `.env.local`, `.env.sync-agent`, `.next/`, `.pytest_cache/`, `.sync-agent-logs/`, `WoWCombatLog/`, `tmp-mobile-check/`, and `animations/`.
 
 ## Secret Handling
 
@@ -187,7 +187,7 @@ When requesting review, include `@codex review` on GitHub if configured and ask 
 - Documentation drift and stale commands
 - Dependency or lockfile changes
 
-Before pushing `main`, verify tests pass, parser validation passes, build passes, secret scan passes, no `.env` or production secret is staged, Railway config changes are intentional, database changes are understood, and the final diff has been reviewed.
+Before opening a PR or asking Neil to merge into `main`, verify tests pass, parser validation passes when applicable, build passes, secret scan or staged-secret review passes, no `.env` or production secret is staged, Railway config changes are intentional, database changes are understood, and the final diff has been reviewed.
 
 ## Hard Stop
 

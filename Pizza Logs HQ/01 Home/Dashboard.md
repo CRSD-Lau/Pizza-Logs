@@ -1,87 +1,52 @@
-# Pizza Logs — Dashboard
-
-> **Rule:** Build more. Organize less. One working feature at a time.
-
----
+# Pizza Logs Dashboard
 
 ## Quick Status
 
-| Thing          | Status                                                 |
-| -------------- | ------------------------------------------------------ |
-| App            | 🟢 Live — https://pizza-logs-production.up.railway.app |
-| DB             | Check after last session                               |
-| Last deploy    | See [[Latest Handoff]]                                 |
-| Active blocker | See [[Known Issues]]                                   |
+| Area | Status |
+|---|---|
+| Production | https://pizza-logs-production.up.railway.app |
+| Working branch | `codex-dev` |
+| Deploy path | PR from `codex-dev` to `main`, Neil merges, Railway deploys |
+| Active focus | See [[Now]] |
+| Active blockers | See [[Known Issues]] |
 
----
+## Daily Links
 
-## Right Now
-→ [[Now]] — what am I working on  
-→ [[Latest Handoff]] — where I left off  
-→ [[Next 30 Minutes]] — just start something  
+- [[START HERE]] - session startup rules
+- [[Latest Handoff]] - current repo state and last session notes
+- [[Now]] - current focus and next actions
+- [[Known Issues]] - open bugs, blockers, and limitations
+- [[Feature Status]] - shipped features, backlog, and technical debt
 
----
+## Architecture And Operations
 
-## The Project
+- [[System Architecture]] - request flow and major subsystems
+- [[Data Model]] - database quick reference
+- [[Repo Map]] - source layout
+- [[Environment Variables]] - active env vars
+- [[Parser Deep Dive]] - parser internals, with `docs/parser-contract.md` as the formal contract
+- [[Railway Runbook]] - deployment and recovery
+- [[Security Checklist]] - current security posture
+- [[Decision Log]] - durable project decisions
+- [[Repeated Fixes & Gotchas]] - recurring implementation pitfalls
+- [[Codex Gotchas]] - agent-specific reminders
+- [[Codex Prompts]] - reusable Codex prompts
 
-**Pizza Logs** — WoW WotLK combat log analytics for PizzaWarriors on Warmane (Lordaeron).  
-Upload a combat log → parsed server-side → boss encounters stored → DPS/HPS rankings, player history, session analytics.
+## Product Summary
 
-**Stack:** Next.js · TypeScript · PostgreSQL · Prisma · Python parser · Railway  
-**Repo:** `C:\Users\neil_\OneDrive\Desktop\PizzaLogs\`  
-**Routes:** `/` `/raids` `/players` `/weekly` `/bosses` `/uploads` `/admin`
+Pizza Logs lets PizzaWarriors upload WotLK combat logs, parse boss encounters with Skada-aligned rules, and review raid sessions, boss rankings, player history, gear, roster data, and weekly summaries.
 
----
+Current high-value areas:
 
-## Navigation
+- parser correctness and fixture coverage;
+- upload reliability and SSE progress;
+- admin-only diagnostics and import tools;
+- Warmane roster/gear cache freshness;
+- player pages for both combat-log and roster-only characters.
 
-### Daily Use
-- [[Now]] — current focus
-- [[Latest Handoff]] — last session recap
-- [[Known Issues]] — active bugs
-- [[Backlog]] — feature queue
+## Known Limitations
 
-### Architecture
-- [[System Architecture]] — request flow, parser internals
-- [[Data Model]] — DB schema quick ref
-- [[Repo Map]] — what lives where
-- [[Environment Variables]] — all env vars
-
-### Operations
-- [[Railway Runbook]] — deploy, restart, logs
-- [[Decision Log]] — why we built it this way
-- [[Security Checklist]] — what's protected, what's not
-- [[Technical Debt]] — known shortcuts and their cost
-
-### AI Control Center
-- [[Codex Resume Prompt]] — paste this to start a session
-- [[Prompt Library]] — reusable prompts for common ops
-- [[Repeated Fixes & Gotchas]] — don't solve the same bug twice
-- [[Codex Gotchas]] — things to remind Codex every session
-- [[AI Operating System]]  
-- [[Codex Skills Index]]
-
-### Ideas
-- [[Growth & Business]] — positioning, monetization, roadmap
-
----
-
-## Shipped Features (highlights)
-
-- Upload → SSE parse → DB → leaderboards (full pipeline working)
-- Session splitting (>60 min gap = new raid session)
-- Target/mob breakdown (per-player per-mob damage)
-- Boss-only DPS (excludes add padding)
-- Raids tab, Players tab, session-scoped player analytics
-- DPS/HPS line chart (recharts, same-class comparison)
-- Accordion sections on all data-heavy pages
-- Milestones / #1 rankings
-- Deduplication (file + encounter level)
-
----
-
-## Known Limitations (won't fix)
-
-- Heroic detection impossible (no ENCOUNTER_START on Warmane)
-- Gunship Battle detection impossible
-- DPS accuracy ±1-2% vs uwu-logs (different event inclusion rules)
+- Absorbs are not implemented yet.
+- Role detection is still a rough upload-time heuristic.
+- Warmane direct server fetches are unreliable; browser-assisted imports remain the supported path.
+- Upload rate limiting and hard server-side size enforcement are still open.

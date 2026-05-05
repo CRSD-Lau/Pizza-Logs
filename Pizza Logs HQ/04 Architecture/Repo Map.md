@@ -1,68 +1,80 @@
 # Repo Map
 
-**Repo:** https://github.com/CRSD-Lau/pizza-logs  
-**Local:** `C:\Users\neil_\OneDrive\Desktop\PizzaLogs\`
+Repo: https://github.com/CRSD-Lau/Pizza-Logs
 
----
+Local path on Neil's desktop:
 
-## Key Files
-
-```
-parser/
-  parser_core.py            ← core logic: SPELL_CLASS_MAP, segmentation, aggregation
-  bosses.py                 ← boss defs + aliases (mirrors lib/constants/bosses.ts)
-  main.py                   ← FastAPI app: /parse and /parse-stream endpoints
-
-app/
-  api/upload/route.ts       ← upload handler: streams to parser, batches DB writes
-  raids/page.tsx            ← raids index, grouped by calendar day
-  uploads/[id]/
-    page.tsx                ← session list for one upload
-    sessions/[idx]/
-      page.tsx              ← single raid session detail + roster
-      players/[name]/
-        page.tsx            ← session-scoped player analytics + DPS/HPS chart
-  players/
-    page.tsx                ← player listing with class filter
-    [playerName]/page.tsx   ← all-time player profile
-  encounters/[id]/page.tsx  ← single boss pull: meters, spell breakdown, roster
-  weekly/page.tsx
-  bosses/[slug]/page.tsx
-  admin/page.tsx            ← DB stats, service health
-
-components/
-  upload/UploadZone.tsx         ← upload UI, SSE reader, browser notifications
-  meter/DamageMeter.tsx         ← DPS/HPS table with spell drill-down
-  meter/MobBreakdown.tsx        ← mob damage table with player drill-down
-  charts/SessionLineChart.tsx   ← recharts line chart (session player page)
-  charts/LeaderboardBar.tsx     ← CSS-only bar for leaderboards
-  ui/AccordionSection.tsx       ← collapsible section (client component)
-  ui/StatCard.tsx
-  ui/Badge.tsx
-  layout/Nav.tsx                ← Upload|Raids|Players|This Week|Bosses|History|Admin
-
-lib/
-  constants/bosses.ts       ← WOTLK_BOSSES: sortOrder (ICC=10-40, Naxx=700-741)
-  constants/classes.ts      ← CLASS_COLORS, getClassColor(), WOW_CLASSES
-  db.ts                     ← Prisma client singleton
-  schema.ts                 ← Zod: ParseResultSchema, UploadResponseSchema
-  utils.ts                  ← formatDps, formatNumber, formatDuration, cn
-  actions/milestones.ts     ← computeMilestones() — rank detection post-upload
-
-prisma/
-  schema.prisma             ← DB schema (source of truth → see [[Data Model]])
-  seed.ts                   ← seeds Boss table from bosses.ts
-
-Pizza Logs HQ/              ← this Obsidian vault (committed to repo)
-AGENTS.md                   ← instructs Codex to read vault at session start
-start.sh                    <- Railway startup: prisma migrate deploy -> node server.js
-Dockerfile                  ← multi-stage; --chown=nextjs:nodejs on prisma dirs
+```text
+C:\Users\neil_\OneDrive\Desktop\PizzaLogs
 ```
 
----
+## Top-Level
+
+```text
+app/                  Next.js App Router pages and API routes
+components/           UI, upload, charts, meters, player gear, roster widgets
+lib/                  Shared app logic and data helpers
+parser/               FastAPI parser service
+prisma/               Prisma schema, migrations, seed
+scripts/              Local helper scripts and item import
+tests/                TypeScript-focused tests
+docs/                 Repo-level parser/workflow/review docs
+Pizza Logs HQ/        Committed Obsidian vault
+public/               Favicon, icons, intro media
+```
+
+## Important Files
+
+| File | Purpose |
+|---|---|
+| `app/api/upload/route.ts` | Upload SSE route and DB persistence |
+| `parser/parser_core.py` | Combat-log segmentation and aggregation |
+| `parser/main.py` | Parser service routes, including `/parse-stream` |
+| `lib/constants/bosses.ts` | WotLK boss list and ICC ordering helpers |
+| `lib/schema.ts` | Zod contracts between parser and web app |
+| `lib/actions/milestones.ts` | Milestone computation |
+| `lib/warmane-armory.ts` | Gear cache, Warmane normalization, item enrichment |
+| `lib/warmane-guild-roster.ts` | Guild roster import/sync/read helpers |
+| `lib/armory-gear-client-scripts.ts` | Gear userscript/bookmarklet source |
+| `lib/guild-roster-client-scripts.ts` | Roster userscript/bookmarklet source |
+| `lib/player-portrait-client-scripts.ts` | Portrait userscript source |
+| `lib/gearscore.ts` | GearScoreLite score calculation |
+| `lib/item-template.ts` | AzerothCore item metadata import/enrichment helpers |
+| `prisma/schema.prisma` | Database schema |
+| `Dockerfile` | Railway web service image |
+| `parser/Dockerfile` | Railway parser service image |
+| `start.sh` | Web service startup and migration deploy |
+| `AGENTS.md` | Codex session and branch rules |
+| `README.md` | Public setup and architecture overview |
+
+## Public Route Families
+
+- `/`
+- `/raids`
+- `/raids/[id]/sessions/[sessionIdx]`
+- `/raids/[id]/sessions/[sessionIdx]/players/[playerName]`
+- `/encounters/[id]`
+- `/bosses`
+- `/bosses/[bossSlug]`
+- `/leaderboards`
+- `/players`
+- `/players/[playerName]`
+- `/guild-roster`
+- `/weekly`
+
+## Admin Route Families
+
+- `/admin`
+- `/admin/login`
+- `/admin/uploads`
+- `/admin/uploads/[id]`
+- `/api/admin/*`
+
+`/uploads` and `/uploads/[id]` redirect to admin upload history.
 
 ## Related
-- [[System Architecture]] — how these files talk to each other
-- [[Data Model]] — DB schema quick reference
-- [[Parser Deep Dive]] — parser internals and edge cases
-- [[Environment Variables]] — env vars per service
+
+- [[System Architecture]]
+- [[Data Model]]
+- [[Parser Deep Dive]]
+- [[Environment Variables]]

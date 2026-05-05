@@ -1,6 +1,6 @@
 # PR Readiness
 
-Before asking Codex to open or prepare a PR:
+Use this checklist before pushing `codex-dev` or opening a PR into `main`.
 
 ## 1. Confirm Branch
 
@@ -21,25 +21,35 @@ git fetch origin
 git merge origin/main
 ```
 
-## 3. Check Status
+## 3. Review Status
 
 ```bash
-git status
+git status --short
+git diff --stat
+git diff
 ```
+
+Confirm the diff contains only intended source, docs, tests, config, fixtures, or lockfiles.
 
 ## 4. Run Validation
 
 ```bash
-npm run lint --if-present
-npm run type-check --if-present
-npm test --if-present
+npm run check:pr
+```
+
+If needed, run the pieces directly:
+
+```bash
+npm run lint
+npm run type-check
 npm run build
 ```
 
-Or, if available:
+Parser changes also need:
 
 ```bash
-npm run check:pr
+cd parser
+pytest tests/ -v
 ```
 
 ## 5. Push
@@ -57,6 +67,8 @@ codex-dev -> main
 ## 7. Do Not Merge Until
 
 - GitHub checks pass.
-- Local smoke test passes.
-- Railway staging or preview passes if configured.
-- There is no conflict with a Claude branch or other active work.
+- The final diff has been reviewed.
+- No secrets, local files, logs, build outputs, uploads, or combat logs are staged.
+- Prisma migration risk is understood if schema changed.
+- Parser fixture/test evidence exists if parser behavior changed.
+- Railway production env changes are not required, or are explicitly documented.

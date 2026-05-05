@@ -1,39 +1,34 @@
-﻿# Codex Gotchas
+# Codex Gotchas
 
-> Project-specific reminders for Codex or any future agent working on Pizza Logs.
+## Project Rules
 
-## Always Remember
+- Start by reading `START HERE`, `Latest Handoff`, and `Now`, then run git status.
+- Work on `codex-dev`; do not commit, push, or merge `main`.
+- Update vault handoff/current-focus docs before committing.
+- Parser correctness outranks cleanup and style.
+- Do not change parser math, segmentation, boss aliases, difficulty, kill/wipe detection, pet attribution, or duration without tests or fixture validation.
+- Do not build a Railway-side Warmane/Cloudflare bypass. Railway should serve cached data and receive browser/local imports.
+- Leave local noise untracked: `.env*`, `.next/`, logs, caches, screenshots, uploads, combat logs, `animations/`, `.sync-agent-logs/`.
 
-- Do not re-architect working systems unless the task requires it.
-- Update Latest Handoff and Now.md before committing.
-- Upload status must be set to `DONE` before `computeMilestones`.
-- Do not build a Railway residential proxy or Cloudflare-bypass path. Railway should serve cached snapshots and receive imports; it should not depend on live Warmane requests during normal page render.
-- Local-only noise can include `.env.local`, `.env.sync-agent`, `.next/`, `.pytest_cache/`, `.sync-agent-logs/`, `animations/`, and `WoWCombatLog/`.
-
-## Recurring Misunderstandings
+## Recurring Pitfalls
 
 | Pitfall | Correct behavior |
 |---|---|
-| Use `SectionHeader` for data sections | Prefer `AccordionSection` for expandable data sections |
-| Filter raids page by `status: "DONE"` | Filter by `encounters: { some: {} }` |
-| Add long recap after every response | Keep results concise and actionable |
-| Add comments explaining what code does | Comment only non-obvious constraints |
-| Create new files when a focused edit would do | Prefer editing existing files |
-| Forget `stalled: false` in UploadZone state | `UploadState.stalled` is required |
+| Direct `main` push | Push `codex-dev` and open a PR |
+| Trust old vault history | Verify against code before updating docs |
+| Treat roster-only members as unsupported | Resolve profile from `guild_roster_members` when no `players` row exists |
+| Fork GearScore logic for roster-only players | Reuse `armory_gear_cache` and `lib/gearscore.ts` |
+| Filter raids by upload status only | Use stored encounter presence |
+| Put upload history on public pages | Keep upload history under admin |
+| Claim Warmane direct fetch is reliable | Document browser-assisted import as supported path |
+| Forget `stalled: false` in upload state resets | Include it in all reset states |
 
-## Parser Facts Agents Get Wrong
+## Parser Facts
 
-- Parser is Python FastAPI on Railway, not client-side.
-- Warmane often lacks useful encounter events; heuristic detection matters.
-- Skada-WoTLK is the source of truth, not UWU.
-- `SPELL_HEAL_ABSORBED` is not healing done in Skada.
-- Heal total is gross minus overheal.
-- `DAMAGE_SHIELD`, `DAMAGE_SPLIT`, and `SPELL_BUILDING_DAMAGE` count for damage done.
+- Skada-WoTLK is the source of truth.
+- `SPELL_HEAL_ABSORBED` is not healing done.
+- Effective heal is gross minus overheal.
+- `SWING_DAMAGE` indexes are shifted.
 - KILL duration uses boss death timestamp.
-
-## Deployment Facts
-
-- Railway internal hostnames are not reachable locally.
-- `start.sh` runs `prisma migrate deploy`, then `node server.js`.
-- Prisma schema changes require `npm run db:generate` locally.
-- Production admin must have `ADMIN_SECRET`; missing secret should fail closed in production.
+- Gunship kill evidence is crew death on Warmane.
+- Heroic detection is evidence-based; some cases remain impossible from logs alone.

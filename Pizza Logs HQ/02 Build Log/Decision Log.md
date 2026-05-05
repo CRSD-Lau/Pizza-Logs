@@ -67,11 +67,11 @@
 
 ---
 
-## Early — No heroic detection
+## Early — No HP-threshold heroic guessing
 
-**Decision:** Don't attempt to detect 25H vs 25N from log events  
-**Why:** Warmane uses the same NPC/spell IDs for both difficulties. Without ENCOUNTER_START (which Warmane doesn't emit), there is no reliable signal. Boss HP threshold approach (25N vs 25H total damage ratio ~1.45x) is too noisy.  
-**Status:** Won't do.
+**Decision:** Do not infer heroic difficulty from boss HP or total-damage thresholds.
+**Why:** Warmane evidence is inconsistent and HP/damage ratios are too noisy.
+**Status:** Still valid. Superseded detail: the parser now uses encounter marker difficulty when present, heroic-only marker spells where reliable, and session normalization for supported cases. Some Warmane pulls still cannot be proven heroic from logs alone.
 
 ---
 

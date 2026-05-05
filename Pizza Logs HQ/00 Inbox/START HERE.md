@@ -1,113 +1,87 @@
-# Pizza Logs — Start Here
+# Pizza Logs - Start Here
 
-> Read this first every session. Then read Latest Handoff → Now.md.
+Read this first at the start of every Codex session, then read:
 
----
+1. `Pizza Logs HQ/02 Build Log/Latest Handoff.md`
+2. `Pizza Logs HQ/03 Current Focus/Now.md`
 
-## What This Project Is
+Then run:
 
-**Pizza Logs** is a WoW WotLK raid log parser and leaderboard site for a Warmane private server guild. Raiders upload their `WoWCombatLog.txt` and the site shows DPS/HPS rankings, boss kill history, and personal progression — matching what players see in **Skada** in-game.
+```powershell
+& 'C:\Program Files\Git\cmd\git.exe' status --short --branch
+```
 
-- **Live site:** https://pizza-logs-production.up.railway.app
-- **Repo:** https://github.com/CRSD-Lau/pizza-logs
-- **Canonical git remote:** `origin` -> `https://github.com/CRSD-Lau/Pizza-Logs.git`
-- **Deploy rule:** user "push/deploy/publish/live" requests mean commit scoped changes and run `git push origin main`; Railway auto-deploys `origin/main`. If `git` is not on PATH locally, use `C:\Program Files\Git\cmd\git.exe`.
+## Project
 
----
+Pizza Logs is a Warmane / WotLK 3.3.5a combat-log parser and leaderboard app for PizzaWarriors.
+
+- Live app: https://pizza-logs-production.up.railway.app
+- Repo: https://github.com/CRSD-Lau/Pizza-Logs
+- Canonical remote: `origin`
+- Production deploys from `origin/main`
+- Codex works on `codex-dev`, pushes `origin/codex-dev`, and opens PRs into `main`
+- Codex must not commit, push, or merge directly on `main`
 
 ## Stack
 
 | Layer | Tech |
-|-------|------|
-| Frontend | Next.js 15 + TypeScript + Tailwind |
-| Backend | Next.js API routes (upload, leaderboard, encounters) |
-| Parser | Python FastAPI (`parser-py` Railway service) |
-| Database | PostgreSQL (Railway managed) |
-| ORM | Prisma |
-| Hosting | Railway — two services: `Web Service` + `parser-py` |
+|---|---|
+| Web | Next.js 15, React 19, TypeScript, Tailwind |
+| Parser | Python FastAPI service |
+| Database | PostgreSQL with Prisma |
+| Hosting | Railway Web Service plus `parser-py` |
 
----
+## Core Flow
 
-## Parser Philosophy
+Browser upload -> `POST /api/upload` -> Next.js forwards to parser `/parse-stream` -> parser streams progress and final JSON -> Next.js writes uploads, encounters, participants, and milestones -> browser links to stored raid/session pages.
 
-**Match Skada-WoTLK exactly.** Source: https://github.com/bkader/Skada-WoTLK
+## Parser Rules That Matter
 
-Skada is the in-game meter the raid uses. The website must show the same numbers.  
-We do **not** try to match UWU — no source code available.
+Parser correctness is the product. Match Skada-WoTLK, not uwu-logs.
 
-Every parser decision must cite a Skada file/line. Key files:
-- `Skada/Modules/Damage.lua` — what damage events are tracked
-- `Skada/Modules/Healing.lua` — what heal events are tracked, effective heal formula
-- `Skada/Core/Tables.lua` — spell exclusion lists
-- `Skada/Core/Functions.lua` — event field suffix definitions
+- Warmane logs often lack reliable `ENCOUNTER_START` / `ENCOUNTER_END`, so heuristic boss detection remains required.
+- If encounter markers exist, the parser can use them, but heroic correction still checks Warmane-specific evidence.
+- Damage events: `SPELL_DAMAGE`, `SWING_DAMAGE`, `RANGE_DAMAGE`, `SPELL_PERIODIC_DAMAGE`, `DAMAGE_SHIELD`, `DAMAGE_SPLIT`, `SPELL_BUILDING_DAMAGE`.
+- Heal events: `SPELL_HEAL`, `SPELL_PERIODIC_HEAL`.
+- `SPELL_HEAL`: `parts[10]` gross, `parts[11]` overheal, `parts[12]` absorbed, `parts[13]` crit.
+- Effective healing is `max(0, parts[10] - parts[11])`.
+- `SWING_DAMAGE` has shifted indexes: amount at `parts[7]`, overkill at `parts[8]`, absorbed at `parts[12]`, crit at `parts[13]`.
+- KILL duration uses boss death timestamp, not the last post-kill event.
+- Gunship kill handling uses Warmane crew-death evidence.
+- Absorbs are separate in Skada and are not implemented as healing.
 
----
+Formal details: `docs/parser-contract.md`.
 
-## Critical Technical Facts
+## Current Product Areas
 
-### Warmane-specific
-- **No ENCOUNTER_START/END** — all boss detection is heuristic
-- **Heroic undetectable** — same spell/NPC IDs in 25N and 25H; don't attempt
-- **Gunship Battle undetectable** — don't attempt
-- Player GUIDs: `0x06` prefix on Warmane, `Player-` prefix on retail
+- Upload and parser pipeline
+- Raids, sessions, encounters, leaderboards, weekly stats, players
+- Admin diagnostics and admin upload history
+- Guild roster cache for PizzaWarriors/Lordaeron
+- Warmane gear cache, GearScoreLite display, AzerothCore item metadata
+- Browser userscripts for roster, gear, and portrait imports
+- Cinematic intro and responsive page polish
 
-### SPELL_HEAL field layout (Skada: `HEAL = "amount, overheal, absorbed, critical"`)
+## Files To Know
+
+```text
+app/api/upload/route.ts       Upload handler and DB writes
+parser/parser_core.py         Core parser logic
+parser/main.py                Parser API and SSE endpoint
+lib/constants/bosses.ts       Boss order and display helpers
+lib/warmane-armory.ts         Gear cache and Warmane gear normalization
+lib/warmane-guild-roster.ts   Guild roster import/sync helpers
+lib/gearscore.ts              GearScoreLite implementation
+prisma/schema.prisma          Database schema
+README.md                     Public setup and architecture overview
+AGENTS.md                     Codex workflow and repo guardrails
 ```
-parts[10] = gross heal   (total cast amount)
-parts[11] = overheal     (wasted — target near full HP)
-parts[12] = absorbed     (absorbed by shields)
-parts[13] = critical     ("1" or "nil")
-Effective heal = max(0, parts[10] - parts[11])
-```
-
-### SPELL_DAMAGE field layout (Skada: `DAMAGE = "amount, overkill, school, resisted, blocked, absorbed, critical, ..."`)
-```
-parts[10] = amount    parts[11] = overkill   parts[15] = absorbed
-Effective damage = max(0, amount - overkill - absorbed)
-```
-
-### SWING_DAMAGE (no spell fields — indices shift by 3)
-```
-parts[7] = amount   parts[8] = overkill   parts[12] = absorbed
-```
-
-### DMG_EVENTS (per Skada Damage.lua)
-`SPELL_DAMAGE`, `SWING_DAMAGE`, `RANGE_DAMAGE`, `SPELL_PERIODIC_DAMAGE`,  
-`DAMAGE_SHIELD`, `DAMAGE_SPLIT`, `SPELL_BUILDING_DAMAGE`
-
-### HEAL_EVENTS (per Skada Healing.lua)
-`SPELL_HEAL`, `SPELL_PERIODIC_HEAL` — that's it. SPELL_HEAL_ABSORBED is NOT tracked.
-
-### Heal exclusions
-None — `Tables.lua` has no `ignored_spells.heal`. Every SPELL_HEAL counts.
-
-### KILL duration
-Use **boss death timestamp** (`UNIT_DIED` on boss), not last event in segment.
-
----
-
-## Architecture in One Paragraph
-
-Browser uploads log → Next.js streams to Python parser (`/parse-stream`) → parser sends SSE progress events + final JSON result → Next.js batches DB writes (upsert players, create encounters + participants, compute milestones) → browser shows results.
-
----
-
-## Key Files to Know
-
-```
-parser/parser_core.py     — all parsing logic
-parser/bosses.py          — boss definitions + aliases
-parser/main.py            — FastAPI endpoints
-app/api/upload/route.ts   — upload handler + DB writes
-lib/constants/bosses.ts   — boss list with sort order
-prisma/schema.prisma      — DB schema
-```
-
----
 
 ## Do Not Re-Invent
 
-- `inferRole` — rough heuristic (heal/dmg ratio), not accurate, known debt
-- `AccordionSection` — use this, not `SectionHeader`, for all data sections
-- Upload status: set `DONE` **before** `computeMilestones`, not after
-- Raids page: filter by `encounters: { some: {} }`, not `status: "DONE"`
+- Keep `codex-dev -> PR -> main`.
+- Use existing Warmane cache/import paths for gear and roster data.
+- Use `AccordionSection` for data-heavy expandable sections.
+- Keep upload status `DONE` before `computeMilestones`.
+- Filter raid history by stored encounters, not only upload status.
+- Do not build a Railway-side Cloudflare bypass for Warmane.

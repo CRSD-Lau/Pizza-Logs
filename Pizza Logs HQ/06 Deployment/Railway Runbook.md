@@ -1,135 +1,108 @@
 # Railway Runbook
 
-> Everything needed to deploy, debug, and recover on Railway.
-
----
-
 ## Services
 
-| Service | Railway Name | URL |
+| Service | Railway name | Notes |
 |---|---|---|
-| Next.js app | Web Service | https://pizza-logs-production.up.railway.app |
-| Python parser | parser-py | `http://parser-py.railway.internal:8000` (internal only) |
-| Database | Postgres | `postgres.railway.internal:5432` (internal only) |
+| Next.js app | `Web Service` | Public app, deploys from `main` |
+| Python parser | `parser-py` | Internal FastAPI parser service |
+| Postgres | Postgres service | Internal database |
 
-**Internal hostnames are not reachable from your local machine.**
+Live app: https://pizza-logs-production.up.railway.app
 
----
+Internal Railway hostnames are not reachable from a local machine.
 
-## Normal Deploy
+## Normal Deployment
 
-Canonical remote: `origin` -> `https://github.com/CRSD-Lau/Pizza-Logs.git`.
-When Neil asks to push, deploy, publish, or make changes live, push `main` to `origin` so Railway picks up the deployment. Do not ask for the repo URL; it is the canonical remote above. If `git` is missing from PATH on Neil's Windows machine, use `C:\Program Files\Git\cmd\git.exe`.
+Codex workflow:
 
-Before pushing, verify the Web Service has `ADMIN_SECRET` configured. Production admin routes fail closed without it. Do not set `ADMIN_COOKIE_SECURE=false` in Railway; that override is only for local HTTP compose.
+1. Work on `codex-dev`.
+2. Push `origin/codex-dev`.
+3. Open a PR from `codex-dev` to `main`.
+4. Neil merges the PR.
+5. Railway auto-deploys `main`.
 
-```bash
-git push origin main
-# Railway auto-deploys on push to main
-railway logs --service "Web Service" -n 100   # watch it
-railway logs --service "parser-py" -n 100
-```
+Codex must not push or merge `main` directly.
 
-Deploy takes ~2-3 min (Next.js), ~1 min (parser). DB doesn't redeploy unless Postgres config changes.
+Before asking Neil to merge, verify:
 
----
+- `ADMIN_SECRET` is configured on Railway Web Service.
+- `ADMIN_COOKIE_SECURE=false` is not set in Railway.
+- Prisma migration risk is understood if migrations changed.
+- Parser tests ran if parser behavior changed.
+- Build and type checks passed.
 
-## Startup Sequence (Next.js)
+## Web Startup
 
 `start.sh` runs at container start:
-1. Detects prisma entry point dynamically (avoids `.bin/prisma` wasm issue)
-2. Resolves historical migrations that were previously applied by `db push`
-3. Runs `prisma migrate deploy`
-4. Starts `node server.js`
 
-**If startup fails:** Check Railway logs for Prisma migration errors. Do not use destructive reset commands unless Neil explicitly approves data loss.
+1. Resolves the Prisma CLI package entry point.
+2. Marks known historical `db push` migrations as applied when needed.
+3. Runs `prisma migrate deploy`.
+4. Starts `node server.js`.
 
----
+If startup fails, inspect Railway Web Service logs for Prisma or standalone Next.js errors.
 
-## Reset Database
+## Parser Service
 
-There is no committed reset endpoint. Prefer Railway dashboard SQL or a Railway shell for destructive recovery. If a temporary endpoint is absolutely required, use a one-time secret from the environment, remove the endpoint in the same recovery window, and never commit the secret value.
+- FastAPI binds to `$PORT` or `8000`.
+- Health endpoint: `GET /health`.
+- Current upload endpoint: `POST /parse-stream`.
+- Legacy/debug endpoints also exist: `POST /parse`, `POST /parse-path`, `POST /parse-debug`.
+- Parser writes uploads to temp disk before returning `StreamingResponse`.
 
-**Alternative:** Railway dashboard -> Postgres -> Connect -> open shell -> SQL
-
----
-
-## Reseed Bosses (after DB reset)
-
-```bash
-railway run --service "Web Service" npm run db:seed
-```
-
----
-
-## Local → Railway DB Access
-
-`postgres.railway.internal` is not reachable locally. Options:
-1. `railway shell --service "Web Service"` - opens shell inside Railway environment
-2. Railway dashboard → Postgres → Settings → Enable TCP Proxy → use `DATABASE_PUBLIC_URL`
-
----
-
-## View Logs
+## Logs
 
 ```bash
 railway logs --service "Web Service" -n 100
 railway logs --service "parser-py" -n 100
 ```
 
-**Common log patterns:**
-- `[start] Running prisma migrate deploy...` — startup working
-- `[upload] unhandled error:` — upload route crashed
-- `TypeError: terminated` — parser connection dropped mid-stream
+Common patterns:
 
----
+- `[start] Running prisma migrate deploy...` means web startup reached migrations.
+- `[upload] unhandled error:` means Next.js upload persistence crashed.
+- `Parser unreachable` from upload SSE means `PARSER_SERVICE_URL` or parser service health is wrong.
 
-## Parser Service Details
+## Database Recovery
 
-- FastAPI on port `$PORT` (Railway injects)
-- Two endpoints:
-  - `POST /parse` — returns full JSON (legacy)
-  - `POST /parse-stream` — streams SSE progress events (current)
-- `X-Accel-Buffering: no` header disables Railway/nginx proxy buffering for SSE
-- File written to temp disk before `StreamingResponse` (avoids UploadFile lifecycle bug)
+There is no committed reset endpoint. Prefer:
 
----
+1. existing admin cleanup controls for upload-derived data;
+2. Railway dashboard SQL;
+3. `railway shell --service "Web Service"` for controlled commands.
 
-## Schema Changes
+Do not commit one-time reset endpoints or reset secrets.
 
-After editing `prisma/schema.prisma`:
+After an approved full DB reset, reseed required data:
+
 ```bash
-npx prisma generate        # update local client (no DB needed)
-# On Railway: just push after validation - start.sh runs prisma migrate deploy at startup
+railway run --service "Web Service" npm run db:seed
+railway run --service "Web Service" npm run db:import-items
 ```
 
----
+## Local To Railway DB Access
+
+`postgres.railway.internal` is only available inside Railway. Local options:
+
+- Railway shell inside the Web Service environment.
+- Railway dashboard TCP proxy with `DATABASE_PUBLIC_URL`, used temporarily and not committed.
 
 ## Rollback
 
-Railway dashboard → Deployments → click previous → Redeploy.  
-DB state is **not** rolled back — code only.
-
----
+Use Railway dashboard deployment rollback/redeploy for code. Database state is not rolled back automatically.
 
 ## Health Checks
 
 ```bash
-curl https://pizza-logs-production.up.railway.app        # app responding?
-# Check /admin page → "Python Parser" card for parser health
+curl https://pizza-logs-production.up.railway.app
 ```
 
----
+Use `/admin` after login to check parser and database health.
 
-## Emergency: Parser Down
+## Emergency Parser Down
 
-1. Railway dashboard → parser-py → Restart
-2. Check parser logs for Python exceptions
-3. If OOM: large file with no size limit — add hard reject in upload route
-
----
-
-## Related
-- [[Environment Variables]] — all env vars with exact values
-- [[Repeated Fixes & Gotchas]] — admin recovery notes + common deploy failures
-- [[Security Checklist]] — what's protected, what's not
+1. Restart `parser-py` in Railway.
+2. Check parser logs for Python exceptions.
+3. Check `PARSER_SERVICE_URL` on Web Service.
+4. If failures involve huge uploads, prioritize server-side upload size enforcement.
