@@ -2,6 +2,10 @@
 
 ## Status
 
+**Codex now works from `codex-dev`, not `main`.** Local `main` was fast-forwarded from `origin/main`, local/remote `codex-dev` was created, and the current checkout is `codex-dev` tracking `origin/codex-dev`. Codex branch policy is now documented in `AGENTS.md`, `README.md`, `docs/git-workflow.md`, and `docs/pr-readiness.md`: Codex pushes `codex-dev`, opens PRs into `main`, and never commits, pushes, or merges directly to `main`.
+
+**PR workflow guardrails are in place.** Added `.github/pull_request_template.md`, `.github/workflows/ci.yml`, and `npm run check:pr`. CI runs on PRs targeting `main` and pushes to `main`; it installs with `npm ci --legacy-peer-deps`, then runs lint, type-check, optional npm test, and build. Manual GitHub branch protection and Railway production/staging guidance are documented in `docs/git-workflow.md`.
+
 **Local test server is running correctly on this machine.** The app is on `http://127.0.0.1:3001`, matching `.env.local`'s `NEXT_PUBLIC_APP_URL`; the Python parser is on `http://127.0.0.1:8000`; PostgreSQL 16 is running on `localhost:5432`. Stale Next listeners on `3000`, `3005`, and `3006` were stopped, generated `.next/` was cleared after the known OneDrive `readlink` failure, and the full local stack was restarted cleanly.
 
 **Local server smoke checks passed.** Parser `/health`, the main public pages, `/admin/login`, `/admin`, and the database-backed APIs all returned HTTP 200. The local DB has `53` bosses, `4` realms, and `38,610` item rows, but no players, uploads, or encounters yet.
@@ -58,6 +62,8 @@
 
 | Task | Type | Notes |
 |------|------|-------|
+| Use `codex-dev` for Codex work | DONE | Current branch tracks `origin/codex-dev`; Codex opens PRs into `main` and does not push/merge `main` |
+| Configure GitHub branch protection | MANUAL | Protect `main`: require PR, require CI checks, block direct pushes; see `docs/git-workflow.md` |
 | Use local test server | VERIFY | App is live at `http://127.0.0.1:3001`; parser is `http://127.0.0.1:8000`; scheduled task `PizzaLogsLocalTestServer` restarts them at logon and checks every 5 minutes |
 | Human-pass HD cinematic intro | VERIFY | After 4K-master ladder deploy, hard-refresh production in normal desktop, 1440p/4K, and phone-sized browsers to judge playback smoothness/taste and try the Skip button manually |
 | Verify `/bosses` mobile cards | DONE | Neil confirmed the boss page mobile fix is in and responsiveness is good; leave `/bosses` alone unless a new regression appears |

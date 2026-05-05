@@ -7,6 +7,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint . --max-warnings=0",
+    "check:pr": "npm run lint --if-present && npm run type-check --if-present && npm test --if-present && npm run build",
     "db:push": "prisma db push",
     "db:migrate": "prisma migrate dev",
     "db:seed": "ts-node --project tsconfig.seed.json prisma/seed.ts",

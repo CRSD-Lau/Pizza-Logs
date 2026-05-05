@@ -20,7 +20,7 @@ After every change session, update:
 
 Include vault updates in the same commit as code/docs changes.
 
-The user does not test local-only changes. After validation, commit and push scoped changes to Git unless the user explicitly asks to keep the work local. For ordinary branch work, push the current branch. For deploy/live/publish/main requests, follow the Railway deployment rules and push `origin/main` after the required gates pass.
+The user does not test local-only changes. Codex must work from the long-lived `codex-dev` branch, commit scoped changes there, push `origin/codex-dev`, and prepare PRs into `main`. Codex must never commit directly to `main`, push directly to `main`, or merge directly into `main`. Railway production deploys from `main` only after the user merges a PR.
 
 ## Project Overview
 
@@ -110,8 +110,10 @@ Admin-only routes must stay protected. Public routes must not expose raw secrets
 
 ## Railway Deployment Expectations
 
-- Work on a branch first.
-- Push `main` only after tests/build/parser validation/secret scan pass.
+- Work from `codex-dev` unless the user explicitly asks for a different branch.
+- Do not push `main` from Codex.
+- Do not merge PRs into `main` from Codex.
+- Production deploy happens only after the user merges `codex-dev` into `main`.
 - Do not change Railway production environment variables from Codex.
 - Do not commit `.env` files or production secrets.
 - `start.sh` runs `prisma migrate deploy`, then `node server.js`.
@@ -124,8 +126,10 @@ Update docs when behavior, commands, deployment, parser rules, or workflows chan
 
 ## Git Hygiene
 
-- Use branch prefix `codex/`.
-- Safe modernization branch for this project: `codex/pizza-logs-modernization`.
+- Default Codex branch for this project: `codex-dev`.
+- `main` is production-only. Codex must not commit, push, or merge directly to `main`.
+- Before starting Codex work, run `git checkout codex-dev`, `git fetch origin`, and `git merge origin/main`.
+- After a PR merges, update `codex-dev` from `main` before starting new work.
 - Review every modified, deleted, and untracked file before staging.
 - Stage source, tests, docs, config, fixtures, and lockfiles that belong to the change.
 - Do not stage `.env*`, logs, build outputs, caches, local screenshots, `node_modules`, `uploads`, combat logs, or personal machine state.
@@ -160,6 +164,8 @@ Prove deletions with search and validation. Parser code needs fixture validation
 ## Codex Workflow
 
 - Use Codex as the canonical agent workflow.
+- Use `codex-dev` as the canonical Codex working branch.
+- Open PRs from `codex-dev` into `main`; do not deploy production by direct `main` pushes.
 - Use available Codex skills/plugins when they directly fit the task, especially repository audits, debugging, verification, GitHub publishing, browser checks, and security review.
 - Prefer true subagents for independent read-only audits or disjoint implementation scopes.
 - Do not install risky plugins or plugins that require secrets unless the repo already has safe configuration.

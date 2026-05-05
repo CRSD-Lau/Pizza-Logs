@@ -23,6 +23,8 @@ npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 .next-*.log
+*.log
+logs/
 
 # OS
 .DS_Store
@@ -38,6 +40,12 @@ __pycache__/
 *.pyc
 *.pyo
 .pytest_cache/
+parser/.venv/
+parser/venv/
+.venv/
+
+# coverage
+coverage/
 
 # combat log (large binary, not tracked)
 WoWCombatLog/

@@ -12,6 +12,31 @@
 
 ## What Was Done This Session
 
+### Codex branch workflow setup
+
+- Stopped using `codex/upload-cinematic-intro` as the active working branch.
+- Updated local `main` with `git pull --ff-only origin main`.
+- Created local branch `codex-dev` from the current checked-out work, preserving the local test-server setup commits that keep `http://127.0.0.1:3001` alive.
+- Pushed `codex-dev` and set upstream tracking to `origin/codex-dev`.
+- Did not push to `main`.
+- Did not merge into `main`.
+- Did not delete `codex/upload-cinematic-intro` because the final task instructions explicitly said not to delete branches.
+- Preserved the pre-existing unstaged `Pizza Logs HQ/.obsidian/workspace.json` change across branch setup.
+- Added Codex branch workflow docs:
+  - `docs/git-workflow.md`
+  - `docs/pr-readiness.md`
+- Added GitHub PR template:
+  - `.github/pull_request_template.md`
+- Added GitHub Actions CI:
+  - `.github/workflows/ci.yml`
+  - runs on PRs targeting `main` and pushes to `main`,
+  - uses Node 20,
+  - installs with `npm ci --legacy-peer-deps`,
+  - runs lint, type-check, optional npm test, and build.
+- Added `npm run check:pr` to run lint, type-check, optional npm test, and build.
+- Updated `AGENTS.md` so Codex works from `codex-dev`, pushes `origin/codex-dev`, and never commits, pushes, or merges directly to `main`.
+- Updated `.gitignore` to cover local logs, venvs, and coverage output.
+
 ### Local test server setup
 
 - Corrected the local test-server state on this checkout.
@@ -718,6 +743,10 @@ Preserved the main-branch queue fix while merging modernization:
 
 ## Current State
 
+- Current branch is `codex-dev`, tracking `origin/codex-dev`.
+- `main` remains production-only and was not pushed or merged by Codex.
+- Codex workflow is now `codex-dev -> PR -> main`; Railway production still deploys only from `main`.
+- Existing branch `codex/upload-cinematic-intro` still exists locally/remotely because branch deletion was explicitly disallowed in the final workflow task.
 - Local test server is running correctly on `http://127.0.0.1:3001`, with the Python parser on `http://127.0.0.1:8000` and PostgreSQL 16 running on `localhost:5432`. Windows Task Scheduler task `PizzaLogsLocalTestServer` now restarts the local test stack at logon and checks it every 5 minutes. The local database has seeded boss/realm/item metadata, but no uploads, encounters, or players yet.
 - HD cinematic intro integration now has a 4K-master responsive public asset ladder: `1920x1080`, `2560x1440`, and `3840x2160` desktop landscape plus `1080x1920` and `2160x3840` mobile portrait, all at `60fps`, `7.2s`, and `432` frames.
 - Intro behavior: `FrozenLogbookIntro` now plays the HD cinematic on hard page load, uses WebM with MP4 fallback, selects mobile/desktop resolutions through ordered `<source media>` entries, lasts up to `7200ms`, exits on video end, keeps `Skip`, and avoids replaying on every internal route change. Reduced-motion users get the matching poster through the same media-query ladder and a short `350ms` timeout.
@@ -743,6 +772,8 @@ Preserved the main-branch queue fix while merging modernization:
 ---
 
 ## Exact Next Step
+
+For Codex work: always start on `codex-dev`, run `git fetch origin`, then merge `origin/main` before edits. After changes, run `npm run check:pr`, push `origin/codex-dev`, and open a PR from `codex-dev` to `main`. Neil merges the PR when ready; Codex does not push or merge `main`.
 
 For local testing: use `http://127.0.0.1:3001`. The scheduled task `PizzaLogsLocalTestServer` should keep the app/parser alive after reboot/logon and restart them within 5 minutes if either exits. Upload `C:/Users/neil_/OneDrive/Desktop/PizzaLogs/WoWCombatLog/WoWCombatLog.txt` or run the relevant import/sync flow to populate the fresh local DB before judging player, raid, search, or leaderboard data.
 

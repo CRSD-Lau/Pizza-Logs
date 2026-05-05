@@ -13,6 +13,8 @@ Pizza Logs uses Codex as the canonical agent workflow. `AGENTS.md` is the source
 
 For significant changes, request review with `@codex review` on GitHub if configured. See `docs/code-review.md` for the parser, upload, admin, Railway, secret, stale-code, and dependency review checklist.
 
+Codex branch workflow is documented in `docs/git-workflow.md` and `docs/pr-readiness.md`. The short version: Codex works on `codex-dev`, opens PRs into `main`, and never pushes or merges directly to `main`.
+
 ---
 
 ## Gear Display
