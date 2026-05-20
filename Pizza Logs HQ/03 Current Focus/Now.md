@@ -2,7 +2,7 @@
 
 ## Active Focus
 
-The current session quieted the local Windows Warmane sync automation. Direct local CLI requests to Warmane still return 403, so Windows now opens Warmane pages only at logon with hidden Startup launchers, and the browser userscripts keep hourly refreshes running inside the existing Warmane tabs. Parser reliability remains the highest-risk product area.
+The current session removed local Windows Warmane auto-open behavior. Direct local CLI requests to Warmane still return 403, so gear and roster refresh now rely on already-open Warmane tabs running the browser userscripts hourly. Parser reliability remains the highest-risk product area.
 
 README visual refresh: added a high-resolution `docs/assets/readme-screenshot.png` preview to the public README. The screenshot was captured from a fresh local Next dev server on `http://127.0.0.1:3004` while the parser service was listening on `127.0.0.1:8000`.
 
@@ -15,6 +15,11 @@ Codex works on `codex-dev`, pushes `origin/codex-dev`, and opens PRs into `main`
 ## This Session
 
 - Investigated Neil's report that command prompts interrupted gaming and hourly sync opened too many Warmane tabs.
+- Investigated Neil's follow-up that Chrome was still silently opening tabs and using too much memory.
+- Confirmed no Pizza Logs scheduled tasks remain.
+- Confirmed no Pizza Logs Startup `.cmd` or `.vbs` files remain.
+- Updated gear and roster installer defaults to clean old scheduled tasks/startup launchers without creating any Windows auto-open launcher.
+- Kept `-RunNow` as an optional one-time page open and `-CreateStartupLauncher` as explicit opt-in only.
 - Confirmed the root cause was hourly `powershell.exe` scheduled tasks plus visible `.cmd` Startup launchers.
 - Changed Gear Sync and Guild Roster Sync so the browser userscripts schedule the next hourly run inside the already-open Warmane tab.
 - Bumped Gear Sync to `1.8.1` and Guild Roster Sync to `1.1.1`.
@@ -152,8 +157,8 @@ Codex works on `codex-dev`, pushes `origin/codex-dev`, and opens PRs into `main`
 | README and wiki metadata refresh | DONE | Updated public README link and GitHub wiki content |
 | Userscript target-specific secrets | DONE | Gear `1.7.1`, roster `1.0.5`; local/prod secrets no longer collide |
 | Hourly Gear Sync refresh-all | DONE | Gear `1.8.1` refreshes all known DB/roster characters hourly from an existing Warmane tab |
-| Windows Gear Sync quiet launcher | DONE | Hidden Startup VBS opens a Warmane character page at logon; no hourly Windows tab opener |
-| Windows Guild Roster Sync quiet launcher | DONE | Hidden Startup VBS opens the Warmane guild roster page at logon; no hourly Windows tab opener |
+| Windows Gear Sync auto-open cleanup | DONE | No scheduled task or Startup launcher remains; existing Warmane tab handles hourly sync |
+| Windows Guild Roster Sync auto-open cleanup | DONE | No scheduled task or Startup launcher remains; existing Warmane tab handles hourly sync |
 | ICC difficulty marker fix | DONE | Saurfang `Rune of Blood` stays normal-capable; Saurfang `Scent of Blood` IDs and Valithria `Twisted Nightmares` now mark heroic |
 | Session player chart kill filter | DONE | DPS/HPS by encounter chart excludes wipes; Encounter Breakdown still lists all pulls |
 

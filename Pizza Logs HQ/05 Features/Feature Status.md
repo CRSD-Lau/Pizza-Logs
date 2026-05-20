@@ -22,7 +22,7 @@ This file is the single source for shipped features, active backlog, and technic
 | Item metadata | AzerothCore `item_template` import populates `wow_items`; no runtime Wowhead API dependency |
 | Gear/userscript import | Browser-assisted Warmane Gear Sync refreshes known character gear hourly and fills icon gaps |
 | Roster/userscript import | Browser-assisted Warmane Guild Roster Sync refreshes roster rows hourly after a secret is saved |
-| Windows Warmane sync launchers | Hidden Startup launchers open Warmane character and guild roster pages at logon; userscripts keep hourly refreshes inside existing tabs |
+| Warmane sync cleanup scripts | Windows cleanup removes old scheduled tasks/startup launchers; userscripts keep hourly refreshes inside existing tabs |
 | Class-icon avatars | Player avatars use WoW class icons with initials fallback |
 | ICC ordering | Shared helpers keep ICC boss displays in progression order where appropriate |
 | Local test server helpers | Windows scripts start/stop web and parser test servers |
@@ -33,7 +33,7 @@ This file is the single source for shipped features, active backlog, and technic
 
 | Item | Status |
 |---|---|
-| Warmane production data freshness | Browser-assisted hidden Startup launchers and in-tab hourly userscript timers are available for gear and roster; fully headless sync remains future work |
+| Warmane production data freshness | Browser-assisted in-tab hourly userscript timers are available for gear and roster; fully headless sync remains future work |
 | Absorbs | Future parser work; not currently implemented |
 
 ## Backlog

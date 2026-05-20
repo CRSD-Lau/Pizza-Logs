@@ -4,6 +4,7 @@ param(
   [string]$TargetUrl = "https://armory.warmane.com/character/Lausudo/Lordaeron/summary",
   [string]$BrowserPath = "",
   [switch]$UseDefaultBrowser,
+  [switch]$CreateStartupLauncher,
   [switch]$RunNow
 )
 
@@ -72,7 +73,7 @@ function ConvertTo-VbsStringLiteral {
   return "`"$escaped`""
 }
 
-if ($PSCmdlet.ShouldProcess($startupScriptPath, "Create quiet Pizza Logs Gear Sync startup launcher")) {
+if ($PSCmdlet.ShouldProcess($TaskName, "Remove old Pizza Logs Gear Sync scheduled task and startup launchers")) {
   Remove-ExistingTask
 
   if (Test-Path -LiteralPath $legacyStartupCommandPath) {
@@ -80,17 +81,33 @@ if ($PSCmdlet.ShouldProcess($startupScriptPath, "Create quiet Pizza Logs Gear Sy
     Write-Host "Removed legacy startup launcher '$legacyStartupCommandPath'."
   }
 
-  $vbsCommand = ConvertTo-VbsStringLiteral $taskCommand
-  Set-Content -LiteralPath $startupScriptPath -Value @(
-    'Set shell = CreateObject("WScript.Shell")',
-    "shell.Run $vbsCommand, 0, False"
-  ) -Encoding ascii
-
-  if ($RunNow) {
-    Start-Process -FilePath "powershell.exe" -ArgumentList $taskArguments -WindowStyle Hidden
+  if (Test-Path -LiteralPath $startupScriptPath) {
+    Remove-Item -LiteralPath $startupScriptPath -Force
+    Write-Host "Removed startup launcher '$startupScriptPath'."
   }
-
-  Write-Host "Created quiet startup launcher '$startupScriptPath'."
-  Write-Host "Target URL: $TargetUrl"
-  Write-Host "The browser userscript now owns the hourly refresh inside the existing Warmane tab."
 }
+
+if ($CreateStartupLauncher) {
+  $vbsCommand = ConvertTo-VbsStringLiteral $taskCommand
+  if ($PSCmdlet.ShouldProcess($startupScriptPath, "Create optional quiet Pizza Logs Gear Sync startup launcher")) {
+    Set-Content -LiteralPath $startupScriptPath -Value @(
+      'Set shell = CreateObject("WScript.Shell")',
+      "shell.Run $vbsCommand, 0, False"
+    ) -Encoding ascii
+    Write-Host "Created quiet startup launcher '$startupScriptPath'."
+  }
+}
+
+if ($RunNow) {
+  Start-Process -FilePath "powershell.exe" -ArgumentList $taskArguments -WindowStyle Hidden
+}
+
+if (-not $CreateStartupLauncher) {
+  Write-Host "No Windows auto-open launcher was created. Keep an existing Warmane tab open for hourly sync."
+}
+
+if ($RunNow -or $CreateStartupLauncher) {
+  Write-Host "Target URL: $TargetUrl"
+}
+
+Write-Host "The browser userscript owns the hourly refresh inside the existing Warmane tab."

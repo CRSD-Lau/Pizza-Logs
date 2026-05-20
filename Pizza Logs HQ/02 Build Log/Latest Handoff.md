@@ -25,9 +25,8 @@
   clutter the DPS/HPS by encounter trend.
 - Gear Sync now refreshes every known Pizza Logs character from Warmane once per
   hour, instead of only importing players with missing or incomplete cached gear.
-- Local Windows automation now opens Warmane character and guild roster pages at
-  logon with hidden Startup launchers; the browser userscripts keep hourly
-  refreshes running inside the existing Warmane tabs.
+- Windows no longer auto-opens Warmane pages. Gear and roster userscripts keep
+  hourly refreshes running inside existing Warmane tabs after Neil opens them.
 - README now includes a high-resolution app preview captured from a fresh local Next server on `http://127.0.0.1:3004`.
 - README now links to the GitHub wiki, and the wiki has been refreshed for current upload, roster, gear, parser, roadmap, and branch workflow details.
 - Local repo-root launchers:
@@ -58,10 +57,11 @@
   existing Warmane tab; roster userscript v1.1.1 stores admin secrets per Pizza
   Logs target origin, shows the target in the Warmane panel, and schedules
   hourly refreshes inside the existing Warmane tab after a secret is saved.
-- Windows gear automation scripts live under `scripts/gear-sync/`; docs live in
-  `docs/gear-sync-windows-task.md`.
-- Windows guild roster automation scripts live under `scripts/guild-roster-sync/`;
-  docs live in `docs/guild-roster-sync-windows-task.md`.
+- Windows gear cleanup/manual-open scripts live under `scripts/gear-sync/`;
+  docs live in `docs/gear-sync-windows-task.md`.
+- Windows guild roster cleanup/manual-open scripts live under
+  `scripts/guild-roster-sync/`; docs live in
+  `docs/guild-roster-sync-windows-task.md`.
 
 ## Quiet Warmane Sync Launch Session
 
@@ -82,6 +82,22 @@
 - Removed the old Startup `.cmd` launchers and created:
   - `C:\Users\neil_\AppData\Roaming\Microsoft\Windows\Start Menu\Programs\Startup\PizzaLogsGearSyncAtLogon.vbs`
   - `C:\Users\neil_\AppData\Roaming\Microsoft\Windows\Start Menu\Programs\Startup\PizzaLogsGuildRosterSyncAtLogon.vbs`
+
+## Warmane Auto-Open Removal Session
+
+- Investigated Neil's follow-up that Chrome was still silently opening tabs and
+  using too much memory.
+- Confirmed no Pizza Logs scheduled tasks remained and no active Pizza
+  Logs/Warmane PowerShell, WScript, or Chrome command line was running.
+- Confirmed the remaining auto-open source was the two Startup `.vbs` launchers.
+- Removed both local Startup launchers:
+  - `PizzaLogsGearSyncAtLogon.vbs`
+  - `PizzaLogsGuildRosterSyncAtLogon.vbs`
+- Updated both installer scripts so the default behavior removes old scheduled
+  tasks and old `.cmd`/`.vbs` Startup launchers, but creates no Windows
+  auto-open launcher.
+- Kept `-RunNow` as an optional one-time open and `-CreateStartupLauncher` as an
+  explicit opt-in only.
 - The cinematic intro now uses generated video assets from `animations/source/Veo.mp4` instead of the retired `public/intro` asset set.
 
 ## Tampermonkey Auth Session
@@ -281,6 +297,12 @@
 | `schtasks.exe /Query /TN PizzaLogsGearSync` | Passed; task is absent |
 | `schtasks.exe /Query /TN PizzaLogsGuildRosterSync` | Passed; task is absent |
 | Startup VBS content checks | Passed; both use `powershell.exe -WindowStyle Hidden` with escaped script and target URL arguments |
+| Startup folder inspection after auto-open removal | Passed; no Pizza Logs startup files remain |
+| Scheduled task search after auto-open removal | Passed; no Pizza Logs/Warmane scheduled tasks remain |
+| `powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\gear-sync\install-windows-task.ps1 -WhatIf` | Passed; default cleanup creates no launcher |
+| `powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\guild-roster-sync\install-windows-task.ps1 -WhatIf` | Passed; default cleanup creates no launcher |
+| Default gear cleanup script run | Passed; no Windows auto-open launcher created |
+| Default guild roster cleanup script run | Passed; no Windows auto-open launcher created |
 | Local `GET http://127.0.0.1:3001/guild-roster?page=2` | Passed with HTTP 200 after dev server compile |
 | `node node_modules\ts-node\dist\bin.js --project tsconfig.seed.json tests\armory-gear-client-scripts.test.ts` | Passed |
 | `node node_modules\ts-node\dist\bin.js --project tsconfig.seed.json tests\guild-roster-client-scripts.test.ts` | Passed |
@@ -322,17 +344,15 @@
   profile with the production userscripts installed and the correct admin secret
   saved.
 - Hourly browser timers need the Warmane gear/roster tabs to remain open. If a
-  tab is closed, refresh resumes after Neil opens it again or after the next
-  Windows logon launcher opens it.
+  tab is closed, refresh resumes after Neil opens it again.
 - Browser background-tab throttling can delay a sync while the browser or PC is
   suspended.
 
 ## Exact Next Step
 
-Review the `codex-dev` to `main` PR for quiet Warmane sync launch behavior.
+Review the `codex-dev` to `main` PR updates for no Windows auto-open behavior.
 After deployment, reinstall/update both production userscripts from `/admin`,
 open one Warmane character tab and the Pizza Warriors guild tab, and click
 `Sync now` / `Sync roster` once if the admin secret is not already saved. Keep
-those tabs open for hourly refreshes without recurring Windows tab launches.
-Neil merges into `main` only after review; Codex does not merge or push `main`
-directly.
+those tabs open for hourly refreshes. Neil merges into `main` only after review;
+Codex does not merge or push `main` directly.

@@ -136,8 +136,8 @@ Warmane live server fetches are best-effort and may fail from Railway or local s
 - Warmane Gear Sync userscript for hourly current-equipment refreshes and icon backfill.
 - Warmane Guild Roster userscript for hourly roster rank, class, race, professions, and member refreshes.
 
-For Windows persistence, the repo includes quiet Startup launchers that open
-Warmane once after logon; the userscripts then refresh hourly inside the existing tabs:
+For Windows safety, the repo includes cleanup scripts that remove old Windows
+auto-open launchers; the userscripts refresh hourly inside existing Warmane tabs:
 [`docs/gear-sync-windows-task.md`](docs/gear-sync-windows-task.md).
 The guild roster has the same local Windows automation:
 [`docs/guild-roster-sync-windows-task.md`](docs/guild-roster-sync-windows-task.md).

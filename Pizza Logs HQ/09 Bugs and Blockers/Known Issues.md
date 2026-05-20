@@ -12,7 +12,7 @@ No confirmed app-breaking bugs are active as of the documentation audit.
 | Upload rate limiting is not implemented | Abuse could create parser/DB load | Prefer Railway-level controls first; add app logic only if needed |
 | Absorbs are not implemented | Disc priest contribution can be lower than Skada combined healing+absorbs views | Future parser work based on Skada `Absorbs.lua`; keep separate from healing done |
 | Role detection is rough | Hybrids/self-healing classes can be mislabeled; tanks are not inferred | Replace upload-time heal/damage ratio with better class/spec/combat evidence |
-| Warmane direct server fetches can fail with Cloudflare/403 | Gear/roster refreshes are unreliable from Railway or plain CLI requests | Supported path is browser-assisted userscripts, hidden Windows Startup launchers for gear and roster, and cached DB snapshots |
+| Warmane direct server fetches can fail with Cloudflare/403 | Gear/roster refreshes are unreliable from Railway or plain CLI requests | Supported path is browser-assisted userscripts running in existing Warmane tabs and cached DB snapshots |
 | Some heroic/Gunship difficulty evidence is absent | Certain pulls cannot be classified perfectly from logs alone | Use direct marker evidence first; keep normal-looking non-Gunship fallback attempts normal; document uncertainty |
 | Orphaned pets can remain unmatched | Small DPS mismatches when pets were active before log start | Keep Skada-aligned owner remap when summon evidence exists |
 
@@ -55,7 +55,8 @@ No confirmed app-breaking bugs are active as of the documentation audit.
 | Gear Sync only ran when Neil manually visited Warmane | Gear `1.8.1` auto-runs hourly inside an existing Warmane tab with a saved target secret; hidden Startup launcher opens the page at logon |
 | Guild Roster Sync only ran when Neil manually visited Warmane | Roster `1.1.1` auto-runs hourly inside an existing Warmane tab with a saved target secret; hidden Startup launcher opens the guild page at logon |
 | Windows sync uninstall scripts errored when no task existed | Gear and roster uninstall scripts now treat missing scheduled tasks/startup launchers as clean no-ops |
-| Warmane sync opened recurring tabs and flashed command prompts | Gear `1.8.1` and roster `1.1.1` schedule hourly runs inside existing Warmane tabs; Windows now uses hidden Startup VBS launchers and removes the old hourly scheduled tasks |
+| Warmane sync opened recurring tabs and flashed command prompts | Gear `1.8.1` and roster `1.1.1` schedule hourly runs inside existing Warmane tabs; old hourly scheduled tasks and visible `.cmd` launchers were removed |
+| Hidden Warmane Startup launchers could still open Chrome tabs | Local Startup launchers were removed, and installer defaults now clean old tasks/launchers without creating any Windows auto-open entry |
 
 ## Not Bugs
 
