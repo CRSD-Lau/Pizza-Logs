@@ -106,9 +106,9 @@ export function MobBreakdown({ mobs, title }: MobBreakdownProps) {
                       return (
                         <div key={p.name} className="flex items-center gap-2 text-xs">
                           <span className="w-28 font-medium truncate" style={{ color }}>{p.name}</span>
-                          <div className="flex-1 h-3 bg-bg-hover rounded overflow-hidden">
+                          <div className="flex-1 h-3 bg-bg-hover rounded-sm overflow-hidden">
                             <div
-                              className="h-full rounded"
+                              className="h-full rounded-sm"
                               style={{ width: `${playerPct}%`, background: color, opacity: 0.65 }}
                             />
                           </div>

@@ -2,7 +2,7 @@ import { LOCAL_USERSCRIPT_URL, USERSCRIPT_URL } from "../../lib/armory-gear-clie
 
 export function GearImportBookmarklet() {
   return (
-    <div className="rounded border border-gold-dim bg-bg-card p-4 space-y-4">
+    <div className="rounded-sm border border-gold-dim bg-bg-card p-4 space-y-4">
       <div>
         <h3 className="heading-cinzel text-sm text-gold tracking-wide">Browser Gear Import</h3>
         <p className="text-sm text-text-secondary mt-1">
@@ -25,7 +25,7 @@ export function GearImportBookmarklet() {
             href={USERSCRIPT_URL}
             target="_blank"
             rel="noreferrer"
-            className="inline-flex rounded border border-gold-dim px-4 py-2 text-sm text-gold transition-colors hover:border-gold hover:text-gold-light"
+            className="inline-flex rounded-sm border border-gold-dim px-4 py-2 text-sm text-gold transition-colors hover:border-gold hover:text-gold-light"
           >
             Install / Update Gear Userscript
           </a>
@@ -33,7 +33,7 @@ export function GearImportBookmarklet() {
             href={LOCAL_USERSCRIPT_URL}
             target="_blank"
             rel="noreferrer"
-            className="inline-flex rounded border border-gold-dim px-4 py-2 text-sm text-gold transition-colors hover:border-gold hover:text-gold-light"
+            className="inline-flex rounded-sm border border-gold-dim px-4 py-2 text-sm text-gold transition-colors hover:border-gold hover:text-gold-light"
           >
             Install Local Gear Userscript
           </a>
@@ -45,7 +45,7 @@ export function GearImportBookmarklet() {
           readOnly
           rows={2}
           value={USERSCRIPT_URL}
-          className="w-full rounded border border-gold-dim bg-bg-deep p-3 font-mono text-xs text-text-secondary"
+          className="w-full rounded-sm border border-gold-dim bg-bg-deep p-3 font-mono text-xs text-text-secondary"
         />
         <label className="block text-xs font-bold uppercase tracking-widest text-text-dim">
           Gear local install URL
@@ -54,7 +54,7 @@ export function GearImportBookmarklet() {
           readOnly
           rows={2}
           value={LOCAL_USERSCRIPT_URL}
-          className="w-full rounded border border-gold-dim bg-bg-deep p-3 font-mono text-xs text-text-secondary"
+          className="w-full rounded-sm border border-gold-dim bg-bg-deep p-3 font-mono text-xs text-text-secondary"
         />
       </div>
     </div>

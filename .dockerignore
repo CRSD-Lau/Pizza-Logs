@@ -7,9 +7,17 @@ uploads
 README.md
 .claude
 .codex
+.agents
+.gstack
+.obsidian
+.specify
 .pytest_cache
+parser/.venv
+parser/venv
 .sync-agent-logs
 WoWCombatLog
 tmp-mobile-check
+tmp-intro-preview
+tools
 tsconfig.tsbuildinfo
 Pizza Logs HQ

@@ -26,6 +26,7 @@ from combat_metrics import (
     session_damage_amount,
 )
 from difficulty_detector import DifficultyDetection, detect_difficulty
+from analytics import ABSORB_AURA_NAMES, infer_role, infer_spec, is_consumable_aura
 
 # ── Constants ─────────────────────────────────────────────────────
 
@@ -75,6 +76,10 @@ HEAL_EVENTS = {
     "SPELL_HEAL",
     "SPELL_PERIODIC_HEAL",
 }
+
+AURA_APPLY_EVENTS = {"SPELL_AURA_APPLIED", "SPELL_AURA_REFRESH"}
+AURA_REMOVE_EVENTS = {"SPELL_AURA_REMOVED"}
+POWER_GAIN_EVENTS = {"SPELL_ENERGIZE", "SPELL_PERIODIC_ENERGIZE"}
 
 # Spells excluded from healing-done totals.
 #
@@ -204,18 +209,59 @@ class TargetStats:
 
 
 @dataclass
+class AbsorbStats:
+    amount:         float = 0.0
+    hits:           int   = 0
+    ambiguous_hits: int   = 0
+
+
+@dataclass
+class AuraStats:
+    uptime_seconds: float = 0.0
+    applications:   int   = 0
+
+
+@dataclass
+class PowerStats:
+    amount:     float = 0.0
+    events:     int   = 0
+    power_type: int   = -1
+
+
+@dataclass
+class IncomingDamage:
+    ts:          float
+    source_name: str
+    spell_name:  str
+    amount:      float
+
+
+@dataclass
+class DeathEventStats:
+    ts:            float
+    recent_damage: list[IncomingDamage] = field(default_factory=list)
+
+
+@dataclass
 class ActorStats:
     name:         str
     guids:        set[str]  = field(default_factory=set)
     wow_class:    Optional[str] = None
     total_damage: float = 0.0
     total_healing:float = 0.0
+    total_absorbs:float = 0.0
     damage_taken: float = 0.0
     deaths:       int   = 0
     hit_count:    int   = 0
     crit_count:   int   = 0
     spells:       dict[str, SpellStats]  = field(default_factory=dict)
     targets:      dict[str, TargetStats] = field(default_factory=dict)  # mob → stats
+    absorbs:      dict[str, AbsorbStats] = field(default_factory=dict)
+    auras:        dict[str, AuraStats] = field(default_factory=dict)
+    power:        dict[str, PowerStats] = field(default_factory=dict)
+    death_events: list[DeathEventStats] = field(default_factory=list)
+    recent_damage: list[IncomingDamage] = field(default_factory=list)
+    observed_spells: set[str] = field(default_factory=set)
 
 
 @dataclass
@@ -273,6 +319,8 @@ class ParsedEncounter:
     fingerprint:       str
     participants:      list[dict]
     raw_event_count:   int
+    total_absorbs:     float = 0.0
+    unattributed_absorbs: float = 0.0
     session_index:     int = 0   # 0-based index; increments on >60 min gap
     difficulty_detection: DifficultyDetection = field(default_factory=lambda: DifficultyDetection(
         mode="UNKNOWN",
@@ -299,6 +347,12 @@ def parse_ts(ts_str: str) -> float:
         return 0.0
     h, mn, s, ms = int(m.group(3)), int(m.group(4)), int(m.group(5)), int(m.group(6))
     return h * 3600 + mn * 60 + s + ms / 1000.0
+
+
+def _elapsed_seconds(start: float, end: float) -> float:
+    if end < start:
+        end += 86400
+    return max(0.0, end - start)
 
 
 def parse_ts_to_iso(ts_str: str, year_hint: int = 2024) -> str:
@@ -758,6 +812,10 @@ class CombatLogParser:
         targets_hit: set[str] = set()
         boss_died_ts: Optional[float] = None  # for accurate KILL duration
         boss_mechanic_healing = 0.0            # heals from non-player → player (boss mechanics)
+        total_absorbs = 0.0
+        unattributed_absorbs = 0.0
+        active_auras: dict[tuple[str, str], tuple[float, str, str]] = {}
+        active_absorb_auras: dict[str, dict[str, tuple[float, str, str]]] = {}
 
         boss_name_lower = boss_name.lower() if boss_name else ""
         boss_alias_set  = {a.lower() for a in boss_def.aliases} if boss_def else set()
@@ -799,8 +857,67 @@ class CombatLogParser:
             if event in (ENCOUNTER_START, ENCOUNTER_END):
                 continue
 
+            if event in AURA_APPLY_EVENTS or event in AURA_REMOVE_EVENTS:
+                if len(parts) < 10:
+                    continue
+                src_guid, src_name = parts[1], parts[2].strip('"').strip()
+                dst_guid, dst_name = parts[4], parts[5].strip('"').strip()
+                spell_name = parts[8].strip('"').strip()
+                aura_key = (dst_guid, spell_name)
+
+                if _is_player(dst_guid) and dst_name and spell_name:
+                    target_actor = _get_actor(actors, dst_name, dst_guid)
+                    aura_stats = target_actor.auras.setdefault(spell_name, AuraStats())
+
+                    if event in AURA_APPLY_EVENTS:
+                        prior = active_auras.get(aura_key)
+                        if prior is not None:
+                            aura_stats.uptime_seconds += _elapsed_seconds(prior[0], ts)
+                        aura_stats.applications += 1
+                        active_auras[aura_key] = (ts, src_guid, src_name)
+                        if spell_name in ABSORB_AURA_NAMES:
+                            active_absorb_auras.setdefault(dst_guid, {})[spell_name] = (
+                                ts,
+                                src_guid,
+                                src_name,
+                            )
+                    else:
+                        prior = active_auras.pop(aura_key, None)
+                        if prior is not None:
+                            aura_stats.uptime_seconds += _elapsed_seconds(prior[0], ts)
+                        active_absorb_auras.get(dst_guid, {}).pop(spell_name, None)
+
+                    if _is_player(src_guid) and src_name:
+                        source_actor = _get_actor(actors, src_name, src_guid)
+                        source_actor.observed_spells.add(spell_name)
+                        if source_actor.wow_class is None and spell_name in SPELL_CLASS_MAP:
+                            source_actor.wow_class = SPELL_CLASS_MAP[spell_name]
+                continue
+
+            if event in POWER_GAIN_EVENTS:
+                if len(parts) < 12:
+                    continue
+                dst_guid, dst_name = parts[4], parts[5].strip('"').strip()
+                if not (_is_player(dst_guid) and dst_name):
+                    continue
+                spell_name = parts[8].strip('"').strip()
+                amount = _safe_float(parts[10])
+                power_type = _safe_int(parts[11])
+                if amount <= 0 or not spell_name:
+                    continue
+                target_actor = _get_actor(actors, dst_name, dst_guid)
+                target_actor.observed_spells.add(spell_name)
+                power = target_actor.power.setdefault(
+                    spell_name,
+                    PowerStats(power_type=power_type),
+                )
+                power.amount += amount
+                power.events += 1
+                continue
+
             if event == UNIT_DIED_EVENT:
                 if len(parts) >= 6:
+                    dead_guid = parts[4]
                     dead_name = parts[5].strip('"').strip()
                     dead_lower = dead_name.lower()
                     # Track boss death for accurate KILL duration.
@@ -812,8 +929,13 @@ class CombatLogParser:
                             "combat trigger" in dead_lower or "green dragon" in dead_lower))
                     ):
                         boss_died_ts = ts
-                    if dead_name in actors:
-                        actors[dead_name].deaths += 1
+                    if _is_player(dead_guid) and dead_name:
+                        dead_actor = _get_actor(actors, dead_name, dead_guid)
+                        dead_actor.deaths += 1
+                        dead_actor.death_events.append(DeathEventStats(
+                            ts=ts,
+                            recent_damage=list(dead_actor.recent_damage),
+                        ))
                 continue
 
             is_heal = event in HEAL_EVENTS
@@ -877,8 +999,48 @@ class CombatLogParser:
                 absorbed = fields.absorbed
                 is_crit = fields.is_crit
 
+            if not is_heal and absorbed > 0 and _is_player(dst_guid):
+                total_absorbs += absorbed
+                shields = active_absorb_auras.get(dst_guid, {})
+                candidates = [
+                    (applied_ts, shield_name, shield_src_guid, shield_src_name)
+                    for shield_name, (applied_ts, shield_src_guid, shield_src_name) in shields.items()
+                ]
+                if candidates:
+                    _, shield_name, shield_src_guid, shield_src_name = max(candidates)
+                    if _is_player(shield_src_guid) and shield_src_name:
+                        absorber = _get_actor(actors, shield_src_name, shield_src_guid)
+                        absorber.total_absorbs += absorbed
+                        absorb_stats = absorber.absorbs.setdefault(shield_name, AbsorbStats())
+                        absorb_stats.amount += absorbed
+                        absorb_stats.hits += 1
+                        absorb_stats.ambiguous_hits += int(len(candidates) > 1)
+                        if absorber.wow_class is None and shield_name in SPELL_CLASS_MAP:
+                            absorber.wow_class = SPELL_CLASS_MAP[shield_name]
+                    else:
+                        unattributed_absorbs += absorbed
+                else:
+                    unattributed_absorbs += absorbed
+
             if amount <= 0:
                 continue
+
+            if not is_heal and _is_player(dst_guid) and dst_name:
+                actual_damage = encounter_damage_amount(fields)
+                damaged_actor = _get_actor(actors, dst_name, dst_guid)
+                damaged_actor.damage_taken += actual_damage
+                damaged_actor.recent_damage = [
+                    event
+                    for event in damaged_actor.recent_damage
+                    if _elapsed_seconds(event.ts, ts) <= 15
+                ]
+                if actual_damage > 0:
+                    damaged_actor.recent_damage.append(IncomingDamage(
+                        ts=ts,
+                        source_name=src_name or "Unknown",
+                        spell_name=spell_name,
+                        amount=actual_damage,
+                    ))
 
             # Only count player sources as DPS/HPS
             if not _is_player(src_guid):
@@ -890,9 +1052,6 @@ class CombatLogParser:
                     # fall through to player accounting below
                 else:
                     # Track damage taken by players from boss
-                    if _is_player(dst_guid) and dst_name:
-                        a = _get_actor(actors, dst_name, dst_guid)
-                        a.damage_taken += amount
                     # Boss-mechanic heals (e.g. Blood-Queen vampiric bites):
                     # src is a non-player NPC but dst is a player. Count in
                     # encounter total_healing without attributing to any actor.
@@ -928,6 +1087,7 @@ class CombatLogParser:
             )
 
             a = _get_actor(actors, src_name, src_guid)
+            a.observed_spells.add(spell_name)
             ss = a.spells.setdefault(spell_name, SpellStats(school=school))
 
             # Detect class from spell name if not yet known
@@ -978,12 +1138,31 @@ class CombatLogParser:
             end_ts = kill_ts
         duration = max(1.0, end_ts - start_ts)
 
+        for (target_guid, spell_name), (applied_ts, _, _) in active_auras.items():
+            for actor in actors.values():
+                if target_guid in actor.guids:
+                    actor.auras.setdefault(spell_name, AuraStats()).uptime_seconds += min(
+                        duration,
+                        _elapsed_seconds(applied_ts, end_ts),
+                    )
+                    break
+
         # Build participant list
         participants = []
         for actor in actors.values():
             dps = actor.total_damage / duration
             hps = actor.total_healing / duration
+            aps = actor.total_absorbs / duration
             crit_pct = (actor.crit_count / actor.hit_count * 100) if actor.hit_count else 0.0
+            observed_spells = actor.observed_spells | set(actor.spells)
+            spec = infer_spec(actor.wow_class, observed_spells)
+            role = infer_role(
+                spec,
+                observed_spells,
+                actor.total_damage,
+                actor.total_healing,
+                actor.damage_taken,
+            )
             spell_breakdown = {
                 name: {
                     "damage":  s.damage,
@@ -999,18 +1178,74 @@ class CombatLogParser:
                 for name, t in actor.targets.items()
                 if t.damage > 0
             }
+            absorb_breakdown = {
+                name: {
+                    "amount": stats.amount,
+                    "hits": stats.hits,
+                    "ambiguousHits": stats.ambiguous_hits,
+                }
+                for name, stats in actor.absorbs.items()
+                if stats.amount > 0
+            }
+            aura_breakdown = {
+                name: {
+                    "uptimeSeconds": round(min(duration, stats.uptime_seconds), 3),
+                    "uptimePct": round(min(100.0, stats.uptime_seconds / duration * 100), 1),
+                    "applications": stats.applications,
+                }
+                for name, stats in actor.auras.items()
+                if stats.uptime_seconds > 0
+            }
+            power_breakdown = {
+                name: {
+                    "amount": stats.amount,
+                    "events": stats.events,
+                    "powerType": stats.power_type,
+                }
+                for name, stats in actor.power.items()
+                if stats.amount > 0
+            }
+            consumable_breakdown = {
+                name: aura_breakdown[name]
+                for name in aura_breakdown
+                if is_consumable_aura(name)
+            }
             participants.append({
                 "name":            actor.name,
                 "class":           actor.wow_class,
+                "spec":            spec,
+                "role":            role,
                 "totalDamage":     actor.total_damage,
                 "totalHealing":    actor.total_healing,
+                "totalAbsorbs":    actor.total_absorbs,
                 "damageTaken":     actor.damage_taken,
                 "dps":             round(dps, 2),
                 "hps":             round(hps, 2),
+                "aps":             round(aps, 2),
                 "deaths":          actor.deaths,
+                "deathEvents":     [
+                    {
+                        "offsetSeconds": round(_elapsed_seconds(start_ts, death.ts), 3),
+                        "recentDamage": [
+                            {
+                                "offsetSeconds": round(_elapsed_seconds(start_ts, damage.ts), 3),
+                                "secondsBeforeDeath": round(_elapsed_seconds(damage.ts, death.ts), 3),
+                                "source": damage.source_name,
+                                "spell": damage.spell_name,
+                                "amount": damage.amount,
+                            }
+                            for damage in death.recent_damage
+                        ],
+                    }
+                    for death in actor.death_events
+                ],
                 "critPct":         round(crit_pct, 1),
                 "spellBreakdown":  spell_breakdown,
                 "targetBreakdown": target_breakdown,
+                "absorbBreakdown": absorb_breakdown,
+                "auraBreakdown":   aura_breakdown,
+                "powerBreakdown":  power_breakdown,
+                "consumableBreakdown": consumable_breakdown,
             })
 
         total_damage  = sum(a.total_damage  for a in actors.values())
@@ -1048,6 +1283,8 @@ class CombatLogParser:
             ended_at          = ended_at,
             total_damage      = total_damage,
             total_healing     = total_healing,
+            total_absorbs     = total_absorbs,
+            unattributed_absorbs = unattributed_absorbs,
             total_damage_taken= total_taken,
             fingerprint       = fingerprint,
             participants      = participants,

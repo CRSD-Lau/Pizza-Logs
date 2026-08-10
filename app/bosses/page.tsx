@@ -139,7 +139,7 @@ export default async function BossesPage() {
                     className={getRevealClassName({
                       boss: true,
                       className:
-                        "group block overflow-hidden bg-bg-card rounded border border-transparent px-4 py-4 hover:border-gold-dim transition-colors md:grid md:gap-3 md:items-center md:py-3",
+                        "group block overflow-hidden bg-bg-card rounded-sm border border-transparent px-4 py-4 hover:border-gold-dim transition-colors md:grid md:gap-3 md:items-center md:py-3",
                     })}
                     style={getRevealStyle(index, { gridTemplateColumns: BOSS_GRID_COLUMNS })}
                   >
@@ -161,7 +161,7 @@ export default async function BossesPage() {
                         />
                       </div>
 
-                      <div className="rounded border border-gold-dim/70 bg-bg-panel/70 px-3 py-2">
+                      <div className="rounded-sm border border-gold-dim/70 bg-bg-panel/70 px-3 py-2">
                         <div className="text-[10px] font-semibold uppercase tracking-widest text-text-dim">
                           Top DPS
                         </div>
@@ -215,7 +215,7 @@ function BossMobileMetric({
   valueClassName: string;
 }) {
   return (
-    <div className="min-w-0 rounded border border-gold-dim bg-bg-panel px-2 py-2 text-center">
+    <div className="min-w-0 rounded-sm border border-gold-dim bg-bg-panel px-2 py-2 text-center">
       <div className={cn("truncate text-sm font-bold tabular-nums", valueClassName)}>{value}</div>
       <div className="text-[10px] text-text-dim uppercase tracking-wide">{label}</div>
     </div>

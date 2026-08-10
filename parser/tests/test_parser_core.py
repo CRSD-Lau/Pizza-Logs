@@ -48,14 +48,15 @@ def _spell_damage_parts(src_guid: str, src_name: str,
                         amount: int, spell: str = "Fireball",
                         event: str = "SPELL_DAMAGE",
                         spell_id: int = 133,
-                        overkill: int = 0) -> list[str]:
+                        overkill: int = 0,
+                        absorbed: int = 0) -> list[str]:
     """Build a minimal SPELL_DAMAGE parts list (18 fields)."""
     return [
         event,
         src_guid, f'"{src_name}"', "0x512",
         dst_guid, f'"{dst_name}"', "0xa48",
         str(spell_id), f'"{spell}"', "4",
-        str(amount), str(overkill), "4", "0", "0", "0", "0", "0",
+        str(amount), str(overkill), "4", "0", "0", str(absorbed), "0", "0",
     ]
 
 
@@ -1564,6 +1565,92 @@ def test_spell_heal_absorbed_not_counted_as_heal():
     assert healer["totalHealing"] == pytest.approx(50_000, abs=1), (
         f"SPELL_HEAL_ABSORBED must not inflate healing. Got {healer['totalHealing']:,.0f}, expected 50,000"
     )
+
+
+def test_conservative_analytics_tracks_absorbs_auras_power_spec_and_roles():
+    """New analytics enrich output without changing Skada damage/healing totals."""
+    healer_guid = "0x0600000000000002"
+    tank_guid = "0x0600000000000003"
+    boss_guid = "0xF130000000000001"
+    ts_start = 46800.0
+
+    segment = [
+        ("4/19 13:00:00.000", [ENCOUNTER_START, "1234", '"Lord Marrowgar"', "6", "25"], ts_start),
+        ("4/19 13:00:05.000", [
+            "SPELL_AURA_APPLIED",
+            healer_guid, '"Shieldheals"', "0x514",
+            tank_guid, '"Shieldtank"', "0x514",
+            "48066", '"Power Word: Shield"', "2", '"BUFF"',
+        ], ts_start + 5),
+        ("4/19 13:00:05.500", [
+            "SPELL_AURA_APPLIED",
+            healer_guid, '"Shieldheals"', "0x514",
+            healer_guid, '"Shieldheals"', "0x514",
+            "57399", '"Well Fed"', "1", '"BUFF"',
+        ], ts_start + 5.5),
+        ("4/19 13:00:06.000", _heal_parts(
+            healer_guid, "Shieldheals", tank_guid, "Shieldtank", 25_000, spell="Penance",
+        ), ts_start + 6),
+        ("4/19 13:00:10.000", _spell_damage_parts(
+            boss_guid, "Lord Marrowgar", tank_guid, "Shieldtank", 100_000,
+            spell="Saber Lash", spell_id=69055, absorbed=20_000,
+        ), ts_start + 10),
+        ("4/19 13:00:12.000", _spell_damage_parts(
+            tank_guid, "Shieldtank", boss_guid, "Lord Marrowgar", 30_000,
+            spell="Shield Slam", spell_id=47488,
+        ), ts_start + 12),
+        ("4/19 13:00:15.000", [
+            "SPELL_ENERGIZE",
+            healer_guid, '"Shieldheals"', "0x514",
+            healer_guid, '"Shieldheals"', "0x514",
+            "47755", '"Rapture"', "2", "1200", "0",
+        ], ts_start + 15),
+        ("4/19 13:00:30.000", [
+            "SPELL_AURA_REMOVED",
+            healer_guid, '"Shieldheals"', "0x514",
+            tank_guid, '"Shieldtank"', "0x514",
+            "48066", '"Power Word: Shield"', "2", '"BUFF"',
+        ], ts_start + 30),
+        ("4/19 13:00:35.000", _spell_damage_parts(
+            boss_guid, "Lord Marrowgar", tank_guid, "Shieldtank", 5_000,
+            spell="Coldflame", spell_id=69146,
+        ), ts_start + 35),
+        ("4/19 13:00:40.000", [
+            UNIT_DIED_EVENT,
+            boss_guid, '"Lord Marrowgar"', "0xa48",
+            tank_guid, '"Shieldtank"', "0x514", "0",
+        ], ts_start + 40),
+        ("4/19 13:00:50.000", [
+            "SPELL_AURA_REMOVED",
+            healer_guid, '"Shieldheals"', "0x514",
+            healer_guid, '"Shieldheals"', "0x514",
+            "57399", '"Well Fed"', "1", '"BUFF"',
+        ], ts_start + 50),
+        ("4/19 13:01:00.000", _unit_died_parts("Lord Marrowgar"), ts_start + 60),
+        ("4/19 13:01:10.000", [ENCOUNTER_END, "1234", '"Lord Marrowgar"', "6", "25", "1"], ts_start + 70),
+    ]
+
+    enc = CombatLogParser(file_year=2026)._aggregate_segment(segment, {})
+    assert enc is not None
+    healer = next(p for p in enc.participants if p["name"] == "Shieldheals")
+    tank = next(p for p in enc.participants if p["name"] == "Shieldtank")
+
+    assert enc.total_absorbs == pytest.approx(20_000)
+    assert enc.unattributed_absorbs == 0
+    assert healer["totalHealing"] == pytest.approx(25_000)
+    assert healer["totalAbsorbs"] == pytest.approx(20_000)
+    assert healer["absorbBreakdown"]["Power Word: Shield"]["hits"] == 1
+    assert healer["spec"] == "Discipline Priest"
+    assert healer["role"] == "HEALER"
+    assert healer["powerBreakdown"]["Rapture"]["amount"] == pytest.approx(1200)
+    assert healer["consumableBreakdown"]["Well Fed"]["uptimeSeconds"] == pytest.approx(44.5)
+    assert tank["auraBreakdown"]["Power Word: Shield"]["uptimeSeconds"] == pytest.approx(25)
+    assert tank["damageTaken"] == pytest.approx(85_000)
+    assert tank["spec"] == "Protection Warrior"
+    assert tank["role"] == "TANK"
+    assert tank["deaths"] == 1
+    assert tank["deathEvents"][0]["recentDamage"][-1]["spell"] == "Coldflame"
+    assert tank["deathEvents"][0]["recentDamage"][-1]["secondsBeforeDeath"] == pytest.approx(5)
 
 
 def test_dps_uses_float_duration():

@@ -247,6 +247,8 @@ export async function POST(req: NextRequest) {
                 endedAt:          new Date(enc.endedAt),
                 totalDamage:      enc.totalDamage,
                 totalHealing:     enc.totalHealing,
+                totalAbsorbs:     enc.totalAbsorbs,
+                unattributedAbsorbs: enc.unattributedAbsorbs,
                 totalDamageTaken: enc.totalDamageTaken,
               },
             });
@@ -259,15 +261,23 @@ export async function POST(req: NextRequest) {
                   encounterId:    encounter.id,
                   playerId,
                   role:           inferRole(p),
+                  spec:           p.spec ?? null,
                   totalDamage:    p.totalDamage,
                   totalHealing:   p.totalHealing,
+                  totalAbsorbs:   p.totalAbsorbs,
                   damageTaken:    p.damageTaken,
                   dps:            p.dps,
                   hps:            p.hps,
+                  aps:            p.aps,
                   deaths:         p.deaths,
                   critPct:        p.critPct,
                   spellBreakdown:  (p.spellBreakdown  ?? {}) as object,
                   targetBreakdown: (p.targetBreakdown ?? {}) as object,
+                  absorbBreakdown: (p.absorbBreakdown ?? {}) as object,
+                  auraBreakdown:   (p.auraBreakdown ?? {}) as object,
+                  powerBreakdown:  (p.powerBreakdown ?? {}) as object,
+                  consumableBreakdown: (p.consumableBreakdown ?? {}) as object,
+                  deathEvents:     p.deathEvents as object[],
                 }];
               }),
               skipDuplicates: true,
@@ -335,9 +345,16 @@ export async function POST(req: NextRequest) {
   });
 }
 
-function inferRole(p: { totalDamage: number; totalHealing: number }): "DPS" | "HEALER" | "TANK" | "UNKNOWN" {
+function inferRole(p: {
+  role?: "DPS" | "HEALER" | "TANK" | "UNKNOWN";
+  totalDamage: number;
+  totalHealing: number;
+  damageTaken: number;
+}): "DPS" | "HEALER" | "TANK" | "UNKNOWN" {
+  if (p.role) return p.role;
   const ratio = p.totalHealing / Math.max(1, p.totalDamage + p.totalHealing);
   if (ratio > 0.6) return "HEALER";
   if (ratio > 0.3) return "UNKNOWN";
+  if (p.damageTaken > Math.max(1, p.totalDamage * 0.25)) return "TANK";
   return "DPS";
 }

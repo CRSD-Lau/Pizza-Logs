@@ -1,22 +1,30 @@
-import { FlatCompat } from "@eslint/eslintrc";
-import { dirname } from "node:path";
-import { fileURLToPath } from "node:url";
+import { defineConfig, globalIgnores } from "eslint/config";
+import nextVitals from "eslint-config-next/core-web-vitals";
+import nextTypeScript from "eslint-config-next/typescript";
 
-const __dirname = dirname(fileURLToPath(import.meta.url));
-const compat = new FlatCompat({ baseDirectory: __dirname });
-
-const config = [
-  ...compat.extends("next/core-web-vitals"),
+export default defineConfig([
+  ...nextVitals,
+  ...nextTypeScript,
   {
-    ignores: [
-      ".next/**",
-      "node_modules/**",
-      "coverage/**",
-      "dist/**",
-      "out/**",
-      "Pizza Logs HQ/.obsidian/**",
-    ],
+    rules: {
+      // These effects intentionally synchronize UI state with browser-only
+      // media, portal, and debounced-network state after hydration.
+      "react-hooks/set-state-in-effect": "off",
+    },
   },
-];
-
-export default config;
+  {
+    files: ["tests/**/*.ts"],
+    rules: {
+      // Source-level regression tests use controlled CommonJS cache injection.
+      "@typescript-eslint/no-require-imports": "off",
+    },
+  },
+  globalIgnores([
+    ".next/**",
+    "node_modules/**",
+    "coverage/**",
+    "dist/**",
+    "out/**",
+    "Pizza Logs HQ/.obsidian/**",
+  ]),
+]);

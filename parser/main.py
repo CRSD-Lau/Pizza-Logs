@@ -22,7 +22,7 @@ import uvicorn
 from fastapi import FastAPI, File, Form, Header, HTTPException, Request, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 from archive_upload import (
     MAX_COMPRESSED_BYTES,
@@ -85,19 +85,20 @@ class SpellBreakdownEntry(BaseModel):
 
 
 class ParticipantOut(BaseModel):
+    model_config = ConfigDict(populate_by_name=True)
+
     name:           str
     class_:         Optional[str] = None
     totalDamage:    float
     totalHealing:   float
+    totalAbsorbs:   float = 0
     damageTaken:    float
     dps:            float
     hps:            float
+    aps:            float = 0
     deaths:         int
     critPct:        float
-    spellBreakdown: dict[str, SpellBreakdownEntry] = {}
-
-    class Config:
-        populate_by_name = True
+    spellBreakdown: dict[str, SpellBreakdownEntry] = Field(default_factory=dict)
 
 
 class EncounterOut(BaseModel):
@@ -112,6 +113,8 @@ class EncounterOut(BaseModel):
     endedAt:          str
     totalDamage:      float
     totalHealing:     float
+    totalAbsorbs:     float = 0
+    unattributedAbsorbs: float = 0
     totalDamageTaken: float
     fingerprint:      str
     participants:     list[dict]
@@ -123,8 +126,8 @@ class ParseResponse(BaseModel):
     fileHash:      str
     rawLineCount:  int
     encounters:    list[EncounterOut]
-    warnings:      list[str] = []
-    sessionDamage: dict[str, float] = {}
+    warnings:      list[str] = Field(default_factory=list)
+    sessionDamage: dict[str, float] = Field(default_factory=dict)
 
 
 # ── Routes ────────────────────────────────────────────────────────
@@ -202,6 +205,8 @@ async def parse_log(
             endedAt          = enc.ended_at,
             totalDamage      = enc.total_damage,
             totalHealing     = enc.total_healing,
+            totalAbsorbs     = enc.total_absorbs,
+            unattributedAbsorbs = enc.unattributed_absorbs,
             totalDamageTaken = enc.total_damage_taken,
             fingerprint      = enc.fingerprint,
             participants     = enc.participants,
@@ -257,6 +262,8 @@ async def parse_log_by_path(body: dict) -> ParseResponse:
             endedAt          = e.ended_at,
             totalDamage      = e.total_damage,
             totalHealing     = e.total_healing,
+            totalAbsorbs     = e.total_absorbs,
+            unattributedAbsorbs = e.unattributed_absorbs,
             totalDamageTaken = e.total_damage_taken,
             fingerprint      = e.fingerprint,
             participants     = e.participants,
@@ -405,6 +412,8 @@ async def parse_debug(
             endedAt          = enc.ended_at,
             totalDamage      = enc.total_damage,
             totalHealing     = enc.total_healing,
+            totalAbsorbs     = enc.total_absorbs,
+            unattributedAbsorbs = enc.unattributed_absorbs,
             totalDamageTaken = enc.total_damage_taken,
             fingerprint      = enc.fingerprint,
             participants     = enc.participants,
@@ -447,6 +456,8 @@ def _enc_to_dict(enc: ParsedEncounter) -> dict:
         endedAt          = enc.ended_at,
         totalDamage      = enc.total_damage,
         totalHealing     = enc.total_healing,
+        totalAbsorbs     = enc.total_absorbs,
+        unattributedAbsorbs = enc.unattributed_absorbs,
         totalDamageTaken = enc.total_damage_taken,
         fingerprint      = enc.fingerprint,
         participants     = enc.participants,

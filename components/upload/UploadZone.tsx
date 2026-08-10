@@ -33,7 +33,7 @@ export function UploadZone({ onComplete }: UploadZoneProps) {
     elapsed: 0,
     stalled: false,
   });
-  const lastEventAt = useRef<number>(Date.now());
+  const lastEventAt = useRef<number>(0);
 
   const [characterName, setCharacterName] = useState("");
   const [realmName, setRealmName] = useState("Lordaeron");
@@ -234,7 +234,7 @@ export function UploadZone({ onComplete }: UploadZoneProps) {
               value={characterName}
               onChange={(event) => setCharacterName(event.target.value)}
               placeholder="Your character name"
-              className="bg-bg-card border border-gold-dim rounded px-3 py-1.5 text-sm text-text-primary outline-none focus:border-gold transition-colors w-44"
+              className="bg-bg-card border border-gold-dim rounded-sm px-3 py-1.5 text-sm text-text-primary outline-hidden focus:border-gold transition-colors w-44"
             />
           </div>
 
@@ -243,7 +243,7 @@ export function UploadZone({ onComplete }: UploadZoneProps) {
             <select
               value={realmName}
               onChange={(event) => setRealmName(event.target.value)}
-              className="bg-bg-card border border-gold-dim rounded px-3 py-1.5 text-sm text-text-primary outline-none focus:border-gold transition-colors"
+              className="bg-bg-card border border-gold-dim rounded-sm px-3 py-1.5 text-sm text-text-primary outline-hidden focus:border-gold transition-colors"
             >
               <option value="Icecrown">Icecrown</option>
               <option value="Lordaeron">Lordaeron</option>
@@ -257,7 +257,7 @@ export function UploadZone({ onComplete }: UploadZoneProps) {
             <select
               value={realmHost}
               onChange={(event) => setRealmHost(event.target.value)}
-              className="bg-bg-card border border-gold-dim rounded px-3 py-1.5 text-sm text-text-primary outline-none focus:border-gold transition-colors"
+              className="bg-bg-card border border-gold-dim rounded-sm px-3 py-1.5 text-sm text-text-primary outline-hidden focus:border-gold transition-colors"
             >
               <option value="warmane">Warmane</option>
             </select>
@@ -269,7 +269,7 @@ export function UploadZone({ onComplete }: UploadZoneProps) {
               value={guildName}
               onChange={(event) => setGuildName(event.target.value)}
               placeholder="PizzaWarriors (optional)"
-              className="bg-bg-card border border-gold-dim rounded px-3 py-1.5 text-sm text-text-primary outline-none focus:border-gold transition-colors w-48"
+              className="bg-bg-card border border-gold-dim rounded-sm px-3 py-1.5 text-sm text-text-primary outline-hidden focus:border-gold transition-colors w-48"
             />
           </div>
         </div>
@@ -279,7 +279,7 @@ export function UploadZone({ onComplete }: UploadZoneProps) {
         <div
           {...(isLocked ? lockedProps : getRootProps())}
           className={cn(
-            "relative border border-dashed rounded-sm px-10 py-16 text-center transition-all duration-200 overflow-hidden",
+            "relative border border-dashed rounded-xs px-10 py-16 text-center transition-all duration-200 overflow-hidden",
             isLocked
               ? "cursor-not-allowed opacity-40 border-gold/20 bg-[rgba(180,140,60,0.01)]"
               : isDragActive
@@ -308,7 +308,7 @@ export function UploadZone({ onComplete }: UploadZoneProps) {
       )}
 
       {state.stage === "uploading" && (
-        <div className="border border-gold/40 rounded bg-bg-panel px-8 py-16 text-center space-y-6">
+        <div className="border border-gold/40 rounded-sm bg-bg-panel px-8 py-16 text-center space-y-6">
           <Spinner className="mx-auto" />
           <div>
             <p className="heading-cinzel text-lg text-gold-light mb-1">{state.message}</p>
@@ -348,7 +348,7 @@ export function UploadZone({ onComplete }: UploadZoneProps) {
       )}
 
       {state.stage === "error" && (
-        <div className="border border-danger/30 rounded bg-danger/5 px-6 py-8 text-center">
+        <div className="border border-danger/30 rounded-sm bg-danger/5 px-6 py-8 text-center">
           <p className="heading-cinzel text-base text-danger mb-2">Upload Failed</p>
           <p className="text-sm text-text-secondary mb-6">{state.error}</p>
           <Button variant="ghost" size="sm" onClick={reset}>Try Again</Button>
@@ -368,7 +368,7 @@ function UploadResult({
   const isDuplicate = result.status === "DUPLICATE";
 
   return (
-    <div className="border border-gold-dim rounded bg-bg-panel divide-y divide-gold-dim">
+    <div className="border border-gold-dim rounded-sm bg-bg-panel divide-y divide-gold-dim">
       <div className="px-5 py-4 flex items-center justify-between gap-4">
         <div>
           <p className="heading-cinzel text-sm text-gold-light">
@@ -389,7 +389,7 @@ function UploadResult({
         <div className="px-5 py-4 flex items-center gap-3 flex-wrap">
           <Link
             href={`/raids/${result.uploadId}/sessions/0`}
-            className="inline-flex items-center gap-1.5 px-4 py-2 rounded border border-gold/60 bg-gold/5 text-sm text-gold-light hover:border-gold hover:bg-gold/10 transition-colors"
+            className="inline-flex items-center gap-1.5 px-4 py-2 rounded-sm border border-gold/60 bg-gold/5 text-sm text-gold-light hover:border-gold hover:bg-gold/10 transition-colors"
           >
             View your raid session &rarr;
           </Link>

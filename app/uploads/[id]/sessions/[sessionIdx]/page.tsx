@@ -210,7 +210,7 @@ export default async function SessionDetailPage({ params }: Props) {
           {Array.from(raidGroups.entries()).map(([raidName, encs]) => (
             <div key={raidName} className="space-y-1">
               <p className="text-xs font-semibold text-text-dim uppercase tracking-widest px-1">{raidName}</p>
-              <div className="bg-bg-panel border border-gold-dim rounded divide-y divide-gold-dim overflow-hidden">
+              <div className="bg-bg-panel border border-gold-dim rounded-sm divide-y divide-gold-dim overflow-hidden">
                 {encs.map((enc) => {
                   const durationSec = (enc.durationMs ?? 0) > 0
                     ? enc.durationMs / 1000
@@ -233,7 +233,7 @@ export default async function SessionDetailPage({ params }: Props) {
                       <div className="flex items-center gap-3 flex-wrap">
                         <span
                           className={cn(
-                            "text-[11px] font-bold px-1.5 py-0.5 rounded",
+                            "text-[11px] font-bold px-1.5 py-0.5 rounded-sm",
                             enc.outcome === "KILL" ? "text-success bg-success/10"
                               : enc.outcome === "WIPE" ? "text-danger bg-danger/10"
                                 : "text-text-dim bg-bg-hover"
@@ -272,7 +272,7 @@ export default async function SessionDetailPage({ params }: Props) {
           count={mobEntries.length}
           defaultOpen={false}
         >
-          <div className="bg-bg-panel border border-gold-dim rounded overflow-hidden">
+          <div className="bg-bg-panel border border-gold-dim rounded-sm overflow-hidden">
             <MobBreakdown mobs={mobEntries} />
           </div>
         </AccordionSection>
@@ -280,7 +280,7 @@ export default async function SessionDetailPage({ params }: Props) {
 
       {playerSet.size > 0 && (
         <AccordionSection title="Raid Roster" count={playerSet.size} defaultOpen>
-          <div className="bg-bg-panel border border-gold-dim rounded p-4 flex flex-wrap gap-2">
+          <div className="bg-bg-panel border border-gold-dim rounded-sm p-4 flex flex-wrap gap-2">
             {Array.from(playerSet.entries()).map(([name, cls], index) => {
               const rosterMember = rosterMemberMap.get(name.toLowerCase());
               const characterClass = cls ?? rosterMember?.className ?? null;
@@ -292,7 +292,7 @@ export default async function SessionDetailPage({ params }: Props) {
                   href={`/raids/${id}/sessions/${sessionIndex}/players/${encodeURIComponent(name)}`}
                   className={getRevealClassName({
                     className:
-                      "inline-flex items-center gap-2 rounded border border-gold-dim bg-bg-card px-2 py-1 text-xs hover:border-gold transition-colors",
+                      "inline-flex items-center gap-2 rounded-sm border border-gold-dim bg-bg-card px-2 py-1 text-xs hover:border-gold transition-colors",
                   })}
                   style={getRevealStyle(index)}
                 >

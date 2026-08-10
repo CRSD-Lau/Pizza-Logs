@@ -15,6 +15,7 @@ Wiki: https://github.com/CRSD-Lau/Pizza-Logs/wiki
 - Single-request streamed text/ZIP upload with Server-Sent Events progress and early difficulty results.
 - Python FastAPI parser service for WotLK combat logs.
 - Skada-WoTLK-aligned damage/healing event handling.
+- Separate absorb/APS, spec/role, aura uptime, consumable, power-gain, and death-timeline analytics.
 - Boss encounter, raid session, player, weekly, and leaderboard pages.
 - File-level and encounter-level deduplication.
 - Milestones for all-time DPS/HPS records.
@@ -31,18 +32,19 @@ Wiki: https://github.com/CRSD-Lau/Pizza-Logs/wiki
 - Other WotLK-style logs may work, but Warmane edge cases drive the parser rules.
 - Logs do not need reliable `ENCOUNTER_START` / `ENCOUNTER_END`; the parser has a heuristic path.
 - If encounter markers exist, the parser can use them, then still applies Warmane-specific heroic correction.
-- Skada-WoTLK is the source of truth, not uwu-logs.
-- Absorbs are not implemented as healing; Skada tracks absorbs separately.
+- Skada-WoTLK remains the source of truth for damage/healing totals. UwU is the feature-parity reference for analytical surfaces, not a replacement math engine.
+- Absorbs remain separate from healing and are attributed only when an active shield aura supplies defensible source evidence.
 
 ## Stack
 
 | Layer | Tech |
 |---|---|
-| Web | Next.js 15, React 19, TypeScript |
-| Styling | Tailwind CSS |
-| Database | PostgreSQL, Prisma 5 |
-| Parser | Python 3.12, FastAPI |
-| Charts | Recharts |
+| Web | Next.js 16.3, React 19.2, Node.js 24 |
+| TypeScript | TypeScript 7 native CLI, TypeScript 6 ecosystem API |
+| Styling | Tailwind CSS 4 |
+| Database | PostgreSQL, Prisma 7 with PostgreSQL driver adapter |
+| Parser | Python 3.12, FastAPI 0.141 |
+| Charts | Recharts 3 |
 | Hosting | Railway |
 
 Railway has two app services:
@@ -121,6 +123,11 @@ Key rules:
 - Gunship kill detection has a Warmane crew-death override.
 - Difficulty is classified per attempt from boss-specific spell ranks and explicit Ulduar rules; conflicts, missing evidence, and unsupported cases return `UNKNOWN` instead of defaulting to Normal.
 - Malformed combat-log lines are counted and returned as parser warnings instead of crashing uploads.
+- Absorb amounts are taken from damage events and attributed to the newest active supported shield aura; ambiguous multi-shield hits are labeled and missing evidence remains unattributed.
+- Player spec/role uses observed WotLK spell signatures plus healing and damage-taken evidence; uncertain cases remain `UNKNOWN` or fall back to output role.
+- Aura uptime, consumables, power gains, and a death timeline with the preceding 15 seconds of incoming damage are stored per participant.
+
+The feature-by-feature comparison against the inspected UwU revision is in [`docs/uwu-analytics-parity.md`](docs/uwu-analytics-parity.md).
 
 ## Player, Gear, And Roster Data
 
@@ -158,7 +165,7 @@ For Windows CLI prerequisites, PATH repair, and repeatable local tooling checks,
 
 Prerequisites:
 
-- Node.js 22+
+- Node.js 24.x (the `.nvmrc`, package engine, CI, Docker, and Railway image all agree)
 - Python 3.12+
 - PostgreSQL 16, or Docker for the local database
 
@@ -239,6 +246,8 @@ Common checks:
 ```bash
 npm run lint
 npm run type-check
+npm run type-check:ecosystem
+npm test
 npm run build
 ```
 
@@ -255,7 +264,7 @@ cd parser
 pytest tests/ -v
 ```
 
-Focused TypeScript tests use `ts-node --project tsconfig.seed.json tests/<file>.test.ts` unless the test needs JSX-aware options.
+Focused TypeScript tests use `npx tsx tests/<file>.test.ts`. `npm test` runs every `tests/*.test.ts` file through the Node test runner.
 
 Parser changes must include fixture or focused pytest validation. See `parser/tests/fixtures/README.md`.
 
@@ -273,6 +282,8 @@ Workflow:
 6. Neil merges the PR when ready; Railway deploys `main`.
 
 Railway startup for the web service runs `start.sh`, which resolves the Prisma CLI entry point, marks historical migrations as applied when needed, runs `prisma migrate deploy`, then starts `node server.js`.
+
+Successful production deployment events and a weekly schedule run `npm run smoke:production`. Admin diagnostics show the Railway commit, branch, deployment ID, environment, service, and app version so the deployed build is identifiable without shell access.
 
 Production requirements:
 
@@ -304,8 +315,8 @@ Short version: keep parser correctness first, avoid direct `main` pushes, keep s
 
 ## Known Limitations
 
-- Absorbs are not implemented as a separate metric yet.
-- Role detection is a rough upload-time heuristic.
+- Fully absorbed missed events without a numeric absorbed amount cannot be measured; multi-shield damage is conservatively attributed to the newest active supported shield and marked ambiguous.
+- Boss-specific UwU "useful damage" formulas and global spell-search pages are not copied; generic boss/target damage remains available and the parity boundary is documented.
 - Warmane server-side roster/gear fetches are unreliable; browser-assisted imports are the supported path.
 - Hodir Hard Mode and Sartharion drake modes remain unsupported and return `UNKNOWN`.
 - Upload concurrency is bounded in-process; distributed rate limiting across multiple Railway replicas is not implemented.

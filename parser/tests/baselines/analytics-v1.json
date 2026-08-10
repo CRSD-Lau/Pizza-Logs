@@ -1,0 +1,25 @@
+{
+  "schemaVersion": 1,
+  "description": "Exact normalized parser analytics captured before the 2026 full-stack upgrade. Hashes cover encounter identity, timing, totals, participants, DPS/HPS, deaths, crits, spell breakdowns, and target breakdowns.",
+  "sourceCommit": "97f8833",
+  "fixtures": {
+    "gunship-kill-synthetic": {
+      "sha256": "772cb6b64338746d4031f6c107385633003bc7a21fc7825ff11fccb53c26569f",
+      "encounters": 1,
+      "totalDamage": 138000.0,
+      "totalHealing": 0.0
+    },
+    "icc-25h-synthetic": {
+      "sha256": "6117da0f18e15a702cf91335f728d47e20779e187de431d056b83fd1c7999503",
+      "encounters": 1,
+      "totalDamage": 165600.0,
+      "totalHealing": 0.0
+    },
+    "icc-25n-synthetic": {
+      "sha256": "94e241a15ecd2e17353dce766fa58025c676b042af3d30546a92c8b7dd15032b",
+      "encounters": 1,
+      "totalDamage": 54000.0,
+      "totalHealing": 0.0
+    }
+  }
+}

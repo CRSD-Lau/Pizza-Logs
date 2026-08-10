@@ -75,7 +75,7 @@ pytest tests/ -v
 Focused TypeScript tests live in `tests/` and usually run with:
 
 ```bash
-ts-node --project tsconfig.seed.json tests/<file>.test.ts
+npx tsx tests/<file>.test.ts
 ```
 
 ## Parser Changes

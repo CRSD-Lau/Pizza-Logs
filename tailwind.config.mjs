@@ -1,7 +1,4 @@
-import type { Config } from "tailwindcss";
-
-const config: Config = {
-  safelist: ["reveal-item", "boss-reveal-item"],
+const config = {
   content: [
     "./pages/**/*.{js,ts,jsx,tsx,mdx}",
     "./components/**/*.{js,ts,jsx,tsx,mdx}",
@@ -10,53 +7,47 @@ const config: Config = {
   theme: {
     extend: {
       colors: {
-        // Deep backgrounds
-        "bg-deep":  "#0a0c10",
+        "bg-deep": "#0a0c10",
         "bg-panel": "#10141c",
-        "bg-card":  "#161b26",
+        "bg-card": "#161b26",
         "bg-hover": "#1d2333",
-        // Gold palette
-        gold:        "#c8a84b",
-        "gold-light":"#f0d080",
-        "gold-dim":  "#7a6530",
-        // Text
-        "text-primary":   "#e8dfc8",
+        gold: "#c8a84b",
+        "gold-light": "#f0d080",
+        "gold-dim": "#7a6530",
+        "text-primary": "#e8dfc8",
         "text-secondary": "#9a8f78",
-        "text-dim":       "#5a5548",
-        // Damage schools
+        "text-dim": "#5a5548",
         school: {
           physical: "#c0c8d8",
-          holy:     "#f0c040",
-          fire:     "#e06030",
-          nature:   "#60c060",
-          frost:    "#80c8f0",
-          shadow:   "#a070d0",
-          arcane:   "#d080f0",
+          holy: "#f0c040",
+          fire: "#e06030",
+          nature: "#60c060",
+          frost: "#80c8f0",
+          shadow: "#a070d0",
+          arcane: "#d080f0",
         },
-        // WoW class colors
         class: {
-          paladin:  "#f4a0c0",
-          warrior:  "#c89040",
-          mage:     "#80c0f0",
-          druid:    "#f0a040",
-          priest:   "#e8e8e8",
-          shaman:   "#0090f8",
-          warlock:  "#9482c9",
-          hunter:   "#aad372",
-          dk:       "#c41e3a",
-          rogue:    "#fff468",
-          monk:     "#00ff98",
-          dh:       "#a330c9",
+          paladin: "#f4a0c0",
+          warrior: "#c89040",
+          mage: "#80c0f0",
+          druid: "#f0a040",
+          priest: "#e8e8e8",
+          shaman: "#0090f8",
+          warlock: "#9482c9",
+          hunter: "#aad372",
+          dk: "#c41e3a",
+          rogue: "#fff468",
+          monk: "#00ff98",
+          dh: "#a330c9",
         },
-        // Semantic
         success: "#50a050",
-        danger:  "#c84040",
+        danger: "#c84040",
         warning: "#c89040",
       },
       fontFamily: {
-        cinzel:   ["var(--font-cinzel)", "serif"],
+        cinzel: ["var(--font-cinzel)", "serif"],
         rajdhani: ["var(--font-rajdhani)", "sans-serif"],
-        sans:     ["var(--font-rajdhani)", "var(--font-inter)", "sans-serif"],
+        sans: ["var(--font-rajdhani)", "var(--font-inter)", "sans-serif"],
       },
       backgroundImage: {
         "radial-gold": "radial-gradient(ellipse 80% 50% at 50% -10%, rgba(180,140,60,0.08) 0%, transparent 60%)",
@@ -70,16 +61,16 @@ const config: Config = {
       keyframes: {
         fadeInUp: {
           from: { opacity: "0", transform: "translateY(12px)" },
-          to:   { opacity: "1", transform: "translateY(0)" },
+          to: { opacity: "1", transform: "translateY(0)" },
         },
         pulseGold: {
           "0%, 100%": { opacity: "1" },
-          "50%":       { opacity: "0.5" },
+          "50%": { opacity: "0.5" },
         },
       },
       boxShadow: {
         "gold-glow": "0 0 20px rgba(200,168,75,0.25)",
-        "card":      "0 2px 12px rgba(0,0,0,0.4)",
+        card: "0 2px 12px rgba(0,0,0,0.4)",
       },
       borderColor: {
         DEFAULT: "rgba(180,140,60,0.2)",

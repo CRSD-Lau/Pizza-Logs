@@ -7,7 +7,7 @@ export default function GuildRosterLoading() {
         <Skeleton className="h-8 w-48" />
         <Skeleton className="mt-2 h-4 w-72" />
       </div>
-      <div className="border border-gold-dim bg-bg-panel rounded p-4 space-y-3">
+      <div className="border border-gold-dim bg-bg-panel rounded-sm p-4 space-y-3">
         {Array.from({ length: 8 }).map((_, index) => (
           <Skeleton key={index} className="h-10 w-full" />
         ))}

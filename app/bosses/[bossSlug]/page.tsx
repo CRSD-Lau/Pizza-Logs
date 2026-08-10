@@ -5,9 +5,8 @@ import { db } from "@/lib/db";
 import { SectionHeader } from "@/components/ui/SectionHeader";
 import { StatCard } from "@/components/ui/StatCard";
 import { LeaderboardBar } from "@/components/charts/LeaderboardBar";
-import { Badge } from "@/components/ui/Badge";
 import { EmptyState } from "@/components/ui/EmptyState";
-import { formatDps, formatDuration, formatNumber } from "@/lib/utils";
+import { formatDps, formatDuration } from "@/lib/utils";
 
 interface Props { params: Promise<{ bossSlug: string }> }
 
@@ -116,7 +115,7 @@ export default async function BossPage({ params }: Props) {
       {boss.encounters.length > 0 && (
         <div className="flex flex-wrap gap-2">
           {DIFFICULTIES.filter(d => killsByDiff[d] > 0 || boss.encounters.some(e => e.difficulty === d)).map(d => (
-            <div key={d} className="bg-bg-card border border-gold-dim rounded px-4 py-2 text-center">
+            <div key={d} className="bg-bg-card border border-gold-dim rounded-sm px-4 py-2 text-center">
               <div className={`diff-badge mb-1 ${d.endsWith("H") ? "heroic" : "normal"}`}>{d}</div>
               <div className="text-xl font-bold text-text-primary tabular-nums">{killsByDiff[d] ?? 0}</div>
               <div className="text-[10px] text-text-dim">kills</div>
@@ -176,7 +175,7 @@ export default async function BossPage({ params }: Props) {
           sub={`${boss.encounters.length} total pulls`}
         />
         {boss.encounters.length > 0 ? (
-          <div className="bg-bg-panel border border-gold-dim rounded divide-y divide-gold-dim">
+          <div className="bg-bg-panel border border-gold-dim rounded-sm divide-y divide-gold-dim">
             {boss.encounters.slice(0, 20).map(enc => {
               const top = enc.participants[0];
               return (

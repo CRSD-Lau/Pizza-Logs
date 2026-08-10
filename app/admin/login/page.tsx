@@ -2,9 +2,11 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { loginAdmin } from "./actions";
 
 export default function AdminLoginPage() {
+  const router = useRouter();
   const [secret, setSecret] = useState("");
   const [error, setError] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -17,7 +19,8 @@ export default function AdminLoginPage() {
     const valid = await loginAdmin(secret.trim());
 
     if (valid) {
-      window.location.href = "/admin";
+      router.push("/admin");
+      router.refresh();
     } else {
       setError(true);
       setSecret("");
@@ -38,7 +41,7 @@ export default function AdminLoginPage() {
         </div>
 
         {/* Card */}
-        <div className="bg-bg-panel border border-gold-dim rounded p-6 space-y-5">
+        <div className="bg-bg-panel border border-gold-dim rounded-sm p-6 space-y-5">
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="space-y-1.5">
               <label htmlFor="secret" className="text-xs text-text-dim uppercase tracking-widest">
@@ -52,7 +55,7 @@ export default function AdminLoginPage() {
                 value={secret}
                 onChange={(e) => { setSecret(e.target.value); setError(false); }}
                 placeholder="Enter secret"
-                className="w-full bg-bg-deep border border-gold-dim rounded px-3 py-2 text-sm text-text-primary placeholder:text-text-dim focus:outline-none focus:border-gold transition-colors"
+                className="w-full bg-bg-deep border border-gold-dim rounded-sm px-3 py-2 text-sm text-text-primary placeholder:text-text-dim focus:outline-hidden focus:border-gold transition-colors"
               />
               {error && (
                 <p className="text-xs text-danger">Incorrect secret. Try again.</p>
@@ -62,7 +65,7 @@ export default function AdminLoginPage() {
             <button
               type="submit"
               disabled={!secret.trim() || loading}
-              className="w-full bg-gold/10 hover:bg-gold/20 border border-gold-mid text-gold-light heading-cinzel text-sm tracking-widest py-2 rounded transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+              className="w-full bg-gold/10 hover:bg-gold/20 border border-gold-mid text-gold-light heading-cinzel text-sm tracking-widest py-2 rounded-sm transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
             >
               {loading ? "Verifying…" : "Enter"}
             </button>

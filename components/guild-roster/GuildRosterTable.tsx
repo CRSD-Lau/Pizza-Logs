@@ -79,7 +79,7 @@ function PageNavButton({
   children: ReactNode;
 }) {
   const className =
-    "inline-flex h-8 w-8 items-center justify-center rounded-sm border border-gold-dim text-text-secondary transition-colors";
+    "inline-flex h-8 w-8 items-center justify-center rounded-xs border border-gold-dim text-text-secondary transition-colors";
 
   if (disabled) {
     return (
@@ -127,7 +127,7 @@ export function GuildRosterTable({ members, currentPage = 1 }: GuildRosterTableP
   const nextPage = page + 1;
 
   return (
-    <div className="overflow-hidden border border-gold-dim bg-bg-panel rounded">
+    <div className="overflow-hidden border border-gold-dim bg-bg-panel rounded-sm">
       <div className="overflow-x-auto">
         <table className="min-w-full text-sm">
           <thead className="bg-bg-card text-text-dim">

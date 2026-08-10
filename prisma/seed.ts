@@ -1,7 +1,7 @@
-import { PrismaClient } from "@prisma/client";
+import { createPrismaClient } from "../lib/prisma-client";
 import { WOTLK_BOSSES } from "../lib/constants/bosses";
 
-const db = new PrismaClient();
+const db = createPrismaClient();
 
 async function main() {
   console.log("Seeding bosses …");

@@ -23,7 +23,7 @@ export function Nav() {
   const [mobileOpen, setMobileOpen] = useState(false);
 
   return (
-    <header className="relative z-20 border-b border-gold-dim bg-bg-deep/80 backdrop-blur-sm sticky top-0">
+    <header className="relative z-20 border-b border-gold-dim bg-bg-deep/80 backdrop-blur-xs sticky top-0">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-16 gap-4">
           <Link href="/" className="flex items-center gap-3 group min-w-0" onClick={() => setMobileOpen(false)}>
@@ -50,7 +50,7 @@ export function Nav() {
                   key={href}
                   href={href}
                   className={cn(
-                    "px-4 py-2 text-sm font-semibold tracking-wide uppercase rounded transition-colors duration-150",
+                    "px-4 py-2 text-sm font-semibold tracking-wide uppercase rounded-sm transition-colors duration-150",
                     active
                       ? "text-gold-light border-b-2 border-gold"
                       : "text-text-secondary hover:text-text-primary"
@@ -64,7 +64,7 @@ export function Nav() {
 
           <button
             type="button"
-            className="lg:hidden inline-flex h-10 w-10 items-center justify-center rounded border border-gold-dim bg-bg-card text-text-secondary hover:text-gold-light hover:border-gold/50 transition-colors"
+            className="lg:hidden inline-flex h-10 w-10 items-center justify-center rounded-sm border border-gold-dim bg-bg-card text-text-secondary hover:text-gold-light hover:border-gold/50 transition-colors"
             aria-label={mobileOpen ? "Close navigation" : "Open navigation"}
             aria-expanded={mobileOpen}
             onClick={() => setMobileOpen(open => !open)}
@@ -88,7 +88,7 @@ export function Nav() {
                     href={href}
                     onClick={() => setMobileOpen(false)}
                     className={cn(
-                      "rounded border px-3 py-2 text-xs font-semibold tracking-wide uppercase transition-colors",
+                      "rounded-sm border px-3 py-2 text-xs font-semibold tracking-wide uppercase transition-colors",
                       active
                         ? "border-gold text-gold-light bg-gold/5"
                         : "border-gold-dim text-text-secondary hover:border-gold/50 hover:text-text-primary"

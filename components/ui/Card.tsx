@@ -8,7 +8,7 @@ export function Card({ className, variant = "card", ...props }: CardProps) {
   return (
     <div
       className={cn(
-        "rounded border border-gold-dim",
+        "rounded-sm border border-gold-dim",
         variant === "panel" ? "bg-bg-panel" : "bg-bg-card",
         className
       )}

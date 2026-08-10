@@ -13,7 +13,7 @@ function GearScoreSummary({
   summary: NonNullable<ReturnType<typeof calculateGearScore>>;
 }) {
   return (
-    <div className="flex flex-wrap items-center justify-between gap-3 rounded border border-gold-dim bg-bg-panel px-4 py-3">
+    <div className="flex flex-wrap items-center justify-between gap-3 rounded-sm border border-gold-dim bg-bg-panel px-4 py-3">
       <div>
         <p className="text-[11px] font-bold uppercase tracking-widest text-text-dim">GearScoreLite</p>
         <p className="mt-0.5 text-2xl font-bold tabular-nums text-text-primary" style={{ color: summary.quality.color }}>
@@ -21,13 +21,13 @@ function GearScoreSummary({
         </p>
       </div>
       <div className="flex flex-wrap gap-2 text-xs">
-        <span className="rounded border border-gold-dim bg-bg-deep px-2 py-1 text-text-secondary">
+        <span className="rounded-sm border border-gold-dim bg-bg-deep px-2 py-1 text-text-secondary">
           {summary.quality.description}
         </span>
-        <span className="rounded border border-gold-dim bg-bg-deep px-2 py-1 text-text-secondary">
+        <span className="rounded-sm border border-gold-dim bg-bg-deep px-2 py-1 text-text-secondary">
           avg ilvl {summary.averageItemLevel}
         </span>
-        <span className="rounded border border-gold-dim bg-bg-deep px-2 py-1 text-text-dim">
+        <span className="rounded-sm border border-gold-dim bg-bg-deep px-2 py-1 text-text-dim">
           {summary.scoredItemCount} scored slots
         </span>
       </div>
@@ -76,7 +76,7 @@ export function PlayerGearSectionSkeleton() {
     <AccordionSection title="Gear" sub="Current Warmane Armory equipment" defaultOpen>
       <div className="grid gap-2 sm:grid-cols-2">
         {Array.from({ length: 8 }).map((_, index) => (
-          <div key={index} className="h-[76px] animate-pulse rounded border border-gold-dim bg-bg-card" />
+          <div key={index} className="h-[76px] animate-pulse rounded-sm border border-gold-dim bg-bg-card" />
         ))}
       </div>
     </AccordionSection>
@@ -87,7 +87,7 @@ export function PlayerGearSection({ result, playerClass }: { result: ArmoryGearR
   if (!result.ok) {
     return (
       <AccordionSection title="Gear" sub="Current Warmane Armory equipment" defaultOpen>
-        <div className="rounded border border-gold-dim bg-bg-panel p-4">
+        <div className="rounded-sm border border-gold-dim bg-bg-panel p-4">
           <p className="text-sm text-text-secondary">{result.message}</p>
           <a href={result.sourceUrl} target="_blank" rel="noreferrer" className="mt-2 inline-block text-xs text-gold hover:text-gold-light">
             Source: Warmane Armory

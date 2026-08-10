@@ -12,7 +12,7 @@ export function StatCard({ label, value, sub, highlight, className }: StatCardPr
   return (
     <div
       className={cn(
-        "bg-bg-panel rounded border px-4 py-4",
+        "bg-bg-panel rounded-sm border px-4 py-4",
         highlight
           ? "border-gold-dim shadow-gold-glow/20"
           : "border-gold-dim",

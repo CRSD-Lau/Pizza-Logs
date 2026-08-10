@@ -16,16 +16,16 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Setup Node
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v7
         with:
-          node-version: 20
+          node-version: 24
           cache: npm
 
       - name: Setup Python
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v7
         with:
           python-version: "3.12"
 
@@ -37,6 +37,9 @@ jobs:
 
       - name: Type check
         run: npm run type-check --if-present
+
+      - name: TypeScript ecosystem compatibility
+        run: npm run type-check:ecosystem
 
       - name: Test
         run: npm test --if-present

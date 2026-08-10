@@ -181,7 +181,7 @@ export function buildBookmarklet(): string {
       });
   };
 
-  return `javascript:(${script.toString().replace("__PIZZA_LOGS_ORIGIN__", PIZZA_LOGS_ORIGIN)})()`;
+  return `javascript:(${serializeBrowserFunction(script).replace("__PIZZA_LOGS_ORIGIN__", PIZZA_LOGS_ORIGIN)})()`;
 }
 
 export function buildSingleBookmarklet(): string {
@@ -310,7 +310,7 @@ export function buildSingleBookmarklet(): string {
       });
   };
 
-  return `javascript:(${script.toString().replace("__PIZZA_LOGS_ORIGIN__", PIZZA_LOGS_ORIGIN)})()`;
+  return `javascript:(${serializeBrowserFunction(script).replace("__PIZZA_LOGS_ORIGIN__", PIZZA_LOGS_ORIGIN)})()`;
 }
 
 export function buildUserscript(options: UserscriptOptions = {}): string {
@@ -657,8 +657,9 @@ export function buildUserscript(options: UserscriptOptions = {}): string {
     "// @grant        GM_xmlhttpRequest",
     "// ==/UserScript==",
     "",
-    `(${script.toString()
+    `(${serializeBrowserFunction(script)
       .replaceAll("__PIZZA_LOGS_ORIGIN__", pizzaLogsOrigin)
       .replaceAll("__PIZZA_LOGS_TARGET__", targetLabel)})();`,
   ].join("\n");
 }
+import { serializeBrowserFunction } from "./serialized-browser-script";

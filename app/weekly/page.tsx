@@ -172,7 +172,7 @@ export default async function WeeklyPage() {
                 <Link
                   key={b.slug}
                   href={`/bosses/${b.slug}`}
-                  className="flex items-center justify-between bg-bg-card border border-gold-dim rounded px-4 py-3 hover:border-gold/40 transition-colors"
+                  className="flex items-center justify-between bg-bg-card border border-gold-dim rounded-sm px-4 py-3 hover:border-gold/40 transition-colors"
                 >
                   <div>
                     <p className="text-sm font-semibold text-text-primary">{b.name}</p>

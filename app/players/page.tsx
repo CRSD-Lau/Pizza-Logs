@@ -157,13 +157,13 @@ export default async function PlayersPage({ searchParams }: Props) {
 
       {/* Class stats */}
       {databaseAvailable && classStats.length > 0 && (
-        <div className="bg-bg-panel border border-gold-dim rounded p-4 space-y-4">
+        <div className="bg-bg-panel border border-gold-dim rounded-sm p-4 space-y-4">
           {/* Distribution bar */}
           <div>
             <p className="text-xs font-semibold text-text-dim uppercase tracking-widest mb-2">
               Class Distribution
             </p>
-            <div className="flex h-5 rounded overflow-hidden gap-px">
+            <div className="flex h-5 rounded-sm overflow-hidden gap-px">
               {classStats.map(([cls, { count }]) => (
                 <div
                   key={cls}
@@ -181,7 +181,7 @@ export default async function PlayersPage({ searchParams }: Props) {
               {classStats.map(([cls, { count }]) => (
                 <span key={cls} className="text-[11px] text-text-dim flex items-center gap-1">
                   <span
-                    className="inline-block w-2 h-2 rounded-sm"
+                    className="inline-block w-2 h-2 rounded-xs"
                     style={{ background: getClassColor(cls) }}
                   />
                   {cls} <span className="text-text-secondary">{count}</span>
@@ -205,14 +205,14 @@ export default async function PlayersPage({ searchParams }: Props) {
                     >
                       {cls}
                     </span>
-                    <div className="flex-1 h-3 bg-bg-card rounded overflow-hidden">
+                    <div className="flex-1 h-3 bg-bg-card rounded-sm overflow-hidden">
                       <div
                         style={{
                           width:      `${(avg / maxAvgDps) * 100}%`,
                           background: getClassColor(cls),
                           opacity:    0.75,
                         }}
-                        className="h-full rounded"
+                        className="h-full rounded-sm"
                       />
                     </div>
                     <span className="text-[11px] text-text-secondary tabular-nums w-16 text-right shrink-0">
@@ -232,7 +232,7 @@ export default async function PlayersPage({ searchParams }: Props) {
         <Link
           href="/players"
           className={cn(
-            "px-3 py-1 rounded-sm text-xs font-semibold uppercase tracking-wide border transition-colors",
+            "px-3 py-1 rounded-xs text-xs font-semibold uppercase tracking-wide border transition-colors",
             !classFilter
               ? "border-gold bg-gold/10 text-gold-light"
               : "border-gold-dim text-text-dim hover:border-gold/40 hover:text-text-secondary"
@@ -248,7 +248,7 @@ export default async function PlayersPage({ searchParams }: Props) {
               key={cls}
               href={`/players?class=${encodeURIComponent(cls)}`}
               className={cn(
-                "px-3 py-1 rounded-sm text-xs font-semibold uppercase tracking-wide border transition-colors",
+                "px-3 py-1 rounded-xs text-xs font-semibold uppercase tracking-wide border transition-colors",
                 active ? "opacity-100" : "opacity-60 hover:opacity-90"
               )}
               style={{
@@ -281,7 +281,7 @@ export default async function PlayersPage({ searchParams }: Props) {
                 href={`/players/${encodeURIComponent(p.name)}`}
                 className={getRevealClassName({
                   className:
-                    "bg-bg-panel border border-gold-dim rounded px-4 py-3 hover:border-gold/50 transition-colors group flex items-center gap-3",
+                    "bg-bg-panel border border-gold-dim rounded-sm px-4 py-3 hover:border-gold/50 transition-colors group flex items-center gap-3",
                 })}
                 style={getRevealStyle(index)}
               >

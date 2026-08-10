@@ -183,10 +183,40 @@ Currently tracked per-spell in `spellBreakdown` but not separately surfaced in t
 
 ## Absorbs Rules
 
-**Not currently tracked.** Skada tracks `Power Word: Shield` and other absorbs in a
-separate module (`actor.absorb`) distinct from healing. This is a known gap.  
-Affected events: `SPELL_AURA_APPLIED` (shield application) + tracking absorbed amounts
-from `parts[12]` of SPELL_HEAL events.
+Absorbs are tracked separately from healing, matching Skada's `actor.absorb`
+concept. For damage events landing on a player, the parser reads the event's
+numeric `absorbed` field and looks for active supported shield auras on that
+target.
+
+- One active shield: attribute the absorb to that shield's player source.
+- Multiple active shields: attribute to the newest active shield and increment
+  `ambiguousHits` so the uncertainty is visible.
+- No supported active shield or non-player shield source: add the amount to the
+  encounter's `unattributedAbsorbs`; do not guess a player.
+- `SPELL_HEAL_ABSORBED` remains excluded from healing and absorb-shield totals.
+- Fully absorbed `*_MISSED` events without a numeric amount cannot be quantified.
+
+Per-participant output includes `totalAbsorbs`, `aps`, and
+`absorbBreakdown`. Encounter output includes `totalAbsorbs` and
+`unattributedAbsorbs`.
+
+---
+
+## Analytical Enrichment
+
+- `spec` is inferred only from observed WotLK spell signatures. Tied or absent
+  evidence returns no spec.
+- `role` combines inferred spec, healing share, damage output, and damage taken.
+  Healer/tank labels require positive supporting combat evidence.
+- `auraBreakdown` records application count, observed uptime seconds, and uptime
+  percentage. Open auras close at the encounter end.
+- `consumableBreakdown` is the curated flask/elixir/food/potion subset of aura
+  uptime.
+- `powerBreakdown` records `SPELL_ENERGIZE` and
+  `SPELL_PERIODIC_ENERGIZE` gains by recipient, spell, event count, and power type.
+- `deathEvents` records the encounter offset and up to the prior 15 seconds of
+  observed incoming damage. Damage/healing totals are not changed by these
+  enrichment paths.
 
 ---
 
@@ -238,7 +268,7 @@ A GUID is considered a player if it matches any of:
 |---|---|
 | SWING_MISSED, SPELL_MISSED, etc. | Contribute 0 damage; tracked by Skada for miss-rate only |
 | ENVIRONMENTAL_DAMAGE | Not registered by Skada for damage done |
-| SPELL_AURA_APPLIED/REMOVED | Not damage or healing |
+| SPELL_AURA_APPLIED/REFRESH/REMOVED | Analytical aura/absorb evidence only; never damage or healing |
 | SPELL_CAST_START/SUCCESS | Not damage or healing |
 | Vehicle damage (0xF15* src GUID) | Tracked in sessionDamage only, not per-player |
 
@@ -252,10 +282,13 @@ A GUID is considered a player if it matches any of:
    is required.
 3. **Difficulty undetectable cases**: unsupported or ambiguous attempts remain
    `UNKNOWN`; Hodir Hard Mode and Sartharion drake modes are explicitly unsupported.
-4. **Absorbs not tracked**: PW:S and other absorb shields not yet implemented.
+4. **Absorb attribution**: Numeric absorbed damage is tracked, but fully absorbed
+   missed events without an amount remain unmeasurable. Concurrent shields are
+   marked ambiguous rather than presented as exact.
 5. **Post-death events**: Some servers log damage/heal events after player/boss death;
    not explicitly filtered (negligible impact on totals).
-6. **Role detection**: Simplified heuristic (healing ratio > 60% = HEALER). Not spec-based.
+6. **Spec/role evidence**: Classification is signature-based and deliberately
+   conservative. Unobserved cooldowns or hybrid off-role play can remain unknown.
 7. **Overkill not surfaced**: Tracked internally but not displayed separately in UI.
 8. **No ENCOUNTER_START on all Warmane bosses**: Not all Warmane bosses emit these;
    heuristic path is used as fallback throughout.

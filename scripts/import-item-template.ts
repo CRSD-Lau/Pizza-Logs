@@ -26,10 +26,11 @@
 import { createReadStream } from "node:fs";
 import { createInterface } from "node:readline";
 import { Readable } from "node:stream";
-import { Prisma, PrismaClient } from "@prisma/client";
+import { Prisma } from "../generated/prisma/client";
+import { createPrismaClient } from "../lib/prisma-client";
 import { parseSqlTuple, QUALITY_MAP, INVENTORY_TYPE_MAP, buildStatsFromTemplate } from "../lib/item-template";
 
-const db = new PrismaClient();
+const db = createPrismaClient();
 
 const ITEM_TEMPLATE_URL =
   "https://raw.githubusercontent.com/azerothcore/database-wotlk/refs/heads/master/sql/base/item_template.sql";

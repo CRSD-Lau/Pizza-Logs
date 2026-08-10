@@ -33,7 +33,7 @@ assert.match(
 
 assert.match(
   cardSource,
-  /fixed z-\[2147483647\]/,
+  /fixed z-2147483647/,
   "renders the tooltip as a top-level fixed overlay above app sections",
 );
 

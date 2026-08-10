@@ -11,9 +11,9 @@
  * Safe to re-run — already-known items are skipped.
  */
 
-import { PrismaClient } from "@prisma/client";
+import { createPrismaClient } from "../lib/prisma-client";
 
-const db = new PrismaClient();
+const db = createPrismaClient();
 
 type GearItem = {
   itemId?: string;

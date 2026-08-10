@@ -17,30 +17,37 @@ interface Participant {
   player:        { name: string; class?: string | null };
   totalDamage:   number;
   totalHealing:  number;
+  totalAbsorbs:  number;
   dps:           number;
   hps:           number;
+  aps:           number;
   deaths:        number;
   critPct:       number;
   role:          string;
   spellBreakdown?: unknown;
+  absorbBreakdown?: unknown;
   /** Boss-only damage (pre-computed from targetBreakdown filtered to boss mob) */
   bossDmg?: number;
 }
 
 interface DamageMeterProps {
   participants: Participant[];
-  metric?:      "dps" | "hps";
+  metric?:      "dps" | "hps" | "aps";
 }
 
 export function DamageMeter({ participants, metric = "dps" }: DamageMeterProps) {
   const [selected, setSelected] = useState<string | null>(null);
 
-  const sorted = [...participants].sort((a, b) =>
-    metric === "hps" ? b.hps - a.hps : b.dps - a.dps
-  );
+  const rate = (participant: Participant) => participant[metric];
+  const raw = (participant: Participant) => metric === "hps"
+    ? participant.totalHealing
+    : metric === "aps"
+      ? participant.totalAbsorbs
+      : participant.totalDamage;
+  const sorted = [...participants].sort((a, b) => rate(b) - rate(a));
 
-  const maxVal = sorted[0] ? (metric === "hps" ? sorted[0].hps : sorted[0].dps) : 1;
-  const totalVal = sorted.reduce((s, p) => s + (metric === "hps" ? p.hps : p.dps), 0);
+  const maxVal = sorted[0] ? rate(sorted[0]) : 1;
+  const totalVal = sorted.reduce((sum, participant) => sum + rate(participant), 0);
 
   return (
     <div>
@@ -48,7 +55,7 @@ export function DamageMeter({ participants, metric = "dps" }: DamageMeterProps) 
       <div className="grid gap-2 px-3 py-1.5 text-[11px] font-semibold text-text-dim uppercase tracking-widest"
         style={{ gridTemplateColumns: "2fr 1fr 1fr 1fr 1fr" }}>
         <span>Player</span>
-        <span className="text-right">Damage</span>
+        <span className="text-right">{metric === "hps" ? "Healing" : metric === "aps" ? "Absorbs" : "Damage"}</span>
         <span className="text-right">{metric.toUpperCase()}</span>
         <span className="text-right">Hits</span>
         <span className="text-right">% total</span>
@@ -56,8 +63,8 @@ export function DamageMeter({ participants, metric = "dps" }: DamageMeterProps) 
 
       <div className="space-y-0.5">
         {sorted.map((p, idx) => {
-          const val      = metric === "hps" ? p.hps : p.dps;
-          const rawVal   = metric === "hps" ? p.totalHealing : p.totalDamage;
+          const val      = rate(p);
+          const rawVal   = raw(p);
           const fillPct  = maxVal > 0 ? (val / maxVal) * 100 : 0;
           const pct      = totalVal > 0 ? Math.round((val / totalVal) * 100) : 0;
           const color    = getClassColor(p.player.class ?? p.player.name);
@@ -84,7 +91,7 @@ export function DamageMeter({ participants, metric = "dps" }: DamageMeterProps) 
                 <div className="flex items-center gap-2 relative z-10">
                   <span className="text-[11px] text-text-dim w-4 text-right font-bold">{idx + 1}</span>
                   <span
-                    className="w-5 h-5 rounded text-[9px] font-bold flex items-center justify-center flex-shrink-0"
+                    className="w-5 h-5 rounded-sm text-[9px] font-bold flex items-center justify-center shrink-0"
                     style={{ background: `${color}22`, color }}
                   >
                     {(p.player.name).substring(0, 2).toUpperCase()}
@@ -100,7 +107,7 @@ export function DamageMeter({ participants, metric = "dps" }: DamageMeterProps) 
                     {formatNumber(rawVal)}
                   </div>
                   {/* Boss-only damage sub-label — shown when adds inflated the total */}
-                  {p.bossDmg !== undefined && p.bossDmg < rawVal * 0.98 && (
+                  {metric === "dps" && p.bossDmg !== undefined && p.bossDmg < rawVal * 0.98 && (
                     <div className="text-[10px] tabular-nums text-text-dim leading-tight">
                       {formatNumber(p.bossDmg)} boss
                     </div>
@@ -118,7 +125,7 @@ export function DamageMeter({ participants, metric = "dps" }: DamageMeterProps) 
                 <div className="text-right relative z-10">
                   <span className="text-xs text-text-secondary tabular-nums">
                     {p.deaths > 0 && <span className="text-danger mr-1">☠{p.deaths}</span>}
-                    {p.critPct.toFixed(0)}%c
+                    {metric === "aps" ? absorbHitCount(p.absorbBreakdown) : `${p.critPct.toFixed(0)}%c`}
                   </span>
                 </div>
 
@@ -129,13 +136,49 @@ export function DamageMeter({ participants, metric = "dps" }: DamageMeterProps) 
               </div>
 
               {/* Expanded spell breakdown */}
-              {isActive && isSpellBreakdown(p.spellBreakdown) && (
-                <SpellBreakdown breakdown={p.spellBreakdown} totalVal={rawVal} />
+              {isActive && metric === "aps" && isAbsorbBreakdown(p.absorbBreakdown) && (
+                <AbsorbBreakdown breakdown={p.absorbBreakdown} />
+              )}
+              {isActive && metric !== "aps" && isSpellBreakdown(p.spellBreakdown) && (
+                <SpellBreakdown breakdown={p.spellBreakdown} />
               )}
             </div>
           );
         })}
       </div>
+    </div>
+  );
+}
+
+type AbsorbEntry = { amount: number; hits: number; ambiguousHits: number };
+
+function isAbsorbBreakdown(value: unknown): value is Record<string, AbsorbEntry> {
+  return !!value && typeof value === "object" && !Array.isArray(value);
+}
+
+function absorbHitCount(value: unknown): string {
+  if (!isAbsorbBreakdown(value)) return "0h";
+  return `${Object.values(value).reduce((sum, entry) => sum + entry.hits, 0)}h`;
+}
+
+function AbsorbBreakdown({ breakdown }: { breakdown: Record<string, AbsorbEntry> }) {
+  const entries = Object.entries(breakdown).sort((a, b) => b[1].amount - a[1].amount);
+  const maxAmount = entries[0]?.[1].amount ?? 1;
+
+  return (
+    <div className="bg-bg-panel border border-gold-dim border-t-0 rounded-b px-3 py-2 mb-1 space-y-1 animate-fade-in-up">
+      {entries.map(([spell, stats]) => (
+        <div key={spell} className="flex items-center gap-2 text-xs">
+          <span className="w-40 text-text-primary truncate font-medium">{spell}</span>
+          <div className="flex-1 h-3 bg-bg-hover rounded-sm overflow-hidden">
+            <div className="h-full rounded-sm bg-holy" style={{ width: `${stats.amount / maxAmount * 100}%` }} />
+          </div>
+          <span className="w-16 text-right tabular-nums text-text-secondary">{formatNumber(stats.amount)}</span>
+          <span className="w-20 text-right tabular-nums text-text-dim">
+            {stats.hits} hits{stats.ambiguousHits > 0 ? `, ${stats.ambiguousHits} mixed` : ""}
+          </span>
+        </div>
+      ))}
     </div>
   );
 }
@@ -146,10 +189,8 @@ function isSpellBreakdown(value: unknown): value is Record<string, SpellEntry> {
 
 function SpellBreakdown({
   breakdown,
-  totalVal,
 }: {
   breakdown: Record<string, SpellEntry>;
-  totalVal:  number;
 }) {
   const entries = Object.entries(breakdown)
     .sort((a, b) => (b[1].damage + b[1].healing) - (a[1].damage + a[1].healing))
@@ -171,9 +212,9 @@ function SpellBreakdown({
         return (
           <div key={spell} className="flex items-center gap-2 text-xs">
             <span className="w-32 text-text-primary truncate font-medium">{spell}</span>
-            <div className="flex-1 h-3 bg-bg-hover rounded overflow-hidden">
+            <div className="flex-1 h-3 bg-bg-hover rounded-sm overflow-hidden">
               <div
-                className="h-full rounded"
+                className="h-full rounded-sm"
                 style={{ width: `${pct}%`, background: color }}
               />
             </div>
