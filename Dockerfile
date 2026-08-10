@@ -40,6 +40,7 @@ COPY --from=builder /app/public ./public
 COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
 COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
 COPY --from=builder /app/prisma ./prisma
+COPY --from=builder /app/prisma.config.ts ./prisma.config.ts
 # Prisma 7's CLI is ESM and has production dependencies beyond @prisma/*.
 # Copy the complete production dependency tree so migrate deploy is reliable.
 COPY --from=prod-deps --chown=nextjs:nodejs /app/node_modules ./node_modules

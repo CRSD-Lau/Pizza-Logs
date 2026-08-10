@@ -18,6 +18,11 @@ Codex works on `codex-dev`, pushes `origin/codex-dev`, and opens PRs into `main`
 
 ## This Session
 
+- Reproduced the post-PR #29 Railway 502 in the final Docker image: Prisma 7
+  `migrate deploy` could not find `datasource.url` because `prisma.config.ts`
+  was absent from the runtime stage.
+- Added `prisma.config.ts` to the runtime image and required an actual container
+  migration/startup probe before the production hotfix is merged.
 - Captured exact pre-upgrade analytical fixture hashes and added a permanent regression gate.
 - Standardized Node 24 across `.nvmrc`, package engines, GitHub Actions, Docker, and the Railway web image.
 - Upgraded Next.js 16.3/React 19.2 and migrated `middleware.ts` to `proxy.ts` with focused source/admin validation.
