@@ -54,14 +54,17 @@ export default async function EncounterPage({ params }: Props) {
   });
 
   const dpsParts = participantsWithBossDmg.filter(p => p.dps > 0);
-  const healParts = participantsWithBossDmg.filter(p => p.role === "HEALER" && p.hps > 0);
+  const healParts = participantsWithBossDmg.filter(p => p.hps > 0);
   const absorbParts = participantsWithBossDmg.filter(p => p.aps > 0);
+  const healAndAbsorbParts = participantsWithBossDmg.filter(p => p.hps + p.aps > 0);
   const durationSec = (encounter.durationMs ?? 0) > 0
     ? encounter.durationMs / 1000
     : Math.max(1, encounter.durationSeconds);
   const totalDps = Math.round(encounter.totalDamage / durationSec);
   const totalHps = Math.round(encounter.totalHealing / durationSec);
   const totalAps = Math.round(encounter.totalAbsorbs / durationSec);
+  const totalHealAndAbsorb = encounter.totalHealing + encounter.totalAbsorbs;
+  const totalHealAndAbsorbPs = Math.round(totalHealAndAbsorb / durationSec);
 
   const auraRows = encounter.participants.flatMap((participant) => {
     const breakdown = (participant.auraBreakdown ?? {}) as Record<string, {
@@ -200,13 +203,14 @@ export default async function EncounterPage({ params }: Props) {
         </div>
       </div>
 
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+      <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-3">
         <StatCard label="Duration" value={formatDuration(encounter.durationSeconds)} highlight />
         <StatCard label="Total Damage" value={formatNumber(encounter.totalDamage)} />
         <StatCard label="Raid DPS" value={totalDps.toLocaleString()} sub="per second" />
-        <StatCard label="Total Healing" value={formatNumber(encounter.totalHealing)} />
-        <StatCard label="Raid HPS" value={totalHps.toLocaleString()} sub="per second" />
+        <StatCard label="Effective Healing" value={formatNumber(encounter.totalHealing)} />
+        <StatCard label="Effective HPS" value={totalHps.toLocaleString()} sub="per second" />
         <StatCard label="Absorbs" value={formatNumber(encounter.totalAbsorbs)} sub={`${totalAps.toLocaleString()} per second`} />
+        <StatCard label="Heal + Absorbs" value={formatNumber(totalHealAndAbsorb)} sub={`${totalHealAndAbsorbPs.toLocaleString()} per second - UwU metric`} />
       </div>
 
       {encounter.milestones.length > 0 && (
@@ -238,8 +242,23 @@ export default async function EncounterPage({ params }: Props) {
         </AccordionSection>
       )}
 
+      {healAndAbsorbParts.length > 0 && (
+        <AccordionSection
+          title="Healing + Absorbs (UwU-compatible)"
+          sub={encounter.unattributedAbsorbs > 0
+            ? `${formatNumber(encounter.unattributedAbsorbs)} absorbs are included in the total but not yet assigned in player ranks`
+            : "Effective healing plus attributed shields"}
+          count={healAndAbsorbParts.length}
+          defaultOpen
+        >
+          <div className="bg-bg-panel border border-gold-dim rounded-sm overflow-hidden">
+            <DamageMeter participants={healAndAbsorbParts} metric="ha" />
+          </div>
+        </AccordionSection>
+      )}
+
       {healParts.length > 0 && (
-        <AccordionSection title="Healing Breakdown" count={healParts.length} defaultOpen>
+        <AccordionSection title="Effective Healing Breakdown" count={healParts.length} defaultOpen={false}>
           <div className="bg-bg-panel border border-gold-dim rounded-sm overflow-hidden">
             <DamageMeter participants={healParts} metric="hps" />
           </div>

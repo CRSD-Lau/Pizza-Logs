@@ -80,6 +80,17 @@ def session_damage_amount(fields: DamageFields) -> float:
     return max(0.0, fields.amount + fields.absorbed)
 
 
+def reported_damage_taken_amount(fields: DamageFields) -> float:
+    """UwU-compatible incoming damage as reported by the combat log.
+
+    UwU's headline Damage Taken metric sums the event amount without removing
+    overkill or the separately reported absorbed value.  Keeping this formula
+    separate from encounter_damage_amount prevents outgoing DPS semantics from
+    being silently reused for an analytically different metric.
+    """
+    return max(0.0, fields.amount)
+
+
 def _safe_int(s: str) -> int:
     try:
         return int(s.strip(), 0)

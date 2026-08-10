@@ -7,10 +7,6 @@ uploads
 README.md
 .claude
 .codex
-.agents
-.gstack
-.obsidian
-.specify
 .pytest_cache
 parser/.venv
 parser/venv

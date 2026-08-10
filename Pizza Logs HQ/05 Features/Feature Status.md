@@ -10,6 +10,9 @@ This file is the single source for shipped features, active backlog, and technic
 | Parser | Skada-WoTLK-aligned damage/healing event handling with heuristic Warmane segmentation |
 | Raid sessions | Uploads split into sessions after long gaps; public session detail pages live under `/raids/...` |
 | Encounter pages | Boss pull meters, spell breakdowns, target breakdowns, roster data |
+| UwU comparison analytics | Bounded boss slices, all-target encounter totals, raw damage taken, evidence-based pet ownership, and explicit healing + absorbs views |
+| Absorbs | Separate absorbs/APS with conservative shield attribution, ambiguity/unattributed totals, and H+A comparison |
+| Analytical enrichment | Spec/role, aura uptime, consumables, power gains, target damage, and death context |
 | Leaderboards | Boss, global, weekly, and player profile summaries |
 | Milestones | Current all-time DPS/HPS ranks per boss/difficulty |
 | Admin auth | `/admin` and admin APIs require `ADMIN_SECRET`; production fails closed if missing |
@@ -34,13 +37,11 @@ This file is the single source for shipped features, active backlog, and technic
 | Item | Status |
 |---|---|
 | Warmane production data freshness | Browser-assisted in-tab hourly userscript timers are available for gear and roster; fully headless sync remains future work |
-| Absorbs | Future parser work; not currently implemented |
 
 ## Backlog
 
 | Priority | Item | Notes |
 |---|---|---|
-| High | Absorbs tracking | Implement Skada `Absorbs.lua` style separate absorb metric, not healing |
 | High | Server-side upload size enforcement | Enforce a hard byte limit while streaming to parser |
 | Medium | Upload rate limiting | Prefer Railway-level controls first, app-level only if needed |
 | Medium | Fully headless local Warmane sync agent | Replace browser-assisted roster/gear userscript runs if Warmane access allows it |

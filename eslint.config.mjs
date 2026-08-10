@@ -25,6 +25,5 @@ export default defineConfig([
     "coverage/**",
     "dist/**",
     "out/**",
-    "Pizza Logs HQ/.obsidian/**",
   ]),
 ]);

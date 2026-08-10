@@ -23,6 +23,7 @@ from combat_metrics import (
     encounter_damage_amount,
     extract_damage_fields,
     extract_heal_fields,
+    reported_damage_taken_amount,
     session_damage_amount,
 )
 from difficulty_detector import DifficultyDetection, detect_difficulty
@@ -77,9 +78,25 @@ HEAL_EVENTS = {
     "SPELL_PERIODIC_HEAL",
 }
 
-AURA_APPLY_EVENTS = {"SPELL_AURA_APPLIED", "SPELL_AURA_REFRESH"}
+AURA_APPLY_EVENTS = {"SPELL_AURA_APPLIED", "SPELL_AURA_REFRESH", "SPELL_AURA_APPLIED_DOSE"}
 AURA_REMOVE_EVENTS = {"SPELL_AURA_REMOVED"}
 POWER_GAIN_EVENTS = {"SPELL_ENERGIZE", "SPELL_PERIODIC_ENERGIZE"}
+
+# Ownership evidence must be an ability that can only connect a player with
+# their own pet. Generic heals and raid-wide buffs are not evidence: using
+# those events reassigned Army ghouls and hunter/warlock pets to healers in the
+# 2026-07-31 parity report. SPELL_SUMMON remains authoritative.
+PET_OWNER_FORWARD_SPELL_IDS: frozenset[int] = frozenset({
+    # Hunter: Mend Pet and Feed Pet ranks
+    136, 1002, 1539, 3111, 3661, 3662, 13542, 13543, 13544, 27046,
+    48989, 48990, 33976,
+    # Warlock: Health Funnel ranks and pet-only owner effects
+    755, 3698, 3699, 3700, 11693, 11694, 11695, 16569, 27259, 47856,
+    60829, 63560, 48743,
+})
+PET_OWNER_REVERSE_SPELL_IDS: frozenset[int] = frozenset({
+    34650,  # Shadowfiend Mana Leech: pet -> owning priest
+})
 
 # Spells excluded from healing-done totals.
 #
@@ -355,6 +372,50 @@ def _elapsed_seconds(start: float, end: float) -> float:
     return max(0.0, end - start)
 
 
+def _is_permanent_pet_guid(guid: str) -> bool:
+    return guid.upper().startswith("0XF14")
+
+
+def _pet_unit_id(guid: str) -> str:
+    """Return the stable creature portion shared by repeated pet GUIDs."""
+    return guid[6:-6].upper() if len(guid) > 12 else ""
+
+
+def _pet_flags(flags: str) -> bool:
+    try:
+        value = int(flags, 16)
+    except (TypeError, ValueError):
+        return False
+    return bool(value & 0x0100) and bool(value & 0x3000)
+
+
+def _owner_evidence_from_event(parts: list[str]) -> Optional[tuple[str, str, str]]:
+    """Return (pet_guid, owner_guid, owner_name) for owner-exclusive events."""
+    if len(parts) < 10:
+        return None
+    spell_id = _safe_int(parts[7])
+    src_guid = parts[1]
+    src_name = parts[2].strip('"').strip()
+    dst_guid = parts[4]
+    dst_name = parts[5].strip('"').strip()
+
+    if (
+        spell_id in PET_OWNER_FORWARD_SPELL_IDS
+        and _is_player(src_guid)
+        and _is_permanent_pet_guid(dst_guid)
+        and _pet_flags(parts[6])
+    ):
+        return dst_guid, src_guid, src_name
+    if (
+        spell_id in PET_OWNER_REVERSE_SPELL_IDS
+        and _is_permanent_pet_guid(src_guid)
+        and _pet_flags(parts[3])
+        and _is_player(dst_guid)
+    ):
+        return src_guid, dst_guid, dst_name
+    return None
+
+
 def parse_ts_to_iso(ts_str: str, year_hint: int = 2024) -> str:
     """Return an ISO timestamp string. Year is inferred from context (file mtime)."""
     m = TS_RE.match(ts_str.strip())
@@ -598,26 +659,14 @@ class CombatLogParser:
                     pet_owner[pet_guid] = (owner_guid, owner_name)
                 continue
 
-            # ── Global player→pet interaction scan ───────────────
-            # Catches pre-summoned pets (no SPELL_SUMMON in log) via heal events.
-            # Restricted to SPELL_HEAL / SPELL_PERIODIC_HEAL so we don't
-            # mis-map AoE buffs (e.g. Blessing of Might hitting every pet in
-            # the raid, assigning all pets to the Paladin) and don't mis-map
-            # vehicle NPCs (Gunship Cannons with CONTROL_PLAYER flags).
-            # Also restricted to 0xF14* GUID prefix (true WotLK pet GUIDs);
-            # 0xF130 = NPC, 0xF150 = vehicle — these are never pre-summoned pets.
-            if (event in ("SPELL_HEAL", "SPELL_PERIODIC_HEAL")
-                and len(parts) >= 7
-                and _is_player(parts[1])
-                and not _is_player(parts[4])
-                and parts[4].upper().startswith("0XF14")
-                and parts[4] not in pet_owner
-            ):
-                try:
-                    if (int(parts[6], 16) & 0x1100) == 0x1100:
-                        pet_owner[parts[4]] = (parts[1], parts[2].strip('"').strip())
-                except (ValueError, IndexError):
-                    pass
+            # ── Global owner-exclusive pet interaction scan ──────
+            # Generic heals and buffs can target somebody else's pet. Infer an
+            # owner only from abilities that can connect a player to their own
+            # pet (Mend Pet, Health Funnel, Shadowfiend Mana Leech, etc.).
+            owner_evidence = _owner_evidence_from_event(parts)
+            if owner_evidence:
+                pet_guid, owner_guid, owner_name = owner_evidence
+                pet_owner.setdefault(pet_guid, (owner_guid, owner_name))
 
             # ── ENCOUNTER_START ──────────────────────────────────
             if event == ENCOUNTER_START:
@@ -782,6 +831,33 @@ class CombatLogParser:
 
         boss_def = (lookup_boss_by_id(boss_id) if boss_id else None) or lookup_boss(boss_name)
         canonical_boss_name = boss_def.name if boss_def else boss_name
+
+        # ENCOUNTER_END is not a reliable combat boundary on Warmane. It can be
+        # emitted seconds or hours after the last boss interaction. Match UwU's
+        # slice model by retaining every event between the first and last
+        # meaningful boss interaction, while still using ENCOUNTER_END solely
+        # for the outcome metadata captured above.
+        boss_names = {canonical_boss_name.lower()}
+        if boss_def:
+            boss_names.update(alias.lower() for alias in boss_def.aliases)
+        has_explicit_start = any(parts[0] == ENCOUNTER_START for _, parts, _ in segment)
+        activity_indexes: list[int] = []
+        for index, (_, activity_parts, _) in enumerate(segment):
+            activity_event = activity_parts[0]
+            if activity_event not in DMG_EVENTS | HEAL_EVENTS | {UNIT_DIED_EVENT}:
+                continue
+            if len(activity_parts) < 6:
+                continue
+            src_name = activity_parts[2].strip('"').strip().lower()
+            dst_name = activity_parts[5].strip('"').strip().lower()
+            if src_name in boss_names or dst_name in boss_names:
+                activity_indexes.append(index)
+        if activity_indexes:
+            window_start = 0 if has_explicit_start else activity_indexes[0]
+            segment = segment[window_start:activity_indexes[-1] + 1]
+            first_ts_str = segment[0][0]
+            last_ts_str = segment[-1][0]
+
         detection = detect_difficulty(
             canonical_boss_name,
             segment,
@@ -816,6 +892,10 @@ class CombatLogParser:
         unattributed_absorbs = 0.0
         active_auras: dict[tuple[str, str], tuple[float, str, str]] = {}
         active_absorb_auras: dict[str, dict[str, tuple[float, str, str]]] = {}
+        recently_removed_absorb_auras: dict[
+            str, dict[str, tuple[float, str, str]]
+        ] = {}
+        discipline_guids: set[str] = set()
 
         boss_name_lower = boss_name.lower() if boss_name else ""
         boss_alias_set  = {a.lower() for a in boss_def.aliases} if boss_def else set()
@@ -834,23 +914,34 @@ class CombatLogParser:
                         if _dst_guid and _dst_guid not in ("0x0000000000000000", "0xNIL"):
                             boss_guids.add(_dst_guid)
 
-        # Pre-pass B: resolve pre-summoned pets that have no SPELL_SUMMON entry.
-        # Scan every event for player→pet interactions (Mend Pet ticks, buffs,
-        # Feed Pet, etc.) — dst_flags TYPE_PET(0x1000)|CONTROL_PLAYER(0x0100)
-        # identifies player-owned pets. Running this before the main loop means
-        # ordering doesn't matter: pet damage that lands before the first Mend
-        # Pet tick is still attributed correctly.
+        # Pre-pass B: resolve pre-summoned permanent pets without allowing a
+        # generic player interaction to claim ownership. First use exclusive
+        # pet abilities, then propagate a known owner across repeated GUID
+        # instances with the same permanent-pet creature id (UwU behavior).
+        if pet_owner is None:
+            pet_owner = {}
         for _, _p, _ in segment:
-            if (len(_p) >= 7
-                and _is_player(_p[1])
-                and not _is_player(_p[4])
-                and _p[4] not in pet_owner
-            ):
-                try:
-                    if (int(_p[6], 16) & 0x1100) == 0x1100:
-                        pet_owner[_p[4]] = (_p[1], _p[2].strip('"').strip())
-                except (ValueError, IndexError):
-                    pass
+            owner_evidence = _owner_evidence_from_event(_p)
+            if owner_evidence:
+                pet_guid, owner_guid, owner_name = owner_evidence
+                pet_owner.setdefault(pet_guid, (owner_guid, owner_name))
+
+        owners_by_unit_id: dict[str, tuple[str, str]] = {}
+        for known_pet_guid, owner in pet_owner.items():
+            if _is_permanent_pet_guid(known_pet_guid):
+                unit_id = _pet_unit_id(known_pet_guid)
+                if unit_id:
+                    owners_by_unit_id.setdefault(unit_id, owner)
+        for _, _p, _ in segment:
+            for guid_index in (1, 4):
+                if len(_p) <= guid_index:
+                    continue
+                candidate_guid = _p[guid_index]
+                if candidate_guid in pet_owner or not _is_permanent_pet_guid(candidate_guid):
+                    continue
+                owner = owners_by_unit_id.get(_pet_unit_id(candidate_guid))
+                if owner:
+                    pet_owner[candidate_guid] = owner
 
         for ts_str, parts, ts in segment:
             event = parts[0]
@@ -881,15 +972,24 @@ class CombatLogParser:
                                 src_guid,
                                 src_name,
                             )
+                            recently_removed_absorb_auras.get(dst_guid, {}).pop(spell_name, None)
                     else:
                         prior = active_auras.pop(aura_key, None)
                         if prior is not None:
                             aura_stats.uptime_seconds += _elapsed_seconds(prior[0], ts)
-                        active_absorb_auras.get(dst_guid, {}).pop(spell_name, None)
+                        removed_absorb = active_absorb_auras.get(dst_guid, {}).pop(spell_name, None)
+                        if removed_absorb is not None:
+                            recently_removed_absorb_auras.setdefault(dst_guid, {})[spell_name] = (
+                                ts,
+                                removed_absorb[1],
+                                removed_absorb[2],
+                            )
 
                     if _is_player(src_guid) and src_name:
                         source_actor = _get_actor(actors, src_name, src_guid)
                         source_actor.observed_spells.add(spell_name)
+                        if spell_name in {"Power Word: Shield", "Divine Aegis", "Penance"}:
+                            discipline_guids.add(src_guid)
                         if source_actor.wow_class is None and spell_name in SPELL_CLASS_MAP:
                             source_actor.wow_class = SPELL_CLASS_MAP[spell_name]
                 continue
@@ -979,6 +1079,14 @@ class CombatLogParser:
                 overkill = 0.0
                 absorbed = 0.0
                 is_crit = fields.is_crit
+                if spell_name == "Penance":
+                    discipline_guids.add(src_guid)
+                if is_crit and src_guid in discipline_guids and _is_player(dst_guid):
+                    active_absorb_auras.setdefault(dst_guid, {})["Divine Aegis"] = (
+                        ts,
+                        src_guid,
+                        src_name,
+                    )
             else:
                 # All remaining events must be in DMG_EVENTS — defence-in-depth
                 # guard against any unrecognised events slipping through.
@@ -1002,9 +1110,17 @@ class CombatLogParser:
             if not is_heal and absorbed > 0 and _is_player(dst_guid):
                 total_absorbs += absorbed
                 shields = active_absorb_auras.get(dst_guid, {})
+                recent_shields = recently_removed_absorb_auras.get(dst_guid, {})
+                recent_shields = {
+                    shield_name: shield
+                    for shield_name, shield in recent_shields.items()
+                    if _elapsed_seconds(shield[0], ts) <= 0.5
+                }
+                recently_removed_absorb_auras[dst_guid] = recent_shields
                 candidates = [
                     (applied_ts, shield_name, shield_src_guid, shield_src_name)
-                    for shield_name, (applied_ts, shield_src_guid, shield_src_name) in shields.items()
+                    for shield_name, (applied_ts, shield_src_guid, shield_src_name)
+                    in (shields | recent_shields).items()
                 ]
                 if candidates:
                     _, shield_name, shield_src_guid, shield_src_name = max(candidates)
@@ -1026,7 +1142,7 @@ class CombatLogParser:
                 continue
 
             if not is_heal and _is_player(dst_guid) and dst_name:
-                actual_damage = encounter_damage_amount(fields)
+                actual_damage = reported_damage_taken_amount(fields)
                 damaged_actor = _get_actor(actors, dst_name, dst_guid)
                 damaged_actor.damage_taken += actual_damage
                 damaged_actor.recent_damage = [
@@ -1102,17 +1218,11 @@ class CombatLogParser:
                 a.total_healing += eff_amount
                 ss.healing += eff_amount
             else:
-                # For bosses with independent add waves (Lady Deathwhisper, BPC),
-                # only count damage directed at the boss unit(s) — not adds.
-                # For bosses where mechanic-unit damage counts (Marrowgar Bone
-                # Spikes, Saurfang Blood Beasts), filter_add_damage=False so we
-                # accumulate all damage regardless of target GUID.
-                apply_boss_filter = bool(
-                    boss_def and boss_def.filter_add_damage and boss_guids
-                )
-                if not apply_boss_filter or dst_guid in boss_guids:
-                    a.total_damage += eff_amount
-                    ss.damage += eff_amount
+                # UwU's headline Total Damage includes every target inside the
+                # bounded pull. Boss-only damage remains available through the
+                # target breakdown instead of silently replacing this total.
+                a.total_damage += eff_amount
+                ss.damage += eff_amount
                 targets_hit.add(dst_name)
                 # Track damage by target mob for drill-down
                 if dst_name:

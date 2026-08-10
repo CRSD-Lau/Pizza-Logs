@@ -135,13 +135,18 @@ parts[12] = absorbed
 Stored encounter damage = `max(0, amount - overkill - absorbed)`.
 Full-session `sessionDamage` uses `amount + absorbed`.
 
-### Add-wave filtering
+### Pull totals and target breakdowns
 
-Bosses with `filter_add_damage=True` in `bosses.py`:
-- **Lady Deathwhisper**: only damage to boss GUID counted (not Adherents/Fanatics)
-- **Blood Prince Council**: only damage to boss GUID counted (not Kinetic Bombs)
+Encounter damage includes every matched target inside the bounded boss pull,
+including Lady Deathwhisper adds and Blood Prince Council mechanics. This
+matches the headline UwU report total. Boss-only and per-target damage remain
+available as analytical breakdowns and must not silently replace the encounter
+total.
 
-All other bosses: all damage counts (Marrowgar Bone Spikes, Saurfang Blood Beasts, etc.)
+Damage taken intentionally uses the raw incoming `amount` field. It does not
+subtract overkill or absorbs because UwU's headline taken metric records the
+reported incoming amount. This definition is separate from outgoing stored
+damage, which continues to use the effective/useful formula above.
 
 ---
 
@@ -191,6 +196,10 @@ target.
 - One active shield: attribute the absorb to that shield's player source.
 - Multiple active shields: attribute to the newest active shield and increment
   `ambiguousHits` so the uncertainty is visible.
+- A shield removed no more than 0.5 seconds before the damage event remains
+  eligible, covering combat-log ordering around shield consumption.
+- Critical Discipline heals and Penance can establish a Divine Aegis source;
+  the absorbed amount still comes only from the damage event.
 - No supported active shield or non-player shield source: add the amount to the
   encounter's `unattributedAbsorbs`; do not guess a player.
 - `SPELL_HEAL_ABSORBED` remains excluded from healing and absorb-shield totals.
@@ -199,6 +208,10 @@ target.
 Per-participant output includes `totalAbsorbs`, `aps`, and
 `absorbBreakdown`. Encounter output includes `totalAbsorbs` and
 `unattributedAbsorbs`.
+
+The UI presents effective healing, absorbs, and their rates independently. It
+also provides an explicitly labeled `healing + absorbs` / `H+A PS` view for
+direct UwU report comparison; the combined view does not mutate stored healing.
 
 ---
 

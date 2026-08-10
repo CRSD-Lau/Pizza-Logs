@@ -29,8 +29,8 @@ Pizza Logs is a Warmane / WotLK 3.3.5a combat-log parser and leaderboard app for
 - Live app: https://pizza-logs-production.up.railway.app
 - Canonical remote: `origin` -> `https://github.com/CRSD-Lau/Pizza-Logs.git`
 - Production deploy: Railway auto-deploys from `origin/main`
-- Stack: Next.js 15, React 19, TypeScript, Tailwind, Prisma, PostgreSQL, Python FastAPI parser
-- Parser target: match Skada-WoTLK, not UWU
+- Stack: Next.js 16, React 19, TypeScript, Tailwind, Prisma, PostgreSQL, Python FastAPI parser
+- Parser target: preserve Skada-WoTLK combat math while matching adopted UwU analytical report definitions
 
 ## Repo Structure
 
@@ -41,7 +41,7 @@ Pizza Logs is a Warmane / WotLK 3.3.5a combat-log parser and leaderboard app for
 - `parser/tests/fixtures/` - parser fixture inputs and expected outputs
 - `prisma/` - schema, migrations, seed
 - `docs/` - repo-level parser/review docs
-- `Pizza Logs HQ/` - committed Obsidian project vault, handoffs, architecture, runbooks
+- `Pizza Logs HQ/` - committed project knowledge base, handoffs, architecture, runbooks
 
 ## Critical Parser Behavior
 
@@ -57,7 +57,10 @@ Do not break combat log parsing. Parser correctness is the product.
 - KILL duration uses boss death timestamp, not the last post-kill event.
 - Player GUIDs include Warmane `0x06` and retail `Player-`.
 - Gunship and heroic difficulty are Warmane edge cases. Do not change their handling without fixture validation and Skada/Warmane evidence.
-- Absorbs are separate in Skada (`actor.absorb`) and are not currently implemented as healing.
+- Absorbs stay separate from effective healing. Reports may additionally show the explicit UwU-compatible `healing + absorbs` metric.
+- Damage taken uses the raw reported incoming amount; outgoing damage continues to use the established effective/useful formula.
+- Encounter windows end at the last meaningful boss activity, not a stale marker or unrelated post-fight trash.
+- Pet ownership requires summon or owner-exclusive spell evidence; generic player-to-pet healing must never steal ownership.
 
 ## Setup Commands
 

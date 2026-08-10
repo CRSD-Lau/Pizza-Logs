@@ -32,17 +32,21 @@ interface Participant {
 
 interface DamageMeterProps {
   participants: Participant[];
-  metric?:      "dps" | "hps" | "aps";
+  metric?:      "dps" | "hps" | "aps" | "ha";
 }
 
 export function DamageMeter({ participants, metric = "dps" }: DamageMeterProps) {
   const [selected, setSelected] = useState<string | null>(null);
 
-  const rate = (participant: Participant) => participant[metric];
+  const rate = (participant: Participant) => metric === "ha"
+    ? participant.hps + participant.aps
+    : participant[metric];
   const raw = (participant: Participant) => metric === "hps"
     ? participant.totalHealing
     : metric === "aps"
       ? participant.totalAbsorbs
+      : metric === "ha"
+        ? participant.totalHealing + participant.totalAbsorbs
       : participant.totalDamage;
   const sorted = [...participants].sort((a, b) => rate(b) - rate(a));
 
@@ -55,8 +59,8 @@ export function DamageMeter({ participants, metric = "dps" }: DamageMeterProps) 
       <div className="grid gap-2 px-3 py-1.5 text-[11px] font-semibold text-text-dim uppercase tracking-widest"
         style={{ gridTemplateColumns: "2fr 1fr 1fr 1fr 1fr" }}>
         <span>Player</span>
-        <span className="text-right">{metric === "hps" ? "Healing" : metric === "aps" ? "Absorbs" : "Damage"}</span>
-        <span className="text-right">{metric.toUpperCase()}</span>
+        <span className="text-right">{metric === "hps" ? "Healing" : metric === "aps" ? "Absorbs" : metric === "ha" ? "Heal + Absorb" : "Damage"}</span>
+        <span className="text-right">{metric === "ha" ? "H+A PS" : metric.toUpperCase()}</span>
         <span className="text-right">Hits</span>
         <span className="text-right">% total</span>
       </div>
@@ -125,7 +129,11 @@ export function DamageMeter({ participants, metric = "dps" }: DamageMeterProps) 
                 <div className="text-right relative z-10">
                   <span className="text-xs text-text-secondary tabular-nums">
                     {p.deaths > 0 && <span className="text-danger mr-1">☠{p.deaths}</span>}
-                    {metric === "aps" ? absorbHitCount(p.absorbBreakdown) : `${p.critPct.toFixed(0)}%c`}
+                    {metric === "aps"
+                      ? absorbHitCount(p.absorbBreakdown)
+                      : metric === "ha"
+                        ? `${p.critPct.toFixed(0)}%c / ${absorbHitCount(p.absorbBreakdown)}`
+                        : `${p.critPct.toFixed(0)}%c`}
                   </span>
                 </div>
 
@@ -141,6 +149,9 @@ export function DamageMeter({ participants, metric = "dps" }: DamageMeterProps) 
               )}
               {isActive && metric !== "aps" && isSpellBreakdown(p.spellBreakdown) && (
                 <SpellBreakdown breakdown={p.spellBreakdown} />
+              )}
+              {isActive && metric === "ha" && isAbsorbBreakdown(p.absorbBreakdown) && (
+                <AbsorbBreakdown breakdown={p.absorbBreakdown} />
               )}
             </div>
           );
