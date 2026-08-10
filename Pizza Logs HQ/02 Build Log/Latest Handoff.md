@@ -22,7 +22,8 @@
 - Browser uploads now use one raw UUID-keyed request for `.txt`, `.log`, or `.zip`; the parser atomically finalizes, validates, emits quick modes, then runs full parsing on bounded workers.
 - A 31,621,979-byte ZIP benchmark reached quick classification 1,926.60 ms after the final byte and completed full parsing in 5,158.69 ms.
 - A full production route, mobile, accessibility, ticket, source, and dependency audit is recorded in `02 Build Log/2026-08-10 Site and Ticket Audit.md`.
-- Draft PR #28 is open from `codex-dev` into `main`; its CI and Slack notification checks pass and it is not deployed until Neil merges it.
+- Draft PR #29 is open from `codex-dev` into `main`; its clean Linux
+  `test-build` check passes and it is not deployed until Neil merges it.
 - The supported workflow is now explicitly one desktop checkout -> `origin/codex-dev` -> PR -> `origin/main` -> Railway. Active docs no longer point to the retired OneDrive/laptop checkout.
 - GitHub's renamed `Production main` ruleset now requires a PR and passing `test-build`, and blocks branch deletion and non-fast-forward updates.
 - Removed unused standalone `sync-agent` TypeScript/build exclusions and replaced its named env ignore with a safer generic `.env.*` rule; current browser-sync launcher logs remain ignored.
@@ -402,6 +403,9 @@
 - Prisma 7.9 client generation and schema validation passed.
 - CI now generates the ignored Prisma 7 client before type-checking, matching a
   fresh checkout instead of relying on a developer's existing generated output.
+- PR #29's replacement clean Linux job passed Prisma generation, lint, both
+  TypeScript gates, all web tests, all parser tests, and the Next production
+  build.
 - The final Node 24 Docker image built successfully and contains the Prisma 7
   CLI plus the Linux schema engine required by production migration startup.
 - The actual local web -> parser -> PostgreSQL upload flow completed, persisted
