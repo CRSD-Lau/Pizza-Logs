@@ -9,10 +9,31 @@ import { StatCard } from "@/components/ui/StatCard";
 import { getClassColor } from "@/lib/constants/classes";
 import { getClassIconUrl } from "@/lib/class-icons";
 import { getRevealClassName, getRevealStyle, orderBossDisplayEntries } from "@/lib/ui-animation";
-import { cn, formatDuration, formatNumber } from "@/lib/utils";
+import { cn, formatDuration, formatDurationPrecise, formatNumber } from "@/lib/utils";
 
 interface Props {
   params: Promise<{ id: string; sessionIdx: string }>;
+}
+
+interface SessionPlayerAnalytics {
+  totalDamage: number;
+  totalHealing: number;
+  totalAbsorbs: number;
+  heal: number;
+  damageTaken: number;
+}
+
+interface SessionAnalytics {
+  startedAt: string;
+  endedAt: string;
+  durationMs: number;
+  totalDamage: number;
+  totalHealing: number;
+  totalAbsorbs: number;
+  heal: number;
+  totalDamageTaken: number;
+  unattributedAbsorbs: number;
+  players: Record<string, SessionPlayerAnalytics>;
 }
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
@@ -30,6 +51,7 @@ export default async function SessionDetailPage({ params }: Props) {
     select: {
       id: true,
       sessionDamage: true,
+      sessionAnalytics: true,
       realm: { select: { name: true, host: true } },
       guild: { select: { name: true } },
     },
@@ -58,19 +80,27 @@ export default async function SessionDetailPage({ params }: Props) {
 
   const kills = orderedEncounters.filter(e => e.outcome === "KILL").length;
   const wipes = orderedEncounters.filter(e => e.outcome === "WIPE").length;
-  const totalHeal = orderedEncounters.reduce((sum, e) => sum + e.totalHealing, 0);
-  const totalAbsorbs = orderedEncounters.reduce((sum, e) => sum + e.totalAbsorbs, 0);
-  const totalHealAndAbsorbs = totalHeal + totalAbsorbs;
-  const totalSecs = orderedEncounters.reduce(
-    (sum, e) => sum + ((e.durationMs ?? 0) > 0 ? e.durationMs / 1000 : e.durationSeconds),
-    0,
-  );
-
   const sessionDmgMap = (upload.sessionDamage ?? {}) as Record<string, number>;
+  const sessionAnalyticsMap = (upload.sessionAnalytics ?? {}) as unknown as Record<string, SessionAnalytics>;
+  const sessionAnalytics = sessionAnalyticsMap[String(sessionIndex)];
   const encounterDmg = orderedEncounters.reduce((sum, e) => sum + e.totalDamage, 0);
-  const fullSessionDmg = sessionDmgMap[String(sessionIndex)] ?? encounterDmg;
-  const startedAt = encounters[0].startedAt;
-  const endedAt = encounters[encounters.length - 1].endedAt;
+  const fallbackHealing = orderedEncounters.reduce((sum, e) => sum + e.totalHealing, 0);
+  const fallbackAbsorbs = orderedEncounters.reduce((sum, e) => sum + e.totalAbsorbs, 0);
+  const fallbackDamageTaken = orderedEncounters.reduce((sum, e) => sum + e.totalDamageTaken, 0);
+  const startedAt = sessionAnalytics?.startedAt ?? encounters[0].startedAt;
+  const endedAt = sessionAnalytics?.endedAt ?? encounters[encounters.length - 1].endedAt;
+  const fallbackDurationMs = Math.max(0, new Date(endedAt).getTime() - new Date(startedAt).getTime());
+  const durationMs = sessionAnalytics?.durationMs ?? fallbackDurationMs;
+  const durationSeconds = Math.max(0.001, durationMs / 1000);
+  const fullSessionDmg = sessionAnalytics?.totalDamage ?? sessionDmgMap[String(sessionIndex)] ?? encounterDmg;
+  const fullSessionHeal = sessionAnalytics?.heal ?? fallbackHealing + fallbackAbsorbs;
+  const fullSessionDamageTaken = sessionAnalytics?.totalDamageTaken ?? fallbackDamageTaken;
+  const sessionPlayers = Object.entries(sessionAnalytics?.players ?? {})
+    .sort(([, left], [, right]) =>
+      right.totalDamage - left.totalDamage
+      || right.heal - left.heal
+      || right.damageTaken - left.damageTaken
+    );
 
   const sessionCount = await db.encounter.groupBy({
     by: ["sessionIndex"],
@@ -82,6 +112,10 @@ export default async function SessionDetailPage({ params }: Props) {
     for (const p of enc.participants) {
       if (!playerSet.has(p.player.name)) playerSet.set(p.player.name, p.player.class ?? null);
     }
+  }
+  const encounterPlayerNames = new Set(playerSet.keys());
+  for (const [name] of sessionPlayers) {
+    if (!playerSet.has(name)) playerSet.set(name, null);
   }
   const realmName = upload.realm?.name ?? "Lordaeron";
   const guildName = upload.guild?.name ?? null;
@@ -203,14 +237,62 @@ export default async function SessionDetailPage({ params }: Props) {
         </div>
       </div>
 
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
         <StatCard label="Kills / Wipes" value={`${kills}K / ${wipes}W`} highlight />
-        <StatCard label="Encounter Damage" value={formatNumber(encounterDmg)} sub="sum of matched pulls" />
-        <StatCard label="Full Log Damage" value={formatNumber(fullSessionDmg)} sub="includes trash between pulls" />
-        <StatCard label="Effective Healing" value={formatNumber(totalHeal)} sub="sum of matched pulls" />
-        <StatCard label="Heal + Absorbs" value={formatNumber(totalHealAndAbsorbs)} sub="UwU-compatible pull metric" />
-        <StatCard label="Active Time" value={formatDuration(totalSecs)} sub="sum of all pulls" />
+        <StatCard label="Total Damage" value={formatNumber(fullSessionDmg)} sub="UwU full custom slice" />
+        <StatCard label="Heal" value={formatNumber(fullSessionHeal)} sub="effective healing + absorbs" />
+        <StatCard label="Damage Taken" value={formatNumber(fullSessionDamageTaken)} sub="UwU full custom slice" />
+        <StatCard label="Duration" value={formatDurationPrecise(durationMs)} sub="first to last log event" />
       </div>
+
+      {sessionPlayers.length > 0 && (
+        <AccordionSection title="Custom Slice" count={sessionPlayers.length} defaultOpen>
+          <div className="bg-bg-panel border border-gold-dim rounded-sm overflow-x-auto">
+            <table className="w-full min-w-[760px] text-xs tabular-nums">
+              <thead className="bg-bg-card text-text-dim uppercase tracking-wider">
+                <tr>
+                  <th className="px-4 py-3 text-left">Player</th>
+                  <th className="px-4 py-3 text-right">Total Damage</th>
+                  <th className="px-4 py-3 text-right">DPS</th>
+                  <th className="px-4 py-3 text-right">Heal</th>
+                  <th className="px-4 py-3 text-right">HPS</th>
+                  <th className="px-4 py-3 text-right">Damage Taken</th>
+                  <th className="px-4 py-3 text-right">DTPS</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gold-dim">
+                {sessionPlayers.map(([name, metrics]) => {
+                  const cls = playerSet.get(name) ?? null;
+                  const color = getClassColor(cls ?? name);
+                  return (
+                    <tr key={name} className="hover:bg-bg-hover transition-colors">
+                      <td className="px-4 py-2.5 text-left">
+                        {encounterPlayerNames.has(name) ? (
+                          <Link
+                            href={`/raids/${id}/sessions/${sessionIndex}/players/${encodeURIComponent(name)}`}
+                            className="font-semibold hover:text-gold transition-colors"
+                            style={{ color }}
+                          >
+                            {name}
+                          </Link>
+                        ) : (
+                          <span className="font-semibold" style={{ color }}>{name}</span>
+                        )}
+                      </td>
+                      <td className="px-4 py-2.5 text-right text-text-primary">{Math.round(metrics.totalDamage).toLocaleString()}</td>
+                      <td className="px-4 py-2.5 text-right text-text-secondary">{(metrics.totalDamage / durationSeconds).toLocaleString(undefined, { maximumFractionDigits: 1 })}</td>
+                      <td className="px-4 py-2.5 text-right text-text-primary">{Math.round(metrics.heal).toLocaleString()}</td>
+                      <td className="px-4 py-2.5 text-right text-text-secondary">{(metrics.heal / durationSeconds).toLocaleString(undefined, { maximumFractionDigits: 1 })}</td>
+                      <td className="px-4 py-2.5 text-right text-text-primary">{Math.round(metrics.damageTaken).toLocaleString()}</td>
+                      <td className="px-4 py-2.5 text-right text-text-secondary">{(metrics.damageTaken / durationSeconds).toLocaleString(undefined, { maximumFractionDigits: 1 })}</td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        </AccordionSection>
+      )}
 
       <AccordionSection title="Encounters" count={encounters.length} defaultOpen>
         <div className="space-y-4">
@@ -274,8 +356,8 @@ export default async function SessionDetailPage({ params }: Props) {
 
       {mobEntries.length > 0 && (
         <AccordionSection
-          title="Mob Damage - Full Session"
-          sub="Aggregate damage to every target across all pulls - click to drill down by player"
+          title="Mob Damage - Boss Pulls"
+          sub="Aggregate damage to every target inside detected pulls - click to drill down by player"
           count={mobEntries.length}
           defaultOpen={false}
         >

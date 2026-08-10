@@ -120,6 +120,27 @@ export const EncounterResultSchema = z.object({
 });
 export type EncounterResult = z.infer<typeof EncounterResultSchema>;
 
+export const SessionPlayerAnalyticsSchema = z.object({
+  totalDamage: z.number().default(0),
+  totalHealing: z.number().default(0),
+  totalAbsorbs: z.number().default(0),
+  heal: z.number().default(0),
+  damageTaken: z.number().default(0),
+});
+
+export const SessionAnalyticsSchema = z.object({
+  startedAt: z.string(),
+  endedAt: z.string(),
+  durationMs: z.number().int().nonnegative(),
+  totalDamage: z.number().default(0),
+  totalHealing: z.number().default(0),
+  totalAbsorbs: z.number().default(0),
+  heal: z.number().default(0),
+  totalDamageTaken: z.number().default(0),
+  unattributedAbsorbs: z.number().default(0),
+  players: z.record(z.string(), SessionPlayerAnalyticsSchema).default({}),
+});
+
 export const ParseResultSchema = z.object({
   filename:      z.string(),
   fileHash:      z.string(),
@@ -127,6 +148,7 @@ export const ParseResultSchema = z.object({
   encounters:    z.array(EncounterResultSchema),
   warnings:      z.array(z.string()).optional(),
   sessionDamage: z.record(z.string(), z.number()).optional().default({}),
+  sessionAnalytics: z.record(z.string(), SessionAnalyticsSchema).optional().default({}),
   uploadId:      z.string().uuid().optional(),
   uploadTimings: z.record(z.string(), z.number()).optional(),
 });

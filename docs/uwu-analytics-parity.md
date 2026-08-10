@@ -13,12 +13,13 @@ independently written implementations and does not copy UwU source code.
 
 | Analytical surface | Pizza Logs status | Contract |
 |---|---|---|
-| Damage, DPS, healing, HPS | Matched by explicit definition | Outgoing damage/effective healing retain Skada primitives; encounter scope and public report definitions follow the adopted UwU comparison contract. |
+| Full-session Custom Slice | Matched for new uploads | One first-to-last-event slice includes wipes, trash, and downtime. Total Damage, Heal, Damage Taken, and every per-player rate use the same duration. |
+| Damage, DPS, healing, HPS | Matched by explicit definition | Headline Total Damage uses the raw damage-event amount; effective healing uses gross minus overheal; Heal adds attributed absorbs. |
 | Per-spell breakdown | Matched | Damage/healing, hits, crits, and school are stored per participant. |
 | Damage by target / boss damage | Matched generically | Every target is stored; encounter UI highlights boss-only damage where applicable. |
-| Damage taken | Matched | Headline taken uses the raw reported incoming amount, while outgoing damage keeps the established effective/useful formula. |
+| Damage taken | Matched | Headline taken uses the raw reported incoming amount. |
 | Absorbs / APS / H+A | Implemented conservatively | Numeric absorbed damage stays separate from healing; reports also expose explicit healing + absorbs totals/rates. Active and just-removed shield evidence controls attribution and uncertainty is surfaced. |
-| Encounter boundaries | Matched | The pull ends at the last meaningful boss activity, preventing stale markers or post-fight trash from inflating duration and roster. |
+| Encounter boundaries | Matched | The pull end follows the last boss-destination event, preventing boss outgoing attacks, stale markers, or post-fight trash from inflating duration and roster. |
 | Pet ownership | Matched conservatively | Summons and owner-exclusive spells establish ownership; permanent pet creature IDs propagate only from that evidence. |
 | Spec and role | Implemented conservatively | WotLK spell signatures plus output/taken evidence; ties and weak evidence are not guessed. |
 | Aura uptime | Implemented | Application count, seconds, and encounter percentage per player/aura. |
@@ -35,7 +36,7 @@ independently written implementations and does not copy UwU source code.
 
 1. New analytical surfaces cannot silently change a metric definition; every adopted definition is frozen by regression coverage.
 2. Missing or conflicting evidence stays unknown/unattributed.
-3. Absorbs never inflate effective healing; the combined H+A metric is always labeled.
+3. Absorbs remain separate from effective healing; the UwU-style Heal column is explicitly defined as effective healing plus attributed absorbs.
 4. Boss-specific useful metrics are supplemental labels, never replacements for
    Skada-aligned totals.
 5. Parser changes require focused or fixture tests and the complete parser gate.
@@ -66,3 +67,7 @@ The original combat ZIP is not publicly downloadable from UwU. Synthetic
 fixtures therefore prove each repaired behavior independently. After this PR
 deploys, re-uploading Neil's original ZIP is the required real-log acceptance
 test; existing database rows are historical results and are not rewritten.
+
+The linked historical Pizza report will continue to show its stored legacy
+values. Re-uploading the source ZIP after deployment creates the new
+`sessionAnalytics` payload and is the only valid like-for-like acceptance run.

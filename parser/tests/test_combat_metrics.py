@@ -11,6 +11,7 @@ from combat_metrics import (
     extract_heal_fields,
     reported_damage_taken_amount,
     session_damage_amount,
+    useful_damage_amount,
 )
 
 
@@ -32,9 +33,10 @@ def test_extract_spell_damage_fields_and_formulas():
     assert fields.school == 4
     assert fields.is_crit is True
     assert fields.spell_name == "Fireball"
-    assert encounter_damage_amount(fields) == 650
+    assert encounter_damage_amount(fields) == 1000
+    assert useful_damage_amount(fields) == 650
     assert reported_damage_taken_amount(fields) == 1000
-    assert session_damage_amount(fields) == 1100
+    assert session_damage_amount(fields) == 1000
 
 
 def test_extract_swing_damage_uses_shifted_wotlk_indexes():

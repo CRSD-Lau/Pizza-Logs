@@ -74,6 +74,7 @@ model Upload {
   parsedAt       DateTime?
   rawLineCount   Int?
   sessionDamage  Json?        // { "0": 407718447.0, "1": 200402269.0, … } full-log dmg per session
+  sessionAnalytics Json?      // UwU-compatible full-slice totals, duration, and per-player metrics by session
   createdAt      DateTime     @default(now())
   updatedAt      DateTime     @updatedAt
 

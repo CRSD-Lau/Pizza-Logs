@@ -57,9 +57,9 @@ Do not break combat log parsing. Parser correctness is the product.
 - KILL duration uses boss death timestamp, not the last post-kill event.
 - Player GUIDs include Warmane `0x06` and retail `Player-`.
 - Gunship and heroic difficulty are Warmane edge cases. Do not change their handling without fixture validation and Skada/Warmane evidence.
-- Absorbs stay separate from effective healing. Reports may additionally show the explicit UwU-compatible `healing + absorbs` metric.
-- Damage taken uses the raw reported incoming amount; outgoing damage continues to use the established effective/useful formula.
-- Encounter windows end at the last meaningful boss activity, not a stale marker or unrelated post-fight trash.
+- Absorbs stay separate from effective healing in stored primitives. The UwU-compatible session `Heal` column is explicitly effective healing plus attributed absorbs.
+- Damage taken and headline outgoing Total Damage use the raw reported amount; useful/effective damage remains a separate analytical formula.
+- Encounter windows end at the last boss-destination event, not a boss outgoing attack, stale marker, or unrelated post-fight trash.
 - Pet ownership requires summon or owner-exclusive spell evidence; generic player-to-pet healing must never steal ownership.
 
 ## Setup Commands

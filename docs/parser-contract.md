@@ -123,8 +123,8 @@ parts[10] = amount
 parts[11] = overkill
 parts[15] = absorbed
 ```
-Stored encounter damage = `max(0, amount - overkill - absorbed)`.
-Full-session `sessionDamage` uses `amount + absorbed`.
+Headline encounter and full-session Total Damage = `max(0, amount)`.
+Useful/effective damage remains a separate formula: `max(0, amount - overkill - absorbed)`.
 
 **SWING_DAMAGE** (no spell fields — indices shift by 3):
 ```
@@ -132,8 +132,8 @@ parts[7] = amount
 parts[8] = overkill
 parts[12] = absorbed
 ```
-Stored encounter damage = `max(0, amount - overkill - absorbed)`.
-Full-session `sessionDamage` uses `amount + absorbed`.
+Headline encounter and full-session Total Damage = `max(0, amount)`.
+Useful/effective damage remains a separate formula: `max(0, amount - overkill - absorbed)`.
 
 ### Pull totals and target breakdowns
 
@@ -145,8 +145,18 @@ total.
 
 Damage taken intentionally uses the raw incoming `amount` field. It does not
 subtract overkill or absorbs because UwU's headline taken metric records the
-reported incoming amount. This definition is separate from outgoing stored
-damage, which continues to use the effective/useful formula above.
+reported incoming amount.
+
+### Full-session Custom Slice
+
+Each session persists one report grain from its first parsed log event to its
+last. It includes boss pulls, wipes, trash, between-pull events, and downtime.
+The stored `sessionAnalytics` object contains raw Total Damage, effective
+healing, attributed absorbs, combined Heal, raw Damage Taken, exact millisecond
+duration, and the same columns per player. Pets with evidence-based ownership
+are credited to their owner; unresolved non-player actors are excluded, as in
+UwU's `add_pets` report pass. Legacy `sessionDamage` remains as a compatibility
+alias for the session Total Damage value.
 
 ---
 
@@ -246,7 +256,7 @@ direct UwU report comparison; the combined view does not mutate stored healing.
    all damage/healing from that GUID is attributed to the owner.
 
 4. **Vehicles excluded**: GUIDs with prefix `0xF15*` (Gunship Cannons) are never
-   treated as pets. Vehicle damage is tracked separately in `sessionDamage`.
+   treated as pets. Vehicle damage is excluded from player/session totals.
 
 ---
 
@@ -283,7 +293,7 @@ A GUID is considered a player if it matches any of:
 | ENVIRONMENTAL_DAMAGE | Not registered by Skada for damage done |
 | SPELL_AURA_APPLIED/REFRESH/REMOVED | Analytical aura/absorb evidence only; never damage or healing |
 | SPELL_CAST_START/SUCCESS | Not damage or healing |
-| Vehicle damage (0xF15* src GUID) | Tracked in sessionDamage only, not per-player |
+| Vehicle damage (0xF15* src GUID) | Excluded from player/session totals |
 
 ---
 

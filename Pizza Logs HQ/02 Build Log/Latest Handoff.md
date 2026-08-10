@@ -31,9 +31,9 @@
 - Production is broadly functional; the audit found and locally fixed a timezone-dependent React hydration error on leaderboard rows.
 - The platform upgrade candidate now uses Node 24, Next.js 16.3, React 19.2, Prisma 7.9, Tailwind 4.3, Recharts 3.10, Zod 4.4, Dropzone 20.1, and current compatible supporting dependencies. `npm audit` is zero.
 - TypeScript 7.0 is the explicit native type-checker; TypeScript 6 supplies the JavaScript API still consumed by Next.js and ESLint. Both gates pass.
-- Parser analytical output is frozen by exact fixture hashes. Skada damage/healing totals remain unchanged while separate absorbs/APS, spec/role, aura uptime, consumables, power gains, and death context are now persisted and displayed.
-- The linked Lausudo UwU report is now a separate five-pull acceptance baseline. Parser repairs bound pulls to meaningful boss activity, include all matched targets in encounter totals, use raw incoming damage for headline taken, require defensible pet-owner evidence, and improve consumed-shield/Divine Aegis attribution.
-- Encounter reports now show effective healing, absorbs, and an explicitly labeled UwU-compatible healing + absorbs total/rate. Session cards distinguish matched encounter damage from full-log damage so trash is no longer presented as boss output.
+- Parser analytical output is frozen by exact fixture hashes. Headline damage now follows UwU's raw damage-event amount while useful/effective damage remains a separate primitive; absorbs/APS, spec/role, aura uptime, consumables, power gains, and death context remain persisted and displayed.
+- The linked Lausudo UwU report is now a separate five-pull acceptance baseline. Parser repairs bound pull ends to boss-destination events, includes all matched targets in encounter totals, uses raw incoming damage for headline taken, requires defensible pet-owner evidence, and improves consumed-shield/Divine Aegis attribution.
+- New uploads persist an UwU-compatible whole-session Custom Slice from the first to last log event. Session cards and the per-player table use one shared duration for raw Total Damage, effective healing plus attributed absorbs, and raw Damage Taken; wipes, trash, and downtime remain included.
 - Admin diagnostics include Railway deployment identity, and a Node 24 production smoke workflow runs after successful production deployments plus weekly.
 - PR #29 initially produced Railway 502 responses because the Prisma 7 runtime
   image omitted `prisma.config.ts`; the final image could not resolve
@@ -426,10 +426,17 @@
   all 293 parser tests. A local production-mode browser walkthrough passed for
   `/raids`, `/leaderboards`, and `/guild-roster`; the local database contains no
   copy of the linked historical report.
+- The follow-up whole-slice repair passes all 295 parser tests and all 37 web
+  tests. A localhost raw upload persisted `sessionAnalytics`, rendered the
+  Custom Slice table and exact `0:00:29.100` duration without runtime errors,
+  and the exact temporary upload and browser artifacts were removed afterward.
+- Production migration risk is additive and low: one nullable
+  `uploads.sessionAnalytics JSONB` column. Existing reports are untouched and
+  continue to use the legacy fallback until their source log is re-uploaded.
 
 ## Exact Next Step
 
-Review and merge the new `codex-dev` UwU parity PR into `main` when ready.
+Review and merge the new `codex-dev` whole-session UwU parity PR into `main` when ready.
 Railway will deploy the merged parser and web app. Confirm the commit in
 protected Admin diagnostics, check the Production Smoke workflow, then
 re-upload the original combat ZIP and compare the five pulls with

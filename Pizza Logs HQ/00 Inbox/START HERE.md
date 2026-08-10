@@ -39,7 +39,9 @@ Browser upload -> one UUID-keyed raw request to `POST /api/upload` -> Next.js fo
 
 ## Parser Rules That Matter
 
-Parser correctness is the product. Match Skada-WoTLK, not uwu-logs.
+Parser correctness is the product. Preserve Skada-WoTLK combat primitives and
+match the adopted UwU public report definitions documented in
+`docs/uwu-analytics-parity.md`; do not copy undocumented behavior blindly.
 
 - Warmane logs often lack reliable `ENCOUNTER_START` / `ENCOUNTER_END`, so heuristic boss detection remains required.
 - If encounter markers exist, the parser can use them, but heroic correction still checks Warmane-specific evidence.
@@ -47,10 +49,11 @@ Parser correctness is the product. Match Skada-WoTLK, not uwu-logs.
 - Heal events: `SPELL_HEAL`, `SPELL_PERIODIC_HEAL`.
 - `SPELL_HEAL`: `parts[10]` gross, `parts[11]` overheal, `parts[12]` absorbed, `parts[13]` crit.
 - Effective healing is `max(0, parts[10] - parts[11])`.
+- Headline Total Damage uses the raw damage-event `amount`; useful/effective damage remains separate.
 - `SWING_DAMAGE` has shifted indexes: amount at `parts[7]`, overkill at `parts[8]`, absorbed at `parts[12]`, crit at `parts[13]`.
 - KILL duration uses boss death timestamp, not the last post-kill event.
 - Gunship kill handling uses Warmane crew-death evidence.
-- Absorbs are separate in Skada and are not implemented as healing.
+- Absorbs stay separate from effective healing; the UwU-style session Heal column explicitly adds attributed absorbs.
 
 Formal details: `docs/parser-contract.md`.
 

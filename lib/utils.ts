@@ -33,9 +33,19 @@ export function formatBytes(bytes: number): string {
 }
 
 export function formatDuration(seconds: number): string {
-  const m = Math.floor(seconds / 60);
-  const s = seconds % 60;
+  const wholeSeconds = Math.max(0, Math.floor(seconds));
+  const m = Math.floor(wholeSeconds / 60);
+  const s = wholeSeconds % 60;
   return `${m}:${String(s).padStart(2, "0")}`;
+}
+
+export function formatDurationPrecise(milliseconds: number): string {
+  const totalMilliseconds = Math.max(0, Math.round(milliseconds));
+  const hours = Math.floor(totalMilliseconds / 3_600_000);
+  const minutes = Math.floor((totalMilliseconds % 3_600_000) / 60_000);
+  const seconds = Math.floor((totalMilliseconds % 60_000) / 1_000);
+  const millis = totalMilliseconds % 1_000;
+  return `${hours}:${String(minutes).padStart(2, "0")}:${String(seconds).padStart(2, "0")}.${String(millis).padStart(3, "0")}`;
 }
 
 export function formatShortDateUtc(value: string | Date): string {

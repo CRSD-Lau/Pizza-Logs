@@ -347,6 +347,23 @@ class ParsedEncounter:
     ))
 
 
+@dataclass
+class SessionAccumulator:
+    first_ts_str: str = ""
+    last_ts_str: str = ""
+    first_abs_ts: Optional[float] = None
+    last_abs_ts: Optional[float] = None
+    names: dict[str, str] = field(default_factory=dict)
+    damage: dict[str, float] = field(default_factory=dict)
+    healing: dict[str, float] = field(default_factory=dict)
+    absorbs: dict[str, float] = field(default_factory=dict)
+    damage_taken: dict[str, float] = field(default_factory=dict)
+    unattributed_absorbs: float = 0.0
+    active_absorb_auras: dict[str, dict[str, tuple[float, str, str]]] = field(default_factory=dict)
+    recently_removed_absorb_auras: dict[str, dict[str, tuple[float, str, str]]] = field(default_factory=dict)
+    discipline_guids: set[str] = field(default_factory=set)
+
+
 # ── CSV line splitter ──────────────────────────────────────────────
 
 def csv_split(s: str) -> list[str]:
@@ -387,6 +404,19 @@ def _pet_flags(flags: str) -> bool:
     except (TypeError, ValueError):
         return False
     return bool(value & 0x0100) and bool(value & 0x3000)
+
+
+def _is_player_or_controlled_unit(guid: str, flags: str) -> bool:
+    if _is_player(guid):
+        return True
+    if guid.upper().startswith("0XF15"):
+        return False
+    return _pet_flags(flags)
+
+
+def _add_metric(values: dict[str, float], guid: str, amount: float) -> None:
+    if amount > 0:
+        values[guid] = values.get(guid, 0.0) + amount
 
 
 def _owner_evidence_from_event(parts: list[str]) -> Optional[tuple[str, str, str]]:
@@ -438,6 +468,7 @@ class CombatLogParser:
         self.raw_count    = 0
         self.warnings: list[str] = []
         self.session_damage: dict[int, float] = {}
+        self.session_analytics: dict[int, dict] = {}
         self.skipped_line_count = 0
         self.skipped_line_reasons: dict[str, int] = {}
         # Cache boss name set once — this is hit millions of times during segmentation
@@ -514,6 +545,189 @@ class CombatLogParser:
             enc.session_index = session_idx
             prev_end_dt = end_dt
 
+    @staticmethod
+    def _accumulate_session_event(
+        session: SessionAccumulator,
+        ts_str: str,
+        parts: list[str],
+        abs_ts: float,
+    ) -> None:
+        """Accumulate the same whole-slice columns rendered by UwU's root report."""
+        if session.first_abs_ts is None:
+            session.first_abs_ts = abs_ts
+            session.first_ts_str = ts_str
+        session.last_abs_ts = abs_ts
+        session.last_ts_str = ts_str
+
+        event = parts[0]
+        src_guid = parts[1] if len(parts) > 1 else ""
+        src_name = parts[2].strip('"').strip() if len(parts) > 2 else ""
+        src_flags = parts[3] if len(parts) > 3 else "0"
+        dst_guid = parts[4] if len(parts) > 4 else ""
+        dst_name = parts[5].strip('"').strip() if len(parts) > 5 else ""
+        dst_flags = parts[6] if len(parts) > 6 else "0"
+        if src_guid and src_name:
+            session.names[src_guid] = src_name
+        if dst_guid and dst_name:
+            session.names[dst_guid] = dst_name
+
+        src_is_player_unit = _is_player_or_controlled_unit(src_guid, src_flags)
+        dst_is_player_unit = _is_player_or_controlled_unit(dst_guid, dst_flags)
+        spell_name = parts[8].strip('"').strip() if len(parts) > 8 else ""
+
+        if event in AURA_APPLY_EVENTS | AURA_REMOVE_EVENTS and len(parts) > 9:
+            if event in AURA_APPLY_EVENTS:
+                if spell_name in ABSORB_AURA_NAMES and dst_is_player_unit:
+                    session.active_absorb_auras.setdefault(dst_guid, {})[spell_name] = (
+                        abs_ts,
+                        src_guid,
+                        src_name,
+                    )
+                    session.recently_removed_absorb_auras.get(dst_guid, {}).pop(spell_name, None)
+            else:
+                removed = session.active_absorb_auras.get(dst_guid, {}).pop(spell_name, None)
+                if removed is not None:
+                    session.recently_removed_absorb_auras.setdefault(dst_guid, {})[spell_name] = (
+                        abs_ts,
+                        removed[1],
+                        removed[2],
+                    )
+            if _is_player(src_guid) and spell_name in {
+                "Power Word: Shield", "Divine Aegis", "Penance",
+            }:
+                session.discipline_guids.add(src_guid)
+            return
+
+        if event in HEAL_EVENTS:
+            fields = extract_heal_fields(parts)
+            if fields is None:
+                return
+            if src_is_player_unit:
+                _add_metric(session.healing, src_guid, fields.effective)
+            if spell_name == "Penance":
+                session.discipline_guids.add(src_guid)
+            if fields.is_crit and src_guid in session.discipline_guids and dst_is_player_unit:
+                session.active_absorb_auras.setdefault(dst_guid, {})["Divine Aegis"] = (
+                    abs_ts,
+                    src_guid,
+                    src_name,
+                )
+            return
+
+        if event not in DMG_EVENTS:
+            return
+        fields = extract_damage_fields(parts)
+        if fields is None:
+            return
+
+        if src_is_player_unit and not dst_is_player_unit:
+            _add_metric(session.damage, src_guid, session_damage_amount(fields))
+
+        if not dst_is_player_unit:
+            return
+        _add_metric(session.damage_taken, dst_guid, reported_damage_taken_amount(fields))
+        if fields.absorbed <= 0:
+            return
+
+        recent = {
+            shield_name: shield
+            for shield_name, shield in session.recently_removed_absorb_auras.get(dst_guid, {}).items()
+            if abs_ts - shield[0] <= 0.5
+        }
+        session.recently_removed_absorb_auras[dst_guid] = recent
+        candidates = [
+            (applied_ts, shield_name, shield_src_guid, shield_src_name)
+            for shield_name, (applied_ts, shield_src_guid, shield_src_name)
+            in (session.active_absorb_auras.get(dst_guid, {}) | recent).items()
+        ]
+        if not candidates:
+            session.unattributed_absorbs += fields.absorbed
+            return
+        _, shield_name, shield_src_guid, _ = max(candidates)
+        _add_metric(session.absorbs, shield_src_guid, fields.absorbed)
+        session.recently_removed_absorb_auras.get(dst_guid, {}).pop(shield_name, None)
+
+    def _finalize_session_analytics(
+        self,
+        sessions: dict[int, SessionAccumulator],
+        pet_owner: dict[str, tuple[str, str]],
+    ) -> None:
+        owners_by_unit_id: dict[str, tuple[str, str]] = {}
+        for pet_guid, owner in pet_owner.items():
+            if _is_permanent_pet_guid(pet_guid):
+                unit_id = _pet_unit_id(pet_guid)
+                if unit_id:
+                    owners_by_unit_id.setdefault(unit_id, owner)
+
+        def resolve_player(
+            guid: str,
+            names: dict[str, str],
+        ) -> Optional[tuple[str, str]]:
+            if _is_player(guid):
+                return guid, names.get(guid, "Unknown")
+            owner = pet_owner.get(guid)
+            if owner is None and _is_permanent_pet_guid(guid):
+                owner = owners_by_unit_id.get(_pet_unit_id(guid))
+            if owner is None or not _is_player(owner[0]):
+                return None
+            return owner[0], owner[1]
+
+        finalized: dict[int, dict] = {}
+        for session_index, raw in sessions.items():
+            players_by_guid: dict[str, dict] = {}
+            unresolved_absorbs = 0.0
+
+            def merge_metric(values: dict[str, float], key: str) -> None:
+                nonlocal unresolved_absorbs
+                for guid, value in values.items():
+                    resolved = resolve_player(guid, raw.names)
+                    if resolved is None:
+                        if key == "totalAbsorbs":
+                            unresolved_absorbs += value
+                        continue
+                    player_guid, player_name = resolved
+                    row = players_by_guid.setdefault(player_guid, {
+                        "name": player_name,
+                        "totalDamage": 0.0,
+                        "totalHealing": 0.0,
+                        "totalAbsorbs": 0.0,
+                        "heal": 0.0,
+                        "damageTaken": 0.0,
+                    })
+                    row[key] += value
+
+            merge_metric(raw.damage, "totalDamage")
+            merge_metric(raw.healing, "totalHealing")
+            merge_metric(raw.absorbs, "totalAbsorbs")
+            merge_metric(raw.damage_taken, "damageTaken")
+            for row in players_by_guid.values():
+                row["heal"] = row["totalHealing"] + row["totalAbsorbs"]
+
+            first_abs = raw.first_abs_ts or 0.0
+            last_abs = raw.last_abs_ts if raw.last_abs_ts is not None else first_abs
+            players = {
+                row["name"]: row
+                for row in sorted(players_by_guid.values(), key=lambda value: value["name"].lower())
+            }
+            finalized[session_index] = {
+                "startedAt": parse_ts_to_iso(raw.first_ts_str, self.file_year),
+                "endedAt": parse_ts_to_iso(raw.last_ts_str, self.file_year),
+                "durationMs": max(0, round((last_abs - first_abs) * 1000)),
+                "totalDamage": sum(row["totalDamage"] for row in players.values()),
+                "totalHealing": sum(row["totalHealing"] for row in players.values()),
+                "totalAbsorbs": sum(row["totalAbsorbs"] for row in players.values()),
+                "heal": sum(row["heal"] for row in players.values()),
+                "totalDamageTaken": sum(row["damageTaken"] for row in players.values()),
+                "unattributedAbsorbs": raw.unattributed_absorbs + unresolved_absorbs,
+                "players": players,
+            }
+
+        self.session_analytics = finalized
+        self.session_damage = {
+            session_index: data["totalDamage"]
+            for session_index, data in finalized.items()
+        }
+
     # ── Internal: line iteration ─────────────────────────────────
 
     def _iter_lines(
@@ -584,12 +798,13 @@ class CombatLogParser:
         heuristic_segment: list[tuple[str, list[str], float]] = []
         all_buffer: list[tuple[str, list[str], float]] = []  # rolling buffer of recent events
 
-        # ── Full-session damage accumulator ──────────────────────
-        # Counts ALL player/pet damage (boss + trash) to match UWU "Custom Slice".
+        # ── Full-session Custom Slice accumulator ────────────────
+        # Counts every event from the first line to the last line in a raid
+        # session. This is the data grain used by UwU's default report.
         # Session boundaries use the same 3600s gap as _assign_session_indices.
         # Midnight rollover: when ts jumps backward >12 h we add a day offset so
         # the absolute timestamp increases monotonically.
-        _full_dmg: dict[int, float] = {}
+        _session_accumulators: dict[int, SessionAccumulator] = {}
         _full_session_idx: int = 0
         _last_local_ts: float = 0.0
         _day_offset: float = 0.0
@@ -607,48 +822,11 @@ class CombatLogParser:
                 _full_session_idx += 1
             _last_local_ts = ts
             _last_abs_ts   = abs_ts
-
-            # ── Accumulate full-session player/pet damage ─────────
-            # Includes DAMAGE_SHIELD (Retribution Aura, thorns) in addition to
-            # DMG_EVENTS — these are excluded from per-boss DPS but UWU counts
-            # them in the full Custom Slice total.
-            #
-            # Uses amount + absorbed - overkill to match UWU / WarcraftLogs
-            # "damage done" convention.  When a boss has a shield (Lady
-            # Deathwhisper mana barrier, Saurfang Blood Barrier) part of each
-            # hit is absorbed: the log records the HP-lost portion in `amount`
-            # and the shield-absorbed portion in `absorbed`.  WCL/UWU count
-            # both as player output.
-            #
-            # Field offsets:
-            #   SWING_DAMAGE (14 fields): [7]=amount  [8]=overkill  [12]=absorbed
-            #   All spell events  (18 f): [10]=amount [11]=overkill [15]=absorbed
-            if event in DMG_EVENTS and len(parts) >= 5:
-                src_guid  = parts[1]
-                dst_guid  = parts[4]
-                src_flags = parts[3] if len(parts) > 3 else "0"
-                is_player = _is_player(src_guid)
-                is_pet    = False
-                if not is_player:
-                    # Exclude vehicle GUIDs (0xF150* = Gunship Cannons).  They have
-                    # TYPE_PET|CONTROL_PLAYER flags and pass the is_pet check, but
-                    # UWU treats them as vehicle mechanics, not player damage.
-                    if not src_guid.upper().startswith("0XF15"):
-                        try:
-                            flags = int(src_flags, 16)
-                            # Accept TYPE_PET (0x1000) or TYPE_GUARDIAN (0x2000) when
-                            # CONTROL_PLAYER (0x0100) is also set.  This covers:
-                            #   • Regular pets (Hunter, Warlock, DK ghoul, Shadowfiend)
-                            #   • Guardians (Mirror Images, Force of Nature Treants,
-                            #     Army of the Dead ghouls, Shaman elementals/totems)
-                            is_pet = bool(flags & 0x0100) and bool(flags & 0x3000)
-                        except (ValueError, TypeError):
-                            pass
-                if (is_player or is_pet) and not _is_player(dst_guid):
-                    fields = extract_damage_fields(parts)
-                    if fields:
-                        eff = session_damage_amount(fields)
-                        _full_dmg[_full_session_idx] = _full_dmg.get(_full_session_idx, 0.0) + eff
+            session_accumulator = _session_accumulators.setdefault(
+                _full_session_idx,
+                SessionAccumulator(),
+            )
+            self._accumulate_session_event(session_accumulator, ts_str, parts, abs_ts)
 
             # ── SPELL_SUMMON: build pet→owner map (global, outside segments) ──
             if event == "SPELL_SUMMON" and len(parts) >= 5:
@@ -733,7 +911,7 @@ class CombatLogParser:
             if heuristic_segment and len(heuristic_segment) >= MIN_ENCOUNTER_EVENTS:
                 emit(heuristic_segment)
 
-        self.session_damage = _full_dmg
+        self._finalize_session_analytics(_session_accumulators, pet_owner)
         return segments, pet_owner
 
     def _is_boss_event(self, parts: list[str]) -> bool:
@@ -832,11 +1010,11 @@ class CombatLogParser:
         boss_def = (lookup_boss_by_id(boss_id) if boss_id else None) or lookup_boss(boss_name)
         canonical_boss_name = boss_def.name if boss_def else boss_name
 
-        # ENCOUNTER_END is not a reliable combat boundary on Warmane. It can be
-        # emitted seconds or hours after the last boss interaction. Match UwU's
-        # slice model by retaining every event between the first and last
-        # meaningful boss interaction, while still using ENCOUNTER_END solely
-        # for the outcome metadata captured above.
+        # UwU constructs pull slices from events whose destination is the boss
+        # (or a multi-boss alias), then includes every intervening log line.
+        # ENCOUNTER markers remain metadata only because Warmane can emit them
+        # before the first hit or long after the final boss-target event.
+        detection_segment = segment
         boss_names = {canonical_boss_name.lower()}
         if boss_def:
             boss_names.update(alias.lower() for alias in boss_def.aliases)
@@ -848,11 +1026,13 @@ class CombatLogParser:
                 continue
             if len(activity_parts) < 6:
                 continue
-            src_name = activity_parts[2].strip('"').strip().lower()
             dst_name = activity_parts[5].strip('"').strip().lower()
-            if src_name in boss_names or dst_name in boss_names:
+            if dst_name in boss_names:
                 activity_indexes.append(index)
         if activity_indexes:
+            # Retain the explicit start when available so pre-pull auras and
+            # ownership evidence inside the marker are not discarded. UwU's
+            # destination-only rule still determines the unreliable end.
             window_start = 0 if has_explicit_start else activity_indexes[0]
             segment = segment[window_start:activity_indexes[-1] + 1]
             first_ts_str = segment[0][0]
@@ -860,7 +1040,7 @@ class CombatLogParser:
 
         detection = detect_difficulty(
             canonical_boss_name,
-            segment,
+            detection_segment,
             encounter_mode=encounter_mode,
             encounter_group_size=(
                 group_size
@@ -901,8 +1081,8 @@ class CombatLogParser:
         boss_alias_set  = {a.lower() for a in boss_def.aliases} if boss_def else set()
 
         # Pre-pass A: discover boss GUIDs from damage/death events where the target
-        # name matches the boss. Used later to exclude add damage from per-encounter
-        # totals (e.g. Lady Deathwhisper Adherents/Fanatics, BPC Kinetic Bombs).
+        # name matches the boss. Retained for debug evidence and boss-target
+        # breakdowns; headline Total Damage includes every target inside the slice.
         boss_guids: set[str] = set()
         for _, _bp, _ in segment:
             ev = _bp[0]
