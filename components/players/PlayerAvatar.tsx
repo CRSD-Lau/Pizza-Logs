@@ -43,7 +43,7 @@ export function PlayerAvatar({
     <div
       aria-label={`${name} avatar`}
       className={cn(
-        "rounded-sm flex-shrink-0 flex items-center justify-center overflow-hidden font-bold",
+        "rounded-xs shrink-0 flex items-center justify-center overflow-hidden font-bold",
         SIZE_CLASSES[size],
         className,
       )}

@@ -130,7 +130,7 @@ export default async function RaidsPage() {
                     className={getRevealClassName({
                       boss: true,
                       className:
-                        "block bg-bg-panel border border-gold-dim rounded p-4 hover:border-gold/50 transition-colors group",
+                        "block bg-bg-panel border border-gold-dim rounded-sm p-4 hover:border-gold/50 transition-colors group",
                     })}
                     style={getRevealStyle(index)}
                   >
@@ -181,7 +181,7 @@ function Metric({
   valueClassName: string;
 }) {
   return (
-    <div className="rounded border border-gold-dim bg-bg-card px-3 py-2 text-center min-w-[74px]">
+    <div className="rounded-sm border border-gold-dim bg-bg-card px-3 py-2 text-center min-w-[74px]">
       <div className={`font-bold tabular-nums ${valueClassName}`}>{value}</div>
       <div className="text-[10px] text-text-dim uppercase tracking-wide">{label}</div>
     </div>

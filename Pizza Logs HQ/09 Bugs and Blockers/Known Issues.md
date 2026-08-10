@@ -12,12 +12,13 @@ the UTC date fix is merged and deployed.
 |---|---|---|
 | Upload concurrency limits are process-local | Multiple Railway parser replicas do not share one global queue/rate limit | Keep bounded per-process quick/full pools; add a shared limiter only if production scaling requires it |
 | Archive upload supports ZIP, not 7z/RAR/tar | Users must create a ZIP or upload the raw text/log | Add another format only with equivalent streaming and security validation |
-| Absorbs are not implemented | Disc priest contribution can be lower than Skada combined healing+absorbs views | Future parser work based on Skada `Absorbs.lua`; keep separate from healing done |
-| Role detection is rough | Hybrids/self-healing classes can be mislabeled; tanks are not inferred | Replace upload-time heal/damage ratio with better class/spec/combat evidence |
+| Absorb attribution is conservative | Fully absorbed missed events without numeric amounts remain unmeasurable; overlapping shields can be ambiguous | Keep absorbs separate from healing, mark multi-shield hits ambiguous, and retain unattributed totals instead of guessing |
+| Spec/role evidence can be absent | Short pulls or unobserved signature spells can leave a spec unset or role conservative | Use observed spell, healing, output, and damage-taken evidence; never force a spec from weak evidence |
+| UwU boss-specific useful/mechanic reports are not universal | Generic target damage exists, but Valkyr grabs, Defile targets, and opinionated boss-specific useful formulas are not all first-class reports | Add one boss rule at a time with Warmane fixtures and keep it supplemental to Skada totals |
 | Warmane direct server fetches can fail with Cloudflare/403 | Gear/roster refreshes are unreliable from Railway or plain CLI requests | Supported path is browser-assisted userscripts running in existing Warmane tabs and cached DB snapshots |
 | Hodir Hard Mode and Sartharion drake modes are unsupported | Those attempts cannot be ranked by an auditable mode | Return `UNKNOWN` until explicit evidence rules exist |
 | Orphaned pets can remain unmatched | Small DPS mismatches when pets were active before log start | Keep Skada-aligned owner remap when summon evidence exists |
-| Four transitive production dependency advisories remain after the Next.js 15.5.23 backport | `npm audit --omit=dev` remains non-zero for `nanoid`, Next.js bundled PostCSS, PostCSS, and Sharp | Keep the direct Next.js 15 security fixes in this release; isolate a Next.js 16.3 migration or take a later 15.x backport |
+| Migration history began after the original schema was created by `db push` | A brand-new empty database is not reconstructable from migrations alone | Existing production is supported by `start.sh` migration baselining; create and rehearse a greenfield baseline before provisioning a replacement database |
 
 ## Resolved Reference
 
@@ -67,6 +68,12 @@ the UTC date fix is merged and deployed.
 | Upload had no archive security or early classification | Added one-request UUID streaming, incremental SHA-256, atomic finalization, ZIP safety limits, quick results, bounded full workers, timeouts, and abandoned-file cleanup |
 | Leaderboard and boss pages emitted React hydration error #418 | Leaderboard short dates now use an explicit UTC timezone on the server and browser |
 | Next.js 15.5.15 had direct middleware/server-action security advisories | Pinned Next.js and `eslint-config-next` to the current 15.x backport, 15.5.23 |
+| Next.js 15/transitive production advisories remained | Upgraded Next.js to 16.3 with React 19.2 and reached `npm audit` zero |
+| Absorbs were missing | Added separate total absorbs/APS, shield breakdown, ambiguous-hit labeling, and encounter unattributed totals without changing healing |
+| Upload-time role inference could not identify tanks | Added observed WotLK spec signatures plus healing/damage-taken role evidence; uncertain cases remain conservative |
+| Analytics lacked aura, consumable, power, and death context | Added per-player aura uptime, curated consumables, energize gains, and death timelines with preceding incoming damage |
+| New compiler transforms broke serialized browser userscripts in tests | Added a self-contained function serializer and full VM execution coverage; generated scripts no longer depend on module-scoped compiler helpers |
+| Fresh CI checkout type-checks saw Prisma query results as `any` | CI now runs `npm run db:generate` before lint and both TypeScript gates |
 
 ## Not Bugs
 

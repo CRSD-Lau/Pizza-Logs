@@ -26,7 +26,7 @@ export function ClearDatabaseButton() {
     return (
       <button
         onClick={() => setPhase("confirm")}
-        className="px-4 py-2 text-sm border border-danger/40 text-danger/80 hover:border-danger hover:text-danger rounded transition-colors"
+        className="px-4 py-2 text-sm border border-danger/40 text-danger/80 hover:border-danger hover:text-danger rounded-sm transition-colors"
       >
         Clear Upload Data
       </button>
@@ -42,7 +42,7 @@ export function ClearDatabaseButton() {
         </span>
         <button
           onClick={handleConfirm}
-          className="px-3 py-1.5 text-sm border border-danger text-danger hover:bg-danger/10 rounded transition-colors"
+          className="px-3 py-1.5 text-sm border border-danger text-danger hover:bg-danger/10 rounded-sm transition-colors"
         >
           Yes, clear uploads
         </button>

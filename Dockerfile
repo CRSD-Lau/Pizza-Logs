@@ -1,10 +1,16 @@
-FROM node:22-alpine AS base
+FROM node:24-alpine AS base
 
 # ── deps ──────────────────────────────────────────────────────────
 FROM base AS deps
 WORKDIR /app
 COPY package.json package-lock.json* ./
 RUN npm ci --legacy-peer-deps
+
+# ── production dependencies (Prisma CLI runs migrations at startup) ──
+FROM base AS prod-deps
+WORKDIR /app
+COPY package.json package-lock.json* ./
+RUN npm ci --omit=dev --legacy-peer-deps --ignore-scripts
 
 # ── builder ───────────────────────────────────────────────────────
 FROM base AS builder
@@ -13,6 +19,9 @@ COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 RUN npx prisma generate
 ENV NEXT_TELEMETRY_DISABLED=1
+# Next imports the Prisma client while collecting route metadata. This non-secret
+# build-only URL creates the adapter without opening a database connection.
+ENV DATABASE_URL=postgresql://pizzalogs-build-only:invalid@localhost:5432/pizzalogs
 RUN mkdir -p /app/public
 RUN npm run build
 
@@ -31,12 +40,9 @@ COPY --from=builder /app/public ./public
 COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
 COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
 COPY --from=builder /app/prisma ./prisma
-# Copy prisma CLI source + engines for startup db push.
-# Must be chown'd so the nextjs user can write engine binaries at runtime.
-# Also copy .prisma (generated client artifacts from prisma generate).
-COPY --from=builder --chown=nextjs:nodejs /app/node_modules/prisma   ./node_modules/prisma
-COPY --from=builder --chown=nextjs:nodejs /app/node_modules/@prisma  ./node_modules/@prisma
-COPY --from=builder --chown=nextjs:nodejs /app/node_modules/.prisma  ./node_modules/.prisma
+# Prisma 7's CLI is ESM and has production dependencies beyond @prisma/*.
+# Copy the complete production dependency tree so migrate deploy is reliable.
+COPY --from=prod-deps --chown=nextjs:nodejs /app/node_modules ./node_modules
 
 COPY start.sh ./start.sh
 RUN chmod +x ./start.sh

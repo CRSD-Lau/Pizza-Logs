@@ -35,6 +35,7 @@ Pizza Logs HQ/.obsidian/workspace.json
 
 # prisma
 # Keep schema migrations versioned alongside Prisma model changes.
+/generated/prisma/
 !prisma/migrations/
 !prisma/migrations/**
 

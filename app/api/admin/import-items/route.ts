@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { Readable } from "node:stream";
 import { createInterface } from "node:readline";
-import { Prisma, PrismaClient } from "@prisma/client";
+import { Prisma, type PrismaClient } from "@/generated/prisma/client";
+import { createPrismaClient } from "@/lib/prisma-client";
 import { parseSqlTuple, QUALITY_MAP, INVENTORY_TYPE_MAP, buildStatsFromTemplate } from "@/lib/item-template";
 import { verifyAdminSecretValue } from "@/lib/admin-auth";
 
@@ -134,7 +135,7 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
   const secret = req.nextUrl.searchParams.get("secret");
   if (!verifyAdmin(secret)) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-  const db = new PrismaClient();
+  const db = createPrismaClient();
   try {
     // Check specific item IDs if provided, else show summary
     const ids = req.nextUrl.searchParams.get("ids")?.split(",").map(s => s.trim()).filter(Boolean) ?? [];
@@ -188,7 +189,7 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const db = new PrismaClient();
+  const db = createPrismaClient();
   try {
     const res = await fetch(ITEM_TEMPLATE_URL, {
       headers: { "User-Agent": "PizzaLogsImporter/1.0" },

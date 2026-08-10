@@ -26,7 +26,7 @@ export function Badge({ variant = "gold", className, ...props }: BadgeProps) {
   return (
     <span
       className={cn(
-        "inline-block text-[10px] font-bold px-1.5 py-0.5 rounded-sm border tracking-wide uppercase",
+        "inline-block text-[10px] font-bold px-1.5 py-0.5 rounded-xs border tracking-wide uppercase",
         VARIANT_STYLES[variant],
         className
       )}

@@ -55,11 +55,66 @@ export default async function EncounterPage({ params }: Props) {
 
   const dpsParts = participantsWithBossDmg.filter(p => p.dps > 0);
   const healParts = participantsWithBossDmg.filter(p => p.role === "HEALER" && p.hps > 0);
+  const absorbParts = participantsWithBossDmg.filter(p => p.aps > 0);
   const durationSec = (encounter.durationMs ?? 0) > 0
     ? encounter.durationMs / 1000
     : Math.max(1, encounter.durationSeconds);
   const totalDps = Math.round(encounter.totalDamage / durationSec);
   const totalHps = Math.round(encounter.totalHealing / durationSec);
+  const totalAps = Math.round(encounter.totalAbsorbs / durationSec);
+
+  const auraRows = encounter.participants.flatMap((participant) => {
+    const breakdown = (participant.auraBreakdown ?? {}) as Record<string, {
+      uptimeSeconds: number;
+      uptimePct: number;
+      applications: number;
+    }>;
+    const consumables = (participant.consumableBreakdown ?? {}) as Record<string, unknown>;
+    return Object.entries(breakdown).filter(([aura]) => !(aura in consumables)).map(([aura, stats]) => ({
+      player: participant.player.name,
+      aura,
+      ...stats,
+    }));
+  }).sort((a, b) => b.uptimePct - a.uptimePct || b.uptimeSeconds - a.uptimeSeconds);
+
+  const powerRows = encounter.participants.flatMap((participant) => {
+    const breakdown = (participant.powerBreakdown ?? {}) as Record<string, {
+      amount: number;
+      events: number;
+      powerType: number;
+    }>;
+    return Object.entries(breakdown).map(([spell, stats]) => ({
+      player: participant.player.name,
+      spell,
+      ...stats,
+    }));
+  }).sort((a, b) => b.amount - a.amount);
+
+  const consumableRows = encounter.participants.flatMap((participant) => {
+    const breakdown = (participant.consumableBreakdown ?? {}) as Record<string, {
+      uptimeSeconds: number;
+      uptimePct: number;
+      applications: number;
+    }>;
+    return Object.entries(breakdown).map(([consumable, stats]) => ({
+      player: participant.player.name,
+      consumable,
+      ...stats,
+    }));
+  }).sort((a, b) => a.player.localeCompare(b.player) || a.consumable.localeCompare(b.consumable));
+
+  const deathRows = encounter.participants.flatMap((participant) => {
+    const events = (participant.deathEvents ?? []) as Array<{
+      offsetSeconds: number;
+      recentDamage: Array<{
+        secondsBeforeDeath: number;
+        source: string;
+        spell: string;
+        amount: number;
+      }>;
+    }>;
+    return events.map((event) => ({ player: participant.player.name, ...event }));
+  }).sort((a, b) => a.offsetSeconds - b.offsetSeconds);
 
   const mobMap = new Map<string, {
     totalDamage: number;
@@ -145,11 +200,13 @@ export default async function EncounterPage({ params }: Props) {
         </div>
       </div>
 
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
         <StatCard label="Duration" value={formatDuration(encounter.durationSeconds)} highlight />
         <StatCard label="Total Damage" value={formatNumber(encounter.totalDamage)} />
         <StatCard label="Raid DPS" value={totalDps.toLocaleString()} sub="per second" />
+        <StatCard label="Total Healing" value={formatNumber(encounter.totalHealing)} />
         <StatCard label="Raid HPS" value={totalHps.toLocaleString()} sub="per second" />
+        <StatCard label="Absorbs" value={formatNumber(encounter.totalAbsorbs)} sub={`${totalAps.toLocaleString()} per second`} />
       </div>
 
       {encounter.milestones.length > 0 && (
@@ -175,7 +232,7 @@ export default async function EncounterPage({ params }: Props) {
 
       {dpsParts.length > 0 && (
         <AccordionSection title="Damage Breakdown" sub="Click a row to expand spell details" count={dpsParts.length} defaultOpen>
-          <div className="bg-bg-panel border border-gold-dim rounded overflow-hidden">
+          <div className="bg-bg-panel border border-gold-dim rounded-sm overflow-hidden">
             <DamageMeter participants={dpsParts} metric="dps" />
           </div>
         </AccordionSection>
@@ -183,22 +240,106 @@ export default async function EncounterPage({ params }: Props) {
 
       {healParts.length > 0 && (
         <AccordionSection title="Healing Breakdown" count={healParts.length} defaultOpen>
-          <div className="bg-bg-panel border border-gold-dim rounded overflow-hidden">
+          <div className="bg-bg-panel border border-gold-dim rounded-sm overflow-hidden">
             <DamageMeter participants={healParts} metric="hps" />
+          </div>
+        </AccordionSection>
+      )}
+
+      {absorbParts.length > 0 && (
+        <AccordionSection
+          title="Absorb Breakdown"
+          sub={encounter.unattributedAbsorbs > 0
+            ? `${formatNumber(encounter.unattributedAbsorbs)} could not be attributed to one active shield`
+            : "Conservatively attributed from active shield auras"}
+          count={absorbParts.length}
+          defaultOpen
+        >
+          <div className="bg-bg-panel border border-gold-dim rounded-sm overflow-hidden">
+            <DamageMeter participants={absorbParts} metric="aps" />
           </div>
         </AccordionSection>
       )}
 
       {mobEntries.length > 0 && (
         <AccordionSection title="Target Breakdown" sub="Damage dealt to each mob - click a row to see per-player split" count={mobEntries.length} defaultOpen={false}>
-          <div className="bg-bg-panel border border-gold-dim rounded overflow-hidden">
+          <div className="bg-bg-panel border border-gold-dim rounded-sm overflow-hidden">
             <MobBreakdown mobs={mobEntries} />
           </div>
         </AccordionSection>
       )}
 
+      {auraRows.length > 0 && (
+        <AccordionSection title="Aura Uptime" sub="Buffs and debuffs observed on raid members" count={auraRows.length} defaultOpen={false}>
+          <div className="bg-bg-panel border border-gold-dim rounded-sm divide-y divide-gold-dim">
+            {auraRows.map((row) => (
+              <div key={`${row.player}-${row.aura}`} className="grid grid-cols-[minmax(0,1fr)_minmax(0,2fr)_auto_auto] gap-3 px-4 py-2.5 text-sm">
+                <span className="font-semibold text-text-primary truncate">{row.player}</span>
+                <span className="text-text-secondary truncate">{row.aura}</span>
+                <span className="tabular-nums text-gold">{row.uptimePct.toFixed(1)}%</span>
+                <span className="tabular-nums text-text-dim">{row.applications}x</span>
+              </div>
+            ))}
+          </div>
+        </AccordionSection>
+      )}
+
+      {consumableRows.length > 0 && (
+        <AccordionSection title="Consumables" sub="Observed flask, elixir, food, and potion auras" count={consumableRows.length} defaultOpen={false}>
+          <div className="bg-bg-panel border border-gold-dim rounded-sm divide-y divide-gold-dim">
+            {consumableRows.map((row) => (
+              <div key={`${row.player}-${row.consumable}`} className="grid grid-cols-[minmax(0,1fr)_minmax(0,2fr)_auto] gap-3 px-4 py-2.5 text-sm">
+                <span className="font-semibold text-text-primary truncate">{row.player}</span>
+                <span className="text-text-secondary truncate">{row.consumable}</span>
+                <span className="tabular-nums text-gold">{row.uptimePct.toFixed(1)}%</span>
+              </div>
+            ))}
+          </div>
+        </AccordionSection>
+      )}
+
+      {powerRows.length > 0 && (
+        <AccordionSection title="Power Gains" sub="Resource gains emitted by combat-log energize events" count={powerRows.length} defaultOpen={false}>
+          <div className="bg-bg-panel border border-gold-dim rounded-sm divide-y divide-gold-dim">
+            {powerRows.map((row) => (
+              <div key={`${row.player}-${row.spell}-${row.powerType}`} className="grid grid-cols-[minmax(0,1fr)_minmax(0,2fr)_auto_auto] gap-3 px-4 py-2.5 text-sm">
+                <span className="font-semibold text-text-primary truncate">{row.player}</span>
+                <span className="text-text-secondary truncate">{row.spell}</span>
+                <span className="tabular-nums text-gold">{formatNumber(row.amount)}</span>
+                <span className="tabular-nums text-text-dim">{row.events}x</span>
+              </div>
+            ))}
+          </div>
+        </AccordionSection>
+      )}
+
+      {deathRows.length > 0 && (
+        <AccordionSection title="Death Timeline" count={deathRows.length} defaultOpen={false}>
+          <div className="bg-bg-panel border border-danger/20 rounded-sm divide-y divide-gold-dim">
+            {deathRows.map((row, index) => (
+              <div key={`${row.player}-${row.offsetSeconds}-${index}`} className="px-4 py-2.5 text-sm">
+                <div className="flex items-center justify-between gap-3">
+                  <span className="font-semibold text-danger">{row.player}</span>
+                  <span className="tabular-nums text-text-secondary">{formatDuration(row.offsetSeconds)}</span>
+                </div>
+                {row.recentDamage.length > 0 && (
+                  <div className="mt-2 space-y-1 text-xs text-text-dim">
+                    {row.recentDamage.slice(-5).map((damage, damageIndex) => (
+                      <div key={`${damage.spell}-${damage.secondsBeforeDeath}-${damageIndex}`} className="flex justify-between gap-3">
+                        <span className="truncate">-{damage.secondsBeforeDeath.toFixed(1)}s {damage.source}: {damage.spell}</span>
+                        <span className="tabular-nums text-text-secondary">{formatNumber(damage.amount)}</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        </AccordionSection>
+      )}
+
       <AccordionSection title="Full Roster" count={encounter.participants.length} defaultOpen={false}>
-        <div className="bg-bg-panel border border-gold-dim rounded divide-y divide-gold-dim">
+        <div className="bg-bg-panel border border-gold-dim rounded-sm divide-y divide-gold-dim">
           {encounter.participants.map((p) => (
             <div key={p.id} className="flex items-center justify-between px-4 py-2.5 hover:bg-bg-hover transition-colors gap-3 flex-wrap">
               <div className="flex items-center gap-3 flex-wrap">
@@ -209,6 +350,7 @@ export default async function EncounterPage({ params }: Props) {
                   {p.player.name}
                 </Link>
                 {p.player.class && <span className="text-xs text-text-dim">{p.player.class}</span>}
+                {p.spec && <span className="text-xs text-text-secondary">{p.spec}</span>}
                 <Badge variant={p.role === "HEALER" ? "holy" : p.role === "TANK" ? "physical" : "gold"}>
                   {p.role}
                 </Badge>
@@ -216,6 +358,7 @@ export default async function EncounterPage({ params }: Props) {
               <div className="flex items-center gap-4 text-sm tabular-nums text-text-secondary flex-wrap justify-end">
                 {p.dps > 0 && <span>{p.dps.toLocaleString(undefined, { maximumFractionDigits: 0 })} dps</span>}
                 {p.hps > 100 && <span>{p.hps.toLocaleString(undefined, { maximumFractionDigits: 0 })} hps</span>}
+                {p.aps > 0 && <span>{p.aps.toLocaleString(undefined, { maximumFractionDigits: 0 })} aps</span>}
                 {p.deaths > 0 && <span className="text-danger">x {p.deaths}</span>}
               </div>
             </div>

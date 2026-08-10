@@ -57,7 +57,7 @@ export default async function AdminUploadsPage() {
               const statusLabel = effectivelyDone ? "DONE" : u.status;
 
               return (
-                <div key={u.id} className="bg-bg-panel border border-gold-dim rounded p-4 space-y-3">
+                <div key={u.id} className="bg-bg-panel border border-gold-dim rounded-sm p-4 space-y-3">
                   <div className="flex items-start justify-between gap-3 flex-wrap">
                     <div>
                       <div className="flex items-center gap-2 flex-wrap">
@@ -96,7 +96,7 @@ export default async function AdminUploadsPage() {
                             key={enc.id}
                             href={`/encounters/${enc.id}`}
                             className={cn(
-                              "text-[11px] px-2 py-0.5 rounded-sm border transition-colors",
+                              "text-[11px] px-2 py-0.5 rounded-xs border transition-colors",
                               enc.outcome === "KILL"
                                 ? "bg-success/8 border-success/25 text-success hover:border-success/50"
                                 : "bg-danger/8 border-danger/20 text-danger hover:border-danger/40"

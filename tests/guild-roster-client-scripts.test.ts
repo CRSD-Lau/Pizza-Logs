@@ -21,7 +21,7 @@ assert.match(userscript, /\/\/ @match\s+https:\/\/armory\.warmane\.com\/guild\/\
 assert.match(userscript, /\/\/ @match\s+http:\/\/armory\.warmane\.com\/guild\/\*/);
 assert.match(userscript, /pizzaLogsAdminSecret:https:\/\/pizza-logs-production\.up\.railway\.app/);
 assert.match(userscript, /pizzaLogsLastRosterSyncAt:https:\/\/pizza-logs-production\.up\.railway\.app/);
-assert.match(userscript, /autoIntervalMs = 60 \* 60 \* 1000/);
+assert.match(userscript, /autoIntervalMs\d?=60\*60\*1e3/);
 assert.match(userscript, /scheduleNextAutoSync/);
 assert.match(userscript, /autoTimer/);
 assert.match(userscript, /clearTimeout/);
@@ -35,12 +35,12 @@ assert.ok(
 assert.match(userscript, new RegExp(GUILD_ROSTER_USERSCRIPT_URL.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")));
 assert.match(localUserscript, /Pizza Logs Warmane Guild Roster Sync \(Local\)/);
 assert.match(localUserscript, new RegExp(LOCAL_GUILD_ROSTER_USERSCRIPT_URL.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")));
-assert.match(localUserscript, new RegExp(`const pizzaLogsOrigin = "${PIZZA_LOGS_LOCAL_ORIGIN.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}";`));
+assert.match(localUserscript, new RegExp(PIZZA_LOGS_LOCAL_ORIGIN.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")));
 assert.match(localUserscript, new RegExp(`pizzaLogsAdminSecret:${PIZZA_LOGS_LOCAL_ORIGIN.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}`));
 assert.doesNotMatch(localUserscript, /pizzaLogsAdminSecret:https:\/\/pizza-logs-production\.up\.railway\.app/);
-assert.match(localUserscript, /const targetLabel = "127\.0\.0\.1:3001"/);
-assert.match(localUserscript, /target\.textContent = `Target: \$\{targetLabel\}`/);
-assert.match(localUserscript, /Admin secret rejected by \$\{targetLabel\}/);
+assert.match(localUserscript, /127\.0\.0\.1:3001/);
+assert.match(localUserscript, /Target:/);
+assert.match(localUserscript, /Admin secret rejected by/);
 assert.match(localUserscript, /\/api\/admin\/guild-roster\/import/);
 
 const bookmarklet = buildGuildRosterBookmarklet();

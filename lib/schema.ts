@@ -32,18 +32,63 @@ export const TargetBreakdownSchema = z.record(
 );
 export type TargetBreakdown = z.infer<typeof TargetBreakdownSchema>;
 
+export const AbsorbBreakdownSchema = z.record(
+  z.string(),
+  z.object({
+    amount: z.number(),
+    hits: z.number(),
+    ambiguousHits: z.number(),
+  }),
+);
+
+export const AuraBreakdownSchema = z.record(
+  z.string(),
+  z.object({
+    uptimeSeconds: z.number(),
+    uptimePct: z.number(),
+    applications: z.number(),
+  }),
+);
+
+export const PowerBreakdownSchema = z.record(
+  z.string(),
+  z.object({
+    amount: z.number(),
+    events: z.number(),
+    powerType: z.number(),
+  }),
+);
+
 export const ParticipantResultSchema = z.object({
   name:            z.string(),
   class:           z.string().nullable().optional(),
+  spec:            z.string().nullable().optional(),
+  role:            z.enum(["DPS", "HEALER", "TANK", "UNKNOWN"]).optional(),
   totalDamage:     z.number(),
   totalHealing:    z.number(),
+  totalAbsorbs:    z.number().default(0),
   damageTaken:     z.number(),
   dps:             z.number(),
   hps:             z.number(),
+  aps:             z.number().default(0),
   deaths:          z.number(),
+  deathEvents:     z.array(z.object({
+    offsetSeconds: z.number(),
+    recentDamage: z.array(z.object({
+      offsetSeconds: z.number(),
+      secondsBeforeDeath: z.number(),
+      source: z.string(),
+      spell: z.string(),
+      amount: z.number(),
+    })).default([]),
+  })).default([]),
   critPct:         z.number(),
   spellBreakdown:  SpellBreakdownSchema.optional(),
   targetBreakdown: TargetBreakdownSchema.optional(),
+  absorbBreakdown: AbsorbBreakdownSchema.optional(),
+  auraBreakdown:   AuraBreakdownSchema.optional(),
+  powerBreakdown:  PowerBreakdownSchema.optional(),
+  consumableBreakdown: AuraBreakdownSchema.optional(),
 });
 export type ParticipantResult = z.infer<typeof ParticipantResultSchema>;
 
@@ -59,6 +104,8 @@ export const EncounterResultSchema = z.object({
   endedAt:         z.string(),
   totalDamage:     z.number(),
   totalHealing:    z.number(),
+  totalAbsorbs:    z.number().default(0),
+  unattributedAbsorbs: z.number().default(0),
   totalDamageTaken:z.number(),
   fingerprint:     z.string(),
   participants:    z.array(ParticipantResultSchema),

@@ -84,6 +84,8 @@ export default async function PlayerPage({ params }: Props) {
   const avgDps      = kills.length > 0
     ? kills.reduce((a, p) => a + p.dps, 0) / kills.length : 0;
   const bestDps     = Math.max(0, ...participants.map(p => p.dps));
+  const bestAps     = Math.max(0, ...participants.map(p => p.aps));
+  const latestSpec  = participants.find((participant) => participant.spec)?.spec ?? null;
 
   const milestones = player?.milestones ?? [];
   const color = getClassColor(profile.className ?? name);
@@ -114,6 +116,7 @@ export default async function PlayerPage({ params }: Props) {
           </h1>
           <div className="flex flex-wrap items-center gap-2 mt-1">
             {profile.className && <span className="text-sm text-text-secondary">{profile.className}</span>}
+            {latestSpec && <span className="text-sm text-gold">{latestSpec}</span>}
             {profile.raceName && <span className="text-sm text-text-dim">{profile.raceName}</span>}
             {profile.level && <span className="text-xs text-text-dim">Level {profile.level}</span>}
             <span className="text-xs text-text-dim">{profile.realmName}</span>
@@ -124,11 +127,12 @@ export default async function PlayerPage({ params }: Props) {
       </div>
 
       {/* Stats */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+      <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
         <StatCard label="Encounters" value={participants.length} />
         <StatCard label="Kills"      value={kills.length} highlight />
         <StatCard label="Best DPS"   value={formatDps(bestDps)} sub="single encounter" />
         <StatCard label="Avg DPS"    value={formatDps(avgDps)} sub="on kills" />
+        <StatCard label="Best APS"   value={formatDps(bestAps)} sub="single encounter" />
       </div>
 
       {/* Gear */}
@@ -188,7 +192,7 @@ export default async function PlayerPage({ params }: Props) {
                 href={`/bosses/${b.bossSlug}`}
                 className={getRevealClassName({
                   boss: true,
-                  className: "bg-bg-card border border-gold-dim rounded px-4 py-3 hover:border-gold/40 transition-colors block",
+                  className: "bg-bg-card border border-gold-dim rounded-sm px-4 py-3 hover:border-gold/40 transition-colors block",
                 })}
                 style={getRevealStyle(index)}
               >
@@ -215,7 +219,7 @@ export default async function PlayerPage({ params }: Props) {
       {/* Recent encounters */}
       <AccordionSection title="Recent Encounters" count={participants.length} defaultOpen={false}>
         {participants.length > 0 ? (
-          <div className="bg-bg-panel border border-gold-dim rounded divide-y divide-gold-dim">
+          <div className="bg-bg-panel border border-gold-dim rounded-sm divide-y divide-gold-dim">
             {recentEncounters.map((p, index) => (
               <Link
                 key={p.id}
@@ -238,6 +242,7 @@ export default async function PlayerPage({ params }: Props) {
                 <div className="flex items-center gap-4 text-sm tabular-nums text-text-secondary">
                   {p.dps > 0 && <span>{formatDps(p.dps)} dps</span>}
                   {p.hps > 100 && <span>{formatDps(p.hps)} hps</span>}
+                  {p.aps > 0 && <span>{formatDps(p.aps)} aps</span>}
                   {p.deaths > 0 && <span className="text-danger">☠{p.deaths}</span>}
                 </div>
               </Link>

@@ -2,7 +2,6 @@ import assert from "node:assert/strict";
 import fs from "node:fs";
 import Module from "node:module";
 import path from "node:path";
-import React from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 
 const failingModel = {

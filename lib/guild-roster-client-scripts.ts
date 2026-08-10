@@ -1,4 +1,5 @@
 import { PIZZA_LOGS_LOCAL_ORIGIN, PIZZA_LOGS_ORIGIN } from "./armory-gear-client-scripts";
+import { serializeBrowserFunction } from "./serialized-browser-script";
 
 export const GUILD_ROSTER_USERSCRIPT_PATH = "/api/admin/guild-roster/userscript.user.js";
 export const LOCAL_GUILD_ROSTER_USERSCRIPT_PATH = "/api/admin/guild-roster/userscript.local.user.js";
@@ -20,7 +21,6 @@ function buildRosterScriptBody(autoRun: boolean, pizzaLogsOrigin = PIZZA_LOGS_OR
     const pizzaLogsOrigin = "__PIZZA_LOGS_ORIGIN__";
     const targetLabel = "__PIZZA_LOGS_TARGET__";
     const guildName = "__DISPLAY_GUILD_NAME__";
-    const warmaneGuildName = "__WARMANE_GUILD_NAME__";
     const realm = "__WARMANE_REALM__";
     const legacySecretKey = "pizzaLogsAdminSecret";
     const secretKey = "pizzaLogsAdminSecret:__PIZZA_LOGS_ORIGIN__";
@@ -245,11 +245,10 @@ function buildRosterScriptBody(autoRun: boolean, pizzaLogsOrigin = PIZZA_LOGS_OR
     }
   };
 
-  return `(${script.toString()
+  return `(${serializeBrowserFunction(script)
     .replaceAll("__PIZZA_LOGS_ORIGIN__", pizzaLogsOrigin)
     .replaceAll("__PIZZA_LOGS_TARGET__", targetLabel)
     .replaceAll("__DISPLAY_GUILD_NAME__", DISPLAY_GUILD_NAME)
-    .replaceAll("__WARMANE_GUILD_NAME__", WARMANE_GUILD_NAME)
     .replaceAll("__WARMANE_REALM__", WARMANE_REALM)
     .replace("__SUMMARY_API_PATH__", `/api/guild/${WARMANE_GUILD_NAME}/${WARMANE_REALM}/summary`)
     .replace("__MEMBERS_API_PATH__", `/api/guild/${WARMANE_GUILD_NAME}/${WARMANE_REALM}/members`)

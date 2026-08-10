@@ -76,14 +76,14 @@ function GearItemTooltip({
       ref={tooltipRef}
       id={tooltipId}
       role="tooltip"
-      className="pointer-events-none fixed z-[2147483647] w-[min(28rem,calc(100vw-3rem))] rounded border border-gold bg-bg-deep p-3 text-xs text-text-secondary shadow-2xl shadow-black/50"
+      className="pointer-events-none fixed z-2147483647 w-[min(28rem,calc(100vw-3rem))] rounded-sm border border-gold bg-bg-deep p-3 text-xs text-text-secondary shadow-2xl shadow-black/50"
       style={{ left: position.left, top: position.top }}
     >
       <div className="flex gap-3">
-        <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-sm border border-gold bg-bg-panel">
+        <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xs border border-gold bg-bg-panel">
           {item.iconUrl ? (
             // eslint-disable-next-line @next/next/no-img-element
-            <img src={item.iconUrl} alt="" className="h-10 w-10 rounded-sm object-cover" />
+            <img src={item.iconUrl} alt="" className="h-10 w-10 rounded-xs object-cover" />
           ) : (
             <span className="text-xs font-bold text-text-dim">{item.slot.slice(0, 2).toUpperCase()}</span>
           )}
@@ -174,12 +174,12 @@ export function GearItemCard({ item, gearScore }: { item: ArmoryGearItem; gearSc
         setVisible(true);
       }}
       onBlur={() => setVisible(false)}
-      className="group relative flex min-h-[76px] cursor-default items-start gap-3 rounded border border-gold-dim bg-bg-card px-3 py-3 transition-colors hover:border-gold/50 hover:bg-bg-hover focus-visible:border-gold focus-visible:outline-none"
+      className="group relative flex min-h-[76px] cursor-default items-start gap-3 rounded-sm border border-gold-dim bg-bg-card px-3 py-3 transition-colors hover:border-gold/50 hover:bg-bg-hover focus-visible:border-gold focus-visible:outline-hidden"
     >
-      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-sm border border-gold-dim bg-bg-deep">
+      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xs border border-gold-dim bg-bg-deep">
         {item.iconUrl ? (
           // eslint-disable-next-line @next/next/no-img-element
-          <img src={item.iconUrl} alt="" className="h-9 w-9 rounded-sm object-cover" />
+          <img src={item.iconUrl} alt="" className="h-9 w-9 rounded-xs object-cover" />
         ) : (
           <span className="text-xs font-bold text-text-dim">{item.slot.slice(0, 2).toUpperCase()}</span>
         )}

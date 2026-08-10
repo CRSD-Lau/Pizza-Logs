@@ -4,7 +4,7 @@ interface DatabaseUnavailableProps {
 
 export function DatabaseUnavailable({ description }: DatabaseUnavailableProps) {
   return (
-    <div className="rounded border border-danger/30 bg-bg-panel px-4 py-3">
+    <div className="rounded-sm border border-danger/30 bg-bg-panel px-4 py-3">
       <p className="text-sm font-semibold text-danger">Database unavailable</p>
       <p className="mt-1 text-sm text-text-secondary">
         {description ??

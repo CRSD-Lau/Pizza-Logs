@@ -223,6 +223,7 @@ function scoreCharacterItem(item: GearScoreItemInput, titanGrip = 1): number | n
 }
 
 export function calculateGearScore(items: GearScoreItemInput[], _playerClass?: string): GearScoreSummary | null {
+  void _playerClass;
   const mainHand = items.find(item => item.slot.toLowerCase() === "main hand");
   const offHand = items.find(item => item.slot.toLowerCase() === "off hand");
   const mainHandLoc = mainHand ? calculateGearScoreForItem(mainHand)?.equipLoc : undefined;

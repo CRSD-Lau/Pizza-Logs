@@ -8,6 +8,7 @@ export function UploadZoneWithRefresh() {
   const router = useRouter();
 
   const handleComplete = (_result: UploadResponse & { filename: string }) => {
+    void _result;
     router.refresh();
   };
 

@@ -10,8 +10,10 @@
 - [ ] No Railway production environment variables changed
 - [ ] `npm run lint --if-present` passes
 - [ ] `npm run type-check --if-present` passes
+- [ ] `npm run type-check:ecosystem` passes
 - [ ] `npm test --if-present` passes
 - [ ] `npm run build` passes
+- [ ] `npm audit` reports zero vulnerabilities
 - [ ] `cd parser && pytest tests/ -v` passes if parser behavior changed
 - [ ] Upload flow tested if upload/parser code changed
 - [ ] Global search tested if player/search/roster code changed

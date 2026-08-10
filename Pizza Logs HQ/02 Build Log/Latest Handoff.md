@@ -22,12 +22,16 @@
 - Browser uploads now use one raw UUID-keyed request for `.txt`, `.log`, or `.zip`; the parser atomically finalizes, validates, emits quick modes, then runs full parsing on bounded workers.
 - A 31,621,979-byte ZIP benchmark reached quick classification 1,926.60 ms after the final byte and completed full parsing in 5,158.69 ms.
 - A full production route, mobile, accessibility, ticket, source, and dependency audit is recorded in `02 Build Log/2026-08-10 Site and Ticket Audit.md`.
-- Draft PR #28 is open from `codex-dev` into `main`; its CI and Slack notification checks pass and it is not deployed until Neil merges it.
+- Draft PR #29 is open from `codex-dev` into `main`; its clean Linux
+  `test-build` check passes and it is not deployed until Neil merges it.
 - The supported workflow is now explicitly one desktop checkout -> `origin/codex-dev` -> PR -> `origin/main` -> Railway. Active docs no longer point to the retired OneDrive/laptop checkout.
 - GitHub's renamed `Production main` ruleset now requires a PR and passing `test-build`, and blocks branch deletion and non-fast-forward updates.
 - Removed unused standalone `sync-agent` TypeScript/build exclusions and replaced its named env ignore with a safer generic `.env.*` rule; current browser-sync launcher logs remain ignored.
 - Production is broadly functional; the audit found and locally fixed a timezone-dependent React hydration error on leaderboard rows.
-- Next.js and `eslint-config-next` are pinned to the patched 15.x backport, 15.5.23. Direct Next.js 15 security advisories are removed; four transitive production audit entries remain for a later Next.js 16 migration or upstream backport.
+- The platform upgrade candidate now uses Node 24, Next.js 16.3, React 19.2, Prisma 7.9, Tailwind 4.3, Recharts 3.10, Zod 4.4, Dropzone 20.1, and current compatible supporting dependencies. `npm audit` is zero.
+- TypeScript 7.0 is the explicit native type-checker; TypeScript 6 supplies the JavaScript API still consumed by Next.js and ESLint. Both gates pass.
+- Parser analytical output is frozen by exact fixture hashes. Skada damage/healing totals remain unchanged while separate absorbs/APS, spec/role, aura uptime, consumables, power gains, and death context are now persisted and displayed.
+- Admin diagnostics include Railway deployment identity, and a Node 24 production smoke workflow runs after successful production deployments plus weekly.
 - ICC heroic difficulty detection now uses boss-scoped markers. `Rune of Blood`
   no longer promotes Deathbringer Saurfang; Saurfang heroic uses `Scent of Blood`
   spell IDs, and Valithria heroic uses `Twisted Nightmares`.
@@ -47,6 +51,9 @@
 ## Current Implementation Snapshot
 
 - Next.js app has public pages for upload, raids, sessions, encounters, bosses, leaderboards, players, guild roster, and weekly stats.
+- Next.js 16 uses `proxy.ts` for the protected admin matcher; no synchronous request API or legacy `middleware.ts` remains.
+- Prisma 7 uses `prisma.config.ts`, the generated client under ignored `generated/prisma`, and `@prisma/adapter-pg`; the final Docker image retains the ESM Prisma CLI needed by `start.sh`.
+- Encounter reports now expose total absorbs/APS, shield attribution details, spec/role, aura uptime, consumables, power gains, target damage, and deaths with the prior 15 seconds of incoming damage.
 - `/guild-roster` now keeps the roster table contained to 20 members per page, with URL-backed page navigation in the table footer.
 - GitHub Actions posts new, reopened, and ready-for-review PR summaries to Slack when `PR_SLACK_WEBHOOK_URL` is configured; if the secret is missing, the workflow warns and exits successfully.
 - `/uploads` and `/uploads/[id]` redirect to admin upload history; public raid/session pages use `/raids/...`.
@@ -376,7 +383,7 @@
 - The two-second benchmark uses explicit encounter markers. Privacy-safe real Warmane heuristic-log timing still needs observation and may be slower.
 - PR Slack notifications still require `PR_SLACK_WEBHOOK_URL` in GitHub repository secrets, but missing configuration no longer fails PR checks.
 - `pull_request_target` runs the Slack workflow from `main`, so Slack formatting changes only affect fresh PR events after the workflow update is merged.
-- Absorbs remain future parser work.
+- Absorbs are implemented conservatively, but real overlapping-shield logs are still needed to calibrate attribution coverage.
 - Railway CLI is installed locally but this checkout remains unlinked until Neil intentionally runs `railway link`.
 - Hourly full gear and roster refreshes depend on a local Windows user/browser
   profile with the production userscripts installed and the correct admin secret
@@ -386,10 +393,32 @@
 - Browser background-tab throttling can delay a sync while the browser or PC is
   suspended.
 
+## Platform And Analytics Release Gate
+
+- Clean `npm ci --legacy-peer-deps` completed with 0 vulnerabilities.
+- `npm run check:pr` passed: zero-warning ESLint, TypeScript 7 native check,
+  TypeScript 6 ecosystem check, all 37 TypeScript tests, and the Next.js 16
+  production build.
+- All 284 parser tests passed and `pip check` found no broken requirements.
+- Prisma 7.9 client generation and schema validation passed.
+- CI now generates the ignored Prisma 7 client before type-checking, matching a
+  fresh checkout instead of relying on a developer's existing generated output.
+- PR #29's replacement clean Linux job passed Prisma generation, lint, both
+  TypeScript gates, all web tests, all parser tests, and the Next production
+  build.
+- The final Node 24 Docker image built successfully and contains the Prisma 7
+  CLI plus the Linux schema engine required by production migration startup.
+- The actual local web -> parser -> PostgreSQL upload flow completed, persisted
+  the new analytics, rendered the stored encounter, and cleaned its exact test
+  row afterward.
+- The current Railway production site passed the public-route/API/protected-
+  redirect smoke suite. The upgraded release remains undeployed until Neil
+  merges the PR into `main`.
+
 ## Exact Next Step
 
-Review draft PR #28 and merge it into `main` when ready. Railway will then deploy
-the merged `main` commit. After deployment, verify the live homepage and primary
-user flow, confirm the leaderboard hydration fix, and re-upload one affected
-mixed heroic/normal raid before closing ticket #1. Codex does not merge or push
-`main` directly.
+Review the new `codex-dev` platform/analytics PR and merge it into `main` when
+ready. Railway will apply the additive analytics migration and deploy the merged
+commit. Confirm the commit in protected Admin diagnostics, check the Production
+Smoke workflow, and then upload one real raid to calibrate absorbs/spec/role.
+Codex does not merge or push `main` directly.

@@ -89,8 +89,11 @@ export default async function SessionPlayerPage({ params }: Props) {
         duration: enc.durationSeconds,
         dps: p.dps,
         hps: p.hps,
+        aps: p.aps,
         totalDamage: p.totalDamage,
         totalHealing: p.totalHealing,
+        totalAbsorbs: p.totalAbsorbs,
+        spec: p.spec,
         deaths: p.deaths,
         critPct: p.critPct,
       };
@@ -102,6 +105,8 @@ export default async function SessionPlayerPage({ params }: Props) {
   const kills = myStats.filter(e => e.outcome === "KILL");
   const bestDps = Math.max(0, ...myStats.map(e => e.dps));
   const bestHps = Math.max(0, ...myStats.map(e => e.hps));
+  const bestAps = Math.max(0, ...myStats.map(e => e.aps));
+  const latestSpec = myStats.find((entry) => entry.spec)?.spec ?? null;
   const totalDeaths = myStats.reduce((sum, e) => sum + e.deaths, 0);
 
   const isHealer = bestHps > bestDps * 0.7 && bestHps > 200;
@@ -174,17 +179,19 @@ export default async function SessionPlayerPage({ params }: Props) {
           </h1>
           <div className="flex items-center gap-2 mt-1 text-sm flex-wrap">
             {playerClass && <span className="text-text-secondary">{playerClass}</span>}
+            {latestSpec && <span className="text-gold">{latestSpec}</span>}
             <span className="text-text-dim">-</span>
             <span className="text-text-dim">{sessionDate}</span>
           </div>
         </div>
       </div>
 
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+      <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
         <StatCard label="Pulls" value={myStats.length} />
         <StatCard label="Kills" value={kills.length} highlight />
         <StatCard label={`Best ${metric}`} value={formatDps(bestMetric)} sub="single pull" />
         <StatCard label={`Avg ${metric}`} value={formatDps(avgKillMetric)} sub="on kills" />
+        <StatCard label="Best APS" value={formatDps(bestAps)} sub="single pull" />
       </div>
 
       {chartData.length > 1 && (
@@ -197,14 +204,14 @@ export default async function SessionPlayerPage({ params }: Props) {
           }
           defaultOpen
         >
-          <div className="bg-bg-panel border border-gold-dim rounded p-4">
+          <div className="bg-bg-panel border border-gold-dim rounded-sm p-4">
             <SessionLineChart data={chartData} players={chartPlayers} metric={metric} />
           </div>
         </AccordionSection>
       )}
 
       <AccordionSection title="Encounter Breakdown" count={myStats.length} defaultOpen>
-        <div className="bg-bg-panel border border-gold-dim rounded divide-y divide-gold-dim overflow-hidden">
+        <div className="bg-bg-panel border border-gold-dim rounded-sm divide-y divide-gold-dim overflow-hidden">
           {myStats.map((e, index) => (
             <Link
               key={e.encounterId}
@@ -219,7 +226,7 @@ export default async function SessionPlayerPage({ params }: Props) {
               <div className="flex items-center gap-3 flex-wrap">
                 <span
                   className={cn(
-                    "text-[11px] font-bold px-1.5 py-0.5 rounded",
+                    "text-[11px] font-bold px-1.5 py-0.5 rounded-sm",
                     e.outcome === "KILL"
                       ? "text-success bg-success/10"
                       : e.outcome === "WIPE"
@@ -248,6 +255,12 @@ export default async function SessionPlayerPage({ params }: Props) {
                   <span>
                     {formatDps(e.hps)}
                     <span className="text-text-dim ml-0.5">hps</span>
+                  </span>
+                )}
+                {e.aps > 0 && (
+                  <span>
+                    {formatDps(e.aps)}
+                    <span className="text-text-dim ml-0.5">aps</span>
                   </span>
                 )}
                 {e.critPct > 0 && (

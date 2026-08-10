@@ -1,0 +1,38 @@
+name: Production Smoke
+
+on:
+  deployment_status:
+  schedule:
+    - cron: "17 10 * * 1"
+  workflow_dispatch:
+    inputs:
+      base_url:
+        description: Optional deployment URL to verify
+        required: false
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  smoke:
+    if: >-
+      github.event_name != 'deployment_status' ||
+      (github.event.deployment_status.state == 'success' &&
+      github.event.deployment.environment == 'production')
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    env:
+      PIZZA_LOGS_BASE_URL: ${{ inputs.base_url || github.event.deployment_status.environment_url || 'https://pizza-logs-production.up.railway.app' }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Setup Node 24
+        uses: actions/setup-node@v7
+        with:
+          node-version: 24
+
+      - name: Verify production routes
+        run: node scripts/production-smoke.mjs

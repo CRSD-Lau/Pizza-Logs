@@ -2,7 +2,9 @@
 
 ## Active Focus
 
-The current session completed a production site, ticket, responsive, accessibility, source, parser, and dependency audit. The app is broadly functional. The release candidate fixes the confirmed leaderboard hydration error, uses the Next.js 15.5.23 security backport, and includes the auditable per-attempt raid difficulty plus secure early-result archive upload path. Parser reliability remains the highest-risk product area.
+The current release candidate completes the ordered platform modernization: analytical regression baselines, Node 24 everywhere, current Actions/dependencies, Next.js 16 + React 19, Prisma 5 -> 6 -> 7, Tailwind/Recharts/Zod/Dropzone majors, and a gated TypeScript 7 native CLI. Parser reliability remains the highest-risk product area, so frozen Skada totals and the complete parser suite remain mandatory.
+
+UwU analytical feature parity is now substantially closed without replacing Skada math: encounters store and display separate absorbs/APS, conservative spec/role, aura uptime, consumables, power gains, target damage, and death context. The exact parity boundary and intentionally supplemental boss-specific useful metrics are documented in `docs/uwu-analytics-parity.md`.
 
 Workflow cleanup established one supported path: the desktop checkout at `C:\Projects\PizzaLogs` on `codex-dev` -> `origin/codex-dev` -> PR -> `origin/main` -> Railway. No laptop, OneDrive clone, Claude worktree, or direct Railway deployment is part of the active development workflow.
 
@@ -16,6 +18,27 @@ Codex works on `codex-dev`, pushes `origin/codex-dev`, and opens PRs into `main`
 
 ## This Session
 
+- Captured exact pre-upgrade analytical fixture hashes and added a permanent regression gate.
+- Standardized Node 24 across `.nvmrc`, package engines, GitHub Actions, Docker, and the Railway web image.
+- Upgraded Next.js 16.3/React 19.2 and migrated `middleware.ts` to `proxy.ts` with focused source/admin validation.
+- Gated Prisma 6 before migrating to Prisma 7.9, `prisma.config.ts`, generated-client output, and the PostgreSQL driver adapter.
+- Upgraded Tailwind 4, Recharts 3, Zod 4, Dropzone 20, tailwind-merge 3, and Lucide; removed unused date-fns.
+- Established the TypeScript 7 native CLI plus TypeScript 6 ecosystem API contract; both checks pass.
+- Updated FastAPI/Uvicorn/multipart/Pydantic/pytest and removed the Pydantic deprecation warning.
+- Added separate absorb/APS, spec/role, aura, consumable, power, and death analytics with focused parser coverage and an additive Prisma migration.
+- Added Railway deployment identity to protected Admin diagnostics.
+- Added post-deployment and weekly production smoke automation; the current production routes pass the same smoke script.
+- Completed the final clean release gate: 37 TypeScript tests, 284 parser tests,
+  both TypeScript compiler contracts, zero-warning lint, Next.js production
+  build, Prisma generation/validation, Python dependency integrity, npm audit,
+  Docker image build, local persisted upload E2E, and live production smoke all
+  pass.
+- Closed the clean-runner gap found by PR CI: the workflow now generates the
+  Prisma 7 client immediately after dependency installation and before lint or
+  type-checking.
+- Opened draft PR #29 from `codex-dev` to `main`; its replacement clean Linux
+  `test-build` job passes after the Prisma generation fix.
+- Ran the actual local Next.js -> parser -> PostgreSQL upload flow against the upgraded stack, loaded the stored encounter page, verified protected redirects, and removed the exact temporary upload afterward.
 - Audited local worktrees, branches, remotes, ignored legacy artifacts, running processes, scheduled tasks, GitHub branches/rules, PR #28, CI, and Railway deployment boundaries.
 - Confirmed there is one worktree, one canonical remote, and only `main` plus `codex-dev` on GitHub; no Claude or laptop development branch remains.
 - Preserved current roster/gear browser-sync utilities because they are active product operations, not a retired cross-machine development agent.
@@ -189,9 +212,10 @@ Codex works on `codex-dev`, pushes `origin/codex-dev`, and opens PRs into `main`
 
 ## Open Follow-Ups
 
-- Merge and deploy the audit PR, then verify `/leaderboards` and a boss detail page no longer emit React hydration error #418.
-- Re-upload an affected mixed heroic/normal raid after deployment and close ticket #1 only after stored difficulties are correct.
-- Plan a separate Next.js 16.3 migration or take a later 15.x backport to clear the four remaining transitive `npm audit --omit=dev` entries.
+- Merge the platform/analytics PR, let Railway run the additive migration, then verify the Admin deployment commit and automatic production smoke result.
+- Re-upload an affected mixed heroic/normal raid after deployment and confirm stored difficulties plus the new analytical sections.
+- Compare absorbs/spec/role against one privacy-safe real Warmane pull; synthetic and fixture gates pass, but real overlapping-shield evidence is the next calibration input.
+- Rehearse a greenfield Prisma migration baseline before provisioning any replacement database; the existing production database remains the supported migration target.
 - Measure quick classification on a privacy-safe real Warmane archive without encounter markers; the robust heuristic CSV path may be slower than the marker-based 1.92660-second benchmark.
 - Add 7z only if equivalent no-extraction security and resource enforcement can be maintained.
 - Add a shared/distributed upload limiter only if Railway uses multiple parser replicas or production traffic warrants it.
@@ -201,7 +225,6 @@ Codex works on `codex-dev`, pushes `origin/codex-dev`, and opens PRs into `main`
 - Decide whether app-level upload rate limiting is needed or Railway-level controls are enough.
 - After the quiet sync PR deploys, reinstall/update the production Gear Sync and Guild Roster Sync userscripts from `/admin`; keep one Warmane character tab and one guild page tab open for hourly refreshes.
 - After this parser fix deploys, reprocess or re-upload the affected latest raid so stored Saurfang and Valithria difficulties are regenerated.
-- Absorbs remain future parser work.
 - Add more encounter-specific useful-damage exclusions as real Skada comparison data becomes available.
 - Link Railway with `railway link` only when intentionally working on Railway configuration; do not deploy without explicit instruction.
 

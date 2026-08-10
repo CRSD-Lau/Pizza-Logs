@@ -68,7 +68,7 @@ export default async function HomePage() {
         />
         <Link
           href="/leaderboards"
-          className="block bg-bg-panel border border-gold-dim rounded px-6 py-10 text-center hover:border-gold/50 transition-colors group"
+          className="block bg-bg-panel border border-gold-dim rounded-sm px-6 py-10 text-center hover:border-gold/50 transition-colors group"
         >
           <p className="heading-cinzel text-2xl font-bold text-gold-light text-glow-gold group-hover:text-gold transition-colors">
             Leaderboards

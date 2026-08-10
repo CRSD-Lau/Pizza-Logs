@@ -1,6 +1,372 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import 'tailwindcss';
+
+@config '../tailwind.config.mjs';
+@source inline('reveal-item boss-reveal-item');
+
+/*
+  The default border color has changed to `currentcolor` in Tailwind CSS v4,
+  so we've added these compatibility styles to make sure everything still
+  looks the same as it did with Tailwind CSS v3.
+
+  If we ever want to remove these styles, we need to add an explicit border
+  color utility to any element that depends on these defaults.
+*/
+@layer base {
+  *,
+  ::after,
+  ::before,
+  ::backdrop,
+  ::file-selector-button {
+    border-color: rgba(180, 140, 60, 0.2);
+  }
+}
+
+@utility border-gold-dim {
+  /* ── Gold border utility ── */
+  border-color: rgba(180, 140, 60, 0.2);
+}
+
+@utility border-gold-mid {
+  border-color: rgba(180, 140, 60, 0.4);
+}
+
+@utility border-gold-full {
+  border-color: rgba(180, 140, 60, 0.7);
+}
+
+@utility panel {
+  /* ── Panel / Card ── */
+  @apply bg-bg-panel border border-gold-dim rounded-sm;
+}
+
+@utility card {
+  @apply bg-bg-card border border-gold-dim rounded-sm;
+}
+
+@utility page-glow {
+  /* ── Page background glow ── */
+  &::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background:
+      radial-gradient(
+        ellipse 80% 50% at 50% -10%,
+        rgba(180, 140, 60, 0.07) 0%,
+        transparent 60%
+      ),
+      radial-gradient(
+        ellipse 50% 80% at -10% 50%,
+        rgba(80, 40, 120, 0.04) 0%,
+        transparent 60%
+      );
+    pointer-events: none;
+    z-index: 0;
+  }
+}
+
+@utility meter-row {
+  /* ── Meter bar row ── */
+  @apply relative overflow-hidden rounded-sm cursor-pointer;
+  @apply border border-transparent transition-colors duration-150;
+  &:hover {
+    border-color: rgba(180, 140, 60, 0.2);
+  }
+  &.active {
+    border-color: rgba(180, 140, 60, 0.45);
+  }
+}
+
+@utility active {
+  &.meter-row {
+    border-color: rgba(180, 140, 60, 0.45);
+  }
+}
+
+@utility heading-cinzel {
+  /* ── Cinzel heading ── */
+  font-family: var(--font-cinzel), serif;
+  letter-spacing: 0.04em;
+}
+
+@utility text-glow-gold {
+  /* ── Glow text ── */
+  text-shadow: 0 0 20px rgba(200, 168, 75, 0.5);
+}
+
+@utility rank-badge {
+  /* ── Rank badge ── */
+  @apply inline-flex items-center justify-center w-7 h-7 rounded-sm text-xs font-bold;
+  background: rgba(180, 140, 60, 0.12);
+  border: 1px solid rgba(180, 140, 60, 0.25);
+  color: #c8a84b;
+  &.rank-1 {
+    background: rgba(240, 192, 64, 0.18);
+    border-color: rgba(240, 192, 64, 0.5);
+    color: #f0d080;
+  }
+  &.rank-2 {
+    background: rgba(192, 200, 216, 0.15);
+    border-color: rgba(192, 200, 216, 0.4);
+    color: #c0c8d8;
+  }
+  &.rank-3 {
+    background: rgba(200, 144, 64, 0.15);
+    border-color: rgba(200, 144, 64, 0.4);
+    color: #c89040;
+  }
+}
+
+@utility rank-1 {
+  &.rank-badge {
+    background: rgba(240, 192, 64, 0.18);
+    border-color: rgba(240, 192, 64, 0.5);
+    color: #f0d080;
+  }
+}
+
+@utility rank-2 {
+  &.rank-badge {
+    background: rgba(192, 200, 216, 0.15);
+    border-color: rgba(192, 200, 216, 0.4);
+    color: #c0c8d8;
+  }
+}
+
+@utility rank-3 {
+  &.rank-badge {
+    background: rgba(200, 144, 64, 0.15);
+    border-color: rgba(200, 144, 64, 0.4);
+    color: #c89040;
+  }
+}
+
+@utility diff-badge {
+  /* ── Difficulty badge ── */
+  @apply inline-block text-xs font-bold px-1.5 py-0.5 rounded-xs;
+  letter-spacing: 0.06em;
+  &.heroic {
+    background: rgba(224, 96, 48, 0.15);
+    border: 1px solid rgba(224, 96, 48, 0.3);
+    color: #e06030;
+  }
+  &.normal {
+    background: rgba(154, 143, 120, 0.12);
+    border: 1px solid rgba(154, 143, 120, 0.25);
+    color: #9a8f78;
+  }
+}
+
+@utility heroic {
+  &.diff-badge {
+    background: rgba(224, 96, 48, 0.15);
+    border: 1px solid rgba(224, 96, 48, 0.3);
+    color: #e06030;
+  }
+}
+
+@utility normal {
+  &.diff-badge {
+    background: rgba(154, 143, 120, 0.12);
+    border: 1px solid rgba(154, 143, 120, 0.25);
+    color: #9a8f78;
+  }
+}
+
+@utility outcome-kill {
+  /* ── Outcome badge ── */
+  @apply inline-block text-xs font-bold px-2 py-0.5 rounded-xs;
+  background: rgba(80, 160, 80, 0.15);
+  border: 1px solid rgba(80, 160, 80, 0.3);
+  color: #50a050;
+}
+
+@utility outcome-wipe {
+  @apply inline-block text-xs font-bold px-2 py-0.5 rounded-xs;
+  background: rgba(200, 64, 64, 0.12);
+  border: 1px solid rgba(200, 64, 64, 0.25);
+  color: #c84040;
+}
+
+@utility outcome-unknown {
+  @apply inline-block text-xs font-bold px-2 py-0.5 rounded-xs;
+  background: rgba(90, 85, 72, 0.15);
+  border: 1px solid rgba(90, 85, 72, 0.3);
+  color: #5a5548;
+}
+
+@utility milestone-banner {
+  /* ── Milestone banner ── */
+  background: linear-gradient(
+    90deg,
+    rgba(200, 168, 75, 0.08) 0%,
+    rgba(200, 168, 75, 0.03) 100%
+  );
+  border: 1px solid rgba(200, 168, 75, 0.3);
+  @apply rounded-sm px-4 py-3;
+}
+
+@utility frozen-intro-overlay {
+  /* Cinematic intro */
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  overflow: hidden;
+  min-height: 100vh;
+  min-height: 100lvh;
+  background: linear-gradient(180deg, #132435 0%, #07111a 62%, #02040a 100%);
+  opacity: 0;
+  contain: layout paint size;
+  transform: translateZ(0);
+  transition: opacity 650ms ease;
+  will-change: opacity;
+}
+
+@utility frozen-intro-overlay--showing {
+  opacity: 1;
+}
+
+@utility frozen-intro-overlay--leaving {
+  opacity: 0;
+  pointer-events: none;
+}
+
+@utility frozen-intro-video {
+  position: absolute;
+  inset: 0;
+  display: block;
+  width: 100vw;
+  min-width: 100%;
+  height: 100vh;
+  height: 100lvh;
+  min-height: 100%;
+  max-width: none;
+  object-fit: cover;
+  transform: translateZ(0) scale(1.001);
+  will-change: opacity, transform;
+}
+
+@utility frozen-intro-poster {
+  position: absolute;
+  inset: 0;
+  display: block;
+  width: 100vw;
+  min-width: 100%;
+  height: 100vh;
+  height: 100lvh;
+  min-height: 100%;
+  max-width: none;
+  object-fit: cover;
+  transform: translateZ(0) scale(1.001);
+  will-change: opacity, transform;
+  background-position: center;
+  background-size: cover;
+}
+
+@utility frozen-intro-vignette {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  background:
+    radial-gradient(
+      ellipse 80% 55% at 50% 42%,
+      transparent 0%,
+      rgba(2, 4, 10, 0.1) 58%,
+      rgba(2, 4, 10, 0.52) 100%
+    ),
+    linear-gradient(
+      180deg,
+      rgba(2, 4, 10, 0.18) 0%,
+      transparent 35%,
+      rgba(2, 4, 10, 0.42) 100%
+    );
+  pointer-events: none;
+}
+
+@utility frozen-intro-skip {
+  position: absolute;
+  z-index: 2;
+  right: 1rem;
+  top: 1rem;
+
+  @media (max-width: 640px) {
+    right: 0.75rem;
+    top: 0.75rem;
+  }
+}
+
+@utility frozen-intro-sound {
+  position: absolute;
+  z-index: 2;
+  right: 1rem;
+  top: 3.75rem;
+  width: 2rem;
+  height: 2rem;
+  padding: 0;
+
+  @media (max-width: 640px) {
+    right: 0.75rem;
+    top: 3.5rem;
+  }
+}
+
+@utility frozen-intro-brand {
+  position: absolute;
+  z-index: 2;
+  left: 50%;
+  top: 15%;
+  transform: translateX(-50%);
+  opacity: 0;
+  text-align: center;
+  pointer-events: none;
+  animation: frozenIntroBrand 8.4s ease both;
+
+  & span {
+    font-family: var(--font-cinzel), serif;
+    font-size: clamp(2.7rem, calc(6vw + 0.5rem), 5.65rem);
+    font-weight: 700;
+    line-height: 0.95;
+    color: #f0d080;
+    text-shadow:
+      0 0 18px rgba(128, 200, 240, 0.28),
+      0 0 34px rgba(200, 168, 75, 0.24),
+      0 2px 18px rgba(0, 0, 0, 0.82);
+  }
+
+  @media (max-width: 640px) {
+    top: 15%;
+    width: min(92vw, 24rem);
+
+    & span {
+      font-size: clamp(2.5rem, calc(13vw + 0.5rem), 4.3rem);
+    }
+  }
+}
+
+@utility reveal-item {
+  /* Shared reveal animations */
+  opacity: 0;
+  transform: translateY(14px);
+  animation: revealItem 420ms ease-out both;
+  animation-delay: calc(var(--reveal-index, 0) * 70ms);
+  will-change: opacity, transform;
+}
+
+@utility boss-reveal-item {
+  animation-name: bossRevealItem;
+}
+
+@utility animate-delay-100 {
+  animation-delay: 0.1s;
+}
+
+@utility animate-delay-200 {
+  animation-delay: 0.2s;
+}
+
+@utility animate-delay-300 {
+  animation-delay: 0.3s;
+}
 
 @layer base {
   :root {
@@ -35,257 +401,6 @@
 
   /* Number rendering */
   .tabular-nums { font-variant-numeric: tabular-nums; }
-}
-
-@layer components {
-  /* ── Gold border utility ── */
-  .border-gold-dim  { border-color: rgba(180,140,60,0.2); }
-  .border-gold-mid  { border-color: rgba(180,140,60,0.4); }
-  .border-gold-full { border-color: rgba(180,140,60,0.7); }
-
-  /* ── Panel / Card ── */
-  .panel {
-    @apply bg-bg-panel border border-gold-dim rounded;
-  }
-  .card {
-    @apply bg-bg-card border border-gold-dim rounded;
-  }
-
-  /* ── Page background glow ── */
-  .page-glow::before {
-    content: '';
-    position: fixed;
-    inset: 0;
-    background:
-      radial-gradient(ellipse 80% 50% at 50% -10%, rgba(180,140,60,0.07) 0%, transparent 60%),
-      radial-gradient(ellipse 50% 80% at -10% 50%, rgba(80,40,120,0.04) 0%, transparent 60%);
-    pointer-events: none;
-    z-index: 0;
-  }
-
-  /* ── Meter bar row ── */
-  .meter-row {
-    @apply relative overflow-hidden rounded cursor-pointer;
-    @apply border border-transparent transition-colors duration-150;
-  }
-  .meter-row:hover  { border-color: rgba(180,140,60,0.2); }
-  .meter-row.active { border-color: rgba(180,140,60,0.45); }
-
-  /* ── Cinzel heading ── */
-  .heading-cinzel {
-    font-family: var(--font-cinzel), serif;
-    letter-spacing: 0.04em;
-  }
-
-  /* ── Glow text ── */
-  .text-glow-gold {
-    text-shadow: 0 0 20px rgba(200,168,75,0.5);
-  }
-
-  /* ── Rank badge ── */
-  .rank-badge {
-    @apply inline-flex items-center justify-center w-7 h-7 rounded text-xs font-bold;
-    background: rgba(180,140,60,0.12);
-    border: 1px solid rgba(180,140,60,0.25);
-    color: #c8a84b;
-  }
-  .rank-badge.rank-1 {
-    background: rgba(240,192,64,0.18);
-    border-color: rgba(240,192,64,0.5);
-    color: #f0d080;
-  }
-  .rank-badge.rank-2 {
-    background: rgba(192,200,216,0.15);
-    border-color: rgba(192,200,216,0.4);
-    color: #c0c8d8;
-  }
-  .rank-badge.rank-3 {
-    background: rgba(200,144,64,0.15);
-    border-color: rgba(200,144,64,0.4);
-    color: #c89040;
-  }
-
-  /* ── Difficulty badge ── */
-  .diff-badge {
-    @apply inline-block text-xs font-bold px-1.5 py-0.5 rounded-sm;
-    letter-spacing: 0.06em;
-  }
-  .diff-badge.heroic {
-    background: rgba(224,96,48,0.15);
-    border: 1px solid rgba(224,96,48,0.3);
-    color: #e06030;
-  }
-  .diff-badge.normal {
-    background: rgba(154,143,120,0.12);
-    border: 1px solid rgba(154,143,120,0.25);
-    color: #9a8f78;
-  }
-
-  /* ── Outcome badge ── */
-  .outcome-kill {
-    @apply inline-block text-xs font-bold px-2 py-0.5 rounded-sm;
-    background: rgba(80,160,80,0.15);
-    border: 1px solid rgba(80,160,80,0.3);
-    color: #50a050;
-  }
-  .outcome-wipe {
-    @apply inline-block text-xs font-bold px-2 py-0.5 rounded-sm;
-    background: rgba(200,64,64,0.12);
-    border: 1px solid rgba(200,64,64,0.25);
-    color: #c84040;
-  }
-  .outcome-unknown {
-    @apply inline-block text-xs font-bold px-2 py-0.5 rounded-sm;
-    background: rgba(90,85,72,0.15);
-    border: 1px solid rgba(90,85,72,0.3);
-    color: #5a5548;
-  }
-
-  /* ── Milestone banner ── */
-  .milestone-banner {
-    background: linear-gradient(90deg, rgba(200,168,75,0.08) 0%, rgba(200,168,75,0.03) 100%);
-    border: 1px solid rgba(200,168,75,0.3);
-    @apply rounded px-4 py-3;
-  }
-
-  /* Cinematic intro */
-  .frozen-intro-overlay {
-    position: fixed;
-    inset: 0;
-    z-index: 100;
-    overflow: hidden;
-    min-height: 100vh;
-    min-height: 100lvh;
-    background: linear-gradient(180deg, #132435 0%, #07111a 62%, #02040a 100%);
-    opacity: 0;
-    contain: layout paint size;
-    transform: translateZ(0);
-    transition: opacity 650ms ease;
-    will-change: opacity;
-  }
-
-  .frozen-intro-overlay--showing {
-    opacity: 1;
-  }
-
-  .frozen-intro-overlay--leaving {
-    opacity: 0;
-    pointer-events: none;
-  }
-
-  .frozen-intro-video,
-  .frozen-intro-poster {
-    position: absolute;
-    inset: 0;
-    display: block;
-    width: 100vw;
-    min-width: 100%;
-    height: 100vh;
-    height: 100lvh;
-    min-height: 100%;
-    max-width: none;
-    object-fit: cover;
-    transform: translateZ(0) scale(1.001);
-    will-change: opacity, transform;
-  }
-
-  .frozen-intro-poster {
-    background-position: center;
-    background-size: cover;
-  }
-
-  .frozen-intro-vignette {
-    position: absolute;
-    inset: 0;
-    z-index: 1;
-    background:
-      radial-gradient(ellipse 80% 55% at 50% 42%, transparent 0%, rgba(2,4,10,0.10) 58%, rgba(2,4,10,0.52) 100%),
-      linear-gradient(180deg, rgba(2,4,10,0.18) 0%, transparent 35%, rgba(2,4,10,0.42) 100%);
-    pointer-events: none;
-  }
-
-  .frozen-intro-skip,
-  .frozen-intro-sound {
-    position: absolute;
-    z-index: 2;
-  }
-
-  .frozen-intro-skip {
-    right: 1rem;
-    top: 1rem;
-  }
-
-  .frozen-intro-sound {
-    right: 1rem;
-    top: 3.75rem;
-    width: 2rem;
-    height: 2rem;
-    padding: 0;
-  }
-
-  .frozen-intro-brand {
-    position: absolute;
-    z-index: 2;
-    left: 50%;
-    top: 15%;
-    transform: translateX(-50%);
-    opacity: 0;
-    text-align: center;
-    pointer-events: none;
-    animation: frozenIntroBrand 8.4s ease both;
-  }
-
-  .frozen-intro-brand span {
-    font-family: var(--font-cinzel), serif;
-    font-size: clamp(2.7rem, calc(6vw + 0.5rem), 5.65rem);
-    font-weight: 700;
-    line-height: 0.95;
-    color: #f0d080;
-    text-shadow:
-      0 0 18px rgba(128,200,240,0.28),
-      0 0 34px rgba(200,168,75,0.24),
-      0 2px 18px rgba(0,0,0,0.82);
-  }
-
-  @media (max-width: 640px) {
-    .frozen-intro-skip {
-      right: 0.75rem;
-      top: 0.75rem;
-    }
-
-    .frozen-intro-sound {
-      right: 0.75rem;
-      top: 3.5rem;
-    }
-
-    .frozen-intro-brand {
-      top: 15%;
-      width: min(92vw, 24rem);
-    }
-
-    .frozen-intro-brand span {
-      font-size: clamp(2.5rem, calc(13vw + 0.5rem), 4.3rem);
-    }
-  }
-
-  /* Shared reveal animations */
-  .reveal-item {
-    opacity: 0;
-    transform: translateY(14px);
-    animation: revealItem 420ms ease-out both;
-    animation-delay: calc(var(--reveal-index, 0) * 70ms);
-    will-change: opacity, transform;
-  }
-
-  .boss-reveal-item {
-    animation-name: bossRevealItem;
-  }
-}
-
-@layer utilities {
-  .animate-delay-100 { animation-delay: 0.1s; }
-  .animate-delay-200 { animation-delay: 0.2s; }
-  .animate-delay-300 { animation-delay: 0.3s; }
 }
 
 @keyframes frozenIntroBrand {

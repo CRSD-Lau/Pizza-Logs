@@ -4,6 +4,7 @@ import { db } from "@/lib/db";
 import { SectionHeader } from "@/components/ui/SectionHeader";
 import { StatCard } from "@/components/ui/StatCard";
 import { formatBytes } from "@/lib/utils";
+import { getDeploymentInfo } from "@/lib/deployment-info";
 import { ClearDatabaseButton } from "./ClearDatabaseButton";
 import { DeleteUploadButton } from "./DeleteUploadButton";
 import { GearImportBookmarklet } from "./GearImportBookmarklet";
@@ -27,6 +28,7 @@ type LatestRosterSyncRow = { lastSyncedAt: Date } | null;
 type LatestItemImportRow = { importedAt: Date | null } | null;
 
 export default async function AdminPage() {
+  const deployment = getDeploymentInfo();
   const parserHealthPromise = fetch(`${process.env.PARSER_SERVICE_URL ?? "http://localhost:8000"}/health`, {
     cache: "no-store",
   }).then(r => r.json() as Promise<ParserHealth>).catch(() => ({ status: "unreachable" }));
@@ -126,7 +128,7 @@ export default async function AdminPage() {
       </div>
 
       {!databaseAvailable && (
-        <div className="bg-bg-panel border border-danger/30 rounded px-4 py-3">
+        <div className="bg-bg-panel border border-danger/30 rounded-sm px-4 py-3">
           <p className="text-sm font-semibold text-danger">Database unavailable</p>
           <p className="mt-1 text-sm text-text-secondary">
             Upload analytics are unavailable until the database connection is restored.
@@ -156,7 +158,13 @@ export default async function AdminPage() {
       {/* 2. Configuration */}
       <section>
         <SectionHeader title="Configuration" />
-        <div className="bg-bg-panel border border-gold-dim rounded p-4 space-y-2 font-mono text-xs text-text-secondary">
+        <div className="bg-bg-panel border border-gold-dim rounded-sm p-4 space-y-2 font-mono text-xs text-text-secondary">
+          <div><span className="text-text-dim">APP_VERSION</span>         = {deployment.version}</div>
+          <div><span className="text-text-dim">DEPLOY_COMMIT</span>       = {deployment.commitShort ?? "local / unavailable"}</div>
+          <div><span className="text-text-dim">DEPLOY_BRANCH</span>       = {deployment.branch ?? "local / unavailable"}</div>
+          <div><span className="text-text-dim">DEPLOYMENT_ID</span>       = {deployment.deploymentId ?? "local / unavailable"}</div>
+          <div><span className="text-text-dim">RAILWAY_ENVIRONMENT</span> = {deployment.environment}</div>
+          <div><span className="text-text-dim">RAILWAY_SERVICE</span>     = {deployment.service ?? "local / unavailable"}</div>
           <div><span className="text-text-dim">PARSER_SERVICE_URL</span> = {process.env.PARSER_SERVICE_URL ?? "http://localhost:8000"}</div>
           <div><span className="text-text-dim">NODE_ENV</span>           = {process.env.NODE_ENV}</div>
           <div><span className="text-text-dim">UPLOAD_DIR</span>         = {process.env.UPLOAD_DIR ?? "./uploads"}</div>
@@ -175,7 +183,7 @@ export default async function AdminPage() {
       {/* 4. Warmane Gear Cache */}
       <section>
         <SectionHeader title="Warmane Gear Cache" sub="Browser-assisted import for player profile gear" />
-        <div className="bg-bg-panel border border-gold-dim rounded p-4 space-y-4">
+        <div className="bg-bg-panel border border-gold-dim rounded-sm p-4 space-y-4">
           <div className="grid grid-cols-2 gap-3">
             <StatCard label="Cached Characters"    value={gearCacheTotal} />
             <StatCard label="Server Refresh Errors" value={recentGearErrors} />
@@ -192,7 +200,7 @@ export default async function AdminPage() {
       {/* 5. Item Template (AzerothCore) */}
       <section>
         <SectionHeader title="Item Template (AzerothCore)" sub="Read-only import status for WoW item metadata" />
-        <div className="bg-bg-panel border border-gold-dim rounded p-4 space-y-4">
+        <div className="bg-bg-panel border border-gold-dim rounded-sm p-4 space-y-4">
           <div className="grid grid-cols-2 gap-3">
             <StatCard label="Items Imported" value={itemImportCount} />
             <StatCard
@@ -205,7 +213,7 @@ export default async function AdminPage() {
           {itemImportCount === 0 && (
             <p className="text-sm text-text-secondary">
               No items imported yet. Run{" "}
-              <code className="font-mono text-xs bg-bg-card border border-gold-dim rounded px-1.5 py-0.5">
+              <code className="font-mono text-xs bg-bg-card border border-gold-dim rounded-sm px-1.5 py-0.5">
                 npm run db:import-items
               </code>{" "}
               to populate.
@@ -228,7 +236,7 @@ export default async function AdminPage() {
       {/* 7. Top uploaders */}
       <section>
         <SectionHeader title="Most Active Uploaders" sub="By logs submitted" />
-        <div className="bg-bg-panel border border-gold-dim rounded divide-y divide-gold-dim">
+        <div className="bg-bg-panel border border-gold-dim rounded-sm divide-y divide-gold-dim">
           {topUploaders.map((u, i) => (
             <div key={u.uploaderName} className="flex items-center justify-between px-4 py-2.5">
               <div className="flex items-center gap-3">
@@ -247,7 +255,7 @@ export default async function AdminPage() {
       {recentUploads.length > 0 && (
         <section>
           <SectionHeader title="Recent Upload Timings" sub="Parse duration per log" />
-          <div className="bg-bg-panel border border-gold-dim rounded divide-y divide-gold-dim">
+          <div className="bg-bg-panel border border-gold-dim rounded-sm divide-y divide-gold-dim">
             {recentUploads.map(u => {
               const elapsedMs  = u.parsedAt ? u.parsedAt.getTime() - u.createdAt.getTime() : null;
               const elapsedSec = elapsedMs ? Math.round(elapsedMs / 1000) : null;
@@ -282,7 +290,7 @@ export default async function AdminPage() {
       {recentErrors.length > 0 && (
         <section>
           <SectionHeader title="Recent Failures" />
-          <div className="bg-bg-panel border border-danger/20 rounded divide-y divide-gold-dim">
+          <div className="bg-bg-panel border border-danger/20 rounded-sm divide-y divide-gold-dim">
             {recentErrors.map(u => (
               <div key={u.id} className="px-4 py-3">
                 <div className="text-sm text-text-primary font-medium">{u.filename}</div>
@@ -314,7 +322,7 @@ function ServiceCard({
   detail: string;
 }) {
   return (
-    <div className="bg-bg-card border border-gold-dim rounded px-4 py-4">
+    <div className="bg-bg-card border border-gold-dim rounded-sm px-4 py-4">
       <div className="flex items-center gap-2 mb-2">
         <div className={`w-2 h-2 rounded-full ${
           status === "ok" ? "bg-success" : status === "warn" ? "bg-warning" : "bg-danger"

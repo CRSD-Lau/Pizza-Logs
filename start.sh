@@ -3,6 +3,8 @@ set -e
 
 echo "[start] Running prisma migrate deploy..."
 
+: "${DATABASE_URL:?DATABASE_URL is required for Prisma migrations}"
+
 # Run prisma CLI via its package source entry point.
 # The .bin/prisma bundled script looks for a companion .wasm at __dirname
 # which doesn't survive the multi-stage Docker copy. Running the source
