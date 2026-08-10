@@ -23,6 +23,9 @@ the UTC date fix is merged and deployed.
 
 | Issue | Resolution |
 |---|---|
+| GitHub `main` rules only blocked deletion and force-pushes | Renamed the ruleset to `Production main` and required a pull request plus a passing `test-build` check |
+| Active docs still pointed to the retired laptop/OneDrive checkout | Standardized the supported path on `C:\Projects\PizzaLogs` and added canonical checkout, remote, branch, upstream, and parity checks to the tooling verifier |
+| Retired standalone `sync-agent` build/env exclusions remained | Removed the unused TypeScript and dist exclusions; generic `.env.*` protection now covers local secret files while current browser-sync logs remain ignored |
 | HPS zero on all encounters | Fixed `SPELL_HEAL` field handling and effective heal formula |
 | Post-fight tail lowered DPS | KILL duration now uses boss death timestamp |
 | Valithria kills parsed as wipes | Green Dragon Combat Trigger death evidence added |

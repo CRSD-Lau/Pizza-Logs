@@ -44,8 +44,7 @@ ADMIN_SECRET="local-dev-admin-secret"
 ## Never Commit
 
 - `.env`
-- `.env.local`
-- `.env.sync-agent`
+- `.env.*` files other than the tracked placeholder-only `.env.example`
 - Railway tokens
 - database URLs
 - `ADMIN_SECRET`

@@ -5,7 +5,7 @@ Repo: https://github.com/CRSD-Lau/Pizza-Logs
 Local path on Neil's desktop:
 
 ```text
-C:\Users\neil_\OneDrive\Desktop\PizzaLogs
+C:\Projects\PizzaLogs
 ```
 
 ## Top-Level

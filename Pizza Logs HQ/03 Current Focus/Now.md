@@ -4,6 +4,8 @@
 
 The current session completed a production site, ticket, responsive, accessibility, source, parser, and dependency audit. The app is broadly functional. The release candidate fixes the confirmed leaderboard hydration error, uses the Next.js 15.5.23 security backport, and includes the auditable per-attempt raid difficulty plus secure early-result archive upload path. Parser reliability remains the highest-risk product area.
 
+Workflow cleanup established one supported path: the desktop checkout at `C:\Projects\PizzaLogs` on `codex-dev` -> `origin/codex-dev` -> PR -> `origin/main` -> Railway. No laptop, OneDrive clone, Claude worktree, or direct Railway deployment is part of the active development workflow.
+
 README visual refresh: added a high-resolution `docs/assets/readme-screenshot.png` preview to the public README. The screenshot was captured from a fresh local Next dev server on `http://127.0.0.1:3004` while the parser service was listening on `127.0.0.1:8000`.
 
 Documentation metadata refresh: the README now links to the GitHub wiki, and the wiki has been rewritten with current upload, roster, gear, parser, roadmap, and branch workflow details.
@@ -14,6 +16,12 @@ Codex works on `codex-dev`, pushes `origin/codex-dev`, and opens PRs into `main`
 
 ## This Session
 
+- Audited local worktrees, branches, remotes, ignored legacy artifacts, running processes, scheduled tasks, GitHub branches/rules, PR #28, CI, and Railway deployment boundaries.
+- Confirmed there is one worktree, one canonical remote, and only `main` plus `codex-dev` on GitHub; no Claude or laptop development branch remains.
+- Preserved current roster/gear browser-sync utilities because they are active product operations, not a retired cross-machine development agent.
+- Updated active docs from retired laptop/OneDrive paths to `C:\Projects\PizzaLogs` and made the tooling verifier enforce the canonical checkout, remote, branch, upstream, and branch parity.
+- Renamed the GitHub ruleset to `Production main` and made it require a pull request plus the passing `test-build` CI check; deletion and non-fast-forward protection remain active.
+- Removed obsolete standalone `sync-agent` build/env exclusions while preserving the active roster/gear browser-sync launchers and their ignored logs.
 - Audited all primary Railway routes plus session, encounter, boss, player, protected admin, redirect, search, pagination, and mobile-menu paths.
 - Verified 375x812 layouts, contained roster scrolling, accessible names, H1s, and image alternative text.
 - Reviewed all three GitHub tickets: #1 remains open pending deployment verification; #2 and #3 behavior pass, though #3 has an incorrect copied closure comment.

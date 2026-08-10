@@ -1,6 +1,6 @@
 # Windows Developer Tooling
 
-This document captures the supported local Windows tooling setup for Pizza Logs. It is meant for Neil's laptop and for Codex sessions running in `C:\Projects\PizzaLogs`.
+This document captures the supported local Windows tooling setup for Pizza Logs. It is meant for Neil's desktop and for Codex sessions running in the canonical checkout at `C:\Projects\PizzaLogs`.
 
 ## Quick Start
 
@@ -63,7 +63,7 @@ Optional but useful tools checked by verification:
 
 ## Current Audit Snapshot
 
-As of the local audit on 2026-05-06:
+As of the local audit on 2026-08-10:
 
 - Windows PowerShell 5.1 is present.
 - PowerShell 7.6.1 was installed.

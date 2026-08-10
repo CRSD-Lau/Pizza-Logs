@@ -13,8 +13,8 @@
 - Pizza Logs is Codex-first: work happens on `codex-dev`, then PRs go into `main`.
 - Railway production deploys from `main` after Neil merges a PR.
 - Live app: https://pizza-logs-production.up.railway.app
-- Local working checkout for Neil's laptop: `C:\Projects\PizzaLogs`
-- Local app target for Neil's laptop: http://127.0.0.1:3001
+- Canonical local checkout on Neil's desktop: `C:\Projects\PizzaLogs`
+- Local app target on Neil's desktop: http://127.0.0.1:3001
 - Local Git executable fallback: `C:\Program Files\Git\cmd\git.exe`
 - GitHub CLI executable: `C:\Program Files\GitHub CLI\gh.exe`
 - Parser correctness remains the highest-risk area.
@@ -22,6 +22,10 @@
 - Browser uploads now use one raw UUID-keyed request for `.txt`, `.log`, or `.zip`; the parser atomically finalizes, validates, emits quick modes, then runs full parsing on bounded workers.
 - A 31,621,979-byte ZIP benchmark reached quick classification 1,926.60 ms after the final byte and completed full parsing in 5,158.69 ms.
 - A full production route, mobile, accessibility, ticket, source, and dependency audit is recorded in `02 Build Log/2026-08-10 Site and Ticket Audit.md`.
+- Draft PR #28 is open from `codex-dev` into `main`; its CI and Slack notification checks pass and it is not deployed until Neil merges it.
+- The supported workflow is now explicitly one desktop checkout -> `origin/codex-dev` -> PR -> `origin/main` -> Railway. Active docs no longer point to the retired OneDrive/laptop checkout.
+- GitHub's renamed `Production main` ruleset now requires a PR and passing `test-build`, and blocks branch deletion and non-fast-forward updates.
+- Removed unused standalone `sync-agent` TypeScript/build exclusions and replaced its named env ignore with a safer generic `.env.*` rule; current browser-sync launcher logs remain ignored.
 - Production is broadly functional; the audit found and locally fixed a timezone-dependent React hydration error on leaderboard rows.
 - Next.js and `eslint-config-next` are pinned to the patched 15.x backport, 15.5.23. Direct Next.js 15 security advisories are removed; four transitive production audit entries remain for a later Next.js 16 migration or upstream backport.
 - ICC heroic difficulty detection now uses boss-scoped markers. `Rune of Blood`
@@ -290,7 +294,10 @@
 | `node node_modules\typescript\bin\tsc --noEmit` | Passed |
 | `node node_modules\eslint\bin\eslint.js . --max-warnings=0` | Passed |
 | `npm run build` from clean `.next` | Passed |
-| `powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\dev\verify-tooling.ps1` | Passed with 0 failures; 1 expected Railway-unlinked warning |
+| `powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\dev\verify-tooling.ps1` after workflow cleanup | Passed with 0 failures; canonical checkout, remote, branch, upstream, and local branch parity all passed; 1 intentional Railway-unlinked warning |
+| `npm run check:pr` after workflow cleanup | Passed: ESLint, TypeScript, and Next.js 15.5.23 production build |
+| Active stale-path and retired-sync exclusion scan | Passed; no active laptop, OneDrive checkout, `.env.sync-agent`, `.sync-agent-dist`, or standalone `sync-agent` references remain outside historical archives/user-owned instructions |
+| GitHub `Production main` ruleset inspection | Passed; PR, `test-build`, deletion, and non-fast-forward rules are active on the default branch |
 | `git diff --check` after Slack workflow formatting cleanup | Passed |
 | Guild roster render test with JSX-aware `ts-node` registration | Passed |
 | `node node_modules\typescript\bin\tsc --noEmit` | Passed |
@@ -380,8 +387,8 @@
 
 ## Exact Next Step
 
-Review the local `codex-dev` difficulty/archive upload commit and its benchmark,
-then open or update the PR into `main` when publication is authorized. After a
-future deployment, smoke-test one privacy-safe real Warmane ZIP with and without
-encounter markers. Neil merges into `main` only after review; Codex does not
-merge or push `main` directly.
+Review draft PR #28 and merge it into `main` when ready. Railway will then deploy
+the merged `main` commit. After deployment, verify the live health and primary
+user flow, confirm the leaderboard hydration fix, and re-upload one affected
+mixed heroic/normal raid before closing ticket #1. Codex does not merge or push
+`main` directly.

@@ -12,8 +12,8 @@ tsconfig.tsbuildinfo
 
 # env
 .env
-.env.local
-.env*.local
+.env.*
+!.env.example
 
 # uploads (file storage at repo root only)
 /uploads/
@@ -65,7 +65,5 @@ tmp-mobile-check/
 tmp-intro-preview/
 tools/
 
-# sync agent
-.env.sync-agent
+# browser sync launcher logs
 .sync-agent-logs/
-.sync-agent-dist/

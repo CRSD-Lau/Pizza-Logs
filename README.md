@@ -214,7 +214,7 @@ Docker compose is available for a local production-style stack:
 docker compose up --build
 ```
 
-On Neil's Windows laptop, the preferred local workflow is the two launchers in the repo root:
+On Neil's Windows desktop, the preferred local workflow is the two launchers in the repo root:
 
 ```powershell
 C:\Projects\PizzaLogs\Start Pizza Logs Local.cmd
