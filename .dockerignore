@@ -9,7 +9,6 @@ README.md
 .codex
 .pytest_cache
 .sync-agent-logs
-.sync-agent-dist
 WoWCombatLog
 tmp-mobile-check
 tsconfig.tsbuildinfo

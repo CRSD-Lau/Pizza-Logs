@@ -63,6 +63,13 @@ export const EncounterResultSchema = z.object({
   fingerprint:     z.string(),
   participants:    z.array(ParticipantResultSchema),
   sessionIndex:    z.number().int().default(0),
+  difficultyDetection: z.object({
+    mode:            z.enum(["10N", "10H", "25N", "25H", "UNKNOWN"]),
+    confidence:      z.string(),
+    evidence:        z.array(z.string()),
+    reason:          z.string(),
+    detectorVersion: z.string(),
+  }).optional(),
 });
 export type EncounterResult = z.infer<typeof EncounterResultSchema>;
 
@@ -73,6 +80,8 @@ export const ParseResultSchema = z.object({
   encounters:    z.array(EncounterResultSchema),
   warnings:      z.array(z.string()).optional(),
   sessionDamage: z.record(z.string(), z.number()).optional().default({}),
+  uploadId:      z.string().uuid().optional(),
+  uploadTimings: z.record(z.string(), z.number()).optional(),
 });
 export type ParseResult = z.infer<typeof ParseResultSchema>;
 

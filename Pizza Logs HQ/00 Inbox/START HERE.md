@@ -33,7 +33,9 @@ Pizza Logs is a Warmane / WotLK 3.3.5a combat-log parser and leaderboard app for
 
 ## Core Flow
 
-Browser upload -> `POST /api/upload` -> Next.js forwards to parser `/parse-stream` -> parser streams progress and final JSON -> Next.js writes uploads, encounters, participants, and milestones -> browser links to stored raid/session pages.
+Browser upload -> one UUID-keyed raw request to `POST /api/upload` -> Next.js forwards to parser `/uploads/{upload_id}/stream` -> parser validates and atomically finalizes the file, emits a quick classification, then streams full parse progress and final JSON -> Next.js writes uploads, encounters, participants, and milestones -> browser links to stored raid/session pages.
+
+`/parse-stream` remains a compatibility path for older callers; the browser upload uses the UUID-keyed route.
 
 ## Parser Rules That Matter
 

@@ -21,7 +21,9 @@ observed Warmane server behavior.
   (two spaces between timestamp and event type)  
 - Supported server: Warmane (WotLK 3.3.5a private server)
 - Supported expansion: Wrath of the Lich King 3.3.5a
-- Max file size: no hard limit; parser streams line-by-line
+- Browser formats: `.txt`, `.log`, and `.zip` (case-insensitive)
+- Primary compressed upload limit: 100 MiB; selected/total uncompressed limit: 1 GiB
+- ZIP members are streamed without filesystem extraction
 
 ---
 
@@ -30,8 +32,8 @@ observed Warmane server behavior.
 ### Primary path: ENCOUNTER_START / ENCOUNTER_END
 
 If the file contains `ENCOUNTER_START` events, the parser uses them as authoritative
-encounter boundaries. All `DMG_EVENTS`, `HEAL_EVENTS`, and `UNIT_DIED` events
-between START and END are collected for the encounter.
+encounter boundaries. Every parsed combat event between START and END is retained
+so aura/cast difficulty evidence is available alongside damage, healing, and death.
 
 ENCOUNTER_START fields: `[0]=ENCOUNTER_START [1]=bossId [2]=bossName [3]=difficultyID [4]=groupSize`  
 ENCOUNTER_END fields: `[0]=ENCOUNTER_END [1]=bossId [2]=bossName [3]=difficultyID [4]=groupSize [5]=success`
@@ -86,44 +88,16 @@ an encounter.
 
 ## Difficulty Detection
 
-### Step 1: ENCOUNTER_START difficultyID
+Difficulty is classified independently for each already-segmented attempt by
+`pizza-difficulty-v2`. The detector aggregates every relevant boss-specific
+spell ID, returns `UNKNOWN` for conflicts or unsupported evidence, and never
+defaults an unmapped boss to Normal. Valid `ENCOUNTER_START` modes are a fallback
+only for boss/mode pairs represented by the supported mapping. Gunship and other
+attempts do not inherit difficulty from another pull or session.
 
-| difficultyID | Result |
-|---|---|
-| 3 | 10N |
-| 4 | 25N |
-| 5 | 10H |
-| 6 | 25H |
-
-Warmane may emit difficultyID=4 (25N) for heroic runs. Proceed to Step 2.
-
-### Step 2: Heroic spell markers (applied even when ENCOUNTER_START present)
-
-If any of the following boss-specific spell names or spell IDs appear in the
-segment AND difficulty is currently `10N` or `25N`, upgrade to `10H` or `25H`:
-
-| Marker | Boss | Source |
-|---|---|---|
-| Bone Slice | Lord Marrowgar (ICC) | Skada — heroic-only multi-target cleave |
-| Scent of Blood spell IDs 72769 / 72771 | Deathbringer Saurfang (ICC) | Heroic-only Blood Beast mechanic; ID-based to avoid Death Knight spell-name collisions |
-| Twisted Nightmares spell IDs 71940 / 71941 or name | Valithria Dreamwalker (ICC) | Heroic replacement for Emerald Vigor |
-| Pact of the Darkfallen | Blood-Queen Lana'thel (ICC) | Skada — heroic-only group link |
-| Unbound Plague | Professor Putricide (ICC) | Skada — heroic-only spreading debuff |
-
-**Excluded markers** (appear in 10N on Warmane, cannot be used as heroic indicators):
-- Rune of Blood (Deathbringer Saurfang)
-- Backlash (Sindragosa)
-- Empowered Shock Vortex / Empowered Shadow Lance / Empowered Blood (Blood Prince Council)
-
-### Step 3: Session normalization
-
-- Gunship Battle: can inherit session heroic difficulty because Warmane provides
-  no reliable Gunship-only heroic marker.
-- Non-Gunship `25N` attempts are not promoted solely because another pull in the
-  same session was heroic. This prevents heroic wipes followed by a normal kill
-  from being bucketed under heroic.
-- Sindragosa and Blood Prince Council without direct heroic evidence remain
-  normal because their ambiguous Warmane spells also appear in 10N.
+The auditable result schema, full spell-map structure, Ulduar special rules,
+unsupported Hodir/Sartharion cases, ranking protection, and tests are documented
+in `docs/difficulty-detector.md`.
 
 ---
 
@@ -272,13 +246,12 @@ A GUID is considered a player if it matches any of:
 
 ## Known Limitations
 
-1. **Heroic difficulty on Warmane**: Warmane emits difficultyID=4 (25N) for heroic runs;
-   the heroic spell marker approach is the only reliable upgrade path.
+1. **Difficulty evidence on Warmane**: encounter IDs may be misleading. Boss-scoped
+   spell ranks override marker fallback; absent or conflicting evidence is `UNKNOWN`.
 2. **Gunship Battle**: Warmane always emits success=0 for Gunship; crew death override
    is required.
-3. **Difficulty undetectable cases**: Sindragosa, Blood Prince Council (heroic markers
-   removed due to Warmane 10N false positives); absent direct evidence they stay
-   normal rather than inheriting heroic from another pull.
+3. **Difficulty undetectable cases**: unsupported or ambiguous attempts remain
+   `UNKNOWN`; Hodir Hard Mode and Sartharion drake modes are explicitly unsupported.
 4. **Absorbs not tracked**: PW:S and other absorb shields not yet implemented.
 5. **Post-death events**: Some servers log damage/heal events after player/boss death;
    not explicitly filtered (negligible impact on totals).
@@ -313,8 +286,10 @@ A GUID is considered a player if it matches any of:
 POST to `/parse-debug` on the parser service to get per-encounter debug metadata
 alongside normal parse results. Returns `DebugInfo` per encounter with:
 - `difficultyMethod` — "encounter_start" or "heuristic"
-- `difficultyRaw` / `difficultyFinal` — before and after heroic upgrade
-- `heroicMarkersFound` — which spell names triggered the upgrade
+- `difficultyRaw` / `difficultyFinal` — encounter marker fallback and final mode
+- `difficultyConfidence`, `difficultyEvidence`, `difficultyReason`, `detectorVersion`
+  — the auditable v2 detector result
+- `heroicMarkersFound` — legacy-compatible evidence list
 - `outcomeMethod` / `outcomeEvidence` — how KILL/WIPE was determined
 - `actorCount`, `bossGuidCount` — aggregation stats
 - `parserWarnings` — any low-confidence warnings

@@ -2,7 +2,9 @@
 
 ## Active Focus
 
-The current session removed local Windows Warmane auto-open behavior. Direct local CLI requests to Warmane still return 403, so gear and roster refresh now rely on already-open Warmane tabs running the browser userscripts hourly. Parser reliability remains the highest-risk product area.
+The current session completed a production site, ticket, responsive, accessibility, source, parser, and dependency audit. The app is broadly functional. The release candidate fixes the confirmed leaderboard hydration error, uses the Next.js 15.5.23 security backport, and includes the auditable per-attempt raid difficulty plus secure early-result archive upload path. Parser reliability remains the highest-risk product area.
+
+Workflow cleanup established one supported path: the desktop checkout at `C:\Projects\PizzaLogs` on `codex-dev` -> `origin/codex-dev` -> PR -> `origin/main` -> Railway. No laptop, OneDrive clone, Claude worktree, or direct Railway deployment is part of the active development workflow.
 
 README visual refresh: added a high-resolution `docs/assets/readme-screenshot.png` preview to the public README. The screenshot was captured from a fresh local Next dev server on `http://127.0.0.1:3004` while the parser service was listening on `127.0.0.1:8000`.
 
@@ -14,6 +16,29 @@ Codex works on `codex-dev`, pushes `origin/codex-dev`, and opens PRs into `main`
 
 ## This Session
 
+- Audited local worktrees, branches, remotes, ignored legacy artifacts, running processes, scheduled tasks, GitHub branches/rules, PR #28, CI, and Railway deployment boundaries.
+- Confirmed there is one worktree, one canonical remote, and only `main` plus `codex-dev` on GitHub; no Claude or laptop development branch remains.
+- Preserved current roster/gear browser-sync utilities because they are active product operations, not a retired cross-machine development agent.
+- Updated active docs from retired laptop/OneDrive paths to `C:\Projects\PizzaLogs` and made the tooling verifier enforce the canonical checkout, remote, branch, upstream, and branch parity.
+- Renamed the GitHub ruleset to `Production main` and made it require a pull request plus the passing `test-build` CI check; deletion and non-fast-forward protection remain active.
+- Removed obsolete standalone `sync-agent` build/env exclusions while preserving the active roster/gear browser-sync launchers and their ignored logs.
+- Rechecked Railway production after publication: primary public routes return 200 and protected admin/upload routes redirect; the parser's `/health` is internal and there is no public web `/api/health` route.
+- Audited all primary Railway routes plus session, encounter, boss, player, protected admin, redirect, search, pagination, and mobile-menu paths.
+- Verified 375x812 layouts, contained roster scrolling, accessible names, H1s, and image alternative text.
+- Reviewed all three GitHub tickets: #1 remains open pending deployment verification; #2 and #3 behavior pass, though #3 has an incorrect copied closure comment.
+- Fixed production React hydration error #418 by making leaderboard dates deterministic in UTC.
+- Added `tests/utils-date.test.ts` for a midnight timezone boundary.
+- Pinned Next.js and `eslint-config-next` to the patched 15.x backport, 15.5.23.
+- Recorded the complete audit in `02 Build Log/2026-08-10 Site and Ticket Audit.md`.
+- Re-ran the full validation gate: focused TypeScript tests, type-check, ESLint, production build, Python dependency check, and 280 parser tests all passed.
+- Replaced first-match/Normal fallback difficulty logic with `pizza-difficulty-v2` boss/mode spell sets and conflict-to-`UNKNOWN` behavior.
+- Added complete ICC, ToC, Ruby Sanctum, VoA/EoE, and supported Ulduar evidence tests, including all Faction Champions alternatives.
+- Added Freya three-Elder and Yogg Keeper-count rules, Ulduar size fallback rules, and explicit unsupported Hodir/Sartharion handling.
+- Added auditable mode/confidence/evidence/reason/version metadata and prevented `UNKNOWN` attempts from entering kill rankings or milestones.
+- Added one-request UUID uploads, incremental SHA-256, atomic finalization, ZIP magic/member/security validation, timeouts, abandoned-file cleanup, and bounded quick/full worker pools.
+- Added quick-result SSE and upload state inspection before full report/database processing.
+- Added repeatable 30 MiB archive benchmark; final byte to quick result measured 1,926.60 ms and full processing 5,158.69 ms.
+- Exercised the actual Next.js -> parser -> local PostgreSQL flow; it returned quick `25H` and final `DONE`, then the exact local test row and temporary files were removed.
 - Investigated Neil's report that command prompts interrupted gaming and hourly sync opened too many Warmane tabs.
 - Investigated Neil's follow-up that Chrome was still silently opening tabs and using too much memory.
 - Confirmed no Pizza Logs scheduled tasks remain.
@@ -164,6 +189,12 @@ Codex works on `codex-dev`, pushes `origin/codex-dev`, and opens PRs into `main`
 
 ## Open Follow-Ups
 
+- Merge and deploy the audit PR, then verify `/leaderboards` and a boss detail page no longer emit React hydration error #418.
+- Re-upload an affected mixed heroic/normal raid after deployment and close ticket #1 only after stored difficulties are correct.
+- Plan a separate Next.js 16.3 migration or take a later 15.x backport to clear the four remaining transitive `npm audit --omit=dev` entries.
+- Measure quick classification on a privacy-safe real Warmane archive without encounter markers; the robust heuristic CSV path may be slower than the marker-based 1.92660-second benchmark.
+- Add 7z only if equivalent no-extraction security and resource enforcement can be maintained.
+- Add a shared/distributed upload limiter only if Railway uses multiple parser replicas or production traffic warrants it.
 - Smoke-check the intro on real iPhone Safari and Android Chrome after the PR is deployed.
 - Confirm the fresh docs-only PR posts to Slack now that `PR_SLACK_WEBHOOK_URL` is configured.
 - Add hard server-side upload size enforcement.

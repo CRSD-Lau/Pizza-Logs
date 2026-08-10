@@ -2,24 +2,30 @@
 
 ## Active Bugs
 
-No confirmed app-breaking bugs are active as of the documentation audit.
+No confirmed release-candidate app-breaking bugs are active. Railway production
+still emits React hydration error #418 on leaderboard and boss-detail pages until
+the UTC date fix is merged and deployed.
 
 ## Active Limitations And Blockers
 
 | Issue | Impact | Current approach |
 |---|---|---|
-| Upload route lacks hard server-side size enforcement | Large uploads can consume web/parser resources | Add streaming byte limit before or while forwarding to parser |
-| Upload rate limiting is not implemented | Abuse could create parser/DB load | Prefer Railway-level controls first; add app logic only if needed |
+| Upload concurrency limits are process-local | Multiple Railway parser replicas do not share one global queue/rate limit | Keep bounded per-process quick/full pools; add a shared limiter only if production scaling requires it |
+| Archive upload supports ZIP, not 7z/RAR/tar | Users must create a ZIP or upload the raw text/log | Add another format only with equivalent streaming and security validation |
 | Absorbs are not implemented | Disc priest contribution can be lower than Skada combined healing+absorbs views | Future parser work based on Skada `Absorbs.lua`; keep separate from healing done |
 | Role detection is rough | Hybrids/self-healing classes can be mislabeled; tanks are not inferred | Replace upload-time heal/damage ratio with better class/spec/combat evidence |
 | Warmane direct server fetches can fail with Cloudflare/403 | Gear/roster refreshes are unreliable from Railway or plain CLI requests | Supported path is browser-assisted userscripts running in existing Warmane tabs and cached DB snapshots |
-| Some heroic/Gunship difficulty evidence is absent | Certain pulls cannot be classified perfectly from logs alone | Use direct marker evidence first; keep normal-looking non-Gunship fallback attempts normal; document uncertainty |
+| Hodir Hard Mode and Sartharion drake modes are unsupported | Those attempts cannot be ranked by an auditable mode | Return `UNKNOWN` until explicit evidence rules exist |
 | Orphaned pets can remain unmatched | Small DPS mismatches when pets were active before log start | Keep Skada-aligned owner remap when summon evidence exists |
+| Four transitive production dependency advisories remain after the Next.js 15.5.23 backport | `npm audit --omit=dev` remains non-zero for `nanoid`, Next.js bundled PostCSS, PostCSS, and Sharp | Keep the direct Next.js 15 security fixes in this release; isolate a Next.js 16.3 migration or take a later 15.x backport |
 
 ## Resolved Reference
 
 | Issue | Resolution |
 |---|---|
+| GitHub `main` rules only blocked deletion and force-pushes | Renamed the ruleset to `Production main` and required a pull request plus a passing `test-build` check |
+| Active docs still pointed to the retired laptop/OneDrive checkout | Standardized the supported path on `C:\Projects\PizzaLogs` and added canonical checkout, remote, branch, upstream, and parity checks to the tooling verifier |
+| Retired standalone `sync-agent` build/env exclusions remained | Removed the unused TypeScript and dist exclusions; generic `.env.*` protection now covers local secret files while current browser-sync logs remain ignored |
 | HPS zero on all encounters | Fixed `SPELL_HEAL` field handling and effective heal formula |
 | Post-fight tail lowered DPS | KILL duration now uses boss death timestamp |
 | Valithria kills parsed as wipes | Green Dragon Combat Trigger death evidence added |
@@ -57,6 +63,10 @@ No confirmed app-breaking bugs are active as of the documentation audit.
 | Windows sync uninstall scripts errored when no task existed | Gear and roster uninstall scripts now treat missing scheduled tasks/startup launchers as clean no-ops |
 | Warmane sync opened recurring tabs and flashed command prompts | Gear `1.8.1` and roster `1.1.1` schedule hourly runs inside existing Warmane tabs; old hourly scheduled tasks and visible `.cmd` launchers were removed |
 | Hidden Warmane Startup launchers could still open Chrome tabs | Local Startup launchers were removed, and installer defaults now clean old tasks/launchers without creating any Windows auto-open entry |
+| Difficulty used first-match or Normal fallback evidence | Added per-attempt `pizza-difficulty-v2` with complete boss/mode spell sets, Ulduar rules, conflict detection, auditable metadata, and `UNKNOWN` ranking protection |
+| Upload had no archive security or early classification | Added one-request UUID streaming, incremental SHA-256, atomic finalization, ZIP safety limits, quick results, bounded full workers, timeouts, and abandoned-file cleanup |
+| Leaderboard and boss pages emitted React hydration error #418 | Leaderboard short dates now use an explicit UTC timezone on the server and browser |
+| Next.js 15.5.15 had direct middleware/server-action security advisories | Pinned Next.js and `eslint-config-next` to the current 15.x backport, 15.5.23 |
 
 ## Not Bugs
 

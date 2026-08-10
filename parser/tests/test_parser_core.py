@@ -211,11 +211,11 @@ def test_decode_difficulty_10h():
 def test_decode_difficulty_10n():
     assert _decode_difficulty(3, 10) == "10N"
 
-def test_decode_difficulty_fallback_25():
-    assert _decode_difficulty(99, 25) == "25N"
+def test_decode_difficulty_does_not_fallback_to_25n():
+    assert _decode_difficulty(99, 25) == "UNKNOWN"
 
-def test_decode_difficulty_fallback_10():
-    assert _decode_difficulty(99, 10) == "10N"
+def test_decode_difficulty_does_not_fallback_to_10n():
+    assert _decode_difficulty(99, 10) == "UNKNOWN"
 
 
 # ── _is_player ─────────────────────────────────────────────────────────────────
@@ -356,16 +356,15 @@ def test_gunship_wipe_no_crew_deaths():
 # ── Gunship difficulty: session-level normalization ────────────────────────────
 # These tests are RED — _normalize_session_difficulty does not exist yet.
 
-def test_gunship_difficulty_upgraded_to_match_session_heroic():
-    """Gunship has no heroic-specific spells; difficulty must be inferred
-    from the session context when other encounters in the same session are HC."""
+def test_gunship_difficulty_is_not_inherited_from_session_heroic():
+    """Difficulty is per attempt; another encounter cannot promote Gunship."""
     encounters = [
         make_encounter("Lord Marrowgar", difficulty="25H", session_index=0),
         make_encounter("Gunship Battle", difficulty="25N", session_index=0),
     ]
     CombatLogParser._normalize_session_difficulty(encounters)
     gunship = next(e for e in encounters if "gunship" in e.boss_name.lower())
-    assert gunship.difficulty == "25H"
+    assert gunship.difficulty == "25N"
 
 
 def test_gunship_difficulty_unchanged_when_already_heroic():
@@ -403,7 +402,7 @@ def test_25n_non_gunship_in_25h_session_is_not_promoted_without_evidence():
     assert dw.difficulty == "25N", (
         f"Lady Deathwhisper without direct heroic evidence must stay '25N', got '{dw.difficulty}'"
     )
-    assert gunship.difficulty == "25H"
+    assert gunship.difficulty == "25N"
 
 
 def test_heroic_wipe_then_normal_kill_keeps_normal_difficulty():
@@ -435,7 +434,7 @@ def test_gunship_difficulty_not_cross_contaminated_across_sessions():
         e for e in encounters if "gunship" in e.boss_name.lower() and e.session_index == 1
     )
     assert session0_gunship.difficulty == "25N"
-    assert session1_gunship.difficulty == "25H"
+    assert session1_gunship.difficulty == "25N"
 
 
 # ── Damage event integration — Skada counts all registered event types ─────────
@@ -1952,31 +1951,32 @@ def _heuristic_segment_10n(boss_name: str, heroic_spell: str,
     return seg
 
 
-def test_sindragosa_10n_backlash_does_not_upgrade_to_heroic():
+def test_sindragosa_backlash_without_rank_evidence_is_unknown():
     """
     On Warmane, Sindragosa 10N also logs 'Backlash' (Unchained Magic self-damage).
-    A Sindragosa segment with ≤10 player GUIDs must stay '10N', not be upgraded
-    to '10H' by the heroic-spell-marker detection.
+    Backlash is not difficulty-specific. Without a supported rank or explicit
+    encounter marker, the attempt must not be guessed as Normal.
     """
     seg = _heuristic_segment_10n("Sindragosa", "Backlash", extra_player_guids=4)
     enc = CombatLogParser(file_year=2026)._aggregate_segment(seg, {})
     assert enc is not None, "Should produce an encounter"
-    assert enc.difficulty == "10N", (
-        f"Sindragosa 10N with Backlash must stay '10N', got '{enc.difficulty}'"
+    assert enc.difficulty == "UNKNOWN", (
+        f"Sindragosa with only Backlash must be UNKNOWN, got '{enc.difficulty}'"
     )
 
 
-def test_bpc_10n_empowered_shock_vortex_does_not_upgrade_to_heroic():
+def test_bpc_empowered_shock_vortex_without_rank_evidence_is_unknown():
     """
     On Warmane, Blood Prince Council 10N logs 'Empowered Shock Vortex'.
-    A BPC segment with ≤10 player GUIDs must stay '10N', not be upgraded to '10H'.
+    This name is not difficulty-specific. Without a supported rank or explicit
+    encounter marker, the attempt must not be guessed as Normal.
     """
     seg = _heuristic_segment_10n("Prince Valanar", "Empowered Shock Vortex",
                                   extra_player_guids=4)
     enc = CombatLogParser(file_year=2026)._aggregate_segment(seg, {})
     assert enc is not None, "Should produce an encounter"
-    assert enc.difficulty == "10N", (
-        f"BPC 10N with Empowered Shock Vortex must stay '10N', got '{enc.difficulty}'"
+    assert enc.difficulty == "UNKNOWN", (
+        f"BPC with only Empowered Shock Vortex must be UNKNOWN, got '{enc.difficulty}'"
     )
 
 
@@ -2047,11 +2047,11 @@ def _make_encounter_start_segment(
     return seg
 
 
-def test_heroic_detected_with_encounter_start_25h():
-    """ENCOUNTER_START difficultyID=4 (25N) + Bone Slice → difficulty must be 25H."""
+def test_rank_spell_overrides_incorrect_encounter_start_25h():
+    """A 25H Coldflame rank overrides Warmane difficultyID=4 (25N)."""
     seg = _make_encounter_start_segment(
         "Lord Marrowgar", diff_id=4, group_size=25,
-        heroic_spell="Bone Slice", extra_player_count=20,
+        heroic_spell="Coldflame", heroic_spell_id=70825, extra_player_count=20,
     )
     p = CombatLogParser()
     enc = p._aggregate_segment(seg, {})
@@ -2098,11 +2098,11 @@ def test_valithria_twisted_nightmares_upgrades_to_heroic():
     assert enc.difficulty == "25H", f"Expected 25H, got {enc.difficulty}"
 
 
-def test_heroic_detected_with_encounter_start_10h():
-    """ENCOUNTER_START difficultyID=4 (25N) + Bone Slice + ≤12 players → 10H."""
+def test_rank_spell_overrides_incorrect_encounter_start_10h():
+    """A 10H Coldflame rank overrides Warmane difficultyID=3 (10N)."""
     seg = _make_encounter_start_segment(
         "Lord Marrowgar", diff_id=3, group_size=10,
-        heroic_spell="Bone Slice", extra_player_count=8,
+        heroic_spell="Coldflame", heroic_spell_id=70824, extra_player_count=8,
     )
     p = CombatLogParser()
     enc = p._aggregate_segment(seg, {})

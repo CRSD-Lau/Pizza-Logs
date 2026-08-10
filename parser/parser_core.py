@@ -25,37 +25,9 @@ from combat_metrics import (
     extract_heal_fields,
     session_damage_amount,
 )
+from difficulty_detector import DifficultyDetection, detect_difficulty
 
 # ── Constants ─────────────────────────────────────────────────────
-
-# Spell names that only appear in heroic difficulty encounters, keyed by boss.
-# Used to upgrade "25N"/"10N" to "25H"/"10H" — runs regardless of whether
-# ENCOUNTER_START is present, because Warmane emits difficultyID=4 (25N) for heroic runs.
-HEROIC_SPELL_NAME_MARKERS_BY_BOSS: dict[str, frozenset[str]] = {
-    # Lord Marrowgar (ICC) — multi-target cleave only present in heroic
-    "lord marrowgar": frozenset({"bone slice"}),
-    # Valithria Dreamwalker (ICC) — heroic replacement for Emerald Vigor
-    "valithria dreamwalker": frozenset({"twisted nightmares"}),
-    # Blood-Queen Lana'thel (ICC) — heroic group link mechanic
-    "blood-queen lana'thel": frozenset({"pact of the darkfallen"}),
-    # Professor Putricide (ICC) — spreads between players in heroic only
-    "professor putricide": frozenset({"unbound plague"}),
-    # NOTE: "backlash" (Sindragosa) and "empowered shock vortex" / "empowered shadow lance" /
-    # "empowered blood" (Blood Prince Council) are intentionally EXCLUDED here.
-    # On Warmane these spells also appear in 10N, so they cannot be used as heroic-exclusive
-    # markers.  Sindragosa and BPC without direct heroic evidence stay normal rather
-    # than inheriting heroic state from another pull in the same session.
-}
-
-# Spell IDs for heroic markers where name-only matching is unsafe. Death Knights
-# also have a "Scent of Blood" talent/proc, so Saurfang detection uses boss spell
-# IDs instead of the shared spell name.
-HEROIC_SPELL_ID_MARKERS_BY_BOSS: dict[str, frozenset[int]] = {
-    # Deathbringer Saurfang (ICC) — heroic Blood Beast raid slow/damage buff
-    "deathbringer saurfang": frozenset({72769, 72771}),
-    # Valithria Dreamwalker (ICC) — aura plus triggered periodic damage
-    "valithria dreamwalker": frozenset({71940, 71941}),
-}
 
 # Gunship Battle: Warmane emits ENCOUNTER_END success=0 even on a genuine kill
 # (the fight ends via scripted ship destruction, not a boss UNIT_DIED).
@@ -270,6 +242,10 @@ class DebugInfo:
     difficulty_raw: str              # difficulty before heroic upgrade
     difficulty_final: str            # difficulty after heroic upgrade
     heroic_markers_found: list[str]  # spell names that triggered upgrade
+    difficulty_confidence: str
+    difficulty_evidence: list[str]
+    difficulty_reason: str
+    detector_version: str
     outcome_method: str              # "encounter_end" | "unit_died" | "gunship_crew" | "heuristic"
     outcome_evidence: str            # human-readable reason
     event_count: int                 # total events in segment
@@ -298,6 +274,12 @@ class ParsedEncounter:
     participants:      list[dict]
     raw_event_count:   int
     session_index:     int = 0   # 0-based index; increments on >60 min gap
+    difficulty_detection: DifficultyDetection = field(default_factory=lambda: DifficultyDetection(
+        mode="UNKNOWN",
+        confidence="none",
+        evidence=(),
+        reason="Legacy encounter without detector metadata",
+    ))
 
 
 # ── CSV line splitter ──────────────────────────────────────────────
@@ -351,6 +333,7 @@ class CombatLogParser:
         fh: TextIO,
         total_lines: int = 0,
         progress_cb: Optional[object] = None,
+        cancel_event=None,
     ) -> list[ParsedEncounter]:
         """Main entry point — returns list of raid boss encounters.
 
@@ -359,15 +342,21 @@ class CombatLogParser:
             total_lines:  pre-counted line total (for progress %). 0 = unknown
             progress_cb:  callable(lines_done: int, total: int) — called every 50k lines
         """
-        lines = self._iter_lines(fh, total_lines, progress_cb)
-        segments, pet_owner = self._segment_encounters(lines)
+        lines = self._iter_lines(fh, total_lines, progress_cb, cancel_event)
         encounters: list[ParsedEncounter] = []
-        for seg in segments:
+
+        def consume_segment(
+            seg: list[tuple[str, list[str], float]],
+            pet_owner: dict[str, tuple[str, str]],
+        ) -> None:
             enc = self._aggregate_segment(seg, pet_owner)
             if enc:
                 encounters.append(enc)
+
+        # Aggregate each closed attempt immediately. This bounds memory to the
+        # largest encounter instead of retaining every parsed line in the log.
+        self._segment_encounters(lines, segment_cb=consume_segment)
         self._assign_session_indices(encounters)
-        self._normalize_session_difficulty(encounters)
         if self.skipped_line_count:
             self.warnings.append(
                 f"Skipped {self.skipped_line_count} malformed combat-log lines."
@@ -376,34 +365,13 @@ class CombatLogParser:
 
     @staticmethod
     def _normalize_session_difficulty(encounters: list["ParsedEncounter"]) -> None:
-        """Normalize encounter difficulties within a session.
+        """Compatibility no-op: difficulty is deliberately per attempt.
 
-        Two cases handled:
-
-        1. Gunship Battle: Warmane emits difficultyID=4 (25N) even on heroic kills
-           because the boss has no heroic-exclusive spells.  Always inherit from session.
-
-        Do not broadly promote normal-looking attempts to heroic based only on another
-        heroic encounter in the same session. Warmane raids can wipe on heroic and then
-        kill on normal; cross-attempt promotion would bucket that normal kill under heroic.
+        Older releases promoted Gunship from another pull in the same session.
+        That cross-attempt inference could misclassify mixed Normal/Heroic raids,
+        so the v2 detector never mutates an attempt after classification.
         """
-        by_session: dict[int, list["ParsedEncounter"]] = {}
-        for enc in encounters:
-            by_session.setdefault(enc.session_index, []).append(enc)
-        for session_encs in by_session.values():
-            heroic_diff = next(
-                (e.difficulty for e in session_encs if e.difficulty in ("25H", "10H")),
-                None,
-            )
-            if not heroic_diff:
-                continue
-            for enc in session_encs:
-                if enc.difficulty in ("25H", "10H"):
-                    continue  # already heroic — no change needed
-                bn = (enc.boss_name or "").lower()
-                if "gunship" in bn:
-                    # Gunship: always inherit session difficulty
-                    enc.difficulty = heroic_diff
+        del encounters
 
     @staticmethod
     def _assign_session_indices(
@@ -438,11 +406,14 @@ class CombatLogParser:
         fh: TextIO,
         total_lines: int = 0,
         progress_cb=None,
+        cancel_event=None,
     ) -> Generator[tuple[str, list[str], float], None, None]:
         """Yield (raw_ts_str, parts, ts_float) for every parseable line."""
         _REPORT_EVERY = 50_000
         for raw_line in fh:
             self.raw_count += 1
+            if cancel_event is not None and self.raw_count % 4096 == 0 and cancel_event.is_set():
+                raise TimeoutError("Parser work was cancelled after the processing timeout")
             if progress_cb and self.raw_count % _REPORT_EVERY == 0:
                 progress_cb(self.raw_count, total_lines)
             result = parse_combat_log_line(raw_line)
@@ -459,7 +430,9 @@ class CombatLogParser:
     # ── Internal: segmentation ───────────────────────────────────
 
     def _segment_encounters(
-        self, lines: Generator[tuple[str, list[str], float], None, None]
+        self,
+        lines: Generator[tuple[str, list[str], float], None, None],
+        segment_cb=None,
     ) -> tuple[list[list[tuple[str, list[str], float]]], dict[str, tuple[str, str]]]:
         """
         Group lines into encounter segments.
@@ -475,6 +448,12 @@ class CombatLogParser:
         segments: list[list[tuple[str, list[str], float]]] = []
         # pet_guid → (owner_guid, owner_name)
         pet_owner: dict[str, tuple[str, str]] = {}
+
+        def emit(segment: list[tuple[str, list[str], float]]) -> None:
+            if segment_cb is not None:
+                segment_cb(segment, pet_owner)
+            else:
+                segments.append(segment)
 
         # ── Path A: ENCOUNTER_START/END ──────────────────────────
         current_segment: list[tuple[str, list[str], float]] = []
@@ -588,6 +567,8 @@ class CombatLogParser:
 
             # ── ENCOUNTER_START ──────────────────────────────────
             if event == ENCOUNTER_START:
+                if current_segment:
+                    emit(current_segment)
                 has_encounter_events = True
                 in_encounter = True
                 current_segment = [(ts_str, parts, ts)]
@@ -598,44 +579,45 @@ class CombatLogParser:
                 has_encounter_events = True
                 if current_segment:
                     current_segment.append((ts_str, parts, ts))
-                    segments.append(current_segment)
+                    emit(current_segment)
                 current_segment = []
                 in_encounter = False
                 continue
 
             # ── ENCOUNTER_START/END path: collect everything ──────
             if has_encounter_events:
-                if in_encounter and (event in DMG_EVENTS or event in HEAL_EVENTS or event == UNIT_DIED_EVENT):
+                # Difficulty evidence includes aura/cast events, so retain every
+                # parsed combat event inside the already-bounded encounter.
+                if in_encounter:
                     current_segment.append((ts_str, parts, ts))
                 continue
 
             # ── Heuristic path (no ENCOUNTER_START in file) ───────
-            if event not in DMG_EVENTS and event not in HEAL_EVENTS and event != UNIT_DIED_EVENT:
-                continue
-
             is_boss = self._is_boss_event(parts)
 
             if heuristic_active:
-                if is_boss:
-                    # Extend active window
-                    last_boss_ts = ts
-                    heuristic_segment.append((ts_str, parts, ts))
-                elif ts - last_boss_ts <= ENCOUNTER_GAP_SECONDS:
-                    # Still within window — collect ALL events (heals, player dmg, deaths)
-                    heuristic_segment.append((ts_str, parts, ts))
-                else:
-                    # Gap exceeded — close this encounter
+                if ts - last_boss_ts > ENCOUNTER_GAP_SECONDS:
+                    # A long quiet gap always closes the previous attempt, even
+                    # when the first line after the gap also names the boss.
                     if len(heuristic_segment) >= MIN_ENCOUNTER_EVENTS:
-                        segments.append(heuristic_segment)
+                        emit(heuristic_segment)
                     heuristic_segment = []
                     heuristic_active = False
-                    # Check if this line itself starts a new boss fight
-                    if is_boss:
+                    if is_boss and (event in DMG_EVENTS or event in HEAL_EVENTS or event == UNIT_DIED_EVENT):
                         heuristic_active = True
                         last_boss_ts = ts
                         heuristic_segment = [(ts_str, parts, ts)]
+                elif is_boss:
+                    # Extend active window
+                    last_boss_ts = ts
+                    heuristic_segment.append((ts_str, parts, ts))
+                else:
+                    # Still within window — collect ALL events (heals, player dmg, deaths)
+                    heuristic_segment.append((ts_str, parts, ts))
             else:
-                if is_boss:
+                # Only damage/heal/death opens a heuristic encounter. Once open,
+                # all events are retained for boss-specific difficulty evidence.
+                if is_boss and (event in DMG_EVENTS or event in HEAL_EVENTS or event == UNIT_DIED_EVENT):
                     heuristic_active = True
                     last_boss_ts = ts
                     heuristic_segment = [(ts_str, parts, ts)]
@@ -643,10 +625,10 @@ class CombatLogParser:
         # Flush trailing segment
         if has_encounter_events:
             if current_segment:
-                segments.append(current_segment)
+                emit(current_segment)
         else:
             if heuristic_segment and len(heuristic_segment) >= MIN_ENCOUNTER_EVENTS:
-                segments.append(heuristic_segment)
+                emit(heuristic_segment)
 
         self.session_damage = _full_dmg
         return segments, pet_owner
@@ -688,14 +670,15 @@ class CombatLogParser:
         # Determine boss from ENCOUNTER_START if present
         boss_name: Optional[str] = None
         boss_id:   Optional[int] = None
-        difficulty = "10N"
+        difficulty = "UNKNOWN"
+        encounter_mode: Optional[str] = None
         group_size = 10
         outcome    = "UNKNOWN"
         first_ts_str = segment[0][0]
         last_ts_str  = segment[-1][0]
 
         _debug_difficulty_method = "heuristic"
-        _debug_difficulty_raw = "10N"
+        _debug_difficulty_raw = "UNKNOWN"
         _debug_markers: list[str] = []
         _debug_outcome_method = "heuristic"
         _debug_outcome_evidence = ""
@@ -708,7 +691,8 @@ class CombatLogParser:
                 boss_name = parts[2].strip('"').strip()
                 diff_id   = _safe_int(parts[3])
                 group_size = _safe_int(parts[4]) or 10
-                difficulty = _decode_difficulty(diff_id, group_size)
+                encounter_mode = _decode_difficulty(diff_id)
+                difficulty = encounter_mode
                 first_ts_str = ts_str
             elif parts[0] == ENCOUNTER_END and len(parts) >= 6:
                 success   = _safe_int(parts[5])
@@ -737,24 +721,37 @@ class CombatLogParser:
             boss_name, boss_id = self._infer_boss(segment)
             group_size, difficulty = self._infer_difficulty(segment)
             outcome = self._infer_outcome(segment, boss_name)
-        _debug_difficulty_raw = difficulty  # capture after both paths
-
-        # Heroic upgrade: run even when ENCOUNTER_START was present, because Warmane
-        # (and many WotLK private servers) emit difficultyID=4 (25N) for heroic runs.
-        # Heroic marker constants contain spells that only appear in heroic difficulty.
-        # If the difficulty was correctly set to H via difficultyID, the replace() is a no-op.
-        heroic_markers_found = self._find_heroic_markers(segment, boss_name)
-        if difficulty in ("10N", "25N") and heroic_markers_found:
-            difficulty = difficulty.replace("N", "H")
-            if debug and difficulty != _debug_difficulty_raw:
-                _debug_markers = heroic_markers_found
-
         if not boss_name:
             if debug:
                 return None, None
             return None  # Cannot identify boss — skip
 
         boss_def = (lookup_boss_by_id(boss_id) if boss_id else None) or lookup_boss(boss_name)
+        canonical_boss_name = boss_def.name if boss_def else boss_name
+        detection = detect_difficulty(
+            canonical_boss_name,
+            segment,
+            encounter_mode=encounter_mode,
+            encounter_group_size=(
+                group_size
+                if encounter_mode is not None and group_size in (10, 25)
+                else None
+            ),
+        )
+        difficulty = detection.mode
+        _debug_difficulty_raw = encounter_mode or "UNKNOWN"
+        _debug_markers = list(detection.evidence)
+        if difficulty in ("10N", "10H"):
+            group_size = 10
+        elif difficulty in ("25N", "25H"):
+            group_size = 25
+        if difficulty == "UNKNOWN" and outcome == "KILL":
+            # Preserve the attempt, but do not expose it to any existing
+            # outcome=KILL ranking query until its mode is auditable.
+            outcome = "UNKNOWN"
+            _debug_outcome_evidence = (
+                f"{_debug_outcome_evidence}; " if _debug_outcome_evidence else ""
+            ) + "kill withheld from rankings because difficulty is UNKNOWN"
 
         # Aggregate actors
         actors: dict[str, ActorStats] = {}
@@ -1055,6 +1052,7 @@ class CombatLogParser:
             fingerprint       = fingerprint,
             participants      = participants,
             raw_event_count   = len(segment),
+            difficulty_detection=detection,
         )
 
         if debug:
@@ -1064,6 +1062,10 @@ class CombatLogParser:
                 difficulty_raw=_debug_difficulty_raw,
                 difficulty_final=difficulty,
                 heroic_markers_found=_debug_markers,
+                difficulty_confidence=detection.confidence,
+                difficulty_evidence=list(detection.evidence),
+                difficulty_reason=detection.reason,
+                detector_version=detection.detector_version,
                 outcome_method=_debug_outcome_method,
                 outcome_evidence=_debug_outcome_evidence,
                 event_count=len(segment),
@@ -1108,39 +1110,6 @@ class CombatLogParser:
         if n <= 12:
             return 10, "10N"
         return 25, "25N"
-
-    def _find_heroic_markers(
-        self,
-        segment: list[tuple[str, list[str], float]],
-        boss_name: Optional[str],
-    ) -> list[str]:
-        """Return heroic-only marker names found in a boss-specific segment."""
-        if not boss_name:
-            return []
-        boss_key = boss_name.lower()
-        name_markers: set[str] = set()
-        id_markers: set[int] = set()
-        for marker_boss, markers in HEROIC_SPELL_NAME_MARKERS_BY_BOSS.items():
-            if marker_boss in boss_key:
-                name_markers.update(markers)
-        for marker_boss, markers in HEROIC_SPELL_ID_MARKERS_BY_BOSS.items():
-            if marker_boss in boss_key:
-                id_markers.update(markers)
-        if not name_markers and not id_markers:
-            return []
-
-        found: list[str] = []
-        for _, parts, _ in segment:
-            if parts[0] == "SWING_DAMAGE" or parts[0] == UNIT_DIED_EVENT:
-                continue
-            if len(parts) > 8:
-                spell_id = _safe_int(parts[7])
-                spell = parts[8].strip('"').strip().lower()
-                if spell in name_markers or spell_id in id_markers:
-                    marker = parts[8].strip('"').strip()
-                    if marker and marker not in found:
-                        found.append(marker)
-        return found
 
     def _infer_outcome(
         self, segment: list[tuple[str, list[str], float]], boss_name: Optional[str]
@@ -1235,14 +1204,12 @@ def _get_actor(actors: dict[str, ActorStats], name: str, guid: str) -> ActorStat
     return actors[name]
 
 
-def _decode_difficulty(diff_id: int, group_size: int) -> str:
+def _decode_difficulty(diff_id: int, group_size: int | None = None) -> str:
     """Map WoW difficultyID to our label."""
     # WotLK: 3=10N, 4=25N, 5=10H, 6=25H
     mapping = {3: "10N", 4: "25N", 5: "10H", 6: "25H"}
-    if diff_id in mapping:
-        return mapping[diff_id]
-    # Fallback by group size
-    return "25N" if group_size >= 20 else "10N"
+    del group_size  # retained in the signature for older internal callers
+    return mapping.get(diff_id, "UNKNOWN")
 
 
 def _fingerprint(

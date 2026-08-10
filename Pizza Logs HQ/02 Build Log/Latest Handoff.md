@@ -2,7 +2,7 @@
 
 ## Date
 
-2026-05-11
+2026-08-10
 
 ## Branch
 
@@ -13,11 +13,21 @@
 - Pizza Logs is Codex-first: work happens on `codex-dev`, then PRs go into `main`.
 - Railway production deploys from `main` after Neil merges a PR.
 - Live app: https://pizza-logs-production.up.railway.app
-- Local working checkout for Neil's laptop: `C:\Projects\PizzaLogs`
-- Local app target for Neil's laptop: http://127.0.0.1:3001
+- Canonical local checkout on Neil's desktop: `C:\Projects\PizzaLogs`
+- Local app target on Neil's desktop: http://127.0.0.1:3001
 - Local Git executable fallback: `C:\Program Files\Git\cmd\git.exe`
 - GitHub CLI executable: `C:\Program Files\GitHub CLI\gh.exe`
 - Parser correctness remains the highest-risk area.
+- Difficulty now uses per-attempt `pizza-difficulty-v2` boss/mode spell sets, explicit Ulduar rules, conflict-to-`UNKNOWN`, and auditable evidence.
+- Browser uploads now use one raw UUID-keyed request for `.txt`, `.log`, or `.zip`; the parser atomically finalizes, validates, emits quick modes, then runs full parsing on bounded workers.
+- A 31,621,979-byte ZIP benchmark reached quick classification 1,926.60 ms after the final byte and completed full parsing in 5,158.69 ms.
+- A full production route, mobile, accessibility, ticket, source, and dependency audit is recorded in `02 Build Log/2026-08-10 Site and Ticket Audit.md`.
+- Draft PR #28 is open from `codex-dev` into `main`; its CI and Slack notification checks pass and it is not deployed until Neil merges it.
+- The supported workflow is now explicitly one desktop checkout -> `origin/codex-dev` -> PR -> `origin/main` -> Railway. Active docs no longer point to the retired OneDrive/laptop checkout.
+- GitHub's renamed `Production main` ruleset now requires a PR and passing `test-build`, and blocks branch deletion and non-fast-forward updates.
+- Removed unused standalone `sync-agent` TypeScript/build exclusions and replaced its named env ignore with a safer generic `.env.*` rule; current browser-sync launcher logs remain ignored.
+- Production is broadly functional; the audit found and locally fixed a timezone-dependent React hydration error on leaderboard rows.
+- Next.js and `eslint-config-next` are pinned to the patched 15.x backport, 15.5.23. Direct Next.js 15 security advisories are removed; four transitive production audit entries remain for a later Next.js 16 migration or upstream backport.
 - ICC heroic difficulty detection now uses boss-scoped markers. `Rune of Blood`
   no longer promotes Deathbringer Saurfang; Saurfang heroic uses `Scent of Blood`
   spell IDs, and Valithria heroic uses `Twisted Nightmares`.
@@ -41,7 +51,7 @@
 - GitHub Actions posts new, reopened, and ready-for-review PR summaries to Slack when `PR_SLACK_WEBHOOK_URL` is configured; if the secret is missing, the workflow warns and exits successfully.
 - `/uploads` and `/uploads/[id]` redirect to admin upload history; public raid/session pages use `/raids/...`.
 - `/admin`, `/admin/uploads`, cleanup actions, and admin import APIs are protected by `ADMIN_SECRET`.
-- Upload flow streams multipart data from `app/api/upload/route.ts` to parser `/parse-stream`, then writes database rows and milestones.
+- Upload flow streams raw bytes from `app/api/upload/route.ts` to parser `/uploads/{uuid}/stream`, then uses the existing database and milestone path after full parsing. Legacy `/parse-stream` remains for plain multipart clients.
 - Parser supports both encounter marker and heuristic segmentation paths, with Skada-aligned damage/healing formulas documented in `docs/parser-contract.md`.
 - Parser heroic upgrade markers are boss-scoped to reduce mixed-raid false positives:
   Saurfang `Rune of Blood` is normal-capable, Saurfang `Scent of Blood`
@@ -249,6 +259,28 @@
 
 ## Verification This Session
 
+### Full site and ticket audit
+
+- Verified all primary public routes, protected admin redirects, deep session/encounter/player pages, player search, roster pagination, client navigation, and the mobile menu against Railway production.
+- Verified 375x812 layouts have no document-level horizontal overflow; the roster table scrolls only inside its container.
+- Verified basic accessible naming and heading/image coverage on eight primary routes.
+- Confirmed ticket #1 is addressed by the per-attempt detector and its heroic-wipe/normal-kill regression, but should remain open until deployment and re-upload verification.
+- Confirmed tickets #2 and #3 behavior on production; ticket #3 has a stale copied closure comment.
+- Fixed React hydration error #418 by formatting leaderboard dates in UTC on both server and browser.
+- Updated Next.js and `eslint-config-next` from 15.5.15/15.0.3 to 15.5.23.
+- Reconciled stale lockfile-only `cross-env`/`vitest` entries; a clean `npm ci --legacy-peer-deps` succeeded.
+- Focused date and archive tests, TypeScript, ESLint, production build, Python `pip check`, and all 280 parser tests passed.
+
+### Difficulty and archive upload
+
+- Added the complete reference spell-rank families as canonical boss/mode sets, including every Faction Champions alternative.
+- Added per-attempt conflict handling, Ulduar hard-mode rules, `UNKNOWN` ranking protection, and detector metadata.
+- Added raw UUID upload states, safe ZIP member streaming, hard resource limits, bounded worker queues, and status inspection.
+- Parser suite passed with 280 tests and one existing Pydantic deprecation warning.
+- TypeScript type-check, ESLint, focused archive source test, and Next.js production build passed.
+- The 30 MiB-class benchmark passed the two-second quick-result target at 1,926.60 ms after the final byte.
+- Actual browser-facing flow passed through Next.js, parser, and local PostgreSQL: quick `25H`, final `DONE`, one encounter inserted. The exact local test upload was deleted and verified absent afterward.
+
 | Check | Result |
 |---|---|
 | README and wiki wording scan | Passed for updated public docs; no em dashes or AI-obvious wording patterns found |
@@ -262,7 +294,11 @@
 | `node node_modules\typescript\bin\tsc --noEmit` | Passed |
 | `node node_modules\eslint\bin\eslint.js . --max-warnings=0` | Passed |
 | `npm run build` from clean `.next` | Passed |
-| `powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\dev\verify-tooling.ps1` | Passed with 0 failures; 1 expected Railway-unlinked warning |
+| `powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\dev\verify-tooling.ps1` after workflow cleanup | Passed with 0 failures; canonical checkout, remote, branch, upstream, and local branch parity all passed; 1 intentional Railway-unlinked warning |
+| `npm run check:pr` after workflow cleanup | Passed: ESLint, TypeScript, and Next.js 15.5.23 production build |
+| Active stale-path and retired-sync exclusion scan | Passed; no active laptop, OneDrive checkout, `.env.sync-agent`, `.sync-agent-dist`, or standalone `sync-agent` references remain outside historical archives/user-owned instructions |
+| GitHub `Production main` ruleset inspection | Passed; PR, `test-build`, deletion, and non-fast-forward rules are active on the default branch |
+| Railway production route probe after cleanup push | `/`, `/raids`, `/leaderboards`, `/players`, `/guild-roster`, and `/weekly` returned 200; `/admin` and `/uploads` returned protected 307 redirects; no public `/api/health` route is defined |
 | `git diff --check` after Slack workflow formatting cleanup | Passed |
 | Guild roster render test with JSX-aware `ts-node` registration | Passed |
 | `node node_modules\typescript\bin\tsc --noEmit` | Passed |
@@ -335,7 +371,9 @@
 
 - Source `Veo.mp4` is 1280x720, so 1440p/4K variants are upscale derivatives rather than native high-resolution renders.
 - Local visual validation covered desktop in the in-app browser plus extracted mobile frames; test devices should still smoke-check iPhone Safari and Android Chrome after deployment.
-- Upload route still lacks hard server-side size enforcement.
+- Upload concurrency limits are process-local; multiple Railway parser replicas would need a shared limiter if production traffic warrants it.
+- Archive upload accepts ZIP plus raw text/log files; 7z/RAR/tar remain unsupported.
+- The two-second benchmark uses explicit encounter markers. Privacy-safe real Warmane heuristic-log timing still needs observation and may be slower.
 - PR Slack notifications still require `PR_SLACK_WEBHOOK_URL` in GitHub repository secrets, but missing configuration no longer fails PR checks.
 - `pull_request_target` runs the Slack workflow from `main`, so Slack formatting changes only affect fresh PR events after the workflow update is merged.
 - Absorbs remain future parser work.
@@ -350,9 +388,8 @@
 
 ## Exact Next Step
 
-Review the `codex-dev` to `main` PR updates for no Windows auto-open behavior.
-After deployment, reinstall/update both production userscripts from `/admin`,
-open one Warmane character tab and the Pizza Warriors guild tab, and click
-`Sync now` / `Sync roster` once if the admin secret is not already saved. Keep
-those tabs open for hourly refreshes. Neil merges into `main` only after review;
-Codex does not merge or push `main` directly.
+Review draft PR #28 and merge it into `main` when ready. Railway will then deploy
+the merged `main` commit. After deployment, verify the live homepage and primary
+user flow, confirm the leaderboard hydration fix, and re-upload one affected
+mixed heroic/normal raid before closing ticket #1. Codex does not merge or push
+`main` directly.

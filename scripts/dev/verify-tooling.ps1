@@ -155,12 +155,72 @@ try {
 try {
   git remote -v
   git status --short --branch
+  $expectedRepoRoot = [IO.Path]::GetFullPath("C:\Projects\PizzaLogs").TrimEnd([char[]]"\/")
+  $repoRoot = [IO.Path]::GetFullPath((git rev-parse --show-toplevel)).TrimEnd([char[]]"\/")
+  if ($repoRoot -ieq $expectedRepoRoot) {
+    Add-Ok "Canonical desktop checkout is '$repoRoot'."
+  } else {
+    Add-Warn "This checkout is '$repoRoot'; the canonical desktop checkout is '$expectedRepoRoot'."
+  }
+
+  $remotes = @(git remote)
+  if ($remotes.Count -eq 1 -and $remotes[0] -eq "origin") {
+    Add-Ok "Only the canonical 'origin' remote is configured."
+  } else {
+    Add-Warn "Expected only the 'origin' remote; found: $($remotes -join ', ')."
+  }
+
+  $originUrl = git remote get-url origin 2>$null
+  if ($LASTEXITCODE -eq 0 -and $originUrl -eq "https://github.com/CRSD-Lau/Pizza-Logs.git") {
+    Add-Ok "origin points to the canonical GitHub repository."
+  } else {
+    Add-Failure "origin must point to https://github.com/CRSD-Lau/Pizza-Logs.git; found '$originUrl'."
+  }
+
   $branch = git branch --show-current
+  if ($branch -eq "codex-dev") {
+    Add-Ok "Current branch is the canonical working branch 'codex-dev'."
+  } else {
+    Add-Warn "Current branch is '$branch'; normal Codex work must use 'codex-dev'."
+  }
+
   $upstream = git rev-parse --abbrev-ref --symbolic-full-name "@{u}" 2>$null
-  if ($LASTEXITCODE -eq 0 -and $upstream) {
-    Add-Ok "Current branch '$branch' tracks '$upstream'."
+  if ($LASTEXITCODE -eq 0 -and $upstream -eq "origin/codex-dev") {
+    Add-Ok "Current branch '$branch' tracks the canonical upstream '$upstream'."
+  } elseif ($LASTEXITCODE -eq 0 -and $upstream) {
+    Add-Warn "Current branch '$branch' tracks '$upstream'; expected 'origin/codex-dev'."
   } else {
     Add-Warn "Current branch '$branch' does not have an upstream or git could not resolve it."
+  }
+
+  git show-ref --verify --quiet refs/heads/main
+  $hasLocalMain = $LASTEXITCODE -eq 0
+  git show-ref --verify --quiet refs/remotes/origin/main
+  $hasOriginMain = $LASTEXITCODE -eq 0
+  if ($hasLocalMain -and $hasOriginMain) {
+    $mainCounts = @((git rev-list --left-right --count main...origin/main) -split '\s+')
+    if ($mainCounts.Count -ge 2 -and $mainCounts[0] -eq "0" -and $mainCounts[1] -eq "0") {
+      Add-Ok "Local main matches origin/main and remains a reference-only branch."
+    } else {
+      Add-Warn "Local main differs from origin/main (local-only=$($mainCounts[0]), remote-only=$($mainCounts[1])). Do not develop on local main."
+    }
+  } else {
+    Add-Warn "Could not compare local main with origin/main."
+  }
+
+  git show-ref --verify --quiet refs/heads/codex-dev
+  $hasLocalCodex = $LASTEXITCODE -eq 0
+  git show-ref --verify --quiet refs/remotes/origin/codex-dev
+  $hasOriginCodex = $LASTEXITCODE -eq 0
+  if ($hasLocalCodex -and $hasOriginCodex) {
+    $codexCounts = @((git rev-list --left-right --count codex-dev...origin/codex-dev) -split '\s+')
+    if ($codexCounts.Count -ge 2 -and $codexCounts[0] -eq "0" -and $codexCounts[1] -eq "0") {
+      Add-Ok "codex-dev matches origin/codex-dev."
+    } else {
+      Add-Warn "codex-dev differs from origin/codex-dev (local-only=$($codexCounts[0]), remote-only=$($codexCounts[1]))."
+    }
+  } else {
+    Add-Failure "Could not compare codex-dev with origin/codex-dev."
   }
 } catch {
   Add-Failure "git repo checks failed: $($_.Exception.Message)"
