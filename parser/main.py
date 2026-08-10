@@ -128,6 +128,11 @@ class ParseResponse(BaseModel):
     encounters:    list[EncounterOut]
     warnings:      list[str] = Field(default_factory=list)
     sessionDamage: dict[str, float] = Field(default_factory=dict)
+    sessionAnalytics: dict[str, dict] = Field(default_factory=dict)
+
+
+def session_analytics_payload(parser: CombatLogParser) -> dict[str, dict]:
+    return {str(k): v for k, v in parser.session_analytics.items()}
 
 
 # ── Routes ────────────────────────────────────────────────────────
@@ -220,6 +225,7 @@ async def parse_log(
         encounters    = encounters_out,
         warnings      = warnings,
         sessionDamage = {str(k): v for k, v in parser.session_damage.items()},
+        sessionAnalytics = session_analytics_payload(parser),
     )
 
 
@@ -279,6 +285,7 @@ async def parse_log_by_path(body: dict) -> ParseResponse:
         encounters    = encounters_out,
         warnings      = parser.warnings,
         sessionDamage = {str(k): v for k, v in parser.session_damage.items()},
+        sessionAnalytics = session_analytics_payload(parser),
     )
 
 
@@ -311,6 +318,7 @@ class DebugParseResponse(BaseModel):
     encounters: list[EncounterOut]
     warnings: list[str]
     sessionDamage: dict[str, float]
+    sessionAnalytics: dict[str, dict]
     debugInfo: list[DebugInfoOut]
 
 
@@ -427,6 +435,7 @@ async def parse_debug(
         encounters    = encounters_out,
         warnings      = warnings,
         sessionDamage = {str(k): v for k, v in parser.session_damage.items()},
+        sessionAnalytics = session_analytics_payload(parser),
         debugInfo     = debug_infos,
     )
 
@@ -722,6 +731,7 @@ async def upload_archive_stream(
                     "encounters": encounters_out,
                     "warnings": warnings,
                     "sessionDamage": {str(k): v for k, v in parser.session_damage.items()},
+                    "sessionAnalytics": session_analytics_payload(parser),
                     "uploadId": upload_id,
                     "uploadTimings": timings,
                 },
@@ -870,6 +880,7 @@ async def parse_log_stream(
                 "encounters":    encounters_out,
                 "warnings":      warnings,
                 "sessionDamage": {str(k): v for k, v in parser.session_damage.items()},
+                "sessionAnalytics": session_analytics_payload(parser),
             },
         })
 

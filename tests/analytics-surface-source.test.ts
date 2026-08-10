@@ -16,6 +16,7 @@ for (const field of [
   "consumableBreakdown",
   "powerBreakdown",
   "deathEvents",
+  "sessionAnalytics",
 ]) {
   assert.match(schema, new RegExp(field), `${field} remains in the database contract`);
   assert.match(uploadRoute, new RegExp(field), `${field} remains in upload persistence`);
@@ -34,9 +35,12 @@ assert.match(encounterPage, /Aura Uptime/);
 assert.match(encounterPage, /Consumables/);
 assert.match(encounterPage, /Power Gains/);
 assert.match(encounterPage, /Death Timeline/);
-assert.match(sessionPage, /Encounter Damage/);
-assert.match(sessionPage, /Full Log Damage/);
-assert.match(sessionPage, /Heal \+ Absorbs/);
+assert.match(sessionPage, /Custom Slice/);
+assert.match(sessionPage, /label="Total Damage"/);
+assert.match(sessionPage, /label="Heal"/);
+assert.match(sessionPage, /label="Damage Taken"/);
+assert.match(sessionPage, /formatDurationPrecise/);
+assert.match(sessionPage, /first to last log event/);
 assert.match(meter, /H\+A PS/);
 
 console.log("analytics-surface-source tests passed");

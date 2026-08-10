@@ -20,13 +20,17 @@ failure from PR #29 is resolved in `main`.
 | Hodir Hard Mode and Sartharion drake modes are unsupported | Those attempts cannot be ranked by an auditable mode | Return `UNKNOWN` until explicit evidence rules exist |
 | Orphaned pets can remain unmatched | A pet already active before logging and lacking summon or owner-exclusive spell evidence remains intentionally unattributed | Propagate permanent-pet ownership only after defensible owner evidence; never infer from generic raid healing |
 | Migration history began after the original schema was created by `db push` | A brand-new empty database is not reconstructable from migrations alone | Existing production is supported by `start.sh` migration baselining; create and rehearse a greenfield baseline before provisioning a replacement database |
+| Linked Pizza report contains historical parser output | The existing URL will still show mixed legacy totals after deployment | Re-upload the original ZIP after the PR deploys; new rows persist `sessionAnalytics` and old rows are not mutated |
 
 ## Resolved Reference
 
 | Issue | Resolution |
 |---|---|
 | Prisma 7 Railway image returned 502 after PR #29 | The runtime image omitted `prisma.config.ts`, so `migrate deploy` had no datasource URL; Docker now copies the config and the actual startup path is container-tested |
-| Stale markers and post-fight trash inflated pulls | Encounter scope now ends at the last meaningful boss activity; tests cover multi-hour wipe markers and post-kill trash/roster contamination |
+| Stale markers, boss outgoing attacks, and post-fight trash inflated pulls | Encounter scope now ends at the last boss-destination event; tests cover late boss attacks, multi-hour wipe markers, and post-kill trash/roster contamination |
+| Session page mixed pull sums with full-log damage | New uploads persist one first-to-last-event Custom Slice for Total Damage, Heal, Damage Taken, exact Duration, and per-player rates |
+| Damage formulas disagreed with UwU Total Damage | Headline encounter/session damage now sums raw event `amount`; it neither subtracts overkill nor adds the absorbed metadata field |
+| Active Time rendered floating-point noise | Whole-session duration is stored in milliseconds and formatted as `H:MM:SS.mmm`; legacy integer formatting floors fractional seconds |
 | Lady Deathwhisper/Blood Prince totals omitted adds | Encounter totals now include every matched pull target; boss-only damage remains a separate target breakdown |
 | Damage taken used outgoing effective-damage math | Headline taken now records the raw incoming amount used by UwU |
 | Generic raid healing could steal pet ownership | Ownership now requires summon or owner-exclusive spell evidence, with permanent-pet propagation covered by regression tests |

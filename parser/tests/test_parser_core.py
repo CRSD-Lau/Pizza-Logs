@@ -506,18 +506,16 @@ def test_damage_shield_counted_in_total():
     assert enc.total_damage == pytest.approx(3_200_000, rel=0.01)
 
 
-# ── Overkill subtraction ───────────────────────────────────────────────────────
+# ── UwU raw damage totals ──────────────────────────────────────────────────────
 
-def test_overkill_not_counted_in_spell_damage():
-    """SPELL_DAMAGE overkill must be subtracted from total_damage.
-    Root cause of BPC 7.8M over-count: three princes die simultaneously,
-    every last hit overkills. Parser was using raw amount, not amount-overkill."""
+def test_overkill_remains_in_uwu_spell_damage_total():
+    """UwU sums the raw SPELL_DAMAGE amount and does not subtract overkill."""
     parser = CombatLogParser()
     ts = 46800.0
     seg = [
         ("4/19 13:00:00.000",
          [ENCOUNTER_START, "1234", '"Lord Marrowgar"', "6", "25"], ts),
-        # 100k hit, 30k overkill → effective = 70k
+        # UwU's parse_both adds the raw 100k amount.
         ("4/19 13:01:00.000",
          _spell_damage_parts(PLAYER_GUID, "Phyre", NPC_GUID, "Lord Marrowgar",
                              100_000, "Fireball", "SPELL_DAMAGE", overkill=30_000),
@@ -530,17 +528,17 @@ def test_overkill_not_counted_in_spell_damage():
     ]
     enc = parser._aggregate_segment(seg, {})
     assert enc is not None
-    assert enc.total_damage == pytest.approx(70_000, rel=0.01)
+    assert enc.total_damage == pytest.approx(100_000, rel=0.01)
 
 
-def test_overkill_not_counted_in_swing_damage():
-    """SWING_DAMAGE overkill must also be subtracted."""
+def test_overkill_remains_in_uwu_swing_damage_total():
+    """UwU sums the raw SWING_DAMAGE amount and does not subtract overkill."""
     parser = CombatLogParser()
     ts = 46800.0
     seg = [
         ("4/19 13:00:00.000",
          [ENCOUNTER_START, "1234", '"Lord Marrowgar"', "6", "25"], ts),
-        # 200k swing, 50k overkill → effective = 150k
+        # UwU's parse_both adds the raw 200k amount.
         ("4/19 13:01:00.000",
          _swing_damage_parts(PLAYER_GUID, "Phyre", NPC_GUID, "Lord Marrowgar",
                              200_000, overkill=50_000),
@@ -553,7 +551,7 @@ def test_overkill_not_counted_in_swing_damage():
     ]
     enc = parser._aggregate_segment(seg, {})
     assert enc is not None
-    assert enc.total_damage == pytest.approx(150_000, rel=0.01)
+    assert enc.total_damage == pytest.approx(200_000, rel=0.01)
 
 
 def test_zero_overkill_unchanged():
@@ -689,6 +687,35 @@ def test_wipe_window_uses_last_boss_activity_not_late_encounter_end():
     assert enc.duration_seconds == pytest.approx(250.0)
     assert enc.total_damage == pytest.approx(30_000)
     assert {p["name"] for p in enc.participants} == {"Phyre"}
+
+
+def test_wipe_window_ignores_boss_outgoing_damage_after_last_boss_target_event():
+    """UwU pull boundaries are built from boss-destination events, not attacks by the boss."""
+    parser = CombatLogParser()
+    ts = 46800.0
+    tank_guid = "0x0600000000000002"
+    seg = [
+        ("4/19 13:00:00.000",
+         [ENCOUNTER_START, "1234", '"Deathbringer Saurfang"', "6", "25"], ts),
+        ("4/19 13:00:10.000",
+         _spell_damage_parts(PLAYER_GUID, "Phyre", NPC_GUID,
+                             "Deathbringer Saurfang", 10_000), ts + 10),
+        ("4/19 13:04:10.000",
+         _spell_damage_parts(PLAYER_GUID, "Phyre", NPC_GUID,
+                             "Deathbringer Saurfang", 20_000), ts + 250),
+        ("4/19 13:04:20.000",
+         _spell_damage_parts(NPC_GUID, "Deathbringer Saurfang", tank_guid,
+                             "Shieldtank", 50_000), ts + 260),
+        ("4/19 13:04:30.000",
+         [ENCOUNTER_END, "1234", '"Deathbringer Saurfang"', "6", "25", "0"],
+         ts + 270),
+    ]
+
+    enc = parser._aggregate_segment(seg, {})
+
+    assert enc is not None
+    assert enc.duration_seconds == pytest.approx(250.0)
+    assert enc.total_damage_taken == 0
 
 
 def test_lady_total_damage_includes_adds_like_uwu_total_damage():
@@ -1112,6 +1139,91 @@ def test_session_damage_starts_empty():
     assert parser.session_damage == {}
 
 
+def test_session_analytics_matches_uwu_whole_custom_slice():
+    """UwU's default report covers every event from first line to last line."""
+    healer_guid = "0x0600000000000002"
+    tank_guid = "0x0600000000000003"
+    boss_guid = "0xF130000000000002"
+    trash_guid = "0xF130000000000003"
+
+    def damage(
+        ts: str,
+        src_guid: str,
+        src_name: str,
+        src_flags: str,
+        dst_guid: str,
+        dst_name: str,
+        dst_flags: str,
+        amount: int,
+        *,
+        overkill: int = 0,
+        absorbed: int = 0,
+    ) -> str:
+        return (
+            f'{ts}  SPELL_DAMAGE,{src_guid},"{src_name}",{src_flags},'
+            f'{dst_guid},"{dst_name}",{dst_flags},133,"Frostbolt",4,'
+            f'{amount},{overkill},4,0,0,{absorbed},0,0\n'
+        )
+
+    def heal(ts: str, amount: int, overheal: int) -> str:
+        return (
+            f'{ts}  SPELL_HEAL,{healer_guid},"Shieldheals",0x512,'
+            f'{tank_guid},"Shieldtank",0x512,48071,"Flash Heal",2,'
+            f'{amount},{overheal},0,0\n'
+        )
+
+    log = _make_full_log(
+        damage(
+            "4/19 13:00:00.000", PLAYER_GUID, "Phyre", "0x512",
+            trash_guid, "Trash Mob", "0xa48", 1_000, overkill=250, absorbed=100,
+        ),
+        (
+            f'4/19 13:00:05.000  SPELL_AURA_APPLIED,{healer_guid},"Shieldheals",0x512,'
+            f'{tank_guid},"Shieldtank",0x512,48066,"Power Word: Shield",2,"BUFF"\n'
+        ),
+        damage(
+            "4/19 13:00:10.000", trash_guid, "Trash Mob", "0xa48",
+            tank_guid, "Shieldtank", "0x512", 500, absorbed=100,
+        ),
+        heal("4/19 13:00:20.000", 500, 200),
+        _enc_start("4/19 13:01:00.000"),
+        damage(
+            "4/19 13:01:10.000", PLAYER_GUID, "Phyre", "0x512",
+            boss_guid, "Lord Marrowgar", "0xa48", 2_000,
+            overkill=500, absorbed=200,
+        ),
+        (
+            f'4/19 13:01:15.000  SPELL_AURA_REFRESH,{healer_guid},"Shieldheals",0x512,'
+            f'{tank_guid},"Shieldtank",0x512,48066,"Power Word: Shield",2,"BUFF"\n'
+        ),
+        damage(
+            "4/19 13:01:20.000", boss_guid, "Lord Marrowgar", "0xa48",
+            tank_guid, "Shieldtank", "0x512", 700, absorbed=100,
+        ),
+        heal("4/19 13:01:30.000", 700, 200),
+        _died("4/19 13:02:00.000", boss_guid, "Lord Marrowgar"),
+        _enc_end("4/19 13:02:00.100"),
+        damage(
+            "4/19 13:03:00.000", PLAYER_GUID, "Phyre", "0x512",
+            trash_guid, "Trash Mob", "0xa48", 400,
+        ),
+    )
+
+    parser = CombatLogParser(file_year=2026)
+    parser.parse_file(_io.StringIO(log))
+
+    session = parser.session_analytics[0]
+    assert session["durationMs"] == 180_000
+    assert session["totalDamage"] == pytest.approx(3_400)
+    assert session["totalHealing"] == pytest.approx(800)
+    assert session["totalAbsorbs"] == pytest.approx(200)
+    assert session["heal"] == pytest.approx(1_000)
+    assert session["totalDamageTaken"] == pytest.approx(1_200)
+    assert session["players"]["Phyre"]["totalDamage"] == pytest.approx(3_400)
+    assert session["players"]["Shieldheals"]["heal"] == pytest.approx(1_000)
+    assert session["players"]["Shieldtank"]["damageTaken"] == pytest.approx(1_200)
+
+
 def test_session_damage_includes_pre_encounter_trash():
     """Damage that lands before ENCOUNTER_START must appear in session_damage."""
     PG = PLAYER_GUID
@@ -1230,7 +1342,13 @@ def test_session_damage_includes_guardian_from_player():
             f'{amount},0,4,0,0,0,0,0\n'
         )
 
+    summon = (
+        f'4/19 13:00:59.000  SPELL_SUMMON,{PG},"Phyre",0x512,'
+        f'{GUARDIAN_GUID},"Mirror Image",{GUARDIAN_FLAGS},'
+        '58833,"Mirror Image",64\n'
+    )
     log = _make_full_log(
+        summon,
         _enc_start("4/19 13:01:00.000"),
         boss_hits,
         guardian_dmg("4/19 13:01:30.000", GUARDIAN_GUID, BG, "Lord Marrowgar",
@@ -1249,13 +1367,10 @@ def test_session_damage_includes_guardian_from_player():
     )
 
 
-# ── Absorbed damage in session_damage ─────────────────────────────────────────
+# ── Absorbed fields in UwU raw damage totals ──────────────────────────────────
 #
-# WarcraftLogs and UWU both count "damage done" as amount + absorbed, not just
-# the HP the target actually lost.  When a boss has a shield (Lady Deathwhisper
-# mana barrier, Saurfang Blood Barrier), a hit may be partially or fully
-# absorbed: the log shows amount=<hp_lost> absorbed=<shield_absorbed>.  Our
-# session_damage accumulator must add both to match the reference totals.
+# UwU's parse_both adds only the damage event's raw amount. It does not add the
+# separate absorbed field and does not subtract overkill.
 #
 # SPELL_DAMAGE field layout (18 fields):
 #   [10]=amount  [11]=overkill  [15]=absorbed
@@ -1263,13 +1378,8 @@ def test_session_damage_includes_guardian_from_player():
 #   [7]=amount   [8]=overkill   [12]=absorbed
 
 
-def test_session_damage_includes_absorbed_spell_damage():
-    """When a spell hit is partially absorbed by a boss shield, session_damage
-    must count amount + absorbed (total damage output, not just HP removed).
-
-    This is the WCL / UWU convention.  Lady Deathwhisper mana barrier (phase 1)
-    absorbs ALL physical damage; Saurfang Blood Barrier absorbs large hits.
-    Without this fix our totals are ~0.88 – 3.29 % below UWU."""
+def test_session_damage_does_not_add_spell_absorbed_field():
+    """UwU sums the raw SPELL_DAMAGE amount without adding absorbed."""
     PG = PLAYER_GUID
     BG = "0xF130000000000002"
 
@@ -1291,18 +1401,15 @@ def test_session_damage_includes_absorbed_spell_damage():
     parser = CombatLogParser()
     parser.parse_file(_io.StringIO(log))
 
-    expected = unabsorbed + absorbed   # 20_000 total output
+    expected = unabsorbed
     assert parser.session_damage.get(0, 0) == pytest.approx(expected, rel=0.01), (
-        "Absorbed spell damage must be counted in session total "
+        "The absorbed field must not be added to UwU raw damage "
         f"(expected {expected}, absorbed={absorbed}, unabsorbed={unabsorbed})"
     )
 
 
-def test_session_damage_includes_absorbed_swing_damage():
-    """When a melee swing is partially absorbed by a boss shield, session_damage
-    must count amount + absorbed.
-
-    SWING_DAMAGE field layout (14 fields): [7]=amount [8]=overkill [12]=absorbed"""
+def test_session_damage_does_not_add_swing_absorbed_field():
+    """UwU sums raw SWING_DAMAGE amount without adding absorbed."""
     PG = PLAYER_GUID
     BG = "0xF130000000000002"
 
@@ -1325,20 +1432,18 @@ def test_session_damage_includes_absorbed_swing_damage():
     parser = CombatLogParser()
     parser.parse_file(_io.StringIO(log))
 
-    expected = unabsorbed + absorbed   # 28_000 total output
+    expected = unabsorbed
     assert parser.session_damage.get(0, 0) == pytest.approx(expected, rel=0.01), (
-        "Absorbed swing damage must be counted in session total "
+        "The absorbed field must not be added to UwU raw damage "
         f"(expected {expected}, absorbed={absorbed}, unabsorbed={unabsorbed})"
     )
 
 
 # ── SPELL_MISSED / SWING_MISSED with missType=ABSORB ─────────────────────────
 #
-# On Warmane (and retail WotLK), a hit that is *fully* absorbed by a boss shield
-# (Lady Deathwhisper Phase 1 mana barrier, Saurfang Blood Barrier) generates a
-# SPELL_MISSED or SWING_MISSED event with missType=ABSORB instead of a DAMAGE
-# event with absorbed>0.  WCL and UWU count the absorbed amount as "damage done"
-# because the player's output was real — the boss shield ate it.
+# Fully absorbed attacks may be emitted as SPELL_MISSED or SWING_MISSED with
+# missType=ABSORB. UwU's parse_both only consumes *_DAMAGE events, so these miss
+# records do not contribute to its Total Damage column.
 #
 # SPELL_MISSED field layout:
 #   [0]=event [1]=srcGUID [2]=srcName [3]=srcFlags [4]=dstGUID [5]=dstName
@@ -1350,10 +1455,8 @@ def test_session_damage_includes_absorbed_swing_damage():
 #   [6]=dstFlags [7]=missType [8]=amountMissed  (present for ABSORB)
 
 
-def test_session_damage_includes_spell_missed_absorb():
-    """SPELL_MISSED ABSORB must NOT contribute to session_damage.
-    UWU does not count fully-absorbed misses separately — it gets the correct
-    total via amount+absorbed without subtracting overkill on damage events."""
+def test_session_damage_excludes_spell_missed_absorb():
+    """SPELL_MISSED ABSORB does not contribute to UwU Total Damage."""
     PG = PLAYER_GUID
     BG = "0xF130000000000002"
     absorbed_amount = 12_345
@@ -1377,10 +1480,10 @@ def test_session_damage_includes_spell_missed_absorb():
     )
 
 
-def test_session_damage_includes_swing_missed_absorb():
+def test_session_damage_excludes_swing_missed_absorb():
     """SWING_MISSED ABSORB must NOT contribute to session_damage.
     UWU does not count fully-absorbed misses separately — same reasoning as
-    test_session_damage_includes_spell_missed_absorb above."""
+    test_session_damage_excludes_spell_missed_absorb above."""
     PG = PLAYER_GUID
     BG = "0xF130000000000002"
     absorbed_amount = 8_000
@@ -1449,8 +1552,8 @@ def test_session_damage_excludes_swing_missed_non_absorb():
 
 
 def test_session_damage_counts_full_amount_with_overkill():
-    """session_damage must count amount+absorbed WITHOUT subtracting overkill.
-    UWU Custom Slice uses amount+absorbed (not amount+absorbed-overkill).
+    """session_damage counts raw amount WITHOUT subtracting overkill.
+    UwU Custom Slice uses the raw damage-event amount.
     Blood Prince Council triple-death causes 6-8M overkill per session."""
     PG = PLAYER_GUID
     BG = "0xF130000000000002"
@@ -1906,17 +2009,11 @@ def test_dps_uses_float_duration():
         f"DPS should use float duration. Got {phyre['dps']:.1f}, expected {51_485_997/234.758:.1f}"
 
 
-# ── Absorbed damage exclusion from per-encounter totals ───────────────────────
+# ── Absorbed fields in per-encounter UwU raw totals ───────────────────────────
 #
-# Lady Deathwhisper Phase 1 has a mana barrier that absorbs all player damage.
-# The combat log records these as SPELL_DAMAGE with absorbed == amount (no HP
-# damage lands). UWU's per-encounter "Useful Damage" excludes absorbed hits
-# (they don't reduce boss HP). Our parser was using amount - overkill only,
-# causing ~35% over-count on Lady DW.
-#
-# Fix: eff_amount = max(0, amount - overkill - absorbed) for per-encounter damage.
-# Note: session_damage still uses amount + absorbed (no overkill) to match UWU
-# Custom Slice totals — those are intentionally different per-level counters.
+# UwU's Total Damage column uses the damage event's raw amount. The absorbed
+# field remains useful for a separate "useful damage" metric, but it is not part
+# of the Total Damage formula shown by the reference report.
 
 def _spell_damage_with_absorbed(src_guid: str, src_name: str,
                                 dst_guid: str, dst_name: str,
@@ -1946,22 +2043,16 @@ def _swing_damage_with_absorbed(src_guid: str, src_name: str,
     ]
 
 
-def test_encounter_damage_excludes_absorbed_spell_damage():
-    """SPELL_DAMAGE absorbed by a boss shield must not count as encounter damage.
-
-    Lady Deathwhisper Phase 1: mana barrier absorbs all player damage.
-    parts[15] = absorbed amount. eff_amount = amount - overkill - absorbed.
-    """
+def test_encounter_damage_uses_raw_spell_amount_with_absorbs():
+    """UwU Total Damage sums raw spell amounts regardless of absorbed metadata."""
     boss_guid = "0xF130000000000001"
     ts_start = 46800.0
 
     segment = [
         ("4/19 13:00:00.000", [ENCOUNTER_START, "1234", '"Lady Deathwhisper"', "4", "25"], ts_start),
-        # Normal hit (absorbed=0) → should count
+        # Every raw event amount counts in UwU Total Damage.
         ("4/19 13:00:05.000", _spell_damage_with_absorbed(PLAYER_GUID, "Phyre", boss_guid, "Lady Deathwhisper", 100_000, 0), ts_start + 5.0),
-        # Mana barrier hit (absorbed=amount) → must NOT count
         ("4/19 13:00:06.000", _spell_damage_with_absorbed(PLAYER_GUID, "Phyre", boss_guid, "Lady Deathwhisper", 200_000, 200_000), ts_start + 6.0),
-        # Partial absorb → only unabsorbed portion counts
         ("4/19 13:00:07.000", _spell_damage_with_absorbed(PLAYER_GUID, "Phyre", boss_guid, "Lady Deathwhisper", 300_000, 50_000), ts_start + 7.0),
         ("4/19 13:01:00.000", _unit_died_parts("Lady Deathwhisper"), ts_start + 60.0),
         ("4/19 13:01:10.000", [ENCOUNTER_END, "1234", '"Lady Deathwhisper"', "4", "25", "1"], ts_start + 70.0),
@@ -1972,25 +2063,20 @@ def test_encounter_damage_excludes_absorbed_spell_damage():
     assert enc is not None
     phyre = next((p for p in enc.participants if p["name"] == "Phyre"), None)
     assert phyre is not None
-    # 100_000 + 0 (fully absorbed) + 250_000 (partial: 300k - 50k absorbed) = 350_000
-    assert phyre["totalDamage"] == pytest.approx(350_000, abs=1), (
-        f"Absorbed damage must be excluded. Got {phyre['totalDamage']:,.0f}, expected 350,000"
+    assert phyre["totalDamage"] == pytest.approx(600_000, abs=1), (
+        f"Raw damage amount mismatch. Got {phyre['totalDamage']:,.0f}, expected 600,000"
     )
 
 
-def test_encounter_damage_excludes_absorbed_swing_damage():
-    """SWING_DAMAGE absorbed by a boss shield must not count as encounter damage.
-
-    absorbed is at parts[12] for SWING_DAMAGE.
-    """
+def test_encounter_damage_uses_raw_swing_amount_with_absorbs():
+    """UwU Total Damage sums raw swing amounts regardless of absorbed metadata."""
     boss_guid = "0xF130000000000001"
     ts_start = 46800.0
 
     segment = [
         ("4/19 13:00:00.000", [ENCOUNTER_START, "1234", '"Lady Deathwhisper"', "4", "25"], ts_start),
-        # Full absorb → 0 damage
+        # Both raw swing amounts count.
         ("4/19 13:00:05.000", _swing_damage_with_absorbed(PLAYER_GUID, "Phyre", boss_guid, "Lady Deathwhisper", 80_000, 80_000), ts_start + 5.0),
-        # Normal melee (absorbed=0) → should count
         ("4/19 13:00:06.000", _swing_damage_with_absorbed(PLAYER_GUID, "Phyre", boss_guid, "Lady Deathwhisper", 40_000, 0), ts_start + 6.0),
         ("4/19 13:01:00.000", _unit_died_parts("Lady Deathwhisper"), ts_start + 60.0),
         ("4/19 13:01:10.000", [ENCOUNTER_END, "1234", '"Lady Deathwhisper"', "4", "25", "1"], ts_start + 70.0),
@@ -2001,9 +2087,8 @@ def test_encounter_damage_excludes_absorbed_swing_damage():
     assert enc is not None
     phyre = next((p for p in enc.participants if p["name"] == "Phyre"), None)
     assert phyre is not None
-    # 0 (fully absorbed) + 40_000 (normal) = 40_000
-    assert phyre["totalDamage"] == pytest.approx(40_000, abs=1), (
-        f"Absorbed swing damage must be excluded. Got {phyre['totalDamage']:,.0f}, expected 40,000"
+    assert phyre["totalDamage"] == pytest.approx(120_000, abs=1), (
+        f"Raw swing amount mismatch. Got {phyre['totalDamage']:,.0f}, expected 120,000"
     )
 
 

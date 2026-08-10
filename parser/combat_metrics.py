@@ -71,13 +71,18 @@ def extract_heal_fields(parts: list[str]) -> Optional[HealFields]:
 
 
 def encounter_damage_amount(fields: DamageFields) -> float:
-    """Damage stored for encounter DPS: excludes overkill and absorbed shield damage."""
+    """UwU Total Damage: use the raw damage amount reported by the log."""
+    return max(0.0, fields.amount)
+
+
+def useful_damage_amount(fields: DamageFields) -> float:
+    """Legacy useful/effective damage kept separate from headline Total Damage."""
     return max(0.0, fields.amount - fields.overkill - fields.absorbed)
 
 
 def session_damage_amount(fields: DamageFields) -> float:
-    """Full-session output convention: count unabsorbed plus absorbed output."""
-    return max(0.0, fields.amount + fields.absorbed)
+    """UwU Custom Slice Total Damage: use the raw reported amount."""
+    return max(0.0, fields.amount)
 
 
 def reported_damage_taken_amount(fields: DamageFields) -> float:

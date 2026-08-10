@@ -4,9 +4,9 @@
 
 The current release candidate completes the ordered platform modernization: analytical regression baselines, Node 24 everywhere, current Actions/dependencies, Next.js 16 + React 19, Prisma 5 -> 6 -> 7, Tailwind/Recharts/Zod/Dropzone majors, and a gated TypeScript 7 native CLI. Parser reliability remains the highest-risk product area, so frozen Skada totals and the complete parser suite remain mandatory.
 
-UwU analytical feature parity is now substantially closed without replacing Skada math: encounters store and display separate absorbs/APS, conservative spec/role, aura uptime, consumables, power gains, target damage, and death context. The exact parity boundary and intentionally supplemental boss-specific useful metrics are documented in `docs/uwu-analytics-parity.md`.
+UwU analytical feature parity now includes the default whole-log Custom Slice. New uploads store raw Total Damage, effective healing plus attributed absorbs, raw Damage Taken, exact first-to-last-event duration, and the same per-player columns/rates. Wipes, trash, between-pull activity, and downtime stay in the slice. Useful/effective damage remains a separate analytical primitive.
 
-The linked 2026-07-31 Lausudo report now has a frozen five-pull acceptance baseline. The repair batch fixes stale/post-fight encounter boundaries, add-inclusive encounter totals, raw headline damage taken, evidence-based pet ownership, recently consumed shields, Divine Aegis source evidence, mixed-grain session labels, and the explicit healing + absorbs comparison view.
+The linked 2026-07-31 Lausudo report now has a frozen five-pull acceptance baseline. The follow-up repair removes the mixed-grain session cards entirely, fixes the raw damage formula, adds full-log healing/absorbs/taken and exact duration, and tightens pull ends to boss-destination events. Historical rows require re-upload and are not rewritten.
 
 Workflow cleanup established one supported path: the desktop checkout at `C:\Projects\PizzaLogs` on `codex-dev` -> `origin/codex-dev` -> PR -> `origin/main` -> Railway. No laptop, OneDrive clone, Claude worktree, or direct Railway deployment is part of the active development workflow.
 
@@ -19,6 +19,13 @@ Documentation metadata refresh: the README now links to the GitHub wiki, and the
 Codex works on `codex-dev`, pushes `origin/codex-dev`, and opens PRs into `main`. Codex does not push or merge `main` directly.
 
 ## This Session
+
+- Confirmed from UwU revision `f32f00e917ad6baba9012704dc9e41afe578426d` that its default report is one first-to-last-event Custom Slice, not a sum of boss pulls and not a kill-only view.
+- Corrected headline damage to raw event `amount`: no overkill subtraction and no absorbed-field addition. Kept useful/effective damage as a separate formula.
+- Added streaming whole-session analytics for Total Damage, effective healing, attributed absorbs, Heal, Damage Taken, exact duration, pet-owner attribution, and per-player rows.
+- Added the nullable `uploads.sessionAnalytics` JSONB migration and wired parser response, Zod validation, upload persistence, and the public session report.
+- Replaced the six mixed-grain session cards with UwU-style Kills/Wipes, Total Damage, Heal, Damage Taken, and exact Duration; added the per-player Custom Slice table and fixed floating-point duration rendering.
+- Passed 295 parser tests, 37 web tests, Prisma generation/validation, TypeScript, and a localhost upload/persistence/render walkthrough. The browser screenshot showed the complete table with no runtime error signatures; exact test data and artifacts were removed.
 
 - Inspected UwU revision `f32f00e917ad6baba9012704dc9e41afe578426d` and the linked public report, then recorded its five pull totals and three Saurfang player acceptance checks without copying UwU source.
 - Added focused regressions for post-boss trash, multi-hour stale wipe markers, Lady adds, raw damage taken, generic-heal pet theft, permanent-pet propagation, just-removed shields, and critical-Penance Divine Aegis evidence.

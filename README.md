@@ -116,13 +116,14 @@ Key rules:
 
 - Damage events match Skada `Damage.lua`: `SPELL_DAMAGE`, `SWING_DAMAGE`, `RANGE_DAMAGE`, `SPELL_PERIODIC_DAMAGE`, `DAMAGE_SHIELD`, `DAMAGE_SPLIT`, and `SPELL_BUILDING_DAMAGE`.
 - Healing events match Skada `Healing.lua`: `SPELL_HEAL` and `SPELL_PERIODIC_HEAL`.
-- Stored encounter damage is the app's useful/effective leaderboard value: `amount - overkill - absorbed`; full-session `sessionDamage` counts `amount + absorbed`.
+- Headline encounter and full-session Total Damage use the raw damage-event `amount`, matching UwU's Total Damage column. Overkill and absorbed metadata remain available for separate useful/effective analysis.
 - Encounter damage includes all matched pull targets, including Lady Deathwhisper adds and Blood Prince Council mechanics; boss-only damage remains a separate analytical breakdown.
 - Damage taken uses the raw incoming amount reported by the combat log, matching UwU's headline taken value.
 - Effective healing is `max(0, gross - overheal)`.
 - `SPELL_HEAL_ABSORBED` is not healing done in Skada.
 - `SWING_DAMAGE` uses shifted indexes because it has no spell fields.
-- Encounter windows end at the last meaningful boss activity; KILL duration uses boss death time and stale wipe markers or post-fight trash cannot extend the pull.
+- Encounter windows end at the last boss-destination event; KILL duration uses boss death time and boss outgoing attacks, stale wipe markers, or post-fight trash cannot extend the pull.
+- Session reports persist one UwU-style Custom Slice from the first to last log event, including wipes, trash, and downtime, with Total Damage, effective healing plus attributed absorbs, Damage Taken, and per-player rates sharing the same duration.
 - Gunship kill detection has a Warmane crew-death override.
 - Difficulty is classified per attempt from boss-specific spell ranks and explicit Ulduar rules; conflicts, missing evidence, and unsupported cases return `UNKNOWN` instead of defaulting to Normal.
 - Malformed combat-log lines are counted and returned as parser warnings instead of crashing uploads.

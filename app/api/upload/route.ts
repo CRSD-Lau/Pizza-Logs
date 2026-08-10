@@ -200,7 +200,12 @@ export async function POST(req: NextRequest) {
               .map(p => [p.name, p.class!] as [string, string])
           )
         );
-        const allPlayerNames = [...new Set(newEncounters.flatMap(e => e.participants.map(p => p.name)))];
+        const sessionPlayerNames = Object.values(parseResult.sessionAnalytics ?? {})
+          .flatMap(session => Object.keys(session.players));
+        const allPlayerNames = [...new Set([
+          ...newEncounters.flatMap(e => e.participants.map(p => p.name)),
+          ...sessionPlayerNames,
+        ])];
 
         const BATCH = 20;
         for (let i = 0; i < allPlayerNames.length; i += BATCH) {
@@ -307,6 +312,7 @@ export async function POST(req: NextRequest) {
             status:        "DONE",
             parsedAt:      new Date(),
             sessionDamage: parseResult.sessionDamage ?? {},
+            sessionAnalytics: parseResult.sessionAnalytics ?? {},
           },
         });
 

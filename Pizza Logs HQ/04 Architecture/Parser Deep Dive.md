@@ -70,7 +70,12 @@ parts[13] critical
 ```
 
 Stored encounter damage subtracts overkill and absorbed amounts. Full-session
-`sessionDamage` counts `amount + absorbed` as total player output across the log.
+Headline encounter and full-session Total Damage use the raw damage-event
+`amount`, matching UwU's displayed Total Damage. `sessionDamage` is retained as
+a compatibility alias; new uploads also persist `sessionAnalytics` with the
+whole first-to-last-event Custom Slice, per-player totals, Heal, Damage Taken,
+and exact duration. Useful/effective damage remains a separate analytical
+formula and does not replace the headline value.
 
 ## Healing Events
 
