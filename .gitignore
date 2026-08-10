@@ -30,8 +30,6 @@ logs/
 .DS_Store
 Thumbs.db
 
-# local Obsidian UI state
-Pizza Logs HQ/.obsidian/workspace.json
 
 # prisma
 # Keep schema migrations versioned alongside Prisma model changes.

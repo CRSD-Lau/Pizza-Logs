@@ -106,6 +106,7 @@ export default async function SessionPlayerPage({ params }: Props) {
   const bestDps = Math.max(0, ...myStats.map(e => e.dps));
   const bestHps = Math.max(0, ...myStats.map(e => e.hps));
   const bestAps = Math.max(0, ...myStats.map(e => e.aps));
+  const bestHealAndAbsorbPs = Math.max(0, ...myStats.map(e => e.hps + e.aps));
   const latestSpec = myStats.find((entry) => entry.spec)?.spec ?? null;
   const totalDeaths = myStats.reduce((sum, e) => sum + e.deaths, 0);
 
@@ -186,12 +187,13 @@ export default async function SessionPlayerPage({ params }: Props) {
         </div>
       </div>
 
-      <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
         <StatCard label="Pulls" value={myStats.length} />
         <StatCard label="Kills" value={kills.length} highlight />
         <StatCard label={`Best ${metric}`} value={formatDps(bestMetric)} sub="single pull" />
         <StatCard label={`Avg ${metric}`} value={formatDps(avgKillMetric)} sub="on kills" />
         <StatCard label="Best APS" value={formatDps(bestAps)} sub="single pull" />
+        <StatCard label="Best H+A PS" value={formatDps(bestHealAndAbsorbPs)} sub="UwU-compatible single pull" />
       </div>
 
       {chartData.length > 1 && (

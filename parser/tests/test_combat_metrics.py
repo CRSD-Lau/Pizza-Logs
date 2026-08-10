@@ -9,6 +9,7 @@ from combat_metrics import (
     encounter_damage_amount,
     extract_damage_fields,
     extract_heal_fields,
+    reported_damage_taken_amount,
     session_damage_amount,
 )
 
@@ -32,6 +33,7 @@ def test_extract_spell_damage_fields_and_formulas():
     assert fields.is_crit is True
     assert fields.spell_name == "Fireball"
     assert encounter_damage_amount(fields) == 650
+    assert reported_damage_taken_amount(fields) == 1000
     assert session_damage_amount(fields) == 1100
 
 

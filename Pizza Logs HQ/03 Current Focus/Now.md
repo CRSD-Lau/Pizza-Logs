@@ -6,6 +6,8 @@ The current release candidate completes the ordered platform modernization: anal
 
 UwU analytical feature parity is now substantially closed without replacing Skada math: encounters store and display separate absorbs/APS, conservative spec/role, aura uptime, consumables, power gains, target damage, and death context. The exact parity boundary and intentionally supplemental boss-specific useful metrics are documented in `docs/uwu-analytics-parity.md`.
 
+The linked 2026-07-31 Lausudo report now has a frozen five-pull acceptance baseline. The repair batch fixes stale/post-fight encounter boundaries, add-inclusive encounter totals, raw headline damage taken, evidence-based pet ownership, recently consumed shields, Divine Aegis source evidence, mixed-grain session labels, and the explicit healing + absorbs comparison view.
+
 Workflow cleanup established one supported path: the desktop checkout at `C:\Projects\PizzaLogs` on `codex-dev` -> `origin/codex-dev` -> PR -> `origin/main` -> Railway. No laptop, OneDrive clone, Claude worktree, or direct Railway deployment is part of the active development workflow.
 
 README visual refresh: added a high-resolution `docs/assets/readme-screenshot.png` preview to the public README. The screenshot was captured from a fresh local Next dev server on `http://127.0.0.1:3004` while the parser service was listening on `127.0.0.1:8000`.
@@ -18,6 +20,10 @@ Codex works on `codex-dev`, pushes `origin/codex-dev`, and opens PRs into `main`
 
 ## This Session
 
+- Inspected UwU revision `f32f00e917ad6baba9012704dc9e41afe578426d` and the linked public report, then recorded its five pull totals and three Saurfang player acceptance checks without copying UwU source.
+- Added focused regressions for post-boss trash, multi-hour stale wipe markers, Lady adds, raw damage taken, generic-heal pet theft, permanent-pet propagation, just-removed shields, and critical-Penance Divine Aegis evidence.
+- Updated encounter/session/player analytical UI so encounter versus full-log damage is explicit and healing, absorbs, and H+A are comparable without redefining effective healing.
+- Passed all 293 parser tests, all 37 web tests, both TypeScript gates, ESLint, the Next.js 16 production build, and a local production-mode public-route walkthrough.
 - Reproduced the post-PR #29 Railway 502 in the final Docker image: Prisma 7
   `migrate deploy` could not find `datasource.url` because `prisma.config.ts`
   was absent from the runtime stage.
@@ -217,7 +223,7 @@ Codex works on `codex-dev`, pushes `origin/codex-dev`, and opens PRs into `main`
 
 ## Open Follow-Ups
 
-- Merge the platform/analytics PR, let Railway run the additive migration, then verify the Admin deployment commit and automatic production smoke result.
+- Merge the UwU parity PR, confirm the Railway commit and Production Smoke workflow, then re-upload Neil's original ZIP and compare all five pulls against the frozen acceptance baseline. Historical database rows will not update automatically.
 - Re-upload an affected mixed heroic/normal raid after deployment and confirm stored difficulties plus the new analytical sections.
 - Compare absorbs/spec/role against one privacy-safe real Warmane pull; synthetic and fixture gates pass, but real overlapping-shield evidence is the next calibration input.
 - Rehearse a greenfield Prisma migration baseline before provisioning any replacement database; the existing production database remains the supported migration target.

@@ -51,8 +51,8 @@ uwu-logs is useful for upload-oriented architecture and WotLK segmentation:
 - Session difficulty normalization promotes every `25N` encounter in a session to `25H` after any confirmed `25H` encounter. That can incorrectly bucket a later normal attempt after heroic wipes.
 - The parser silently skips malformed lines. Unsupported combat events are still intentionally ignored, but malformed input should be counted and surfaced as parser warnings so upload results are explainable.
 - `totalDamage` and "useful damage" are not modeled separately in the app schema. A schema migration may be warranted later, but changing leaderboard semantics in this refactor would be high risk.
-- Useful target filtering is only a boolean boss-level `filter_add_damage` rule. uwu-logs has richer encounter-specific useful-target tables.
-- Absorbs remain intentionally separate from healing done, but the app does not yet expose a separate absorbs metric.
+- Headline encounter totals include every matched pull target. Boss-only and per-target views are separate; encounter-specific opinionated useful-damage formulas remain supplemental future work.
+- Absorbs are stored and displayed separately from effective healing, with an explicitly labeled healing + absorbs comparison view.
 - `/parse-stream` does not currently repeat the filename extension validation that `/parse` and `/parse-debug` perform.
 - `/api/upload` documents a 1 GB client limit but still lacks a hard web-route byte limit before forwarding.
 

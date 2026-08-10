@@ -13,10 +13,13 @@ independently written implementations and does not copy UwU source code.
 
 | Analytical surface | Pizza Logs status | Contract |
 |---|---|---|
-| Damage, DPS, healing, HPS | Matched | Frozen Skada-aligned totals and exact fixture hashes remain the authority. |
+| Damage, DPS, healing, HPS | Matched by explicit definition | Outgoing damage/effective healing retain Skada primitives; encounter scope and public report definitions follow the adopted UwU comparison contract. |
 | Per-spell breakdown | Matched | Damage/healing, hits, crits, and school are stored per participant. |
 | Damage by target / boss damage | Matched generically | Every target is stored; encounter UI highlights boss-only damage where applicable. |
-| Absorbs / APS | Implemented conservatively | Numeric absorbed damage is separate from healing; active shield evidence controls attribution and uncertainty is surfaced. |
+| Damage taken | Matched | Headline taken uses the raw reported incoming amount, while outgoing damage keeps the established effective/useful formula. |
+| Absorbs / APS / H+A | Implemented conservatively | Numeric absorbed damage stays separate from healing; reports also expose explicit healing + absorbs totals/rates. Active and just-removed shield evidence controls attribution and uncertainty is surfaced. |
+| Encounter boundaries | Matched | The pull ends at the last meaningful boss activity, preventing stale markers or post-fight trash from inflating duration and roster. |
+| Pet ownership | Matched conservatively | Summons and owner-exclusive spells establish ownership; permanent pet creature IDs propagate only from that evidence. |
 | Spec and role | Implemented conservatively | WotLK spell signatures plus output/taken evidence; ties and weak evidence are not guessed. |
 | Aura uptime | Implemented | Application count, seconds, and encounter percentage per player/aura. |
 | Consumables | Implemented | Curated consumable auras are separated from the general aura table. |
@@ -30,9 +33,9 @@ independently written implementations and does not copy UwU source code.
 
 ## Non-Negotiable Compatibility Rules
 
-1. New analytical surfaces cannot mutate the frozen damage/healing baseline.
+1. New analytical surfaces cannot silently change a metric definition; every adopted definition is frozen by regression coverage.
 2. Missing or conflicting evidence stays unknown/unattributed.
-3. Absorbs never inflate healing.
+3. Absorbs never inflate effective healing; the combined H+A metric is always labeled.
 4. Boss-specific useful metrics are supplemental labels, never replacements for
    Skada-aligned totals.
 5. Parser changes require focused or fixture tests and the complete parser gate.
@@ -45,3 +48,21 @@ independently written implementations and does not copy UwU source code.
 - `parser/tests/test_parser_core.py` covers the enrichment paths, including
   absorbs, ambiguity fields, role/spec, aura uptime, consumables, power gains,
   incoming damage, and death timing.
+- `parser/tests/baselines/uwu-2026-07-31-lausudo.json` captures the five-pull
+  public Lausudo comparison report, including headline totals and the player
+  checks that exposed the Saurfang boundary/ownership failures.
+- `parser/tests/test_uwu_parity_baseline.py` locks that external acceptance
+  baseline independently from synthetic parser fixtures.
+
+## 2026-07-31 Lausudo Acceptance Baseline
+
+The public UwU report contains five pulls: Marrowgar, Lady Deathwhisper,
+Gunship, and two Saurfang wipes. The frozen baseline records each pull's mode,
+result, millisecond duration, damage, effective healing, and damage taken. It
+also locks the previously divergent Saurfang player checks for Shadowcake,
+Azyia, and Gowron.
+
+The original combat ZIP is not publicly downloadable from UwU. Synthetic
+fixtures therefore prove each repaired behavior independently. After this PR
+deploys, re-uploading Neil's original ZIP is the required real-log acceptance
+test; existing database rows are historical results and are not rewritten.

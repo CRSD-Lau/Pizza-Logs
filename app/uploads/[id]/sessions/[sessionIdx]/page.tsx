@@ -59,11 +59,16 @@ export default async function SessionDetailPage({ params }: Props) {
   const kills = orderedEncounters.filter(e => e.outcome === "KILL").length;
   const wipes = orderedEncounters.filter(e => e.outcome === "WIPE").length;
   const totalHeal = orderedEncounters.reduce((sum, e) => sum + e.totalHealing, 0);
-  const totalSecs = orderedEncounters.reduce((sum, e) => sum + e.durationSeconds, 0);
+  const totalAbsorbs = orderedEncounters.reduce((sum, e) => sum + e.totalAbsorbs, 0);
+  const totalHealAndAbsorbs = totalHeal + totalAbsorbs;
+  const totalSecs = orderedEncounters.reduce(
+    (sum, e) => sum + ((e.durationMs ?? 0) > 0 ? e.durationMs / 1000 : e.durationSeconds),
+    0,
+  );
 
   const sessionDmgMap = (upload.sessionDamage ?? {}) as Record<string, number>;
-  const fullSessionDmg = sessionDmgMap[String(sessionIndex)];
-  const totalDmg = fullSessionDmg ?? orderedEncounters.reduce((sum, e) => sum + e.totalDamage, 0);
+  const encounterDmg = orderedEncounters.reduce((sum, e) => sum + e.totalDamage, 0);
+  const fullSessionDmg = sessionDmgMap[String(sessionIndex)] ?? encounterDmg;
   const startedAt = encounters[0].startedAt;
   const endedAt = encounters[encounters.length - 1].endedAt;
 
@@ -198,10 +203,12 @@ export default async function SessionDetailPage({ params }: Props) {
         </div>
       </div>
 
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
         <StatCard label="Kills / Wipes" value={`${kills}K / ${wipes}W`} highlight />
-        <StatCard label="Total Damage" value={formatNumber(totalDmg)} />
-        <StatCard label="Total Healing" value={formatNumber(totalHeal)} />
+        <StatCard label="Encounter Damage" value={formatNumber(encounterDmg)} sub="sum of matched pulls" />
+        <StatCard label="Full Log Damage" value={formatNumber(fullSessionDmg)} sub="includes trash between pulls" />
+        <StatCard label="Effective Healing" value={formatNumber(totalHeal)} sub="sum of matched pulls" />
+        <StatCard label="Heal + Absorbs" value={formatNumber(totalHealAndAbsorbs)} sub="UwU-compatible pull metric" />
         <StatCard label="Active Time" value={formatDuration(totalSecs)} sub="sum of all pulls" />
       </div>
 

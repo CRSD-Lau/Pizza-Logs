@@ -15,7 +15,8 @@ Wiki: https://github.com/CRSD-Lau/Pizza-Logs/wiki
 - Single-request streamed text/ZIP upload with Server-Sent Events progress and early difficulty results.
 - Python FastAPI parser service for WotLK combat logs.
 - Skada-WoTLK-aligned damage/healing event handling.
-- Separate absorb/APS, spec/role, aura uptime, consumable, power-gain, and death-timeline analytics.
+- Separate absorb/APS plus an explicitly labeled UwU-compatible healing + absorbs view.
+- Spec/role, aura uptime, consumable, power-gain, target-damage, and death-timeline analytics.
 - Boss encounter, raid session, player, weekly, and leaderboard pages.
 - File-level and encounter-level deduplication.
 - Milestones for all-time DPS/HPS records.
@@ -32,8 +33,8 @@ Wiki: https://github.com/CRSD-Lau/Pizza-Logs/wiki
 - Other WotLK-style logs may work, but Warmane edge cases drive the parser rules.
 - Logs do not need reliable `ENCOUNTER_START` / `ENCOUNTER_END`; the parser has a heuristic path.
 - If encounter markers exist, the parser can use them, then still applies Warmane-specific heroic correction.
-- Skada-WoTLK remains the source of truth for damage/healing totals. UwU is the feature-parity reference for analytical surfaces, not a replacement math engine.
-- Absorbs remain separate from healing and are attributed only when an active shield aura supplies defensible source evidence.
+- Skada-WoTLK remains the source of truth for outgoing damage and effective-healing primitives. Adopted public report definitions are aligned with UwU where users compare the two products.
+- Effective healing and absorbs remain separate stored metrics; reports also expose the explicit combined healing + absorbs value used for UwU comparisons.
 
 ## Stack
 
@@ -116,14 +117,17 @@ Key rules:
 - Damage events match Skada `Damage.lua`: `SPELL_DAMAGE`, `SWING_DAMAGE`, `RANGE_DAMAGE`, `SPELL_PERIODIC_DAMAGE`, `DAMAGE_SHIELD`, `DAMAGE_SPLIT`, and `SPELL_BUILDING_DAMAGE`.
 - Healing events match Skada `Healing.lua`: `SPELL_HEAL` and `SPELL_PERIODIC_HEAL`.
 - Stored encounter damage is the app's useful/effective leaderboard value: `amount - overkill - absorbed`; full-session `sessionDamage` counts `amount + absorbed`.
+- Encounter damage includes all matched pull targets, including Lady Deathwhisper adds and Blood Prince Council mechanics; boss-only damage remains a separate analytical breakdown.
+- Damage taken uses the raw incoming amount reported by the combat log, matching UwU's headline taken value.
 - Effective healing is `max(0, gross - overheal)`.
 - `SPELL_HEAL_ABSORBED` is not healing done in Skada.
 - `SWING_DAMAGE` uses shifted indexes because it has no spell fields.
-- KILL duration uses boss death time, not the last post-kill event.
+- Encounter windows end at the last meaningful boss activity; KILL duration uses boss death time and stale wipe markers or post-fight trash cannot extend the pull.
 - Gunship kill detection has a Warmane crew-death override.
 - Difficulty is classified per attempt from boss-specific spell ranks and explicit Ulduar rules; conflicts, missing evidence, and unsupported cases return `UNKNOWN` instead of defaulting to Normal.
 - Malformed combat-log lines are counted and returned as parser warnings instead of crashing uploads.
-- Absorb amounts are taken from damage events and attributed to the newest active supported shield aura; ambiguous multi-shield hits are labeled and missing evidence remains unattributed.
+- Absorb amounts are taken from damage events and attributed to the newest active supported shield aura; recently removed shields remain eligible for 0.5 seconds, Discipline critical-heal evidence can identify Divine Aegis, ambiguous multi-shield hits are labeled, and missing evidence remains unattributed.
+- Permanent pet ownership propagates across repeated Warmane GUID instances only after summon or owner-exclusive spell evidence establishes the owner.
 - Player spec/role uses observed WotLK spell signatures plus healing and damage-taken evidence; uncertain cases remain `UNKNOWN` or fall back to output role.
 - Aura uptime, consumables, power gains, and a death timeline with the preceding 15 seconds of incoming damage are stored per participant.
 
@@ -304,7 +308,7 @@ parser/tests/fixtures/
 prisma/              Schema, migrations, and seed script
 scripts/             Item import and local Windows test-server helpers
 docs/                Repo-level workflow, parser, and review docs
-Pizza Logs HQ/       Committed Obsidian project vault
+Pizza Logs HQ/       Committed project knowledge base
 ```
 
 ## Contribution Workflow

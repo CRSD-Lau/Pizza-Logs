@@ -1,0 +1,88 @@
+{
+  "schemaVersion": 1,
+  "capturedAt": "2026-08-10T18:10:00Z",
+  "sourceReport": "https://uwu-logs.xyz/reports/26-07-31--23-03--Lausudo--Lordaeron/",
+  "pizzaSession": "https://pizza-logs-production.up.railway.app/raids/cmsnilz9r000001s04lavk5eq/sessions/0",
+  "metricDefinitions": {
+    "totalDamage": "UwU Total Damage for the explicit boss, mode, outcome, and attempt slice",
+    "heal": "UwU effective healing plus attributed absorbs",
+    "damageTaken": "UwU raw reported incoming damage amount",
+    "durationSeconds": "UwU rendered slice duration with millisecond precision"
+  },
+  "encounters": [
+    {
+      "boss": "Lord Marrowgar",
+      "difficulty": "25H",
+      "outcome": "KILL",
+      "attempt": 0,
+      "durationSeconds": 302.736,
+      "totalDamage": 52698673,
+      "heal": 10761681,
+      "damageTaken": 8993151
+    },
+    {
+      "boss": "Lady Deathwhisper",
+      "difficulty": "25N",
+      "outcome": "KILL",
+      "attempt": 0,
+      "durationSeconds": 211.968,
+      "totalDamage": 35840197,
+      "heal": 3354761,
+      "damageTaken": 2282814
+    },
+    {
+      "boss": "Gunship Battle",
+      "difficulty": "25H",
+      "outcome": "KILL",
+      "attempt": 0,
+      "durationSeconds": 250.704,
+      "totalDamage": 24143389,
+      "heal": 3954241,
+      "damageTaken": 1954328
+    },
+    {
+      "boss": "Deathbringer Saurfang",
+      "difficulty": "25H",
+      "outcome": "WIPE",
+      "attempt": 0,
+      "durationSeconds": 263.159,
+      "totalDamage": 51896345,
+      "heal": 6298559,
+      "damageTaken": 5723542
+    },
+    {
+      "boss": "Deathbringer Saurfang",
+      "difficulty": "25H",
+      "outcome": "WIPE",
+      "attempt": 1,
+      "durationSeconds": 242.263,
+      "totalDamage": 45521200,
+      "heal": 6162683,
+      "damageTaken": 5833285
+    }
+  ],
+  "playerAcceptanceChecks": [
+    {
+      "boss": "Deathbringer Saurfang",
+      "attempt": 0,
+      "player": "Shadowcake",
+      "totalDamage": 31681,
+      "note": "Must not receive another player's ghoul or Army damage"
+    },
+    {
+      "boss": "Deathbringer Saurfang",
+      "attempt": 1,
+      "player": "Azyia",
+      "totalDamage": 2719649,
+      "rank": 6,
+      "note": "Must not receive Tyrostrikes pet damage"
+    },
+    {
+      "boss": "Deathbringer Saurfang",
+      "attempt": 1,
+      "player": "Gowron",
+      "totalDamage": 0,
+      "note": "Must not receive hunter pet Auto Attack, Bite, or Cleave"
+    }
+  ]
+}

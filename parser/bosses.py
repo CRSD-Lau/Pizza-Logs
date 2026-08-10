@@ -14,11 +14,6 @@ class BossDef:
     raid: str
     wow_boss_id: Optional[int] = None
     aliases: list[str] = field(default_factory=list)
-    # When True, per-encounter damage only counts hits where dst_guid is the
-    # boss unit itself (excludes independent add waves like LDW Adherents/Fanatics
-    # or BPC Kinetic Bombs).  Leave False (default) for bosses where mechanic-unit
-    # damage should count (Marrowgar Bone Spikes, Saurfang Blood Beasts, etc.).
-    filter_add_damage: bool = False
 
 
 BOSSES: list[BossDef] = [
@@ -80,8 +75,7 @@ BOSSES: list[BossDef] = [
 
     # Icecrown Citadel
     BossDef("Lord Marrowgar",        "lord-marrowgar",       "Icecrown Citadel",        36612),
-    BossDef("Lady Deathwhisper",     "lady-deathwhisper",    "Icecrown Citadel",        36855,
-            filter_add_damage=True),
+    BossDef("Lady Deathwhisper",     "lady-deathwhisper",    "Icecrown Citadel",        36855),
     BossDef("Gunship Battle",        "gunship-battle",       "Icecrown Citadel",        None,
             # Horde side: players jetpack to The Skybreaker and kill these crew members.
             # High Captain Justin Bartlett is the Alliance NPC whose death signals a kill.
@@ -92,8 +86,7 @@ BOSSES: list[BossDef] = [
     BossDef("Rotface",               "rotface",              "Icecrown Citadel",        36627),
     BossDef("Professor Putricide",   "professor-putricide",  "Icecrown Citadel",        36678),
     BossDef("Blood Prince Council",  "blood-prince-council", "Icecrown Citadel",        37958,
-            ["Prince Valanar", "Prince Keleseth", "Prince Taldaram"],
-            filter_add_damage=True),
+            ["Prince Valanar", "Prince Keleseth", "Prince Taldaram"]),
     BossDef("Blood-Queen Lana'thel", "blood-queen-lanathel", "Icecrown Citadel",        37955),
     BossDef("Valithria Dreamwalker", "valithria-dreamwalker","Icecrown Citadel",        36789),
     BossDef("Sindragosa",            "sindragosa",           "Icecrown Citadel",        36853),

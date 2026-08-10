@@ -632,6 +632,116 @@ def test_player_to_npc_damage_still_counted():
     assert enc.total_damage == pytest.approx(300_000, rel=0.01)
 
 
+def test_kill_window_excludes_post_boss_trash_and_roster_noise():
+    """Events after the boss death must not leak into encounter totals or roster."""
+    parser = CombatLogParser()
+    ts = 46800.0
+    other_player = "0x0600000000000002"
+    trash_guid = "0xF130000000000099"
+    seg = [
+        ("4/19 13:00:00.000",
+         [ENCOUNTER_START, "1234", '"Lord Marrowgar"', "6", "25"], ts),
+        ("4/19 13:00:01.000",
+         _spell_damage_parts(PLAYER_GUID, "Phyre", NPC_GUID, "Lord Marrowgar", 100_000),
+         ts + 1),
+        ("4/19 13:02:00.000", _unit_died_parts("Lord Marrowgar"), ts + 120),
+        ("4/19 13:02:10.000",
+         _spell_damage_parts(other_player, "Latecomer", trash_guid,
+                             "Deathspeaker Attendant", 900_000),
+         ts + 130),
+        ("4/19 13:03:00.000",
+         [ENCOUNTER_END, "1234", '"Lord Marrowgar"', "6", "25", "1"], ts + 180),
+    ]
+
+    enc = parser._aggregate_segment(seg, {})
+
+    assert enc is not None
+    assert enc.total_damage == pytest.approx(100_000)
+    assert {p["name"] for p in enc.participants} == {"Phyre"}
+    assert enc.duration_seconds == pytest.approx(120.0)
+
+
+def test_wipe_window_uses_last_boss_activity_not_late_encounter_end():
+    """A stale Warmane ENCOUNTER_END cannot create a multi-hour wipe."""
+    parser = CombatLogParser()
+    ts = 46800.0
+    seg = [
+        ("4/19 13:00:00.000",
+         [ENCOUNTER_START, "1234", '"Deathbringer Saurfang"', "6", "25"], ts),
+        ("4/19 13:00:10.000",
+         _spell_damage_parts(PLAYER_GUID, "Phyre", NPC_GUID,
+                             "Deathbringer Saurfang", 10_000), ts + 10),
+        ("4/19 13:04:10.000",
+         _spell_damage_parts(PLAYER_GUID, "Phyre", NPC_GUID,
+                             "Deathbringer Saurfang", 20_000), ts + 250),
+        ("4/19 16:05:00.000",
+         _spell_damage_parts("0x0600000000000002", "Latecomer",
+                             "0xF130000000000099", "Trash", 900_000), ts + 11100),
+        ("4/19 16:05:10.000",
+         [ENCOUNTER_END, "1234", '"Deathbringer Saurfang"', "6", "25", "0"],
+         ts + 11110),
+    ]
+
+    enc = parser._aggregate_segment(seg, {})
+
+    assert enc is not None
+    assert enc.outcome == "WIPE"
+    assert enc.duration_seconds == pytest.approx(250.0)
+    assert enc.total_damage == pytest.approx(30_000)
+    assert {p["name"] for p in enc.participants} == {"Phyre"}
+
+
+def test_lady_total_damage_includes_adds_like_uwu_total_damage():
+    parser = CombatLogParser()
+    ts = 46800.0
+    seg = [
+        ("4/19 13:00:00.000",
+         [ENCOUNTER_START, "36855", '"Lady Deathwhisper"', "4", "25"], ts),
+        ("4/19 13:00:01.000",
+         _spell_damage_parts(PLAYER_GUID, "Phyre", NPC_GUID,
+                             "Lady Deathwhisper", 100_000), ts + 1),
+        ("4/19 13:00:30.000",
+         _spell_damage_parts(PLAYER_GUID, "Phyre", "0xF130000000000055",
+                             "Cult Adherent", 40_000), ts + 30),
+        ("4/19 13:02:00.000", _unit_died_parts("Lady Deathwhisper"), ts + 120),
+        ("4/19 13:02:00.100",
+         [ENCOUNTER_END, "36855", '"Lady Deathwhisper"', "4", "25", "1"], ts + 120.1),
+    ]
+
+    enc = parser._aggregate_segment(seg, {})
+
+    assert enc is not None
+    assert enc.total_damage == pytest.approx(140_000)
+    phyre = next(p for p in enc.participants if p["name"] == "Phyre")
+    assert sum(row["damage"] for row in phyre["targetBreakdown"].values()) == pytest.approx(140_000)
+
+
+def test_damage_taken_matches_uwu_reported_amount():
+    """Headline damage taken uses the raw event amount, as UwU does."""
+    parser = CombatLogParser()
+    ts = 46800.0
+    seg = [
+        ("4/19 13:00:00.000",
+         [ENCOUNTER_START, "1234", '"Lord Marrowgar"', "6", "25"], ts),
+        ("4/19 13:00:01.000",
+         _spell_damage_parts(PLAYER_GUID, "Phyre", NPC_GUID,
+                             "Lord Marrowgar", 10_000), ts + 1),
+        ("4/19 13:01:00.000",
+         _spell_damage_parts(NPC_GUID, "Lord Marrowgar", PLAYER_GUID,
+                             "Phyre", 1_000, overkill=250, absorbed=100), ts + 60),
+        ("4/19 13:02:00.000", _unit_died_parts("Lord Marrowgar"), ts + 120),
+        ("4/19 13:02:00.100",
+         [ENCOUNTER_END, "1234", '"Lord Marrowgar"', "6", "25", "1"], ts + 120.1),
+    ]
+
+    enc = parser._aggregate_segment(seg, {})
+
+    assert enc is not None
+    phyre = next(p for p in enc.participants if p["name"] == "Phyre")
+    assert phyre["damageTaken"] == pytest.approx(1_000)
+    assert enc.total_damage_taken == pytest.approx(1_000)
+
+
 # ── Pet owner inference — interaction scan ────────────────────────────────────
 
 def _aoe_buff_parts(caster_guid: str, caster_name: str,
@@ -752,11 +862,11 @@ def test_pet_damage_attributed_to_owner_via_mend_pet():
 # ── Pre-summoned pet attribution via interaction scan ──────────────────────────
 #
 # When a pet was alive before the log started there is no SPELL_SUMMON event.
-# The parser must infer ownership from any player→pet event during the fight
-# (Mend Pet, Feed Pet, any buff).  The dst_flags bitmask identifies a pet:
+# The parser may infer ownership only from an owner-exclusive pet ability during
+# the fight (for example Mend Pet or Feed Pet). The dst_flags bitmask identifies a pet:
 #   0x1000 = TYPE_PET   0x0100 = CONTROL_PLAYER  → both must be set.
 
-PET_GUID  = "0xF1300007AC000042"   # realistic non-player NPC GUID for a pet
+PET_GUID  = "0xF1400007AC000042"   # true permanent-pet GUID
 PET_FLAGS = "0x1114"               # TYPE_PET | CONTROL_PLAYER | FRIENDLY | RAID
 
 PLAYER2_GUID  = "0x0600000000000002"
@@ -897,6 +1007,66 @@ def test_pet_already_in_pet_owner_not_overwritten_by_interaction():
     phyre = next((p for p in enc.participants if p["name"] == "Phyre"), None)
     assert phyre is not None, "damage not credited to original owner"
     assert phyre["totalDamage"] == pytest.approx(50_000, rel=0.01)
+
+
+def test_generic_raid_heal_does_not_claim_somebody_elses_pet():
+    """Only owner-exclusive pet abilities may establish ownership."""
+    parser = CombatLogParser()
+    ts = 46800.0
+    healer_guid = "0x0600000000000002"
+    generic_heal = [
+        "SPELL_HEAL", healer_guid, '"Shadowcake"', PLAYER2_FLAGS,
+        PET_GUID, '"Growl"', PET_FLAGS,
+        "2061", '"Flash Heal"', "2", "3000", "0", "0", "0",
+    ]
+    seg = [
+        ("4/19 13:00:00.000",
+         [ENCOUNTER_START, "1234", '"Lord Marrowgar"', "6", "25"], ts),
+        ("4/19 13:00:01.000",
+         _spell_damage_parts(PLAYER_GUID, "Phyre", NPC_GUID,
+                             "Lord Marrowgar", 10_000), ts + 1),
+        ("4/19 13:00:10.000", generic_heal, ts + 10),
+        ("4/19 13:00:30.000",
+         _pet_spell_damage_parts(PET_GUID, "Growl", NPC_GUID,
+                                 "Lord Marrowgar", 80_000), ts + 30),
+        ("4/19 13:02:00.000", _unit_died_parts("Lord Marrowgar"), ts + 120),
+        ("4/19 13:02:00.100",
+         [ENCOUNTER_END, "1234", '"Lord Marrowgar"', "6", "25", "1"], ts + 120.1),
+    ]
+
+    enc = parser._aggregate_segment(seg, {})
+
+    assert enc is not None
+    assert enc.total_damage == pytest.approx(10_000)
+    shadowcake = next((p for p in enc.participants if p["name"] == "Shadowcake"), None)
+    assert shadowcake is None or shadowcake["totalDamage"] == 0
+
+
+def test_known_permanent_pet_owner_propagates_to_new_guid_instance():
+    """Repeated permanent-pet GUID instances retain the established owner."""
+    parser = CombatLogParser()
+    ts = 46800.0
+    prior_pet_guid = "0xF1400007AC000001"
+    current_pet_guid = "0xF1400007AC000099"
+    seg = [
+        ("4/19 13:00:00.000",
+         [ENCOUNTER_START, "1234", '"Lord Marrowgar"', "6", "25"], ts),
+        ("4/19 13:00:01.000",
+         _spell_damage_parts(PLAYER_GUID, "Phyre", NPC_GUID,
+                             "Lord Marrowgar", 10_000), ts + 1),
+        ("4/19 13:00:30.000",
+         _pet_spell_damage_parts(current_pet_guid, "Growl", NPC_GUID,
+                                 "Lord Marrowgar", 80_000), ts + 30),
+        ("4/19 13:02:00.000", _unit_died_parts("Lord Marrowgar"), ts + 120),
+        ("4/19 13:02:00.100",
+         [ENCOUNTER_END, "1234", '"Lord Marrowgar"', "6", "25", "1"], ts + 120.1),
+    ]
+
+    enc = parser._aggregate_segment(seg, {prior_pet_guid: (PLAYER_GUID, "Phyre")})
+
+    assert enc is not None
+    phyre = next(p for p in enc.participants if p["name"] == "Phyre")
+    assert phyre["totalDamage"] == pytest.approx(90_000)
 
 
 # ── Full-session damage (parser.session_damage) ───────────────────────────────
@@ -1645,12 +1815,75 @@ def test_conservative_analytics_tracks_absorbs_auras_power_spec_and_roles():
     assert healer["powerBreakdown"]["Rapture"]["amount"] == pytest.approx(1200)
     assert healer["consumableBreakdown"]["Well Fed"]["uptimeSeconds"] == pytest.approx(44.5)
     assert tank["auraBreakdown"]["Power Word: Shield"]["uptimeSeconds"] == pytest.approx(25)
-    assert tank["damageTaken"] == pytest.approx(85_000)
+    assert tank["damageTaken"] == pytest.approx(105_000)
     assert tank["spec"] == "Protection Warrior"
     assert tank["role"] == "TANK"
     assert tank["deaths"] == 1
     assert tank["deathEvents"][0]["recentDamage"][-1]["spell"] == "Coldflame"
     assert tank["deathEvents"][0]["recentDamage"][-1]["secondsBeforeDeath"] == pytest.approx(5)
+
+
+def test_absorb_is_attributed_when_shield_removal_precedes_damage_by_fraction():
+    """Warmane can remove a consumed aura immediately before its damage row."""
+    healer_guid = "0x0600000000000002"
+    tank_guid = "0x0600000000000003"
+    ts = 46800.0
+    segment = [
+        ("4/19 13:00:00.000", [ENCOUNTER_START, "1234", '"Lord Marrowgar"', "6", "25"], ts),
+        ("4/19 13:00:01.000", _spell_damage_parts(
+            PLAYER_GUID, "Phyre", NPC_GUID, "Lord Marrowgar", 10_000,
+        ), ts + 1),
+        ("4/19 13:00:05.000", [
+            "SPELL_AURA_APPLIED", healer_guid, '"Shieldheals"', "0x514",
+            tank_guid, '"Shieldtank"', "0x514", "48066", '"Power Word: Shield"', "2", '"BUFF"',
+        ], ts + 5),
+        ("4/19 13:00:09.800", [
+            "SPELL_AURA_REMOVED", healer_guid, '"Shieldheals"', "0x514",
+            tank_guid, '"Shieldtank"', "0x514", "48066", '"Power Word: Shield"', "2", '"BUFF"',
+        ], ts + 9.8),
+        ("4/19 13:00:10.000", _spell_damage_parts(
+            NPC_GUID, "Lord Marrowgar", tank_guid, "Shieldtank", 50_000,
+            spell="Saber Lash", absorbed=20_000,
+        ), ts + 10),
+        ("4/19 13:01:00.000", _unit_died_parts("Lord Marrowgar"), ts + 60),
+        ("4/19 13:01:00.100", [ENCOUNTER_END, "1234", '"Lord Marrowgar"', "6", "25", "1"], ts + 60.1),
+    ]
+
+    enc = CombatLogParser(file_year=2026)._aggregate_segment(segment, {})
+
+    assert enc is not None
+    healer = next(p for p in enc.participants if p["name"] == "Shieldheals")
+    assert healer["totalAbsorbs"] == pytest.approx(20_000)
+    assert enc.unattributed_absorbs == 0
+
+
+def test_critical_penance_establishes_divine_aegis_source():
+    """UwU reconstructs Divine Aegis from critical Discipline heals."""
+    healer_guid = "0x0600000000000002"
+    tank_guid = "0x0600000000000003"
+    ts = 46800.0
+    penance = _heal_parts(healer_guid, "Shieldheals", tank_guid, "Shieldtank", 30_000, spell="Penance")
+    penance[13] = "1"
+    segment = [
+        ("4/19 13:00:00.000", [ENCOUNTER_START, "1234", '"Lord Marrowgar"', "6", "25"], ts),
+        ("4/19 13:00:01.000", _spell_damage_parts(
+            PLAYER_GUID, "Phyre", NPC_GUID, "Lord Marrowgar", 10_000,
+        ), ts + 1),
+        ("4/19 13:00:05.000", penance, ts + 5),
+        ("4/19 13:00:10.000", _spell_damage_parts(
+            NPC_GUID, "Lord Marrowgar", tank_guid, "Shieldtank", 50_000,
+            spell="Saber Lash", absorbed=9_000,
+        ), ts + 10),
+        ("4/19 13:01:00.000", _unit_died_parts("Lord Marrowgar"), ts + 60),
+        ("4/19 13:01:00.100", [ENCOUNTER_END, "1234", '"Lord Marrowgar"', "6", "25", "1"], ts + 60.1),
+    ]
+
+    enc = CombatLogParser(file_year=2026)._aggregate_segment(segment, {})
+
+    assert enc is not None
+    healer = next(p for p in enc.participants if p["name"] == "Shieldheals")
+    assert healer["absorbBreakdown"]["Divine Aegis"]["amount"] == pytest.approx(9_000)
+    assert enc.unattributed_absorbs == 0
 
 
 def test_dps_uses_float_duration():
@@ -1660,7 +1893,8 @@ def test_dps_uses_float_duration():
     segment = [
         ("4/19 13:00:00.000", [ENCOUNTER_START, "1234", '"Lord Marrowgar"', "6", "25"], ts_start),
         ("4/19 13:00:01.000", _spell_damage_parts(PLAYER_GUID, "Phyre", boss_guid, "Lord Marrowgar", 51_485_997), ts_start + 1.0),
-        ("4/19 13:03:54.758", [ENCOUNTER_END, "1234", '"Lord Marrowgar"', "6", "25", "1"], ts_start + 234.758),
+        ("4/19 13:03:54.758", _unit_died_parts("Lord Marrowgar"), ts_start + 234.758),
+        ("4/19 13:04:00.000", [ENCOUNTER_END, "1234", '"Lord Marrowgar"', "6", "25", "1"], ts_start + 240.0),
     ]
     parser = CombatLogParser(file_year=2026)
     enc = parser._aggregate_segment(segment, {})
@@ -1832,13 +2066,8 @@ def test_boss_mechanic_heal_counted_in_encounter():
 # Fix: pre-pass discovers boss GUID(s) by matching dst_name to boss_name /
 # aliases; main loop only accumulates eff_amount when dst_guid is in boss_guids.
 
-def test_encounter_damage_excludes_add_damage():
-    """Damage to add units (Adherents, Fanatics, etc.) must NOT count toward
-    the encounter's total_damage — only boss-directed damage counts.
-
-    This fixes Lady Deathwhisper being ~35% over UWU.
-    Lady Deathwhisper has filter_add_damage=True so the boss_guids filter applies.
-    """
+def test_encounter_damage_includes_add_damage_for_uwu_total_parity():
+    """UwU Total Damage includes add units inside the matched boss slice."""
     boss_guid = "0xF130000000000001"
     add_guid  = "0xF130000000000002"
     ts_start  = 46800.0
@@ -1847,7 +2076,7 @@ def test_encounter_damage_excludes_add_damage():
         ("4/19 13:00:00.000", [ENCOUNTER_START, "1234", '"Lady Deathwhisper"', "4", "25"], ts_start),
         # Hit boss: should count
         ("4/19 13:00:05.000", _spell_damage_parts(PLAYER_GUID, "Phyre", boss_guid, "Lady Deathwhisper", 100_000), ts_start + 5.0),
-        # Hit add: must NOT count toward encounter total_damage
+        # Hit add: counts in UwU's headline Total Damage
         ("4/19 13:00:06.000", _spell_damage_parts(PLAYER_GUID, "Phyre", add_guid, "Deathwhisper Adherent", 50_000), ts_start + 6.0),
         ("4/19 13:01:00.000", _unit_died_parts("Lady Deathwhisper"), ts_start + 60.0),
         ("4/19 13:01:10.000", [ENCOUNTER_END, "1234", '"Lady Deathwhisper"', "4", "25", "1"], ts_start + 70.0),
@@ -1858,26 +2087,23 @@ def test_encounter_damage_excludes_add_damage():
     assert enc is not None
     phyre = next((p for p in enc.participants if p["name"] == "Phyre"), None)
     assert phyre is not None
-    assert phyre["totalDamage"] == pytest.approx(100_000, abs=1), (
-        f"Only boss damage counts per-encounter. Got {phyre['totalDamage']:,.0f}, expected 100,000"
+    assert phyre["totalDamage"] == pytest.approx(150_000, abs=1), (
+        f"Boss and add damage count per encounter. Got {phyre['totalDamage']:,.0f}, expected 150,000"
     )
-    assert enc.total_damage == pytest.approx(100_000, abs=1), (
-        f"Encounter total must exclude add damage. Got {enc.total_damage:,.0f}, expected 100,000"
+    assert enc.total_damage == pytest.approx(150_000, abs=1), (
+        f"Encounter total must include add damage. Got {enc.total_damage:,.0f}, expected 150,000"
     )
 
 
-# ── Boss mechanic unit damage (filter_add_damage=False) ──────────────────────
+# ── Boss mechanic unit damage ────────────────────────────────────────────────
 #
 # Marrowgar spawns Bone Spikes that players must DPS/click to free raid members.
 # Saurfang spawns Blood Beasts that players kill to prevent them from healing boss.
-# These are boss-mechanic units, NOT independent add waves — UWU counts damage to
-# them.  The boss_guids filter must NOT apply when filter_add_damage=False.
+# UwU counts damage to them in headline Total Damage, just like other targets
+# inside the bounded pull.
 
 def test_encounter_damage_includes_mechanic_unit_damage():
-    """Damage to boss mechanic units (Bone Spikes, Blood Beasts) MUST count
-    toward the encounter total.  Lord Marrowgar has filter_add_damage=False so
-    all damage — to the boss AND mechanic units — is accumulated.
-    """
+    """Damage to boss mechanic units must count in the encounter total."""
     marrowgar_guid  = "0xF130000000000010"
     bone_spike_guid = "0xF130000000000011"
     ts_start        = 46800.0
@@ -1899,7 +2125,7 @@ def test_encounter_damage_includes_mechanic_unit_damage():
     phyre = next((p for p in enc.participants if p["name"] == "Phyre"), None)
     assert phyre is not None
     assert phyre["totalDamage"] == pytest.approx(150_000, abs=1), (
-        f"Mechanic-unit damage must be counted (filter_add_damage=False). "
+        f"Mechanic-unit damage must be counted. "
         f"Got {phyre['totalDamage']:,.0f}, expected 150,000"
     )
     assert enc.total_damage == pytest.approx(150_000, abs=1), (

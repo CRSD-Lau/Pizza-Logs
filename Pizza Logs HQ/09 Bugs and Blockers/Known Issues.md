@@ -2,9 +2,8 @@
 
 ## Active Bugs
 
-Railway production currently returns HTTP 502 after PR #29 because the Prisma 7
-runtime image omitted `prisma.config.ts`. The Docker hotfix is locally verified
-through the actual migration/startup path and requires an emergency PR merge.
+No confirmed active production outage is open. The Prisma 7 Railway startup
+failure from PR #29 is resolved in `main`.
 
 ## Active Limitations And Blockers
 
@@ -13,11 +12,13 @@ through the actual migration/startup path and requires an emergency PR merge.
 | Upload concurrency limits are process-local | Multiple Railway parser replicas do not share one global queue/rate limit | Keep bounded per-process quick/full pools; add a shared limiter only if production scaling requires it |
 | Archive upload supports ZIP, not 7z/RAR/tar | Users must create a ZIP or upload the raw text/log | Add another format only with equivalent streaming and security validation |
 | Absorb attribution is conservative | Fully absorbed missed events without numeric amounts remain unmeasurable; overlapping shields can be ambiguous | Keep absorbs separate from healing, mark multi-shield hits ambiguous, and retain unattributed totals instead of guessing |
+| Existing reports are not automatically reparsed | Historical rows keep the parser output created when they were uploaded | Re-upload the original combat ZIP after a parser deployment to validate and persist the repaired output |
+| Exact UwU ZIP is not publicly downloadable | Synthetic regressions prove each repaired behavior, but cannot reproduce every event in the linked report | Use the frozen public five-pull baseline now; Neil's post-merge re-upload is the real-log acceptance gate |
 | Spec/role evidence can be absent | Short pulls or unobserved signature spells can leave a spec unset or role conservative | Use observed spell, healing, output, and damage-taken evidence; never force a spec from weak evidence |
 | UwU boss-specific useful/mechanic reports are not universal | Generic target damage exists, but Valkyr grabs, Defile targets, and opinionated boss-specific useful formulas are not all first-class reports | Add one boss rule at a time with Warmane fixtures and keep it supplemental to Skada totals |
 | Warmane direct server fetches can fail with Cloudflare/403 | Gear/roster refreshes are unreliable from Railway or plain CLI requests | Supported path is browser-assisted userscripts running in existing Warmane tabs and cached DB snapshots |
 | Hodir Hard Mode and Sartharion drake modes are unsupported | Those attempts cannot be ranked by an auditable mode | Return `UNKNOWN` until explicit evidence rules exist |
-| Orphaned pets can remain unmatched | Small DPS mismatches when pets were active before log start | Keep Skada-aligned owner remap when summon evidence exists |
+| Orphaned pets can remain unmatched | A pet already active before logging and lacking summon or owner-exclusive spell evidence remains intentionally unattributed | Propagate permanent-pet ownership only after defensible owner evidence; never infer from generic raid healing |
 | Migration history began after the original schema was created by `db push` | A brand-new empty database is not reconstructable from migrations alone | Existing production is supported by `start.sh` migration baselining; create and rehearse a greenfield baseline before provisioning a replacement database |
 
 ## Resolved Reference
@@ -25,6 +26,11 @@ through the actual migration/startup path and requires an emergency PR merge.
 | Issue | Resolution |
 |---|---|
 | Prisma 7 Railway image returned 502 after PR #29 | The runtime image omitted `prisma.config.ts`, so `migrate deploy` had no datasource URL; Docker now copies the config and the actual startup path is container-tested |
+| Stale markers and post-fight trash inflated pulls | Encounter scope now ends at the last meaningful boss activity; tests cover multi-hour wipe markers and post-kill trash/roster contamination |
+| Lady Deathwhisper/Blood Prince totals omitted adds | Encounter totals now include every matched pull target; boss-only damage remains a separate target breakdown |
+| Damage taken used outgoing effective-damage math | Headline taken now records the raw incoming amount used by UwU |
+| Generic raid healing could steal pet ownership | Ownership now requires summon or owner-exclusive spell evidence, with permanent-pet propagation covered by regression tests |
+| Divine Aegis and consumed shields lost absorb attribution | Critical Discipline-heal evidence can establish Divine Aegis and recently removed shields remain eligible for 0.5 seconds |
 | GitHub `main` rules only blocked deletion and force-pushes | Renamed the ruleset to `Production main` and required a pull request plus a passing `test-build` check |
 | Active docs still pointed to the retired laptop/OneDrive checkout | Standardized the supported path on `C:\Projects\PizzaLogs` and added canonical checkout, remote, branch, upstream, and parity checks to the tooling verifier |
 | Retired standalone `sync-agent` build/env exclusions remained | Removed the unused TypeScript and dist exclusions; generic `.env.*` protection now covers local secret files while current browser-sync logs remain ignored |

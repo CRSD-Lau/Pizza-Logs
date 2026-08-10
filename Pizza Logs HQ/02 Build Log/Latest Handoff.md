@@ -32,6 +32,8 @@
 - The platform upgrade candidate now uses Node 24, Next.js 16.3, React 19.2, Prisma 7.9, Tailwind 4.3, Recharts 3.10, Zod 4.4, Dropzone 20.1, and current compatible supporting dependencies. `npm audit` is zero.
 - TypeScript 7.0 is the explicit native type-checker; TypeScript 6 supplies the JavaScript API still consumed by Next.js and ESLint. Both gates pass.
 - Parser analytical output is frozen by exact fixture hashes. Skada damage/healing totals remain unchanged while separate absorbs/APS, spec/role, aura uptime, consumables, power gains, and death context are now persisted and displayed.
+- The linked Lausudo UwU report is now a separate five-pull acceptance baseline. Parser repairs bound pulls to meaningful boss activity, include all matched targets in encounter totals, use raw incoming damage for headline taken, require defensible pet-owner evidence, and improve consumed-shield/Divine Aegis attribution.
+- Encounter reports now show effective healing, absorbs, and an explicitly labeled UwU-compatible healing + absorbs total/rate. Session cards distinguish matched encounter damage from full-log damage so trash is no longer presented as boss output.
 - Admin diagnostics include Railway deployment identity, and a Node 24 production smoke workflow runs after successful production deployments plus weekly.
 - PR #29 initially produced Railway 502 responses because the Prisma 7 runtime
   image omitted `prisma.config.ts`; the final image could not resolve
@@ -404,7 +406,7 @@
 - `npm run check:pr` passed: zero-warning ESLint, TypeScript 7 native check,
   TypeScript 6 ecosystem check, all 37 TypeScript tests, and the Next.js 16
   production build.
-- All 284 parser tests passed and `pip check` found no broken requirements.
+- All 293 parser tests passed and `pip check` found no broken requirements.
 - Prisma 7.9 client generation and schema validation passed.
 - CI now generates the ignored Prisma 7 client before type-checking, matching a
   fresh checkout instead of relying on a developer's existing generated output.
@@ -419,11 +421,18 @@
 - The current Railway production site passed the public-route/API/protected-
   redirect smoke suite. The upgraded release remains undeployed until Neil
   merges the PR into `main`.
+- The UwU parity repair passed TypeScript 7, the TypeScript 6 ecosystem gate,
+  zero-warning ESLint, all 37 web tests, the Next.js 16 production build, and
+  all 293 parser tests. A local production-mode browser walkthrough passed for
+  `/raids`, `/leaderboards`, and `/guild-roster`; the local database contains no
+  copy of the linked historical report.
 
 ## Exact Next Step
 
-Review the new `codex-dev` platform/analytics PR and merge it into `main` when
-ready. Railway will apply the additive analytics migration and deploy the merged
-commit. Confirm the commit in protected Admin diagnostics, check the Production
-Smoke workflow, and then upload one real raid to calibrate absorbs/spec/role.
-Codex does not merge or push `main` directly.
+Review and merge the new `codex-dev` UwU parity PR into `main` when ready.
+Railway will deploy the merged parser and web app. Confirm the commit in
+protected Admin diagnostics, check the Production Smoke workflow, then
+re-upload the original combat ZIP and compare the five pulls with
+`parser/tests/baselines/uwu-2026-07-31-lausudo.json`. Existing stored reports
+will not be rewritten automatically. Codex does not merge or push `main`
+directly.

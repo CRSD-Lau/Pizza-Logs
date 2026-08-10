@@ -19,7 +19,7 @@ prisma/               Prisma schema, migrations, seed
 scripts/              Local helper scripts and item import
 tests/                TypeScript-focused tests
 docs/                 Repo-level parser/workflow/review docs
-Pizza Logs HQ/        Committed Obsidian vault
+Pizza Logs HQ/        Committed project knowledge base
 public/               Favicon, icons, intro media
 ```
 
