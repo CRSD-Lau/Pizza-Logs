@@ -5,13 +5,14 @@
 ```text
 Browser
   POST /api/upload?filename=...&realmName=...
-  multipart/form-data, SSE response
+  raw file stream + random UUIDv4, SSE response
     |
 Next.js Web Service
-  forwards request body to PARSER_SERVICE_URL /parse-stream
+  forwards request stream to PARSER_SERVICE_URL /uploads/{uuid}/stream
     |
 Python parser-py service
-  writes temp file, counts lines, parses encounters, streams progress and final JSON
+  hashes to .part, atomically finalizes, validates archive, streams quick modes
+  bounded worker queue performs full parsing and returns final JSON
     |
 Next.js Web Service
   validates parser JSON, writes DB rows, computes milestones
@@ -27,6 +28,7 @@ Parser service emits:
 
 ```json
 { "type": "progress", "pct": 45, "msg": "Aggregating DPS and HPS..." }
+{ "type": "quick-result", "state": "quick-result-ready", "result": { "encounters": [] } }
 { "type": "done", "data": { "...": "ParseResult" } }
 { "type": "error", "msg": "..." }
 ```
@@ -47,12 +49,11 @@ CombatLogParser.parse_file()
     Path B: Warmane heuristic boss windows
   _aggregate_segment()
     detect boss
-    detect difficulty and heroic evidence
+    classify one attempt with auditable difficulty evidence
     detect kill/wipe outcome
     aggregate damage, healing, damage taken, deaths, crits
     remap pets where owner evidence exists
     generate encounter fingerprint
-  _normalize_session_difficulty()
   _assign_session_indices()
 ```
 

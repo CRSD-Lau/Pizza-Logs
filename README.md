@@ -12,7 +12,7 @@ Wiki: https://github.com/CRSD-Lau/Pizza-Logs/wiki
 
 ## Current Features
 
-- Streaming combat-log upload with Server-Sent Events progress.
+- Single-request streamed text/ZIP upload with Server-Sent Events progress and early difficulty results.
 - Python FastAPI parser service for WotLK combat logs.
 - Skada-WoTLK-aligned damage/healing event handling.
 - Boss encounter, raid session, player, weekly, and leaderboard pages.
@@ -89,12 +89,12 @@ The scripts crop the bottom-right Veo watermark out of the frame, preserve 16:9 
 
 ## Upload And Parsing Flow
 
-1. Browser posts a multipart file to `POST /api/upload` and reads an SSE stream.
-2. Next.js forwards the body to `PARSER_SERVICE_URL/parse-stream`.
-3. The parser writes the upload to temp disk, counts lines, parses encounters, and streams progress.
-4. Next.js validates the final parser payload with Zod.
-5. The app upserts realm/guild/player rows, creates encounters and participants, marks the upload `DONE`, then computes milestones.
-6. The browser receives a completion event and links to the stored raid session.
+1. Browser creates a random upload UUID and posts raw `.txt`, `.log`, or `.zip` bytes to `POST /api/upload` while reading SSE progress.
+2. Next.js forwards the request body directly to the parser's UUID upload endpoint.
+3. The parser streams to a unique `.part` file, hashes incrementally, atomically finalizes it, validates limits and archive safety, then emits a quick per-attempt difficulty result.
+4. A bounded background worker performs full DPS/HPS parsing while the same SSE request stays open.
+5. Next.js validates the final parser payload with Zod and uses the existing realm/guild/player/encounter persistence path.
+6. The upload is marked `DONE`, milestones are computed, and the browser links to the stored raid session.
 
 Duplicate handling:
 
@@ -103,11 +103,11 @@ Duplicate handling:
 | File | SHA-256 of full file content via `Upload.fileHash` |
 | Encounter | SHA-256 fingerprint from boss, difficulty, time block, and sorted participant names |
 
-Known upload limitation: the client advertises a 1 GB limit, but `/api/upload` does not currently enforce a hard server-side byte limit.
+The upload protocol, security limits, states, compatibility endpoint, and benchmark are documented in `docs/archive-upload-protocol.md`.
 
 ## Parser Behavior
 
-The formal parser contract is in `docs/parser-contract.md`.
+The formal parser contract is in `docs/parser-contract.md`; detector evidence and Ulduar rules are in `docs/difficulty-detector.md`.
 
 Key rules:
 
@@ -119,7 +119,7 @@ Key rules:
 - `SWING_DAMAGE` uses shifted indexes because it has no spell fields.
 - KILL duration uses boss death time, not the last post-kill event.
 - Gunship kill detection has a Warmane crew-death override.
-- Heroic detection uses encounter marker IDs, reliable marker spells, and narrow session normalization only where it cannot cross-contaminate normal fallback attempts. Some encounters remain impossible to classify perfectly from Warmane logs alone.
+- Difficulty is classified per attempt from boss-specific spell ranks and explicit Ulduar rules; conflicts, missing evidence, and unsupported cases return `UNKNOWN` instead of defaulting to Normal.
 - Malformed combat-log lines are counted and returned as parser warnings instead of crashing uploads.
 
 ## Player, Gear, And Roster Data
@@ -307,5 +307,5 @@ Short version: keep parser correctness first, avoid direct `main` pushes, keep s
 - Absorbs are not implemented as a separate metric yet.
 - Role detection is a rough upload-time heuristic.
 - Warmane server-side roster/gear fetches are unreliable; browser-assisted imports are the supported path.
-- Some heroic/Gunship difficulty details cannot be proven from Warmane logs without supporting session evidence.
-- Upload rate limiting and hard server-side size enforcement are still open security work.
+- Hodir Hard Mode and Sartharion drake modes remain unsupported and return `UNKNOWN`.
+- Upload concurrency is bounded in-process; distributed rate limiting across multiple Railway replicas is not implemented.

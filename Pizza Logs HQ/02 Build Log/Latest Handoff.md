@@ -2,7 +2,7 @@
 
 ## Date
 
-2026-05-11
+2026-08-10
 
 ## Branch
 
@@ -18,6 +18,9 @@
 - Local Git executable fallback: `C:\Program Files\Git\cmd\git.exe`
 - GitHub CLI executable: `C:\Program Files\GitHub CLI\gh.exe`
 - Parser correctness remains the highest-risk area.
+- Difficulty now uses per-attempt `pizza-difficulty-v2` boss/mode spell sets, explicit Ulduar rules, conflict-to-`UNKNOWN`, and auditable evidence.
+- Browser uploads now use one raw UUID-keyed request for `.txt`, `.log`, or `.zip`; the parser atomically finalizes, validates, emits quick modes, then runs full parsing on bounded workers.
+- A 31,621,979-byte ZIP benchmark reached quick classification 1,926.60 ms after the final byte and completed full parsing in 5,158.69 ms.
 - ICC heroic difficulty detection now uses boss-scoped markers. `Rune of Blood`
   no longer promotes Deathbringer Saurfang; Saurfang heroic uses `Scent of Blood`
   spell IDs, and Valithria heroic uses `Twisted Nightmares`.
@@ -41,7 +44,7 @@
 - GitHub Actions posts new, reopened, and ready-for-review PR summaries to Slack when `PR_SLACK_WEBHOOK_URL` is configured; if the secret is missing, the workflow warns and exits successfully.
 - `/uploads` and `/uploads/[id]` redirect to admin upload history; public raid/session pages use `/raids/...`.
 - `/admin`, `/admin/uploads`, cleanup actions, and admin import APIs are protected by `ADMIN_SECRET`.
-- Upload flow streams multipart data from `app/api/upload/route.ts` to parser `/parse-stream`, then writes database rows and milestones.
+- Upload flow streams raw bytes from `app/api/upload/route.ts` to parser `/uploads/{uuid}/stream`, then uses the existing database and milestone path after full parsing. Legacy `/parse-stream` remains for plain multipart clients.
 - Parser supports both encounter marker and heuristic segmentation paths, with Skada-aligned damage/healing formulas documented in `docs/parser-contract.md`.
 - Parser heroic upgrade markers are boss-scoped to reduce mixed-raid false positives:
   Saurfang `Rune of Blood` is normal-capable, Saurfang `Scent of Blood`
@@ -249,6 +252,16 @@
 
 ## Verification This Session
 
+### Difficulty and archive upload
+
+- Added the complete reference spell-rank families as canonical boss/mode sets, including every Faction Champions alternative.
+- Added per-attempt conflict handling, Ulduar hard-mode rules, `UNKNOWN` ranking protection, and detector metadata.
+- Added raw UUID upload states, safe ZIP member streaming, hard resource limits, bounded worker queues, and status inspection.
+- Parser suite passed with 280 tests and one existing Pydantic deprecation warning.
+- TypeScript type-check, ESLint, focused archive source test, and Next.js production build passed.
+- The 30 MiB-class benchmark passed the two-second quick-result target at 1,926.60 ms after the final byte.
+- Actual browser-facing flow passed through Next.js, parser, and local PostgreSQL: quick `25H`, final `DONE`, one encounter inserted. The exact local test upload was deleted and verified absent afterward.
+
 | Check | Result |
 |---|---|
 | README and wiki wording scan | Passed for updated public docs; no em dashes or AI-obvious wording patterns found |
@@ -335,7 +348,9 @@
 
 - Source `Veo.mp4` is 1280x720, so 1440p/4K variants are upscale derivatives rather than native high-resolution renders.
 - Local visual validation covered desktop in the in-app browser plus extracted mobile frames; test devices should still smoke-check iPhone Safari and Android Chrome after deployment.
-- Upload route still lacks hard server-side size enforcement.
+- Upload concurrency limits are process-local; multiple Railway parser replicas would need a shared limiter if production traffic warrants it.
+- Archive upload accepts ZIP plus raw text/log files; 7z/RAR/tar remain unsupported.
+- The two-second benchmark uses explicit encounter markers. Privacy-safe real Warmane heuristic-log timing still needs observation and may be slower.
 - PR Slack notifications still require `PR_SLACK_WEBHOOK_URL` in GitHub repository secrets, but missing configuration no longer fails PR checks.
 - `pull_request_target` runs the Slack workflow from `main`, so Slack formatting changes only affect fresh PR events after the workflow update is merged.
 - Absorbs remain future parser work.
@@ -350,9 +365,8 @@
 
 ## Exact Next Step
 
-Review the `codex-dev` to `main` PR updates for no Windows auto-open behavior.
-After deployment, reinstall/update both production userscripts from `/admin`,
-open one Warmane character tab and the Pizza Warriors guild tab, and click
-`Sync now` / `Sync roster` once if the admin secret is not already saved. Keep
-those tabs open for hourly refreshes. Neil merges into `main` only after review;
-Codex does not merge or push `main` directly.
+Review the local `codex-dev` difficulty/archive upload commit and its benchmark,
+then open or update the PR into `main` when publication is authorized. After a
+future deployment, smoke-test one privacy-safe real Warmane ZIP with and without
+encounter markers. Neil merges into `main` only after review; Codex does not
+merge or push `main` directly.

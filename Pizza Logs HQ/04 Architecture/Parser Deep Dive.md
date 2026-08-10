@@ -29,10 +29,14 @@ Warmane logs often have missing or misleading encounter markers, so the heuristi
 
 ## Difficulty
 
-- Encounter marker difficulty IDs map to `10N`, `25N`, `10H`, or `25H` when present.
-- Warmane may report heroic pulls as normal, so heroic marker spells are checked even when `ENCOUNTER_START` exists.
-- Session normalization is intentionally narrow: Gunship can inherit heroic evidence, but normal-looking non-Gunship attempts are not promoted just because another pull in the session was heroic.
-- Some encounters do not expose enough evidence and remain normal rather than guessing from unrelated pulls.
+- Classification runs after segmentation and returns `10N`, `10H`, `25N`, `25H`, or `UNKNOWN` per attempt.
+- Boss-specific spell-rank evidence is aggregated; conflicting ranks return `UNKNOWN`.
+- Explicit Ulduar rules handle raid size, five hard-mode markers, Freya Elders, and Yogg Keepers.
+- A supported `ENCOUNTER_START` mode is only a fallback when stronger spell evidence is absent.
+- Difficulty never inherits from another encounter or session.
+- Unsupported or missing evidence remains `UNKNOWN`, and those attempts cannot enter kill rankings.
+
+Formal detector details: `docs/difficulty-detector.md`.
 
 ## Damage Events
 

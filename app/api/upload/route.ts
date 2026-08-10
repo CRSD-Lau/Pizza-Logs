@@ -30,6 +30,8 @@ export async function POST(req: NextRequest) {
   const { uploaderName, guildName, realmName, realmHost, expansion } = meta.data;
   const parserUrl = process.env.PARSER_SERVICE_URL ?? "http://localhost:8000";
   const contentType = req.headers.get("content-type") ?? "";
+  const clientUploadId = req.headers.get("x-upload-id");
+  const useArchiveProtocol = Boolean(clientUploadId) && contentType.startsWith("application/octet-stream");
 
   const stream = new ReadableStream({
     async start(controller) {
@@ -45,9 +47,18 @@ export async function POST(req: NextRequest) {
         // ── Forward to parser SSE endpoint ──────────────────────
         let parserRes: Response;
         try {
-          parserRes = await fetch(`${parserUrl}/parse-stream`, {
+          const parserEndpoint = useArchiveProtocol
+            ? `${parserUrl}/uploads/${encodeURIComponent(clientUploadId!)}/stream`
+            : `${parserUrl}/parse-stream`;
+          const parserHeaders: Record<string, string> = useArchiveProtocol
+            ? {
+                "content-type": "application/octet-stream",
+                "x-filename": filename,
+              }
+            : { "content-type": contentType };
+          parserRes = await fetch(parserEndpoint, {
             method:  "POST",
-            headers: { "content-type": contentType },
+            headers: parserHeaders,
             body:    req.body,
             duplex:  "half",
             signal:  AbortSignal.timeout(270_000),
@@ -266,8 +277,12 @@ export async function POST(req: NextRequest) {
               const playerId = playerMap.get(p.name);
               if (!playerId) continue;
               const role = inferRole(p);
-              if (p.dps > 0)                        milestoneChecks.push({ playerId, playerName: p.name, encounterId: encounter.id, bossId: boss.id, bossName: boss.name, difficulty: enc.difficulty, metric: "DPS", value: p.dps });
-              if (role === "HEALER" && p.hps > 100) milestoneChecks.push({ playerId, playerName: p.name, encounterId: encounter.id, bossId: boss.id, bossName: boss.name, difficulty: enc.difficulty, metric: "HPS", value: p.hps });
+              if (enc.outcome === "KILL" && enc.difficulty !== "UNKNOWN" && p.dps > 0) {
+                milestoneChecks.push({ playerId, playerName: p.name, encounterId: encounter.id, bossId: boss.id, bossName: boss.name, difficulty: enc.difficulty, metric: "DPS", value: p.dps });
+              }
+              if (enc.outcome === "KILL" && enc.difficulty !== "UNKNOWN" && role === "HEALER" && p.hps > 100) {
+                milestoneChecks.push({ playerId, playerName: p.name, encounterId: encounter.id, bossId: boss.id, bossName: boss.name, difficulty: enc.difficulty, metric: "HPS", value: p.hps });
+              }
             }
 
             encountersInserted++;
@@ -315,6 +330,7 @@ export async function POST(req: NextRequest) {
       "Content-Type":     "text/event-stream",
       "Cache-Control":    "no-cache, no-transform",
       "X-Accel-Buffering":"no",
+      ...(clientUploadId ? { "X-Upload-ID": clientUploadId } : {}),
     },
   });
 }

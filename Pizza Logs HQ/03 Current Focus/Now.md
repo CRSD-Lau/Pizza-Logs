@@ -2,7 +2,7 @@
 
 ## Active Focus
 
-The current session removed local Windows Warmane auto-open behavior. Direct local CLI requests to Warmane still return 403, so gear and roster refresh now rely on already-open Warmane tabs running the browser userscripts hourly. Parser reliability remains the highest-risk product area.
+The current session implemented auditable per-attempt raid difficulty and a secure early-result archive upload path. Parser reliability remains the highest-risk product area. Direct local CLI requests to Warmane still return 403, so gear and roster refresh continue to rely on already-open Warmane tabs.
 
 README visual refresh: added a high-resolution `docs/assets/readme-screenshot.png` preview to the public README. The screenshot was captured from a fresh local Next dev server on `http://127.0.0.1:3004` while the parser service was listening on `127.0.0.1:8000`.
 
@@ -14,6 +14,14 @@ Codex works on `codex-dev`, pushes `origin/codex-dev`, and opens PRs into `main`
 
 ## This Session
 
+- Replaced first-match/Normal fallback difficulty logic with `pizza-difficulty-v2` boss/mode spell sets and conflict-to-`UNKNOWN` behavior.
+- Added complete ICC, ToC, Ruby Sanctum, VoA/EoE, and supported Ulduar evidence tests, including all Faction Champions alternatives.
+- Added Freya three-Elder and Yogg Keeper-count rules, Ulduar size fallback rules, and explicit unsupported Hodir/Sartharion handling.
+- Added auditable mode/confidence/evidence/reason/version metadata and prevented `UNKNOWN` attempts from entering kill rankings or milestones.
+- Added one-request UUID uploads, incremental SHA-256, atomic finalization, ZIP magic/member/security validation, timeouts, abandoned-file cleanup, and bounded quick/full worker pools.
+- Added quick-result SSE and upload state inspection before full report/database processing.
+- Added repeatable 30 MiB archive benchmark; final byte to quick result measured 1,926.60 ms and full processing 5,158.69 ms.
+- Exercised the actual Next.js -> parser -> local PostgreSQL flow; it returned quick `25H` and final `DONE`, then the exact local test row and temporary files were removed.
 - Investigated Neil's report that command prompts interrupted gaming and hourly sync opened too many Warmane tabs.
 - Investigated Neil's follow-up that Chrome was still silently opening tabs and using too much memory.
 - Confirmed no Pizza Logs scheduled tasks remain.
@@ -164,6 +172,9 @@ Codex works on `codex-dev`, pushes `origin/codex-dev`, and opens PRs into `main`
 
 ## Open Follow-Ups
 
+- Measure quick classification on a privacy-safe real Warmane archive without encounter markers; the robust heuristic CSV path may be slower than the marker-based 1.92660-second benchmark.
+- Add 7z only if equivalent no-extraction security and resource enforcement can be maintained.
+- Add a shared/distributed upload limiter only if Railway uses multiple parser replicas or production traffic warrants it.
 - Smoke-check the intro on real iPhone Safari and Android Chrome after the PR is deployed.
 - Confirm the fresh docs-only PR posts to Slack now that `PR_SLACK_WEBHOOK_URL` is configured.
 - Add hard server-side upload size enforcement.

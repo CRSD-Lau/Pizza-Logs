@@ -23,6 +23,8 @@ interface UploadState {
   error?: string;
 }
 
+const MAX_UPLOAD_BYTES = 100 * 1024 * 1024;
+
 export function UploadZone({ onComplete }: UploadZoneProps) {
   const [state, setState] = useState<UploadState>({
     stage: "idle",
@@ -53,6 +55,17 @@ export function UploadZone({ onComplete }: UploadZoneProps) {
   }, []);
 
   const processFile = useCallback(async (file: File) => {
+    if (file.size > MAX_UPLOAD_BYTES) {
+      setState({
+        stage: "error",
+        progress: 0,
+        message: "",
+        elapsed: 0,
+        stalled: false,
+        error: "File exceeds the 100 MiB compressed upload limit.",
+      });
+      return;
+    }
     void requestNotificationPermission();
     const startTime = Date.now();
 
@@ -87,13 +100,20 @@ export function UploadZone({ onComplete }: UploadZoneProps) {
     });
     if (guildName.trim()) params.set("guildName", guildName.trim());
 
-    const form = new FormData();
-    form.append("file", file);
+    const uploadId = crypto.randomUUID();
 
     let succeeded = false;
 
     try {
-      const res = await fetch(`/api/upload?${params}`, { method: "POST", body: form });
+      const res = await fetch(`/api/upload?${params}`, {
+        method: "POST",
+        headers: {
+          "content-type": "application/octet-stream",
+          "x-upload-id": uploadId,
+          "x-filename": file.name,
+        },
+        body: file,
+      });
       if (!res.body) throw new Error("No response body");
 
       const reader = res.body.getReader();
@@ -112,7 +132,13 @@ export function UploadZone({ onComplete }: UploadZoneProps) {
           for (const line of chunk.split("\n")) {
             if (!line.startsWith("data: ")) continue;
 
-            let event: { type: string; pct?: number; msg?: string; result?: UploadResponse };
+            let event: {
+              type: string;
+              pct?: number;
+              msg?: string;
+              result?: UploadResponse | { encounters?: unknown[] };
+              timings?: { finalByteToQuickResultMs?: number };
+            };
             try {
               event = JSON.parse(line.slice(6));
             } catch {
@@ -121,15 +147,29 @@ export function UploadZone({ onComplete }: UploadZoneProps) {
 
             const elapsed = Math.floor((Date.now() - startTime) / 1000);
 
-            if (event.type === "progress" && event.pct !== undefined) {
+            if ((event.type === "progress" || event.type === "state") && event.pct !== undefined) {
               lastEventAt.current = Date.now();
               setState((current) => current.stage === "uploading"
                 ? { ...current, progress: event.pct!, message: event.msg ?? "", elapsed, stalled: false }
                 : current);
+            } else if (event.type === "quick-result") {
+              lastEventAt.current = Date.now();
+              const quickMs = event.timings?.finalByteToQuickResultMs;
+              setState((current) => current.stage === "uploading"
+                ? {
+                    ...current,
+                    progress: event.pct ?? 45,
+                    message: quickMs !== undefined
+                      ? `${event.msg ?? "Quick classification ready"} (${(quickMs / 1000).toFixed(2)}s after upload)`
+                      : (event.msg ?? "Quick classification ready"),
+                    elapsed,
+                    stalled: false,
+                  }
+                : current);
             } else if (event.type === "complete" && event.result) {
               succeeded = true;
               clearInterval(ticker);
-              const result = { ...event.result, filename: file.name };
+              const result = { ...(event.result as UploadResponse), filename: file.name };
               setState({ stage: "done", progress: 100, message: "Done", elapsed, stalled: false, result });
               onComplete?.(result);
               const stored = result.encountersInserted;
@@ -163,7 +203,12 @@ export function UploadZone({ onComplete }: UploadZoneProps) {
     onDrop: (files) => {
       if (files[0]) processFile(files[0]);
     },
-    accept: { "text/plain": [".txt", ".log"] },
+    accept: {
+      "text/plain": [".txt", ".log"],
+      "application/zip": [".zip"],
+      "application/x-zip-compressed": [".zip"],
+      "application/octet-stream": [".zip"],
+    },
     multiple: false,
     disabled: state.stage === "uploading" || isLocked,
   });
@@ -257,7 +302,7 @@ export function UploadZone({ onComplete }: UploadZoneProps) {
             <Button variant="gold" size="md" onClick={(event) => event.stopPropagation()} disabled={!characterName.trim()}>
               Choose File
             </Button>
-            <p className="text-xs text-text-dim mt-3">Supports files up to 1 GB</p>
+            <p className="text-xs text-text-dim mt-3">TXT, LOG, or ZIP up to 100 MiB compressed</p>
           </div>
         </div>
       )}
