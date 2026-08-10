@@ -2,7 +2,9 @@
 
 ## Active Bugs
 
-No confirmed app-breaking bugs are active as of the documentation audit.
+No confirmed release-candidate app-breaking bugs are active. Railway production
+still emits React hydration error #418 on leaderboard and boss-detail pages until
+the UTC date fix is merged and deployed.
 
 ## Active Limitations And Blockers
 
@@ -15,6 +17,7 @@ No confirmed app-breaking bugs are active as of the documentation audit.
 | Warmane direct server fetches can fail with Cloudflare/403 | Gear/roster refreshes are unreliable from Railway or plain CLI requests | Supported path is browser-assisted userscripts running in existing Warmane tabs and cached DB snapshots |
 | Hodir Hard Mode and Sartharion drake modes are unsupported | Those attempts cannot be ranked by an auditable mode | Return `UNKNOWN` until explicit evidence rules exist |
 | Orphaned pets can remain unmatched | Small DPS mismatches when pets were active before log start | Keep Skada-aligned owner remap when summon evidence exists |
+| Four transitive production dependency advisories remain after the Next.js 15.5.23 backport | `npm audit --omit=dev` remains non-zero for `nanoid`, Next.js bundled PostCSS, PostCSS, and Sharp | Keep the direct Next.js 15 security fixes in this release; isolate a Next.js 16.3 migration or take a later 15.x backport |
 
 ## Resolved Reference
 
@@ -59,6 +62,8 @@ No confirmed app-breaking bugs are active as of the documentation audit.
 | Hidden Warmane Startup launchers could still open Chrome tabs | Local Startup launchers were removed, and installer defaults now clean old tasks/launchers without creating any Windows auto-open entry |
 | Difficulty used first-match or Normal fallback evidence | Added per-attempt `pizza-difficulty-v2` with complete boss/mode spell sets, Ulduar rules, conflict detection, auditable metadata, and `UNKNOWN` ranking protection |
 | Upload had no archive security or early classification | Added one-request UUID streaming, incremental SHA-256, atomic finalization, ZIP safety limits, quick results, bounded full workers, timeouts, and abandoned-file cleanup |
+| Leaderboard and boss pages emitted React hydration error #418 | Leaderboard short dates now use an explicit UTC timezone on the server and browser |
+| Next.js 15.5.15 had direct middleware/server-action security advisories | Pinned Next.js and `eslint-config-next` to the current 15.x backport, 15.5.23 |
 
 ## Not Bugs
 

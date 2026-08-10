@@ -2,7 +2,7 @@
 
 ## Active Focus
 
-The current session implemented auditable per-attempt raid difficulty and a secure early-result archive upload path. Parser reliability remains the highest-risk product area. Direct local CLI requests to Warmane still return 403, so gear and roster refresh continue to rely on already-open Warmane tabs.
+The current session completed a production site, ticket, responsive, accessibility, source, parser, and dependency audit. The app is broadly functional. The release candidate fixes the confirmed leaderboard hydration error, uses the Next.js 15.5.23 security backport, and includes the auditable per-attempt raid difficulty plus secure early-result archive upload path. Parser reliability remains the highest-risk product area.
 
 README visual refresh: added a high-resolution `docs/assets/readme-screenshot.png` preview to the public README. The screenshot was captured from a fresh local Next dev server on `http://127.0.0.1:3004` while the parser service was listening on `127.0.0.1:8000`.
 
@@ -14,6 +14,14 @@ Codex works on `codex-dev`, pushes `origin/codex-dev`, and opens PRs into `main`
 
 ## This Session
 
+- Audited all primary Railway routes plus session, encounter, boss, player, protected admin, redirect, search, pagination, and mobile-menu paths.
+- Verified 375x812 layouts, contained roster scrolling, accessible names, H1s, and image alternative text.
+- Reviewed all three GitHub tickets: #1 remains open pending deployment verification; #2 and #3 behavior pass, though #3 has an incorrect copied closure comment.
+- Fixed production React hydration error #418 by making leaderboard dates deterministic in UTC.
+- Added `tests/utils-date.test.ts` for a midnight timezone boundary.
+- Pinned Next.js and `eslint-config-next` to the patched 15.x backport, 15.5.23.
+- Recorded the complete audit in `02 Build Log/2026-08-10 Site and Ticket Audit.md`.
+- Re-ran the full validation gate: focused TypeScript tests, type-check, ESLint, production build, Python dependency check, and 280 parser tests all passed.
 - Replaced first-match/Normal fallback difficulty logic with `pizza-difficulty-v2` boss/mode spell sets and conflict-to-`UNKNOWN` behavior.
 - Added complete ICC, ToC, Ruby Sanctum, VoA/EoE, and supported Ulduar evidence tests, including all Faction Champions alternatives.
 - Added Freya three-Elder and Yogg Keeper-count rules, Ulduar size fallback rules, and explicit unsupported Hodir/Sartharion handling.
@@ -172,6 +180,9 @@ Codex works on `codex-dev`, pushes `origin/codex-dev`, and opens PRs into `main`
 
 ## Open Follow-Ups
 
+- Merge and deploy the audit PR, then verify `/leaderboards` and a boss detail page no longer emit React hydration error #418.
+- Re-upload an affected mixed heroic/normal raid after deployment and close ticket #1 only after stored difficulties are correct.
+- Plan a separate Next.js 16.3 migration or take a later 15.x backport to clear the four remaining transitive `npm audit --omit=dev` entries.
 - Measure quick classification on a privacy-safe real Warmane archive without encounter markers; the robust heuristic CSV path may be slower than the marker-based 1.92660-second benchmark.
 - Add 7z only if equivalent no-extraction security and resource enforcement can be maintained.
 - Add a shared/distributed upload limiter only if Railway uses multiple parser replicas or production traffic warrants it.

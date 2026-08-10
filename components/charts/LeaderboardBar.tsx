@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { cn, formatDps } from "@/lib/utils";
+import { cn, formatDps, formatShortDateUtc } from "@/lib/utils";
 import { getClassColor } from "@/lib/constants/classes";
 import { getRevealClassName, getRevealStyle } from "@/lib/ui-animation";
 
@@ -74,7 +74,7 @@ export function LeaderboardBar({ entries, metric, className }: LeaderboardBarPro
                     {e.difficulty}
                   </span>
                   <span className="sm:hidden">
-                    {new Date(e.date).toLocaleDateString("en-US", { month: "short", day: "numeric" })}
+                    {formatShortDateUtc(e.date)}
                   </span>
                 </div>
               </div>
@@ -87,7 +87,7 @@ export function LeaderboardBar({ entries, metric, className }: LeaderboardBarPro
               </div>
 
               <div className="hidden sm:block text-right text-[11px] text-text-dim tabular-nums">
-                {new Date(e.date).toLocaleDateString("en-US", { month: "short", day: "numeric" })}
+                {formatShortDateUtc(e.date)}
               </div>
 
               <div className="col-start-3 row-start-2 text-right sm:col-start-5 sm:row-start-1">

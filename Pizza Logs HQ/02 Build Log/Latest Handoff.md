@@ -21,6 +21,9 @@
 - Difficulty now uses per-attempt `pizza-difficulty-v2` boss/mode spell sets, explicit Ulduar rules, conflict-to-`UNKNOWN`, and auditable evidence.
 - Browser uploads now use one raw UUID-keyed request for `.txt`, `.log`, or `.zip`; the parser atomically finalizes, validates, emits quick modes, then runs full parsing on bounded workers.
 - A 31,621,979-byte ZIP benchmark reached quick classification 1,926.60 ms after the final byte and completed full parsing in 5,158.69 ms.
+- A full production route, mobile, accessibility, ticket, source, and dependency audit is recorded in `02 Build Log/2026-08-10 Site and Ticket Audit.md`.
+- Production is broadly functional; the audit found and locally fixed a timezone-dependent React hydration error on leaderboard rows.
+- Next.js and `eslint-config-next` are pinned to the patched 15.x backport, 15.5.23. Direct Next.js 15 security advisories are removed; four transitive production audit entries remain for a later Next.js 16 migration or upstream backport.
 - ICC heroic difficulty detection now uses boss-scoped markers. `Rune of Blood`
   no longer promotes Deathbringer Saurfang; Saurfang heroic uses `Scent of Blood`
   spell IDs, and Valithria heroic uses `Twisted Nightmares`.
@@ -251,6 +254,18 @@
 - Normalized GitHub PR description markdown for Slack by converting markdown headings to bold labels and collapsing noisy whitespace.
 
 ## Verification This Session
+
+### Full site and ticket audit
+
+- Verified all primary public routes, protected admin redirects, deep session/encounter/player pages, player search, roster pagination, client navigation, and the mobile menu against Railway production.
+- Verified 375x812 layouts have no document-level horizontal overflow; the roster table scrolls only inside its container.
+- Verified basic accessible naming and heading/image coverage on eight primary routes.
+- Confirmed ticket #1 is addressed by the per-attempt detector and its heroic-wipe/normal-kill regression, but should remain open until deployment and re-upload verification.
+- Confirmed tickets #2 and #3 behavior on production; ticket #3 has a stale copied closure comment.
+- Fixed React hydration error #418 by formatting leaderboard dates in UTC on both server and browser.
+- Updated Next.js and `eslint-config-next` from 15.5.15/15.0.3 to 15.5.23.
+- Reconciled stale lockfile-only `cross-env`/`vitest` entries; a clean `npm ci --legacy-peer-deps` succeeded.
+- Focused date and archive tests, TypeScript, ESLint, production build, Python `pip check`, and all 280 parser tests passed.
 
 ### Difficulty and archive upload
 
