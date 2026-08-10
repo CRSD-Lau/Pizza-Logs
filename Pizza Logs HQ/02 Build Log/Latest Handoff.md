@@ -298,6 +298,7 @@
 | `npm run check:pr` after workflow cleanup | Passed: ESLint, TypeScript, and Next.js 15.5.23 production build |
 | Active stale-path and retired-sync exclusion scan | Passed; no active laptop, OneDrive checkout, `.env.sync-agent`, `.sync-agent-dist`, or standalone `sync-agent` references remain outside historical archives/user-owned instructions |
 | GitHub `Production main` ruleset inspection | Passed; PR, `test-build`, deletion, and non-fast-forward rules are active on the default branch |
+| Railway production route probe after cleanup push | `/`, `/raids`, `/leaderboards`, `/players`, `/guild-roster`, and `/weekly` returned 200; `/admin` and `/uploads` returned protected 307 redirects; no public `/api/health` route is defined |
 | `git diff --check` after Slack workflow formatting cleanup | Passed |
 | Guild roster render test with JSX-aware `ts-node` registration | Passed |
 | `node node_modules\typescript\bin\tsc --noEmit` | Passed |
@@ -388,7 +389,7 @@
 ## Exact Next Step
 
 Review draft PR #28 and merge it into `main` when ready. Railway will then deploy
-the merged `main` commit. After deployment, verify the live health and primary
+the merged `main` commit. After deployment, verify the live homepage and primary
 user flow, confirm the leaderboard hydration fix, and re-upload one affected
 mixed heroic/normal raid before closing ticket #1. Codex does not merge or push
 `main` directly.

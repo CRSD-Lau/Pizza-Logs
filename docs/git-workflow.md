@@ -119,4 +119,4 @@ There is no need to check out local `main`. If it has no unique commits, it may 
 - Keep the local Railway CLI unlinked unless Railway configuration work is explicitly requested.
 - Do not change Railway production secrets or environment variables from Codex.
 - Verify `ADMIN_SECRET` is set in production before merging admin-sensitive changes.
-- After Railway deploys a merged PR, verify `/`, `/api/health`, the changed user flow, and the deployed commit before closing related tickets.
+- After Railway deploys a merged PR, verify `/`, the changed routes and user flow, and the deployed commit before closing related tickets. The parser's `/health` endpoint is internal; the web app does not expose `/api/health`.

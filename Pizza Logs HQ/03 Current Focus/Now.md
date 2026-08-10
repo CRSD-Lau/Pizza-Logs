@@ -22,6 +22,7 @@ Codex works on `codex-dev`, pushes `origin/codex-dev`, and opens PRs into `main`
 - Updated active docs from retired laptop/OneDrive paths to `C:\Projects\PizzaLogs` and made the tooling verifier enforce the canonical checkout, remote, branch, upstream, and branch parity.
 - Renamed the GitHub ruleset to `Production main` and made it require a pull request plus the passing `test-build` CI check; deletion and non-fast-forward protection remain active.
 - Removed obsolete standalone `sync-agent` build/env exclusions while preserving the active roster/gear browser-sync launchers and their ignored logs.
+- Rechecked Railway production after publication: primary public routes return 200 and protected admin/upload routes redirect; the parser's `/health` is internal and there is no public web `/api/health` route.
 - Audited all primary Railway routes plus session, encounter, boss, player, protected admin, redirect, search, pagination, and mobile-menu paths.
 - Verified 375x812 layouts, contained roster scrolling, accessible names, H1s, and image alternative text.
 - Reviewed all three GitHub tickets: #1 remains open pending deployment verification; #2 and #3 behavior pass, though #3 has an incorrect copied closure comment.
