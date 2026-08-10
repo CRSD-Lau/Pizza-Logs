@@ -73,6 +73,7 @@ the UTC date fix is merged and deployed.
 | Upload-time role inference could not identify tanks | Added observed WotLK spec signatures plus healing/damage-taken role evidence; uncertain cases remain conservative |
 | Analytics lacked aura, consumable, power, and death context | Added per-player aura uptime, curated consumables, energize gains, and death timelines with preceding incoming damage |
 | New compiler transforms broke serialized browser userscripts in tests | Added a self-contained function serializer and full VM execution coverage; generated scripts no longer depend on module-scoped compiler helpers |
+| Fresh CI checkout type-checks saw Prisma query results as `any` | CI now runs `npm run db:generate` before lint and both TypeScript gates |
 
 ## Not Bugs
 

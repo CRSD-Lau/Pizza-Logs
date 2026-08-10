@@ -33,6 +33,9 @@ Codex works on `codex-dev`, pushes `origin/codex-dev`, and opens PRs into `main`
   build, Prisma generation/validation, Python dependency integrity, npm audit,
   Docker image build, local persisted upload E2E, and live production smoke all
   pass.
+- Closed the clean-runner gap found by PR CI: the workflow now generates the
+  Prisma 7 client immediately after dependency installation and before lint or
+  type-checking.
 - Ran the actual local Next.js -> parser -> PostgreSQL upload flow against the upgraded stack, loaded the stored encounter page, verified protected redirects, and removed the exact temporary upload afterward.
 - Audited local worktrees, branches, remotes, ignored legacy artifacts, running processes, scheduled tasks, GitHub branches/rules, PR #28, CI, and Railway deployment boundaries.
 - Confirmed there is one worktree, one canonical remote, and only `main` plus `codex-dev` on GitHub; no Claude or laptop development branch remains.

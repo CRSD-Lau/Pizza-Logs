@@ -400,6 +400,8 @@
   production build.
 - All 284 parser tests passed and `pip check` found no broken requirements.
 - Prisma 7.9 client generation and schema validation passed.
+- CI now generates the ignored Prisma 7 client before type-checking, matching a
+  fresh checkout instead of relying on a developer's existing generated output.
 - The final Node 24 Docker image built successfully and contains the Prisma 7
   CLI plus the Linux schema engine required by production migration startup.
 - The actual local web -> parser -> PostgreSQL upload flow completed, persisted
