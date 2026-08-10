@@ -22,8 +22,9 @@
 - Browser uploads now use one raw UUID-keyed request for `.txt`, `.log`, or `.zip`; the parser atomically finalizes, validates, emits quick modes, then runs full parsing on bounded workers.
 - A 31,621,979-byte ZIP benchmark reached quick classification 1,926.60 ms after the final byte and completed full parsing in 5,158.69 ms.
 - A full production route, mobile, accessibility, ticket, source, and dependency audit is recorded in `02 Build Log/2026-08-10 Site and Ticket Audit.md`.
-- Draft PR #29 is open from `codex-dev` into `main`; its clean Linux
-  `test-build` check passes and it is not deployed until Neil merges it.
+- PR #29 merged into `main` as `55d931c`; its clean Linux `test-build` passed,
+  but the first Railway deployment failed at runtime because the final image
+  omitted `prisma.config.ts`.
 - The supported workflow is now explicitly one desktop checkout -> `origin/codex-dev` -> PR -> `origin/main` -> Railway. Active docs no longer point to the retired OneDrive/laptop checkout.
 - GitHub's renamed `Production main` ruleset now requires a PR and passing `test-build`, and blocks branch deletion and non-fast-forward updates.
 - Removed unused standalone `sync-agent` TypeScript/build exclusions and replaced its named env ignore with a safer generic `.env.*` rule; current browser-sync launcher logs remain ignored.
@@ -32,6 +33,10 @@
 - TypeScript 7.0 is the explicit native type-checker; TypeScript 6 supplies the JavaScript API still consumed by Next.js and ESLint. Both gates pass.
 - Parser analytical output is frozen by exact fixture hashes. Skada damage/healing totals remain unchanged while separate absorbs/APS, spec/role, aura uptime, consumables, power gains, and death context are now persisted and displayed.
 - Admin diagnostics include Railway deployment identity, and a Node 24 production smoke workflow runs after successful production deployments plus weekly.
+- PR #29 initially produced Railway 502 responses because the Prisma 7 runtime
+  image omitted `prisma.config.ts`; the final image could not resolve
+  `datasource.url` during `migrate deploy`. The Docker hotfix copies the config
+  beside `start.sh` and is validated by running the real image startup path.
 - ICC heroic difficulty detection now uses boss-scoped markers. `Rune of Blood`
   no longer promotes Deathbringer Saurfang; Saurfang heroic uses `Scent of Blood`
   spell IDs, and Valithria heroic uses `Twisted Nightmares`.
