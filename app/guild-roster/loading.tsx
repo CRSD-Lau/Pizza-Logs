@@ -2,7 +2,7 @@ import { Skeleton } from "@/components/ui/Skeleton";
 
 export default function GuildRosterLoading() {
   return (
-    <div className="pt-10 space-y-6">
+    <div className="page-shell">
       <div>
         <Skeleton className="h-8 w-48" />
         <Skeleton className="mt-2 h-4 w-72" />

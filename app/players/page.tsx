@@ -11,13 +11,17 @@ import { formatDps } from "@/lib/utils";
 import { cn } from "@/lib/utils";
 import { isDatabaseConnectionError } from "@/lib/database-errors";
 import { getRevealClassName, getRevealStyle } from "@/lib/ui-animation";
+import { PageHeader, PageShell } from "@/components/ui/PageLayout";
+import { ChevronLeft, ChevronRight } from "lucide-react";
 
 export const metadata: Metadata = { title: "Players" };
 export const dynamic = "force-dynamic";
 
 interface Props {
-  searchParams: Promise<{ class?: string }>;
+  searchParams: Promise<{ class?: string; page?: string }>;
 }
+
+const PLAYERS_PER_PAGE = 30;
 
 type PlayerStatsRow = {
   class: string | null;
@@ -84,7 +88,7 @@ async function getPlayersPageData(classFilter?: string): Promise<PlayersPageData
 }
 
 export default async function PlayersPage({ searchParams }: Props) {
-  const { class: classFilter } = await searchParams;
+  const { class: classFilter, page: requestedPage } = await searchParams;
 
   // Class stats — always unfiltered, used for the visualization panel
   const { databaseAvailable, allPlayersForStats, players, totalCount } = await getPlayersPageData(classFilter);
@@ -137,19 +141,33 @@ export default async function PlayersPage({ searchParams }: Props) {
     return b._count.participants - a._count.participants;
   });
 
+  const totalPages = Math.max(1, Math.ceil(enriched.length / PLAYERS_PER_PAGE));
+  const parsedPage = Number.parseInt(requestedPage ?? "1", 10);
+  const currentPage = Math.min(Math.max(Number.isFinite(parsedPage) ? parsedPage : 1, 1), totalPages);
+  const pageStart = (currentPage - 1) * PLAYERS_PER_PAGE;
+  const visiblePlayers = enriched.slice(pageStart, pageStart + PLAYERS_PER_PAGE);
+  const pageHref = (page: number) => {
+    const params = new URLSearchParams();
+    if (classFilter) params.set("class", classFilter);
+    if (page > 1) params.set("page", String(page));
+    const query = params.toString();
+    return query ? `/players?${query}` : "/players";
+  };
+
   return (
-    <div className="pt-10 space-y-6">
-      {/* Header */}
-      <div>
-        <h1 className="heading-cinzel text-2xl font-bold text-gold-light text-glow-gold">Players</h1>
-        <p className="text-text-secondary text-sm mt-1">
+    <PageShell>
+      <PageHeader
+        title="Players"
+        description={
+          <p>
           {!databaseAvailable
             ? "Player data is unavailable while the database is offline"
             : classFilter
             ? `${players.length} ${classFilter}${players.length !== 1 ? "s" : ""} · ${totalCount} total`
             : `${totalCount} players tracked across logs and the guild roster`}
-        </p>
-      </div>
+          </p>
+        }
+      />
 
       {!databaseAvailable && (
         <DatabaseUnavailable description="The player list and profile search need the Pizza Logs database. Start local Postgres to load players." />
@@ -157,10 +175,15 @@ export default async function PlayersPage({ searchParams }: Props) {
 
       {/* Class stats */}
       {databaseAvailable && classStats.length > 0 && (
-        <div className="bg-bg-panel border border-gold-dim rounded-sm p-4 space-y-4">
+        <details className="group border-y border-gold-dim">
+          <summary className="flex min-h-14 cursor-pointer list-none items-center justify-between gap-4 rounded-sm px-2 py-3 text-sm font-semibold uppercase tracking-widest text-gold hover:bg-bg-panel/45 [&::-webkit-details-marker]:hidden">
+            Class overview
+            <span className="text-text-dim transition-transform group-open:rotate-180" aria-hidden="true">⌄</span>
+          </summary>
+          <div className="space-y-5 px-2 pb-5 pt-2">
           {/* Distribution bar */}
           <div>
-            <p className="text-xs font-semibold text-text-dim uppercase tracking-widest mb-2">
+            <p className="mb-2 text-sm font-semibold uppercase tracking-widest text-text-dim">
               Class Distribution
             </p>
             <div className="flex h-5 rounded-sm overflow-hidden gap-px">
@@ -179,7 +202,7 @@ export default async function PlayersPage({ searchParams }: Props) {
             </div>
             <div className="flex flex-wrap gap-x-4 gap-y-1 mt-2">
               {classStats.map(([cls, { count }]) => (
-                <span key={cls} className="text-[11px] text-text-dim flex items-center gap-1">
+                <span key={cls} className="flex items-center gap-1 text-sm text-text-dim">
                   <span
                     className="inline-block w-2 h-2 rounded-xs"
                     style={{ background: getClassColor(cls) }}
@@ -193,14 +216,14 @@ export default async function PlayersPage({ searchParams }: Props) {
           {/* Avg best DPS by class */}
           {classAvgDps.length > 0 && (
             <div>
-              <p className="text-xs font-semibold text-text-dim uppercase tracking-widest mb-2">
+              <p className="mb-2 text-sm font-semibold uppercase tracking-widest text-text-dim">
                 Avg Best DPS by Class
               </p>
               <div className="space-y-1.5">
                 {classAvgDps.map(({ cls, avg }) => (
                   <div key={cls} className="flex items-center gap-2">
                     <span
-                      className="text-[11px] font-semibold w-24 truncate shrink-0"
+                      className="w-24 shrink-0 truncate text-sm font-semibold"
                       style={{ color: getClassColor(cls) }}
                     >
                       {cls}
@@ -215,7 +238,7 @@ export default async function PlayersPage({ searchParams }: Props) {
                         className="h-full rounded-sm"
                       />
                     </div>
-                    <span className="text-[11px] text-text-secondary tabular-nums w-16 text-right shrink-0">
+                    <span className="w-16 shrink-0 text-right text-sm tabular-nums text-text-secondary">
                       {formatDps(avg)}
                     </span>
                   </div>
@@ -223,7 +246,8 @@ export default async function PlayersPage({ searchParams }: Props) {
               </div>
             </div>
           )}
-        </div>
+          </div>
+        </details>
       )}
 
       {/* Class filter */}
@@ -232,7 +256,7 @@ export default async function PlayersPage({ searchParams }: Props) {
         <Link
           href="/players"
           className={cn(
-            "px-3 py-1 rounded-xs text-xs font-semibold uppercase tracking-wide border transition-colors",
+            "inline-flex min-h-11 items-center rounded-sm border px-3 py-2 text-xs font-semibold uppercase tracking-wide transition-colors",
             !classFilter
               ? "border-gold bg-gold/10 text-gold-light"
               : "border-gold-dim text-text-dim hover:border-gold/40 hover:text-text-secondary"
@@ -248,7 +272,7 @@ export default async function PlayersPage({ searchParams }: Props) {
               key={cls}
               href={`/players?class=${encodeURIComponent(cls)}`}
               className={cn(
-                "px-3 py-1 rounded-xs text-xs font-semibold uppercase tracking-wide border transition-colors",
+                "inline-flex min-h-11 items-center rounded-sm border px-3 py-2 text-xs font-semibold uppercase tracking-wide transition-colors",
                 active ? "opacity-100" : "opacity-60 hover:opacity-90"
               )}
               style={{
@@ -272,8 +296,9 @@ export default async function PlayersPage({ searchParams }: Props) {
           action={<Link href="/" className="text-gold hover:text-gold-light text-sm">Upload a log →</Link>}
         />
       ) : (
-        <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-2">
-          {enriched.map((p, index) => {
+        <div className="space-y-5">
+          <div className="grid border-y border-gold-dim sm:grid-cols-2 lg:grid-cols-3">
+          {visiblePlayers.map((p, index) => {
             const color = getClassColor(p.class ?? p.name);
             return (
               <Link
@@ -281,7 +306,7 @@ export default async function PlayersPage({ searchParams }: Props) {
                 href={`/players/${encodeURIComponent(p.name)}`}
                 className={getRevealClassName({
                   className:
-                    "bg-bg-panel border border-gold-dim rounded-sm px-4 py-3 hover:border-gold/50 transition-colors group flex items-center gap-3",
+                    "group flex min-h-20 items-center gap-3 border-b border-gold-dim px-3 py-3 transition-colors hover:bg-bg-panel/55 sm:border-r",
                 })}
                 style={getRevealStyle(index)}
               >
@@ -308,14 +333,14 @@ export default async function PlayersPage({ searchParams }: Props) {
                       <span className="text-[10px] text-gold font-bold shrink-0">👑 #1</span>
                     )}
                   </div>
-                  <div className="flex items-center gap-2 mt-0.5 text-[11px] text-text-dim">
+                  <div className="mt-1 flex items-center gap-2 text-sm text-text-dim">
                     {p.class && <span>{p.class}</span>}
                     {p.realm && <span>· {p.realm.name}</span>}
                     <span>· {p._count.participants} pulls</span>
                   </div>
                   {/* Best DPS/HPS */}
                   {(p.bestDps !== null || p.bestHps !== null) && (
-                    <div className="flex items-center gap-3 mt-1 text-[11px] tabular-nums">
+                    <div className="mt-1 flex items-center gap-3 text-xs tabular-nums">
                       {p.bestDps !== null && (
                         <span className="text-text-secondary">
                           <span className="text-text-dim">Best </span>
@@ -336,8 +361,30 @@ export default async function PlayersPage({ searchParams }: Props) {
               </Link>
             );
           })}
+          </div>
+          {totalPages > 1 && (
+            <nav className="flex items-center justify-between gap-3" aria-label="Player directory pages">
+              <Link
+                href={pageHref(currentPage - 1)}
+                aria-disabled={currentPage === 1}
+                className={cn("inline-flex min-h-11 min-w-11 items-center justify-center rounded-sm border border-gold-dim px-3 text-sm text-text-secondary", currentPage === 1 && "pointer-events-none opacity-40")}
+              >
+                <ChevronLeft className="h-4 w-4" aria-hidden="true" /> <span className="ml-1 hidden sm:inline">Previous</span>
+              </Link>
+              <p className="text-sm tabular-nums text-text-dim">
+                {pageStart + 1}–{Math.min(pageStart + PLAYERS_PER_PAGE, enriched.length)} of {enriched.length}
+              </p>
+              <Link
+                href={pageHref(currentPage + 1)}
+                aria-disabled={currentPage === totalPages}
+                className={cn("inline-flex min-h-11 min-w-11 items-center justify-center rounded-sm border border-gold-dim px-3 text-sm text-text-secondary", currentPage === totalPages && "pointer-events-none opacity-40")}
+              >
+                <span className="mr-1 hidden sm:inline">Next</span> <ChevronRight className="h-4 w-4" aria-hidden="true" />
+              </Link>
+            </nav>
+          )}
         </div>
       ))}
-    </div>
+    </PageShell>
   );
 }

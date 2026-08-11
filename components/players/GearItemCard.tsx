@@ -188,7 +188,7 @@ export function GearItemCard({ item, gearScore }: { item: ArmoryGearItem; gearSc
       <div className="min-w-0 flex-1">
         <div className="flex items-start justify-between gap-2">
           <div className="min-w-0">
-            <p className="text-[11px] font-bold uppercase tracking-widest text-text-dim">{item.slot}</p>
+            <p className="text-xs font-bold uppercase tracking-widest text-text-dim">{item.slot}</p>
             <p
               className="truncate text-sm font-semibold text-text-primary group-hover:text-gold-light"
               style={qualityColor ? { color: qualityColor } : undefined}

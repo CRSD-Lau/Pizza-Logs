@@ -166,17 +166,17 @@ export default async function EncounterPage({ params }: Props) {
     }));
 
   return (
-    <div className="pt-10 space-y-8">
-      <div className="text-xs text-text-dim flex items-center gap-1 flex-wrap">
-        <Link href="/raids" className="hover:text-gold">Raids</Link>
+    <div className="page-shell">
+      <div className="flex flex-wrap items-center gap-1 text-sm text-text-dim">
+        <Link href="/raids" className="inline-flex min-h-11 items-center hover:text-gold">Raids</Link>
         <span>&gt;</span>
-        <Link href={`/raids/${encounter.upload.id}/sessions/${encounter.sessionIndex}`} className="hover:text-gold">
+        <Link href={`/raids/${encounter.upload.id}/sessions/${encounter.sessionIndex}`} className="inline-flex min-h-11 items-center hover:text-gold">
           Raid Session
         </Link>
         <span>&gt;</span>
-        <Link href="/bosses" className="hover:text-gold">Bosses</Link>
+        <Link href="/bosses" className="inline-flex min-h-11 items-center hover:text-gold">Bosses</Link>
         <span>&gt;</span>
-        <Link href={`/bosses/${encounter.boss.slug}`} className="hover:text-gold">{encounter.boss.name}</Link>
+        <Link href={`/bosses/${encounter.boss.slug}`} className="inline-flex min-h-11 items-center hover:text-gold">{encounter.boss.name}</Link>
         <span>&gt;</span>
         <span className="text-text-secondary">Encounter</span>
       </div>
@@ -203,14 +203,14 @@ export default async function EncounterPage({ params }: Props) {
         </div>
       </div>
 
-      <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-3">
-        <StatCard label="Duration" value={formatDuration(encounter.durationSeconds)} highlight />
+      <div className="grid grid-cols-2 items-stretch gap-y-2 rounded-sm bg-bg-panel/40 p-2 sm:grid-cols-4 lg:grid-cols-8">
+        <StatCard label="Duration" value={formatDuration(encounter.durationSeconds)} highlight className="col-span-2" />
         <StatCard label="Total Damage" value={formatNumber(encounter.totalDamage)} />
         <StatCard label="Raid DPS" value={totalDps.toLocaleString()} sub="per second" />
         <StatCard label="Effective Healing" value={formatNumber(encounter.totalHealing)} />
         <StatCard label="Effective HPS" value={totalHps.toLocaleString()} sub="per second" />
         <StatCard label="Absorbs" value={formatNumber(encounter.totalAbsorbs)} sub={`${totalAps.toLocaleString()} per second`} />
-        <StatCard label="Heal + Absorbs" value={formatNumber(totalHealAndAbsorb)} sub={`${totalHealAndAbsorbPs.toLocaleString()} per second - UwU metric`} />
+        <StatCard label="Heal + Absorbs" value={formatNumber(totalHealAndAbsorb)} sub={`${totalHealAndAbsorbPs.toLocaleString()} per second - UwU metric`} className="col-span-2" />
       </div>
 
       {encounter.milestones.length > 0 && (
@@ -236,7 +236,7 @@ export default async function EncounterPage({ params }: Props) {
 
       {dpsParts.length > 0 && (
         <AccordionSection title="Damage Breakdown" sub="Click a row to expand spell details" count={dpsParts.length} defaultOpen>
-          <div className="bg-bg-panel border border-gold-dim rounded-sm overflow-hidden">
+          <div className="data-panel">
             <DamageMeter participants={dpsParts} metric="dps" />
           </div>
         </AccordionSection>
@@ -249,9 +249,9 @@ export default async function EncounterPage({ params }: Props) {
             ? `${formatNumber(encounter.unattributedAbsorbs)} absorbs are included in the total but not yet assigned in player ranks`
             : "Effective healing plus attributed shields"}
           count={healAndAbsorbParts.length}
-          defaultOpen
+          defaultOpen={false}
         >
-          <div className="bg-bg-panel border border-gold-dim rounded-sm overflow-hidden">
+          <div className="data-panel">
             <DamageMeter participants={healAndAbsorbParts} metric="ha" />
           </div>
         </AccordionSection>
@@ -259,7 +259,7 @@ export default async function EncounterPage({ params }: Props) {
 
       {healParts.length > 0 && (
         <AccordionSection title="Effective Healing Breakdown" count={healParts.length} defaultOpen={false}>
-          <div className="bg-bg-panel border border-gold-dim rounded-sm overflow-hidden">
+          <div className="data-panel">
             <DamageMeter participants={healParts} metric="hps" />
           </div>
         </AccordionSection>
@@ -272,9 +272,9 @@ export default async function EncounterPage({ params }: Props) {
             ? `${formatNumber(encounter.unattributedAbsorbs)} could not be attributed to one active shield`
             : "Conservatively attributed from active shield auras"}
           count={absorbParts.length}
-          defaultOpen
+          defaultOpen={false}
         >
-          <div className="bg-bg-panel border border-gold-dim rounded-sm overflow-hidden">
+          <div className="data-panel">
             <DamageMeter participants={absorbParts} metric="aps" />
           </div>
         </AccordionSection>
@@ -282,7 +282,7 @@ export default async function EncounterPage({ params }: Props) {
 
       {mobEntries.length > 0 && (
         <AccordionSection title="Target Breakdown" sub="Damage dealt to each mob - click a row to see per-player split" count={mobEntries.length} defaultOpen={false}>
-          <div className="bg-bg-panel border border-gold-dim rounded-sm overflow-hidden">
+          <div className="data-panel">
             <MobBreakdown mobs={mobEntries} />
           </div>
         </AccordionSection>
@@ -290,13 +290,13 @@ export default async function EncounterPage({ params }: Props) {
 
       {auraRows.length > 0 && (
         <AccordionSection title="Aura Uptime" sub="Buffs and debuffs observed on raid members" count={auraRows.length} defaultOpen={false}>
-          <div className="bg-bg-panel border border-gold-dim rounded-sm divide-y divide-gold-dim">
+          <div className="divide-y divide-gold-dim border-y border-gold-dim">
             {auraRows.map((row) => (
-              <div key={`${row.player}-${row.aura}`} className="grid grid-cols-[minmax(0,1fr)_minmax(0,2fr)_auto_auto] gap-3 px-4 py-2.5 text-sm">
+              <div key={`${row.player}-${row.aura}`} className="grid grid-cols-[minmax(0,1fr)_auto] gap-x-3 gap-y-1 px-2 py-3 text-sm sm:grid-cols-[minmax(0,1fr)_minmax(0,2fr)_auto_auto] sm:px-4">
                 <span className="font-semibold text-text-primary truncate">{row.player}</span>
-                <span className="text-text-secondary truncate">{row.aura}</span>
-                <span className="tabular-nums text-gold">{row.uptimePct.toFixed(1)}%</span>
-                <span className="tabular-nums text-text-dim">{row.applications}x</span>
+                <span className="row-start-2 truncate text-text-secondary sm:row-start-auto">{row.aura}</span>
+                <span className="col-start-2 row-start-1 tabular-nums text-gold sm:col-start-auto sm:row-start-auto">{row.uptimePct.toFixed(1)}%</span>
+                <span className="col-start-2 row-start-2 tabular-nums text-text-dim sm:col-start-auto sm:row-start-auto">{row.applications}x</span>
               </div>
             ))}
           </div>
@@ -305,12 +305,12 @@ export default async function EncounterPage({ params }: Props) {
 
       {consumableRows.length > 0 && (
         <AccordionSection title="Consumables" sub="Observed flask, elixir, food, and potion auras" count={consumableRows.length} defaultOpen={false}>
-          <div className="bg-bg-panel border border-gold-dim rounded-sm divide-y divide-gold-dim">
+          <div className="divide-y divide-gold-dim border-y border-gold-dim">
             {consumableRows.map((row) => (
-              <div key={`${row.player}-${row.consumable}`} className="grid grid-cols-[minmax(0,1fr)_minmax(0,2fr)_auto] gap-3 px-4 py-2.5 text-sm">
+              <div key={`${row.player}-${row.consumable}`} className="grid grid-cols-[minmax(0,1fr)_auto] gap-x-3 gap-y-1 px-2 py-3 text-sm sm:grid-cols-[minmax(0,1fr)_minmax(0,2fr)_auto] sm:px-4">
                 <span className="font-semibold text-text-primary truncate">{row.player}</span>
-                <span className="text-text-secondary truncate">{row.consumable}</span>
-                <span className="tabular-nums text-gold">{row.uptimePct.toFixed(1)}%</span>
+                <span className="row-start-2 truncate text-text-secondary sm:row-start-auto">{row.consumable}</span>
+                <span className="col-start-2 row-span-2 row-start-1 self-center tabular-nums text-gold sm:col-start-auto sm:row-span-1 sm:row-start-auto">{row.uptimePct.toFixed(1)}%</span>
               </div>
             ))}
           </div>
@@ -319,13 +319,13 @@ export default async function EncounterPage({ params }: Props) {
 
       {powerRows.length > 0 && (
         <AccordionSection title="Power Gains" sub="Resource gains emitted by combat-log energize events" count={powerRows.length} defaultOpen={false}>
-          <div className="bg-bg-panel border border-gold-dim rounded-sm divide-y divide-gold-dim">
+          <div className="divide-y divide-gold-dim border-y border-gold-dim">
             {powerRows.map((row) => (
-              <div key={`${row.player}-${row.spell}-${row.powerType}`} className="grid grid-cols-[minmax(0,1fr)_minmax(0,2fr)_auto_auto] gap-3 px-4 py-2.5 text-sm">
+              <div key={`${row.player}-${row.spell}-${row.powerType}`} className="grid grid-cols-[minmax(0,1fr)_auto] gap-x-3 gap-y-1 px-2 py-3 text-sm sm:grid-cols-[minmax(0,1fr)_minmax(0,2fr)_auto_auto] sm:px-4">
                 <span className="font-semibold text-text-primary truncate">{row.player}</span>
-                <span className="text-text-secondary truncate">{row.spell}</span>
-                <span className="tabular-nums text-gold">{formatNumber(row.amount)}</span>
-                <span className="tabular-nums text-text-dim">{row.events}x</span>
+                <span className="row-start-2 truncate text-text-secondary sm:row-start-auto">{row.spell}</span>
+                <span className="col-start-2 row-start-1 tabular-nums text-gold sm:col-start-auto sm:row-start-auto">{formatNumber(row.amount)}</span>
+                <span className="col-start-2 row-start-2 tabular-nums text-text-dim sm:col-start-auto sm:row-start-auto">{row.events}x</span>
               </div>
             ))}
           </div>
@@ -334,7 +334,7 @@ export default async function EncounterPage({ params }: Props) {
 
       {deathRows.length > 0 && (
         <AccordionSection title="Death Timeline" count={deathRows.length} defaultOpen={false}>
-          <div className="bg-bg-panel border border-danger/20 rounded-sm divide-y divide-gold-dim">
+          <div className="divide-y divide-gold-dim border-y border-danger/30">
             {deathRows.map((row, index) => (
               <div key={`${row.player}-${row.offsetSeconds}-${index}`} className="px-4 py-2.5 text-sm">
                 <div className="flex items-center justify-between gap-3">
@@ -358,7 +358,7 @@ export default async function EncounterPage({ params }: Props) {
       )}
 
       <AccordionSection title="Full Roster" count={encounter.participants.length} defaultOpen={false}>
-        <div className="bg-bg-panel border border-gold-dim rounded-sm divide-y divide-gold-dim">
+        <div className="divide-y divide-gold-dim border-y border-gold-dim">
           {encounter.participants.map((p) => (
             <div key={p.id} className="flex items-center justify-between px-4 py-2.5 hover:bg-bg-hover transition-colors gap-3 flex-wrap">
               <div className="flex items-center gap-3 flex-wrap">

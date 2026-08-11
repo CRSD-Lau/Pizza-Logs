@@ -138,7 +138,7 @@ export default async function SessionPlayerPage({ params }: Props) {
   const chartPlayers: PlayerLine[] = allPlayers.map((pName) => ({
     name: pName,
     isSubject: pName === name,
-    color: pName === name ? "#c8a84b" : classColor,
+    color: pName === name ? "var(--color-gold)" : classColor,
   }));
 
   const sessionCount = await db.encounter.groupBy({
@@ -152,7 +152,7 @@ export default async function SessionPlayerPage({ params }: Props) {
   });
 
   return (
-    <div className="pt-10 space-y-8">
+    <div className="page-shell">
       <div className="text-xs text-text-dim flex items-center gap-1 flex-wrap">
         <Link href="/raids" className="hover:text-gold">Raids</Link>
         <span>&gt;</span>

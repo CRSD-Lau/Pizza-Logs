@@ -79,7 +79,7 @@ function PageNavButton({
   children: ReactNode;
 }) {
   const className =
-    "inline-flex h-8 w-8 items-center justify-center rounded-xs border border-gold-dim text-text-secondary transition-colors";
+    "inline-flex h-11 w-11 items-center justify-center rounded-sm border border-gold-dim text-text-secondary transition-colors";
 
   if (disabled) {
     return (
@@ -131,7 +131,7 @@ export function GuildRosterTable({ members, currentPage = 1 }: GuildRosterTableP
       <div className="overflow-x-auto">
         <table className="min-w-full text-sm">
           <thead className="bg-bg-card text-text-dim">
-            <tr className="text-left text-[11px] uppercase tracking-widest">
+            <tr className="text-left text-xs uppercase tracking-widest">
               <th className="px-4 py-3 font-semibold">Character</th>
               <th className="px-4 py-3 font-semibold">Class</th>
               <th className="px-4 py-3 font-semibold">Race</th>

@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { GuildRosterTable } from "@/components/guild-roster/GuildRosterTable";
 import { DEFAULT_GUILD_NAME, DEFAULT_GUILD_REALM, readGuildRosterMembers } from "@/lib/warmane-guild-roster";
+import { PageHeader } from "@/components/ui/PageLayout";
 
 export const metadata: Metadata = { title: "Guild Roster" };
 export const dynamic = "force-dynamic";
@@ -25,10 +26,10 @@ export default async function GuildRosterPage({ searchParams }: Props) {
   }, null);
 
   return (
-    <div className="pt-10 space-y-6">
-      <div>
-        <h1 className="heading-cinzel text-2xl font-bold text-gold-light text-glow-gold">Guild Roster</h1>
-        <p className="text-text-secondary text-sm mt-1">
+    <div className="page-shell">
+      <PageHeader
+        title="Guild Roster"
+        description={<p>
           {members.length > 0
             ? `${members.length} ${DEFAULT_GUILD_NAME} members on ${DEFAULT_GUILD_REALM}`
             : `${DEFAULT_GUILD_NAME} members on ${DEFAULT_GUILD_REALM}`}
@@ -37,8 +38,8 @@ export default async function GuildRosterPage({ searchParams }: Props) {
               {" "}· Last synced {latestSync.toLocaleString()}
             </span>
           )}
-        </p>
-      </div>
+        </p>}
+      />
 
       <GuildRosterTable members={members} currentPage={currentPage} />
     </div>

@@ -2,7 +2,7 @@
 
 ## Date
 
-2026-08-10
+2026-08-11
 
 ## Branch
 
@@ -18,6 +18,8 @@
 - Local Git executable fallback: `C:\Program Files\Git\cmd\git.exe`
 - GitHub CLI executable: `C:\Program Files\GitHub CLI\gh.exe`
 - Parser correctness remains the highest-risk area.
+- The frontend now uses a shared page/header/section/data-panel contract, readable metadata colors, 44px controls, asymmetric metric summaries, responsive analytical rows, and progressive disclosure for long directories and reports.
+- The cinematic intro is homepage-only and runs once per browser session; hard-loaded report and profile routes are never blocked by it.
 - Difficulty now uses per-attempt `pizza-difficulty-v2` boss/mode spell sets, explicit Ulduar rules, conflict-to-`UNKNOWN`, and auditable evidence.
 - Browser uploads now use one raw UUID-keyed request for `.txt`, `.log`, or `.zip`; the parser atomically finalizes, validates, emits quick modes, then runs full parsing on bounded workers.
 - A 31,621,979-byte ZIP benchmark reached quick classification 1,926.60 ms after the final byte and completed full parsing in 5,158.69 ms.
@@ -54,6 +56,19 @@
   - `C:\Projects\PizzaLogs\Start Pizza Logs Local.cmd`
   - `C:\Projects\PizzaLogs\Stop Pizza Logs Local.cmd`
 - Imported local Codex discussion history lives under `Pizza Logs HQ/08 AI Control Center/Imported Codex Chats/`.
+
+## Frontend Polish Session
+
+- Raised `text-dim` to `#918772` and `text-secondary` to `#b3a68c`; meaningful metadata no longer uses the previous 2.3-2.6:1 microtext treatment.
+- Added `PageShell`, `PageHeader`, `PageSection`, and `DataPanel`, plus a documented frontend contract in `DESIGN.md`.
+- Standardized public/admin page rhythm, reduced equal-card treatment, and introduced a dominant metric on homepage, weekly, session, and encounter summaries.
+- Paginated the player directory at 30 profiles per page, collapsed empty boss raids, and changed leaderboards to one accessible boss disclosure at a time.
+- Converted damage and target meter rows to native buttons with focus and expanded-state semantics. Mobile meters and encounter aura, consumable, and power rows now collapse to intentional two-column summaries.
+- Enlarged navigation, search, upload, filter, pagination, and disclosure controls to a 44px minimum interaction box.
+- Replaced component-level school/gold literals with shared tokens where equivalents exist.
+- Local browser verification passed at 1440x1000 and 375x812 with no document overflow, no console warnings/errors, 44px visible form controls, and no intro on a hard-loaded `/players` route.
+- Verification passed: TypeScript 7, all 38 web tests, zero-warning ESLint, and the Next.js 16 production build.
+- No parser, Prisma schema, migration, API, or persisted analytical behavior changed.
 
 ## Current Implementation Snapshot
 
@@ -436,10 +451,8 @@
 
 ## Exact Next Step
 
-Review and merge the new `codex-dev` whole-session UwU parity PR into `main` when ready.
-Railway will deploy the merged parser and web app. Confirm the commit in
-protected Admin diagnostics, check the Production Smoke workflow, then
-re-upload the original combat ZIP and compare the five pulls with
-`parser/tests/baselines/uwu-2026-07-31-lausudo.json`. Existing stored reports
-will not be rewritten automatically. Codex does not merge or push `main`
-directly.
+Review the frontend audit remediation PR from `codex-dev` into `main`. Railway
+will deploy only after Neil merges it. After deployment, smoke-check one
+populated session and encounter on a real mobile browser, then continue the
+existing UwU re-upload acceptance step for historical parser data. Codex does
+not merge or push `main` directly.

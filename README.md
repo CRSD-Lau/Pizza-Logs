@@ -309,12 +309,13 @@ parser/tests/fixtures/
 prisma/              Schema, migrations, and seed script
 scripts/             Item import and local Windows test-server helpers
 docs/                Repo-level workflow, parser, and review docs
+DESIGN.md            Frontend hierarchy, spacing, surface, and accessibility contract
 Pizza Logs HQ/       Committed project knowledge base
 ```
 
 ## Contribution Workflow
 
-See `CONTRIBUTING.md`, `AGENTS.md`, `docs/git-workflow.md`, and `.github/pull_request_template.md`.
+See `CONTRIBUTING.md`, `AGENTS.md`, `DESIGN.md`, `docs/git-workflow.md`, and `.github/pull_request_template.md`.
 
 Short version: keep parser correctness first, avoid direct `main` pushes, keep secrets out of Git, update docs with behavior changes, and use `codex-dev -> PR -> main`.
 

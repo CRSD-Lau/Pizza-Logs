@@ -58,7 +58,7 @@ export default async function AdminUploadDetailPage({ params }: Props) {
   const totalSecs = upload.encounters.reduce((sum, e) => sum + e.durationSeconds, 0);
 
   return (
-    <div className="pt-10 space-y-8">
+    <div className="page-shell">
       <div className="text-xs text-text-dim flex items-center gap-2 flex-wrap">
         <Link href="/admin" className="hover:text-gold">Admin</Link>
         <span>&gt;</span>

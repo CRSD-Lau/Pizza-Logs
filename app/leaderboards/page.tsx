@@ -7,6 +7,7 @@ import Link from "next/link";
 import { isDatabaseConnectionError } from "@/lib/database-errors";
 import { sortBossesByICCOrder } from "@/lib/constants/bosses";
 import { getRevealClassName, getRevealStyle } from "@/lib/ui-animation";
+import { PageHeader, PageShell } from "@/components/ui/PageLayout";
 
 export const metadata: Metadata = { title: "Leaderboards" };
 export const dynamic = "force-dynamic";
@@ -87,15 +88,15 @@ export default async function LeaderboardsPage() {
   }
 
   return (
-    <div className="pt-10 space-y-12">
-      <div>
-        <h1 className="heading-cinzel text-2xl font-bold text-gold-light text-glow-gold">
-          Leaderboards
-        </h1>
-        <p className="text-text-secondary text-sm mt-1">
+    <PageShell>
+      <PageHeader
+        title="Leaderboards"
+        description={
+          <p>
           All-time top 10 DPS and HPS per boss — kills only, one entry per player
-        </p>
-      </div>
+          </p>
+        }
+      />
 
       {!databaseAvailable && (
         <DatabaseUnavailable description="Leaderboards need the Pizza Logs database. Start local Postgres to load rankings." />
@@ -108,25 +109,25 @@ export default async function LeaderboardsPage() {
           action={<Link href="/" className="text-gold hover:text-gold-light text-sm">Upload a log →</Link>}
         />
       ) : (
-        <div className="space-y-16">
+        <div className="divide-y divide-gold-dim border-y border-gold-dim">
           {boards.map(({ boss, dpsEntries, hpsEntries }, index) => (
-            <section
+            <details
               key={boss.id}
-              className={getRevealClassName({ boss: true, className: "space-y-6" })}
+              open={index === 0}
+              className={getRevealClassName({ boss: true, className: "group" })}
               style={getRevealStyle(index)}
             >
-              {/* Boss header */}
-              <div className="border-b border-gold-dim pb-3">
-                <Link
-                  href={`/bosses/${boss.slug}`}
-                  className="heading-cinzel text-lg font-bold text-gold hover:text-gold-light transition-colors"
-                >
+              <summary className="flex min-h-16 cursor-pointer list-none items-center justify-between gap-4 rounded-sm px-2 py-3 transition-colors hover:bg-bg-panel/50 focus-visible:bg-bg-panel/50 sm:px-4 [&::-webkit-details-marker]:hidden">
+                <span className="min-w-0">
+                  <span className="heading-cinzel block truncate text-base font-bold text-gold transition-colors group-open:text-gold-light sm:text-lg">
                   {boss.name}
-                </Link>
-                <span className="text-xs text-text-dim ml-3">{boss.raid}</span>
-              </div>
+                  </span>
+                  <span className="mt-1 block text-sm text-text-dim">{boss.raid} · {dpsEntries.length} DPS · {hpsEntries.length} HPS</span>
+                </span>
+                <span className="text-xl text-text-dim transition-transform group-open:rotate-180" aria-hidden="true">⌄</span>
+              </summary>
 
-              <div className="grid md:grid-cols-2 gap-8">
+              <div className="grid gap-8 px-2 pb-8 pt-3 md:grid-cols-2 sm:px-4">
                 {/* DPS */}
                 {dpsEntries.length > 0 && (
                   <div className="space-y-2">
@@ -147,10 +148,13 @@ export default async function LeaderboardsPage() {
                   </div>
                 )}
               </div>
-            </section>
+              <Link href={`/bosses/${boss.slug}`} className="mx-2 mb-6 inline-flex min-h-11 items-center text-sm font-semibold text-gold hover:text-gold-light sm:mx-4">
+                View {boss.name} history &rarr;
+              </Link>
+            </details>
           ))}
         </div>
       ))}
-    </div>
+    </PageShell>
   );
 }

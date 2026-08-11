@@ -15,8 +15,8 @@ const config = {
         "gold-light": "#f0d080",
         "gold-dim": "#7a6530",
         "text-primary": "#e8dfc8",
-        "text-secondary": "#9a8f78",
-        "text-dim": "#5a5548",
+        "text-secondary": "#b3a68c",
+        "text-dim": "#918772",
         school: {
           physical: "#c0c8d8",
           holy: "#f0c040",

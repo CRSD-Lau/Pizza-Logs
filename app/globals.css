@@ -19,6 +19,40 @@
   ::file-selector-button {
     border-color: rgba(180, 140, 60, 0.2);
   }
+
+  :focus-visible {
+    outline: 2px solid #c8a84b;
+    outline-offset: 3px;
+  }
+
+  button,
+  a,
+  input,
+  summary {
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  button,
+  select,
+  input:not([type='checkbox']):not([type='radio']) {
+    min-height: 2.75rem;
+  }
+}
+
+@utility page-shell {
+  @apply pt-8 sm:pt-10 space-y-8 sm:space-y-10;
+}
+
+@utility page-section {
+  @apply space-y-4 border-t border-gold-dim pt-6 sm:pt-8;
+}
+
+@utility data-panel {
+  @apply overflow-hidden border-y border-gold-dim bg-bg-panel -mx-4 sm:mx-0 sm:rounded-sm sm:border;
+}
+
+@utility touch-target {
+  @apply min-h-11 min-w-11;
 }
 
 @utility border-gold-dim {
@@ -67,7 +101,7 @@
 
 @utility meter-row {
   /* ── Meter bar row ── */
-  @apply relative overflow-hidden rounded-sm cursor-pointer;
+  @apply relative overflow-hidden rounded-sm cursor-pointer min-h-11;
   @apply border border-transparent transition-colors duration-150;
   &:hover {
     border-color: rgba(180, 140, 60, 0.2);

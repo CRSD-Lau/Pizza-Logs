@@ -225,8 +225,8 @@ export function UploadZone({ onComplete }: UploadZoneProps) {
   return (
     <div className="space-y-4">
       {state.stage === "idle" && (
-        <div className="flex flex-wrap gap-3 items-center">
-          <div className="flex items-center gap-2">
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-[1.2fr_0.8fr_0.8fr_1.2fr]">
+          <div className="grid gap-1.5">
             <label className="text-xs text-text-secondary uppercase tracking-wide">
               Character <span className="text-danger">*</span>
             </label>
@@ -234,16 +234,16 @@ export function UploadZone({ onComplete }: UploadZoneProps) {
               value={characterName}
               onChange={(event) => setCharacterName(event.target.value)}
               placeholder="Your character name"
-              className="bg-bg-card border border-gold-dim rounded-sm px-3 py-1.5 text-sm text-text-primary outline-hidden focus:border-gold transition-colors w-44"
+              className="w-full rounded-sm border border-gold-dim bg-bg-card px-3 py-2 text-sm text-text-primary outline-hidden transition-colors focus:border-gold"
             />
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="grid gap-1.5">
             <label className="text-xs text-text-secondary uppercase tracking-wide">Realm</label>
             <select
               value={realmName}
               onChange={(event) => setRealmName(event.target.value)}
-              className="bg-bg-card border border-gold-dim rounded-sm px-3 py-1.5 text-sm text-text-primary outline-hidden focus:border-gold transition-colors"
+              className="w-full rounded-sm border border-gold-dim bg-bg-card px-3 py-2 text-sm text-text-primary outline-hidden transition-colors focus:border-gold"
             >
               <option value="Icecrown">Icecrown</option>
               <option value="Lordaeron">Lordaeron</option>
@@ -252,24 +252,24 @@ export function UploadZone({ onComplete }: UploadZoneProps) {
             </select>
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="grid gap-1.5">
             <label className="text-xs text-text-secondary uppercase tracking-wide">Server</label>
             <select
               value={realmHost}
               onChange={(event) => setRealmHost(event.target.value)}
-              className="bg-bg-card border border-gold-dim rounded-sm px-3 py-1.5 text-sm text-text-primary outline-hidden focus:border-gold transition-colors"
+              className="w-full rounded-sm border border-gold-dim bg-bg-card px-3 py-2 text-sm text-text-primary outline-hidden transition-colors focus:border-gold"
             >
               <option value="warmane">Warmane</option>
             </select>
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="grid gap-1.5">
             <label className="text-xs text-text-secondary uppercase tracking-wide">Guild</label>
             <input
               value={guildName}
               onChange={(event) => setGuildName(event.target.value)}
               placeholder="PizzaWarriors (optional)"
-              className="bg-bg-card border border-gold-dim rounded-sm px-3 py-1.5 text-sm text-text-primary outline-hidden focus:border-gold transition-colors w-48"
+              className="w-full rounded-sm border border-gold-dim bg-bg-card px-3 py-2 text-sm text-text-primary outline-hidden transition-colors focus:border-gold"
             />
           </div>
         </div>
@@ -279,12 +279,12 @@ export function UploadZone({ onComplete }: UploadZoneProps) {
         <div
           {...(isLocked ? lockedProps : getRootProps())}
           className={cn(
-            "relative border border-dashed rounded-xs px-10 py-16 text-center transition-all duration-200 overflow-hidden",
+            "relative overflow-hidden rounded-sm border border-dashed px-4 py-12 text-center transition-[background-color,border-color,box-shadow] duration-200 sm:px-10 sm:py-16",
             isLocked
-              ? "cursor-not-allowed opacity-40 border-gold/20 bg-[rgba(180,140,60,0.01)]"
+              ? "cursor-not-allowed border-gold/20 bg-gold/[0.01] opacity-40"
               : isDragActive
-                ? "cursor-pointer border-gold bg-[rgba(180,140,60,0.06)] shadow-gold-glow"
-                : "cursor-pointer border-gold/40 bg-[rgba(180,140,60,0.02)] hover:border-gold hover:bg-[rgba(180,140,60,0.04)]"
+                ? "cursor-pointer border-gold bg-gold/[0.06] shadow-gold-glow"
+                : "cursor-pointer border-gold/40 bg-gold/[0.02] hover:border-gold hover:bg-gold/[0.04]"
           )}
         >
           {!isLocked && <input {...getInputProps()} />}
@@ -325,7 +325,7 @@ export function UploadZone({ onComplete }: UploadZoneProps) {
           </div>
 
           <div className="max-w-sm mx-auto space-y-1.5">
-            <div className="flex justify-between text-[11px] text-text-dim tabular-nums">
+            <div className="flex justify-between text-xs text-text-dim tabular-nums">
               <span>{state.progress}%</span>
               <span>
                 {state.elapsed < 60
@@ -439,7 +439,7 @@ function UploadResult({
 function Stat({ label, value, highlight }: { label: string; value: number; highlight?: boolean }) {
   return (
     <div>
-      <div className="text-[10px] text-text-dim uppercase tracking-widest">{label}</div>
+      <div className="text-xs text-text-dim uppercase tracking-widest">{label}</div>
       <div className={cn("text-xl font-bold tabular-nums", highlight ? "text-gold-light" : "text-text-primary")}>
         {value}
       </div>

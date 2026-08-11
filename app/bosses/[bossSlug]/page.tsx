@@ -87,7 +87,7 @@ export default async function BossPage({ params }: Props) {
   }, {});
 
   return (
-    <div className="pt-10 space-y-10">
+    <div className="page-shell">
       {/* Breadcrumb */}
       <div className="text-xs text-text-dim">
         <Link href="/bosses" className="hover:text-gold">Bosses</Link>

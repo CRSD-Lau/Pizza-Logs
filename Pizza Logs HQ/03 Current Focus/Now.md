@@ -2,6 +2,8 @@
 
 ## Active Focus
 
+The current `codex-dev` candidate also completes the frontend audit remediation: readable metadata, shared page and surface contracts, asymmetric result hierarchy, paginated/progressively disclosed long reports, accessible 44px interactions, responsive analytics rows, and a homepage-only once-per-session cinematic intro. `DESIGN.md` is the implementation contract for follow-up UI work.
+
 The current release candidate completes the ordered platform modernization: analytical regression baselines, Node 24 everywhere, current Actions/dependencies, Next.js 16 + React 19, Prisma 5 -> 6 -> 7, Tailwind/Recharts/Zod/Dropzone majors, and a gated TypeScript 7 native CLI. Parser reliability remains the highest-risk product area, so frozen Skada totals and the complete parser suite remain mandatory.
 
 UwU analytical feature parity now includes the default whole-log Custom Slice. New uploads store raw Total Damage, effective healing plus attributed absorbs, raw Damage Taken, exact first-to-last-event duration, and the same per-player columns/rates. Wipes, trash, between-pull activity, and downtime stay in the slice. Useful/effective damage remains a separate analytical primitive.
@@ -19,6 +21,16 @@ Documentation metadata refresh: the README now links to the GitHub wiki, and the
 Codex works on `codex-dev`, pushes `origin/codex-dev`, and opens PRs into `main`. Codex does not push or merge `main` directly.
 
 ## This Session
+
+- Completed the full frontend audit remediation without changing parser or persistence behavior.
+- Added shared `PageShell`, `PageHeader`, `PageSection`, and `DataPanel` primitives and standardized page rhythm across the app.
+- Raised metadata contrast, removed meaningful 9-11px microtext, and replaced component-level school/gold literals with design tokens where equivalents exist.
+- Reworked metric hierarchy on home, weekly, session, and encounter views; secondary data now uses quieter surfaces and closed disclosures.
+- Paginated `/players` at 30 profiles, collapsed bosses without activity, and made leaderboards one-boss-at-a-time disclosures.
+- Converted damage/target rows to keyboard-operable buttons with `aria-expanded`; mobile analytics use compact two-column summaries.
+- Enforced 44px controls and corrected the upload form to a deliberate one-column mobile layout.
+- Changed the cinematic intro to homepage-only, once per browser session, with deep routes bypassing it.
+- Added `DESIGN.md` and `tests/frontend-foundations-source.test.ts`; TypeScript, all 38 web tests, ESLint, production build, and desktop/mobile browser checks pass.
 
 - Confirmed from UwU revision `f32f00e917ad6baba9012704dc9e41afe578426d` that its default report is one first-to-last-event Custom Slice, not a sum of boss pulls and not a kill-only view.
 - Corrected headline damage to raw event `amount`: no overkill subtraction and no absorbed-field addition. Kept useful/effective damage as a separate formula.
@@ -230,7 +242,7 @@ Codex works on `codex-dev`, pushes `origin/codex-dev`, and opens PRs into `main`
 
 ## Open Follow-Ups
 
-- Merge the UwU parity PR, confirm the Railway commit and Production Smoke workflow, then re-upload Neil's original ZIP and compare all five pulls against the frozen acceptance baseline. Historical database rows will not update automatically.
+- Merge the frontend audit remediation PR, confirm the Railway commit and Production Smoke workflow, then re-upload Neil's original ZIP and compare all five pulls against the frozen acceptance baseline. Historical database rows will not update automatically.
 - Re-upload an affected mixed heroic/normal raid after deployment and confirm stored difficulties plus the new analytical sections.
 - Compare absorbs/spec/role against one privacy-safe real Warmane pull; synthetic and fixture gates pass, but real overlapping-shield evidence is the next calibration input.
 - Rehearse a greenfield Prisma migration baseline before provisioning any replacement database; the existing production database remains the supported migration target.
