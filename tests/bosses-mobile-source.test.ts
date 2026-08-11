@@ -9,12 +9,14 @@ assert.match(source, /import \{ getRevealClassName, getRevealStyle \} from "@\/l
 assert.match(source, /raid\.bosses\.map\(\(b, index\) =>/);
 assert.match(source, /className=\{getRevealClassName\(\{\s*boss: true,/);
 assert.match(source, /style=\{getRevealStyle\(index,/);
-assert.match(source, /hidden md:grid/);
+assert.match(source, /hidden[^"\n]*md:grid/);
 assert.match(source, /md:hidden/);
 assert.match(source, /grid-cols-3/);
 assert.match(source, /overflow-hidden/);
 assert.match(source, /min-w-0/);
 assert.match(source, /aria-label=\{`\$\{b\.name\} boss summary`\}/);
 assert.match(source, /group-hover:text-gold-light/);
+assert.match(source, /Raids without recorded activity/);
+assert.match(source, /inactiveBossCount/);
 
 console.log("bosses mobile source tests passed");

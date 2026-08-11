@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useId, useState } from "react";
 import { cn } from "@/lib/utils";
 
 interface Props {
@@ -19,13 +19,16 @@ export function AccordionSection({
   count,
 }: Props) {
   const [open, setOpen] = useState(defaultOpen);
+  const contentId = useId();
 
   return (
     <section>
       <button
         type="button"
         onClick={() => setOpen(o => !o)}
-        className="w-full flex items-center justify-between gap-4 mb-3 group"
+        aria-expanded={open}
+        aria-controls={contentId}
+        className="group flex min-h-11 w-full items-center justify-between gap-4 rounded-sm py-2 text-left"
       >
         <div className="text-left">
           <div className="flex items-center gap-2">
@@ -33,16 +36,16 @@ export function AccordionSection({
               {title}
             </span>
             {count !== undefined && (
-              <span className="text-xs text-text-dim tabular-nums">({count})</span>
+              <span className="text-sm text-text-dim tabular-nums">({count})</span>
             )}
           </div>
           {sub && (
-            <p className="text-xs text-text-dim mt-0.5">{sub}</p>
+            <p className="mt-1 text-sm text-text-dim">{sub}</p>
           )}
         </div>
         <span
           className={cn(
-            "text-text-dim group-hover:text-gold transition-all duration-200 shrink-0",
+            "shrink-0 text-text-dim transition-transform duration-200 group-hover:text-gold",
             open ? "rotate-0" : "-rotate-90"
           )}
         >
@@ -52,12 +55,13 @@ export function AccordionSection({
 
       {/* Grid-rows collapse trick — animates height without JS measurement */}
       <div
+        id={contentId}
         className={cn(
-          "grid transition-all duration-200 ease-in-out",
+          "grid transition-[grid-template-rows,opacity] duration-200 ease-in-out",
           open ? "grid-rows-[1fr] opacity-100" : "grid-rows-[0fr] opacity-0"
         )}
       >
-        <div className="overflow-hidden">
+        <div className={cn("overflow-hidden", open && "pt-3")}>
           {children}
         </div>
       </div>

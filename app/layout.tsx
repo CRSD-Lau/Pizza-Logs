@@ -35,10 +35,10 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <FrozenLogbookIntro />
         <div className="page-glow">
           <Nav />
-          <main className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-20">
+          <main className="relative z-10 mx-auto max-w-7xl px-4 pb-20 sm:px-6 lg:px-8">
             {children}
           </main>
-          <footer className="relative z-10 border-t border-gold-dim mt-16 py-6 text-center">
+          <footer className="relative z-10 mt-12 border-t border-gold-dim py-6 text-center sm:mt-16">
             <p className="text-sm text-text-dim">
               Pizza Logs &mdash; All parsing handled server-side on Railway &nbsp;·&nbsp;
               <span className="text-gold-dim">PizzaWarriors</span>

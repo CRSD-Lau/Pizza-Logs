@@ -26,6 +26,10 @@ failure from PR #29 is resolved in `main`.
 
 | Issue | Resolution |
 |---|---|
+| Low-contrast 9-12px metadata disappeared against dark surfaces | Raised semantic metadata tokens to AA-readable values, established a 12px decorative and 14px normal metadata floor, and added a frontend contract test |
+| Long player, boss, and leaderboard pages exposed every record at once | Players now paginate at 30; inactive bosses and per-boss leaderboards use accessible progressive disclosure |
+| Damage and target meter rows were mouse-only clickable divs | Rows are native buttons with visible focus, `aria-expanded`, stable controlled regions, and responsive mobile summaries |
+| Cinematic intro blocked hard-loaded report routes | Intro now runs only on the homepage and only once per browser session |
 | Prisma 7 Railway image returned 502 after PR #29 | The runtime image omitted `prisma.config.ts`, so `migrate deploy` had no datasource URL; Docker now copies the config and the actual startup path is container-tested |
 | Stale markers, boss outgoing attacks, and post-fight trash inflated pulls | Encounter scope now ends at the last boss-destination event; tests cover late boss attacks, multi-hour wipe markers, and post-kill trash/roster contamination |
 | Session page mixed pull sums with full-log damage | New uploads persist one first-to-last-event Custom Slice for Total Damage, Heal, Damage Taken, exact Duration, and per-player rates |

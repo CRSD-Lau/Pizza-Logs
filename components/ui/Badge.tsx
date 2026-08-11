@@ -4,17 +4,17 @@ type BadgeVariant = "gold" | "physical" | "holy" | "fire" | "nature" | "frost" |
 
 const VARIANT_STYLES: Record<BadgeVariant, string> = {
   gold:     "bg-gold/10 border-gold/30 text-gold",
-  physical: "bg-[#c0c8d8]/10 border-[#c0c8d8]/25 text-[#c0c8d8]",
-  holy:     "bg-[#f0c040]/10 border-[#f0c040]/25 text-[#f0c040]",
-  fire:     "bg-[#e06030]/10 border-[#e06030]/25 text-[#e06030]",
-  nature:   "bg-[#60c060]/10 border-[#60c060]/25 text-[#60c060]",
-  frost:    "bg-[#80c8f0]/10 border-[#80c8f0]/25 text-[#80c8f0]",
-  shadow:   "bg-[#a070d0]/10 border-[#a070d0]/25 text-[#a070d0]",
-  arcane:   "bg-[#d080f0]/10 border-[#d080f0]/25 text-[#d080f0]",
+  physical: "bg-school-physical/10 border-school-physical/25 text-school-physical",
+  holy:     "bg-school-holy/10 border-school-holy/25 text-school-holy",
+  fire:     "bg-school-fire/10 border-school-fire/25 text-school-fire",
+  nature:   "bg-school-nature/10 border-school-nature/25 text-school-nature",
+  frost:    "bg-school-frost/10 border-school-frost/25 text-school-frost",
+  shadow:   "bg-school-shadow/10 border-school-shadow/25 text-school-shadow",
+  arcane:   "bg-school-arcane/10 border-school-arcane/25 text-school-arcane",
   kill:     "bg-success/10 border-success/30 text-success",
   wipe:     "bg-danger/10 border-danger/25 text-danger",
   unknown:  "bg-text-dim/10 border-text-dim/20 text-text-dim",
-  heroic:   "bg-[#e06030]/12 border-[#e06030]/30 text-[#e06030]",
+  heroic:   "bg-school-fire/10 border-school-fire/30 text-school-fire",
   normal:   "bg-text-secondary/10 border-text-secondary/20 text-text-secondary",
 };
 
@@ -26,7 +26,7 @@ export function Badge({ variant = "gold", className, ...props }: BadgeProps) {
   return (
     <span
       className={cn(
-        "inline-block text-[10px] font-bold px-1.5 py-0.5 rounded-xs border tracking-wide uppercase",
+        "inline-block rounded-xs border px-1.5 py-0.5 text-xs font-bold uppercase tracking-wide",
         VARIANT_STYLES[variant],
         className
       )}

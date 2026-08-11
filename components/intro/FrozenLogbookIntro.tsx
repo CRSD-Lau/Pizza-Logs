@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Volume2, VolumeX } from "lucide-react";
+import { usePathname } from "next/navigation";
 import { Button } from "@/components/ui/Button";
 
 export const INTRO_DURATION_MS = 8400;
@@ -9,6 +10,7 @@ const INTRO_EXIT_MS = 650;
 const REDUCED_MOTION_DURATION_MS = 350;
 const DESKTOP_POSTER = "/animations/posters/desktop-poster.jpg";
 const MOBILE_POSTER = "/animations/posters/mobile-poster.jpg";
+const INTRO_SESSION_KEY = "pizza-logs-intro-seen";
 
 type IntroVariant = {
   id: string;
@@ -77,6 +79,7 @@ function canPreferWebM() {
 }
 
 export function FrozenLogbookIntro() {
+  const pathname = usePathname();
   const videoRef = useRef<HTMLVideoElement>(null);
   const [phase, setPhase] = useState<IntroPhase>("hidden");
   const [reducedMotion, setReducedMotion] = useState(false);
@@ -111,6 +114,12 @@ export function FrozenLogbookIntro() {
   }, [soundEnabled]);
 
   useEffect(() => {
+    if (pathname !== "/" || window.sessionStorage.getItem(INTRO_SESSION_KEY)) {
+      setPhase("hidden");
+      return;
+    }
+
+    window.sessionStorage.setItem(INTRO_SESSION_KEY, "true");
     const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     const variantMedia = INTRO_VARIANTS
       .filter((source): source is IntroVariant & { media: string } => Boolean(source.media))
@@ -133,7 +142,7 @@ export function FrozenLogbookIntro() {
       window.clearTimeout(timeout);
       variantMedia.forEach(media => media.removeEventListener("change", syncVariant));
     };
-  }, [finishIntro]);
+  }, [finishIntro, pathname]);
 
   useEffect(() => {
     if (phase !== "leaving") return;

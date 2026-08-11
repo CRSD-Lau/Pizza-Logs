@@ -165,7 +165,7 @@ export function PlayerSearch({ className, onNavigate }: PlayerSearchProps) {
             const result = results[action.navigateIndex];
             if (result) navigateToResult(result);
           }}
-          className="h-10 w-full rounded-sm border border-gold-dim bg-bg-card/85 pl-9 pr-9 text-sm font-medium text-text-primary placeholder:text-text-dim outline-hidden transition-colors focus:border-gold/70 focus:bg-bg-card focus:ring-1 focus:ring-gold/30"
+          className="h-11 w-full rounded-sm border border-gold-dim bg-bg-card/85 pl-10 pr-11 text-sm font-medium text-text-primary placeholder:text-text-dim outline-hidden transition-colors focus:border-gold/70 focus:bg-bg-card focus:ring-1 focus:ring-gold/30"
         />
         {loading ? (
           <Loader2
@@ -178,7 +178,7 @@ export function PlayerSearch({ className, onNavigate }: PlayerSearchProps) {
             type="button"
             aria-label="Clear player search"
             onClick={clearSearch}
-            className="absolute right-2 top-1/2 inline-flex h-6 w-6 -translate-y-1/2 items-center justify-center rounded-xs text-text-dim transition-colors hover:bg-bg-hover hover:text-text-primary"
+            className="absolute right-0 top-1/2 inline-flex h-11 w-11 -translate-y-1/2 items-center justify-center rounded-sm text-text-dim transition-colors hover:bg-bg-hover hover:text-text-primary"
           >
             <X size={14} />
           </button>
@@ -227,7 +227,7 @@ export function PlayerSearch({ className, onNavigate }: PlayerSearchProps) {
                 onMouseDown={(event) => event.preventDefault()}
                 onClick={() => navigateToResult(result)}
                 className={cn(
-                  "block w-full px-3 py-2 text-left transition-colors",
+                  "block min-h-11 w-full px-3 py-2.5 text-left transition-colors",
                   activeIndex === index ? "bg-bg-hover" : "hover:bg-bg-card",
                 )}
               >
@@ -236,11 +236,11 @@ export function PlayerSearch({ className, onNavigate }: PlayerSearchProps) {
                     <span className="block truncate text-sm font-semibold" style={{ color }}>
                       {result.name}
                     </span>
-                    <span className="block truncate text-xs text-text-dim">
+                    <span className="block truncate text-sm text-text-dim">
                       {metadata.join(" / ")}
                     </span>
                   </span>
-                  <span className="shrink-0 text-[10px] font-bold uppercase tracking-wider text-text-dim">
+                  <span className="shrink-0 text-xs font-bold uppercase tracking-wider text-text-dim">
                     {sourceLabel}
                   </span>
                 </span>

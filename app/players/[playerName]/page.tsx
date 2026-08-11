@@ -94,7 +94,7 @@ export default async function PlayerPage({ params }: Props) {
   const recentEncounters = buildPlayerRecentEncounters(participants);
 
   return (
-    <div className="pt-10 space-y-10">
+    <div className="page-shell">
       {/* Header */}
       <div className="flex items-center gap-4">
         <PlayerAvatar

@@ -15,7 +15,7 @@ function GearScoreSummary({
   return (
     <div className="flex flex-wrap items-center justify-between gap-3 rounded-sm border border-gold-dim bg-bg-panel px-4 py-3">
       <div>
-        <p className="text-[11px] font-bold uppercase tracking-widest text-text-dim">GearScoreLite</p>
+        <p className="text-xs font-bold uppercase tracking-widest text-text-dim">GearScoreLite</p>
         <p className="mt-0.5 text-2xl font-bold tabular-nums text-text-primary" style={{ color: summary.quality.color }}>
           {summary.score.toLocaleString()}
         </p>

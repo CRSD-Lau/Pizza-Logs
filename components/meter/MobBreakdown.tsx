@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useId, useState } from "react";
 import { cn, formatNumber } from "@/lib/utils";
 import { getClassColor } from "@/lib/constants/classes";
 import { getRevealClassName, getRevealStyle } from "@/lib/ui-animation";
@@ -28,6 +28,7 @@ interface MobBreakdownProps {
 
 export function MobBreakdown({ mobs, title }: MobBreakdownProps) {
   const [selected, setSelected] = useState<string | null>(null);
+  const breakdownId = useId();
 
   const totalDamage = mobs.reduce((s, m) => s + m.totalDamage, 0);
   const maxDamage   = mobs[0]?.totalDamage ?? 1;
@@ -37,8 +38,7 @@ export function MobBreakdown({ mobs, title }: MobBreakdownProps) {
   return (
     <div>
       {title && (
-        <div className="grid gap-2 px-3 py-1.5 text-[11px] font-semibold text-text-dim uppercase tracking-widest border-b border-gold-dim"
-          style={{ gridTemplateColumns: "2fr 1fr 1fr 1fr" }}>
+        <div className="hidden grid-cols-[minmax(0,2fr)_repeat(3,minmax(0,1fr))] gap-2 border-b border-gold-dim px-3 py-2 text-xs font-semibold uppercase tracking-widest text-text-dim sm:grid">
           <span>Target</span>
           <span className="text-right">Damage</span>
           <span className="text-right">Hits / Crit%</span>
@@ -46,8 +46,7 @@ export function MobBreakdown({ mobs, title }: MobBreakdownProps) {
         </div>
       )}
       {!title && (
-        <div className="grid gap-2 px-3 py-1.5 text-[11px] font-semibold text-text-dim uppercase tracking-widest"
-          style={{ gridTemplateColumns: "2fr 1fr 1fr 1fr" }}>
+        <div className="hidden grid-cols-[minmax(0,2fr)_repeat(3,minmax(0,1fr))] gap-2 px-3 py-2 text-xs font-semibold uppercase tracking-widest text-text-dim sm:grid">
           <span>Target</span>
           <span className="text-right">Damage</span>
           <span className="text-right">Hits / Crit%</span>
@@ -64,38 +63,42 @@ export function MobBreakdown({ mobs, title }: MobBreakdownProps) {
 
           return (
             <div key={mob.name}>
-              <div
+              <button
+                type="button"
                 className={cn(
                   getRevealClassName(),
-                  "meter-row grid gap-2 items-center px-3 py-2.5 bg-bg-card cursor-pointer",
+                  "meter-row grid w-full grid-cols-[minmax(0,1fr)_auto] items-center gap-x-3 gap-y-1 bg-bg-card px-3 py-3 text-left sm:grid-cols-[minmax(0,2fr)_repeat(3,minmax(0,1fr))] sm:gap-2 sm:py-2.5",
                   isOpen && "active"
                 )}
-                style={getRevealStyle(index, { gridTemplateColumns: "2fr 1fr 1fr 1fr" })}
+                style={getRevealStyle(index)}
                 onClick={() => setSelected(isOpen ? null : mob.name)}
+                aria-expanded={isOpen}
+                aria-controls={`${breakdownId}-${index}`}
               >
                 {/* Bar fill */}
                 <div
                   className="absolute inset-0 pointer-events-none"
-                  style={{ background: "#b8952a", opacity: 0.1, width: `${fillPct}%` }}
+                  style={{ background: "var(--color-gold)", opacity: 0.1, width: `${fillPct}%` }}
                 />
 
                 <span className="relative z-10 text-sm font-semibold text-text-primary truncate">
                   {mob.name}
                 </span>
-                <span className="relative z-10 text-right text-sm tabular-nums text-text-primary">
+                <span className="relative z-10 row-start-2 text-sm tabular-nums text-text-primary sm:row-start-auto sm:text-right">
                   {formatNumber(mob.totalDamage)}
                 </span>
-                <span className="relative z-10 text-right text-xs tabular-nums text-text-secondary">
+                <span className="relative z-10 hidden text-right text-xs tabular-nums text-text-secondary sm:block">
                   {mob.hits.toLocaleString()} · {critPct}%c
                 </span>
-                <span className="relative z-10 text-right text-sm tabular-nums text-text-secondary">
+                <span className="relative z-10 col-start-2 row-start-1 text-right text-sm tabular-nums text-text-secondary sm:col-start-auto sm:row-start-auto">
                   {pct}%
                 </span>
-              </div>
+              </button>
 
               {/* Per-player drill-down */}
+              <div id={`${breakdownId}-${index}`} hidden={!isOpen}>
               {isOpen && (
-                <div className="bg-bg-panel border border-gold-dim border-t-0 rounded-b px-3 py-2 mb-1 space-y-1 animate-fade-in-up">
+                <div className="mb-1 space-y-1 rounded-b border border-t-0 border-gold-dim bg-bg-panel px-3 py-2 animate-fade-in-up">
                   {mob.byPlayer
                     .sort((a, b) => b.damage - a.damage)
                     .map(p => {
@@ -115,15 +118,16 @@ export function MobBreakdown({ mobs, title }: MobBreakdownProps) {
                           <span className="w-14 text-right tabular-nums text-text-secondary">
                             {formatNumber(p.damage)}
                           </span>
-                          <span className="w-16 text-right tabular-nums text-text-dim">
+                          <span className="hidden w-16 text-right tabular-nums text-text-dim sm:block">
                             {p.hits}h {playerCrit}%c
                           </span>
-                          <span className="w-8 text-right tabular-nums text-text-dim">{playerPct}%</span>
+                          <span className="w-8 shrink-0 text-right tabular-nums text-text-dim">{playerPct}%</span>
                         </div>
                       );
                     })}
                 </div>
               )}
+              </div>
             </div>
           );
         })}

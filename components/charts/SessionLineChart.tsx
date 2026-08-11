@@ -59,13 +59,13 @@ function CustomTooltip({
   if (!active || !payload?.length) return null;
   return (
     <div style={{
-      background:   "#1a1a24",
-      border:       "1px solid rgba(200,168,75,0.3)",
+      background:   "var(--color-bg-card)",
+      border:       "1px solid color-mix(in srgb, var(--color-gold) 30%, transparent)",
       borderRadius: "4px",
       padding:      "8px 12px",
       fontSize:     12,
     }}>
-      <p style={{ color: "#c8a84b", fontWeight: 700, marginBottom: 4 }}>{label}</p>
+      <p style={{ color: "var(--color-gold)", fontWeight: 700, marginBottom: 4 }}>{label}</p>
       {payload
         .filter(isTooltipEntry)
         .sort((a, b) => b.value - a.value)
@@ -87,12 +87,12 @@ export function SessionLineChart({ data, players, metric }: Props) {
   return (
     <ResponsiveContainer width="100%" height={280}>
       <LineChart data={data} margin={{ top: 8, right: 8, left: 0, bottom: 8 }}>
-        <CartesianGrid strokeDasharray="3 3" stroke="rgba(200,168,75,0.07)" />
+        <CartesianGrid strokeDasharray="3 3" stroke="color-mix(in srgb, var(--color-gold) 7%, transparent)" />
         <XAxis
           dataKey="bossName"
-          tick={{ fill: "#6b7280", fontSize: 11 }}
+          tick={{ fill: "var(--color-text-dim)", fontSize: 12 }}
           tickLine={false}
-          axisLine={{ stroke: "rgba(200,168,75,0.15)" }}
+          axisLine={{ stroke: "color-mix(in srgb, var(--color-gold) 15%, transparent)" }}
           interval={0}
           tickFormatter={(v: string) => {
             // Abbreviate long boss names to last word
@@ -101,7 +101,7 @@ export function SessionLineChart({ data, players, metric }: Props) {
           }}
         />
         <YAxis
-          tick={{ fill: "#6b7280", fontSize: 11 }}
+          tick={{ fill: "var(--color-text-dim)", fontSize: 12 }}
           tickLine={false}
           axisLine={false}
           tickFormatter={(v: number) => formatNumber(v)}
@@ -109,9 +109,9 @@ export function SessionLineChart({ data, players, metric }: Props) {
         />
         <Tooltip content={<CustomTooltip metric={metric} />} />
         <Legend
-          wrapperStyle={{ fontSize: 11, paddingTop: 8 }}
+          wrapperStyle={{ fontSize: 12, paddingTop: 8 }}
           formatter={(value: string, entry: { color?: string }) => (
-            <span style={{ color: entry.color ?? "#9ca3af" }}>{value}</span>
+            <span style={{ color: entry.color ?? "var(--color-text-secondary)" }}>{value}</span>
           )}
         />
         {players.map(p => (

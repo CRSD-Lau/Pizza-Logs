@@ -9,6 +9,7 @@ import { getWeekBounds } from "@/lib/utils";
 import { db } from "@/lib/db";
 import { isDatabaseConnectionError } from "@/lib/database-errors";
 import { buildWeeklyBossKills } from "@/lib/weekly-stats";
+import { PageHeader } from "@/components/ui/PageLayout";
 
 export const metadata: Metadata = { title: "This Week" };
 export const dynamic = "force-dynamic";
@@ -100,13 +101,13 @@ export default async function WeeklyPage() {
   const weekLabel = `${start.toLocaleDateString("en-US", { month: "short", day: "numeric" })} - ${end.toLocaleDateString("en-US", { month: "short", day: "numeric" })}`;
 
   return (
-    <div className="pt-10 space-y-10">
-      <div>
-        <h1 className="heading-cinzel text-2xl font-bold text-gold-light text-glow-gold">Weekly Summary</h1>
-        <p className="text-text-secondary text-sm mt-1">
+    <div className="page-shell">
+      <PageHeader
+        title="Weekly Summary"
+        description={<p>
           {databaseAvailable ? weekLabel : `${weekLabel} - database offline`}
-        </p>
-      </div>
+        </p>}
+      />
 
       {!databaseAvailable && (
         <DatabaseUnavailable description="Weekly stats need the Pizza Logs database. Start local Postgres to load this week's raids." />
@@ -114,8 +115,8 @@ export default async function WeeklyPage() {
 
       {databaseAvailable && (
       <>
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-          <StatCard label="Boss Kills" value={data.totalKills} highlight />
+        <div className="grid grid-cols-2 items-stretch gap-y-2 rounded-sm bg-bg-panel/40 p-2 sm:grid-cols-5">
+          <StatCard label="Boss Kills" value={data.totalKills} highlight className="col-span-2" />
           <StatCard label="Wipes" value={data.totalWipes} />
           <StatCard label="Bosses Cleared" value={data.bossesCleared} />
           <StatCard

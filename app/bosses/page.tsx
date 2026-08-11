@@ -9,6 +9,7 @@ import { RAIDS } from "@/lib/constants/bosses";
 import { cn } from "@/lib/utils";
 import { isDatabaseConnectionError } from "@/lib/database-errors";
 import { getRevealClassName, getRevealStyle } from "@/lib/ui-animation";
+import { PageHeader, PageShell } from "@/components/ui/PageLayout";
 
 export const metadata: Metadata = { title: "Boss Rankings" };
 export const dynamic = "force-dynamic";
@@ -79,17 +80,26 @@ export default async function BossesPage() {
   })).filter(r => r.bosses.length > 0);
 
   const activeBosses = bosses.filter(b => b.totalPulls > 0);
+  const activeRaids = byRaid
+    .map(raid => ({ ...raid, bosses: raid.bosses.filter(boss => boss.totalPulls > 0) }))
+    .filter(raid => raid.bosses.length > 0);
+  const inactiveRaids = byRaid
+    .map(raid => ({ ...raid, bosses: raid.bosses.filter(boss => boss.totalPulls === 0) }))
+    .filter(raid => raid.bosses.length > 0);
+  const inactiveBossCount = inactiveRaids.reduce((sum, raid) => sum + raid.bosses.length, 0);
 
   return (
-    <div className="pt-10 space-y-10">
-      <div>
-        <h1 className="heading-cinzel text-2xl font-bold text-gold-light text-glow-gold">Boss Rankings</h1>
-        <p className="text-text-secondary text-sm mt-1">
+    <PageShell>
+      <PageHeader
+        title="Boss Rankings"
+        description={
+          <p>
           {databaseAvailable
             ? `All-time records across ${activeBosses.length} bosses`
             : "Boss rankings are unavailable while the database is offline"}
-        </p>
-      </div>
+          </p>
+        }
+      />
 
       {!databaseAvailable && (
         <DatabaseUnavailable description="Boss rankings need the Pizza Logs database. Start local Postgres to load encounters and records." />
@@ -102,12 +112,13 @@ export default async function BossesPage() {
           action={<Link href="/" className="text-gold hover:text-gold-light text-sm">Upload a log &rarr;</Link>}
         />
       ) : (
-        byRaid.map(raid => (
+        <>
+        {activeRaids.map(raid => (
           <section key={raid.slug}>
             <SectionHeader title={raid.name} />
             <div className="space-y-2 md:space-y-0.5">
               <div
-                className="hidden md:grid gap-3 px-4 py-2 text-[11px] font-semibold text-text-dim uppercase tracking-widest"
+                className="hidden gap-3 px-4 py-2 text-xs font-semibold uppercase tracking-widest text-text-dim md:grid"
                 style={{ gridTemplateColumns: BOSS_GRID_COLUMNS }}
               >
                 <span>Boss</span>
@@ -162,7 +173,7 @@ export default async function BossesPage() {
                       </div>
 
                       <div className="rounded-sm border border-gold-dim/70 bg-bg-panel/70 px-3 py-2">
-                        <div className="text-[10px] font-semibold uppercase tracking-widest text-text-dim">
+                        <div className="text-xs font-semibold uppercase tracking-widest text-text-dim">
                           Top DPS
                         </div>
                         <div className="mt-0.5 truncate text-sm text-text-primary tabular-nums">
@@ -199,9 +210,36 @@ export default async function BossesPage() {
               })}
             </div>
           </section>
-        ))
+        ))}
+        {inactiveBossCount > 0 && (
+          <details className="group border-y border-gold-dim">
+            <summary className="flex min-h-14 cursor-pointer list-none items-center justify-between gap-4 rounded-sm px-2 py-3 transition-colors hover:bg-bg-panel/45 [&::-webkit-details-marker]:hidden">
+              <span>
+                <span className="heading-cinzel block font-semibold text-gold-light">Raids without recorded activity</span>
+                <span className="mt-1 block text-sm text-text-dim">{inactiveBossCount} bosses hidden until needed</span>
+              </span>
+              <span className="text-xl text-text-dim transition-transform group-open:rotate-180" aria-hidden="true">⌄</span>
+            </summary>
+            <div className="grid gap-x-8 gap-y-6 px-2 pb-6 pt-3 sm:grid-cols-2 lg:grid-cols-3">
+              {inactiveRaids.map(raid => (
+                <div key={raid.slug}>
+                  <h2 className="heading-cinzel mb-2 text-sm font-semibold text-gold">{raid.name}</h2>
+                  <div className="divide-y divide-gold-dim/70 border-y border-gold-dim/70">
+                    {raid.bosses.map(boss => (
+                      <Link key={boss.slug} href={`/bosses/${boss.slug}`} className="flex min-h-11 items-center justify-between gap-3 px-1 text-sm text-text-secondary hover:text-gold-light">
+                        <span>{boss.name}</span>
+                        <span className="text-text-dim" aria-hidden="true">&rarr;</span>
+                      </Link>
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </details>
+        )}
+        </>
       ))}
-    </div>
+    </PageShell>
   );
 }
 
@@ -215,9 +253,9 @@ function BossMobileMetric({
   valueClassName: string;
 }) {
   return (
-    <div className="min-w-0 rounded-sm border border-gold-dim bg-bg-panel px-2 py-2 text-center">
+    <div className="min-w-0 px-2 py-1 text-center">
       <div className={cn("truncate text-sm font-bold tabular-nums", valueClassName)}>{value}</div>
-      <div className="text-[10px] text-text-dim uppercase tracking-wide">{label}</div>
+      <div className="text-xs uppercase tracking-wide text-text-dim">{label}</div>
     </div>
   );
 }

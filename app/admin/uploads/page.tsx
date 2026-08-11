@@ -29,7 +29,7 @@ export default async function AdminUploadsPage() {
   });
 
   return (
-    <div className="pt-10 space-y-8">
+    <div className="page-shell">
       <div>
         <h1 className="heading-cinzel text-2xl font-bold text-gold-light text-glow-gold">Admin Upload History</h1>
         <p className="text-text-secondary text-sm mt-1">{uploads.length} logs stored</p>

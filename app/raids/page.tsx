@@ -5,6 +5,7 @@ import { DatabaseUnavailable } from "@/components/ui/DatabaseUnavailable";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { isDatabaseConnectionError } from "@/lib/database-errors";
 import { getRevealClassName, getRevealStyle } from "@/lib/ui-animation";
+import { PageHeader } from "@/components/ui/PageLayout";
 
 export const metadata: Metadata = { title: "Raids" };
 export const dynamic = "force-dynamic";
@@ -95,15 +96,15 @@ export default async function RaidsPage() {
   }
 
   return (
-    <div className="pt-10 space-y-8">
-      <div>
-        <h1 className="heading-cinzel text-2xl font-bold text-gold-light text-glow-gold">Raids</h1>
-        <p className="text-text-secondary text-sm mt-1">
+    <div className="page-shell">
+      <PageHeader
+        title="Raids"
+        description={<p>
           {databaseAvailable
             ? `${sessions.length} raid session${sessions.length !== 1 ? "s" : ""} recorded`
             : "Raid sessions are unavailable while the database is offline"}
-        </p>
-      </div>
+        </p>}
+      />
 
       {!databaseAvailable && (
         <DatabaseUnavailable description="Raid history needs the Pizza Logs database. Start local Postgres to load recorded sessions." />
@@ -183,7 +184,7 @@ function Metric({
   return (
     <div className="rounded-sm border border-gold-dim bg-bg-card px-3 py-2 text-center min-w-[74px]">
       <div className={`font-bold tabular-nums ${valueClassName}`}>{value}</div>
-      <div className="text-[10px] text-text-dim uppercase tracking-wide">{label}</div>
+      <div className="text-xs text-text-dim uppercase tracking-wide">{label}</div>
     </div>
   );
 }

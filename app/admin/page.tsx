@@ -113,7 +113,7 @@ export default async function AdminPage() {
   const parserHealth = await parserHealthPromise;
 
   return (
-    <div className="pt-10 space-y-10">
+    <div className="page-shell">
       <div className="flex items-start justify-between gap-4 flex-wrap">
         <div>
           <h1 className="heading-cinzel text-2xl font-bold text-gold-light text-glow-gold">

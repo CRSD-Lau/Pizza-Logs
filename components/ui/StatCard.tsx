@@ -12,18 +12,18 @@ export function StatCard({ label, value, sub, highlight, className }: StatCardPr
   return (
     <div
       className={cn(
-        "bg-bg-panel rounded-sm border px-4 py-4",
+        "min-w-0 px-4 py-3",
         highlight
-          ? "border-gold-dim shadow-gold-glow/20"
-          : "border-gold-dim",
+          ? "rounded-sm border border-gold-mid bg-bg-card/85 shadow-card"
+          : "border-l border-gold-dim bg-transparent first:border-l-0",
         className
       )}
     >
-      <div className="text-[11px] font-semibold text-text-dim uppercase tracking-widest mb-2">
+      <div className="mb-2 text-xs font-semibold uppercase tracking-widest text-text-dim">
         {label}
       </div>
       <div className={cn(
-        "text-2xl font-bold leading-none tabular-nums mb-1",
+        "mb-1 text-2xl font-bold leading-none tabular-nums",
         highlight ? "text-gold-light text-glow-gold" : "text-text-primary"
       )}>
         {value}

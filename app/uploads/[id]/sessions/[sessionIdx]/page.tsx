@@ -191,9 +191,9 @@ export default async function SessionDetailPage({ params }: Props) {
   }
 
   return (
-    <div className="pt-10 space-y-8">
-      <div className="text-xs text-text-dim flex items-center gap-1 flex-wrap">
-        <Link href="/raids" className="hover:text-gold">Raids</Link>
+    <div className="page-shell">
+      <div className="flex flex-wrap items-center gap-1 text-sm text-text-dim">
+        <Link href="/raids" className="inline-flex min-h-11 items-center hover:text-gold">Raids</Link>
         <span>&gt;</span>
         <span className="text-text-secondary">
           {sessionCount === 1 ? "Raid Session" : `Session ${sessionIndex + 1} of ${sessionCount}`}
@@ -237,17 +237,17 @@ export default async function SessionDetailPage({ params }: Props) {
         </div>
       </div>
 
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
-        <StatCard label="Kills / Wipes" value={`${kills}K / ${wipes}W`} highlight />
+      <div className="grid grid-cols-2 items-stretch gap-y-2 rounded-sm bg-bg-panel/40 p-2 sm:grid-cols-3 lg:grid-cols-6">
+        <StatCard label="Kills / Wipes" value={`${kills}K / ${wipes}W`} highlight className="col-span-2" />
         <StatCard label="Total Damage" value={formatNumber(fullSessionDmg)} sub="UwU full custom slice" />
         <StatCard label="Heal" value={formatNumber(fullSessionHeal)} sub="effective healing + absorbs" />
         <StatCard label="Damage Taken" value={formatNumber(fullSessionDamageTaken)} sub="UwU full custom slice" />
-        <StatCard label="Duration" value={formatDurationPrecise(durationMs)} sub="first to last log event" />
+        <StatCard label="Duration" value={formatDurationPrecise(durationMs)} sub="first to last log event" className="col-span-2 sm:col-span-1" />
       </div>
 
       {sessionPlayers.length > 0 && (
-        <AccordionSection title="Custom Slice" count={sessionPlayers.length} defaultOpen>
-          <div className="bg-bg-panel border border-gold-dim rounded-sm overflow-x-auto">
+        <AccordionSection title="Custom Slice" count={sessionPlayers.length} defaultOpen={false}>
+          <div className="data-panel overflow-x-auto">
             <table className="w-full min-w-[760px] text-xs tabular-nums">
               <thead className="bg-bg-card text-text-dim uppercase tracking-wider">
                 <tr>
@@ -299,7 +299,7 @@ export default async function SessionDetailPage({ params }: Props) {
           {Array.from(raidGroups.entries()).map(([raidName, encs]) => (
             <div key={raidName} className="space-y-1">
               <p className="text-xs font-semibold text-text-dim uppercase tracking-widest px-1">{raidName}</p>
-              <div className="bg-bg-panel border border-gold-dim rounded-sm divide-y divide-gold-dim overflow-hidden">
+              <div className="data-panel divide-y divide-gold-dim">
                 {encs.map((enc) => {
                   const durationSec = (enc.durationMs ?? 0) > 0
                     ? enc.durationMs / 1000
@@ -361,15 +361,15 @@ export default async function SessionDetailPage({ params }: Props) {
           count={mobEntries.length}
           defaultOpen={false}
         >
-          <div className="bg-bg-panel border border-gold-dim rounded-sm overflow-hidden">
+          <div className="data-panel">
             <MobBreakdown mobs={mobEntries} />
           </div>
         </AccordionSection>
       )}
 
       {playerSet.size > 0 && (
-        <AccordionSection title="Raid Roster" count={playerSet.size} defaultOpen>
-          <div className="bg-bg-panel border border-gold-dim rounded-sm p-4 flex flex-wrap gap-2">
+        <AccordionSection title="Raid Roster" count={playerSet.size} defaultOpen={false}>
+          <div className="flex flex-wrap gap-2 border-y border-gold-dim px-2 py-4">
             {Array.from(playerSet.entries()).map(([name, cls], index) => {
               const rosterMember = rosterMemberMap.get(name.toLowerCase());
               const characterClass = cls ?? rosterMember?.className ?? null;
@@ -381,7 +381,7 @@ export default async function SessionDetailPage({ params }: Props) {
                   href={`/raids/${id}/sessions/${sessionIndex}/players/${encodeURIComponent(name)}`}
                   className={getRevealClassName({
                     className:
-                      "inline-flex items-center gap-2 rounded-sm border border-gold-dim bg-bg-card px-2 py-1 text-xs hover:border-gold transition-colors",
+                      "inline-flex min-h-11 items-center gap-2 rounded-sm px-2 py-1 text-sm transition-colors hover:bg-bg-card",
                   })}
                   style={getRevealStyle(index)}
                 >

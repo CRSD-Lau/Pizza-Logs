@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useId, useState } from "react";
 import { cn, formatDps, formatNumber } from "@/lib/utils";
 import { getClassColor } from "@/lib/constants/classes";
 import { getRevealClassName, getRevealStyle } from "@/lib/ui-animation";
@@ -37,6 +37,7 @@ interface DamageMeterProps {
 
 export function DamageMeter({ participants, metric = "dps" }: DamageMeterProps) {
   const [selected, setSelected] = useState<string | null>(null);
+  const breakdownId = useId();
 
   const rate = (participant: Participant) => metric === "ha"
     ? participant.hps + participant.aps
@@ -56,8 +57,7 @@ export function DamageMeter({ participants, metric = "dps" }: DamageMeterProps) 
   return (
     <div>
       {/* Header */}
-      <div className="grid gap-2 px-3 py-1.5 text-[11px] font-semibold text-text-dim uppercase tracking-widest"
-        style={{ gridTemplateColumns: "2fr 1fr 1fr 1fr 1fr" }}>
+      <div className="hidden grid-cols-[minmax(0,2fr)_repeat(4,minmax(0,1fr))] gap-2 px-3 py-2 text-xs font-semibold uppercase tracking-widest text-text-dim sm:grid">
         <span>Player</span>
         <span className="text-right">{metric === "hps" ? "Healing" : metric === "aps" ? "Absorbs" : metric === "ha" ? "Heal + Absorb" : "Damage"}</span>
         <span className="text-right">{metric === "ha" ? "H+A PS" : metric.toUpperCase()}</span>
@@ -76,14 +76,17 @@ export function DamageMeter({ participants, metric = "dps" }: DamageMeterProps) 
 
           return (
             <div key={p.player.name}>
-              <div
+              <button
+                type="button"
                 className={cn(
                   getRevealClassName(),
-                  "meter-row grid gap-2 items-center px-3 py-2.5 bg-bg-card",
+                  "meter-row grid w-full grid-cols-[minmax(0,1fr)_auto] items-center gap-x-3 gap-y-1 bg-bg-card px-3 py-3 text-left sm:grid-cols-[minmax(0,2fr)_repeat(4,minmax(0,1fr))] sm:gap-2 sm:py-2.5",
                   isActive && "active"
                 )}
-                style={getRevealStyle(idx, { gridTemplateColumns: "2fr 1fr 1fr 1fr 1fr" })}
+                style={getRevealStyle(idx)}
                 onClick={() => setSelected(isActive ? null : p.player.name)}
+                aria-expanded={isActive}
+                aria-controls={`${breakdownId}-${idx}`}
               >
                 {/* Bar background fill */}
                 <div
@@ -92,8 +95,8 @@ export function DamageMeter({ participants, metric = "dps" }: DamageMeterProps) 
                 />
 
                 {/* Player name */}
-                <div className="flex items-center gap-2 relative z-10">
-                  <span className="text-[11px] text-text-dim w-4 text-right font-bold">{idx + 1}</span>
+                <div className="relative z-10 flex min-w-0 items-center gap-2">
+                  <span className="w-4 text-right text-xs font-bold text-text-dim">{idx + 1}</span>
                   <span
                     className="w-5 h-5 rounded-sm text-[9px] font-bold flex items-center justify-center shrink-0"
                     style={{ background: `${color}22`, color }}
@@ -106,27 +109,27 @@ export function DamageMeter({ participants, metric = "dps" }: DamageMeterProps) 
                 </div>
 
                 {/* Damage */}
-                <div className="text-right relative z-10">
+                <div className="relative z-10 row-start-2 text-left sm:row-start-auto sm:text-right">
                   <div className="text-sm font-semibold tabular-nums text-text-primary">
                     {formatNumber(rawVal)}
                   </div>
                   {/* Boss-only damage sub-label — shown when adds inflated the total */}
                   {metric === "dps" && p.bossDmg !== undefined && p.bossDmg < rawVal * 0.98 && (
-                    <div className="text-[10px] tabular-nums text-text-dim leading-tight">
+                    <div className="text-xs tabular-nums leading-tight text-text-dim">
                       {formatNumber(p.bossDmg)} boss
                     </div>
                   )}
                 </div>
 
                 {/* DPS/HPS */}
-                <div className="text-right relative z-10">
+                <div className="relative z-10 col-start-2 row-start-1 text-right sm:col-start-auto sm:row-start-auto">
                   <div className="text-sm font-semibold tabular-nums text-text-primary">
                     {formatDps(val)}
                   </div>
                 </div>
 
                 {/* Hits + crit */}
-                <div className="text-right relative z-10">
+                <div className="relative z-10 hidden text-right sm:block">
                   <span className="text-xs text-text-secondary tabular-nums">
                     {p.deaths > 0 && <span className="text-danger mr-1">☠{p.deaths}</span>}
                     {metric === "aps"
@@ -138,21 +141,23 @@ export function DamageMeter({ participants, metric = "dps" }: DamageMeterProps) 
                 </div>
 
                 {/* % of total */}
-                <div className="text-right text-sm text-text-secondary tabular-nums relative z-10">
+                <div className="relative z-10 col-start-2 row-start-2 text-right text-sm tabular-nums text-text-secondary sm:col-start-auto sm:row-start-auto">
                   {pct}%
                 </div>
-              </div>
+              </button>
 
               {/* Expanded spell breakdown */}
-              {isActive && metric === "aps" && isAbsorbBreakdown(p.absorbBreakdown) && (
-                <AbsorbBreakdown breakdown={p.absorbBreakdown} />
-              )}
-              {isActive && metric !== "aps" && isSpellBreakdown(p.spellBreakdown) && (
-                <SpellBreakdown breakdown={p.spellBreakdown} />
-              )}
-              {isActive && metric === "ha" && isAbsorbBreakdown(p.absorbBreakdown) && (
-                <AbsorbBreakdown breakdown={p.absorbBreakdown} />
-              )}
+              <div id={`${breakdownId}-${idx}`}>
+                {isActive && metric === "aps" && isAbsorbBreakdown(p.absorbBreakdown) && (
+                  <AbsorbBreakdown breakdown={p.absorbBreakdown} />
+                )}
+                {isActive && metric !== "aps" && isSpellBreakdown(p.spellBreakdown) && (
+                  <SpellBreakdown breakdown={p.spellBreakdown} />
+                )}
+                {isActive && metric === "ha" && isAbsorbBreakdown(p.absorbBreakdown) && (
+                  <AbsorbBreakdown breakdown={p.absorbBreakdown} />
+                )}
+              </div>
             </div>
           );
         })}
@@ -184,8 +189,8 @@ function AbsorbBreakdown({ breakdown }: { breakdown: Record<string, AbsorbEntry>
           <div className="flex-1 h-3 bg-bg-hover rounded-sm overflow-hidden">
             <div className="h-full rounded-sm bg-holy" style={{ width: `${stats.amount / maxAmount * 100}%` }} />
           </div>
-          <span className="w-16 text-right tabular-nums text-text-secondary">{formatNumber(stats.amount)}</span>
-          <span className="w-20 text-right tabular-nums text-text-dim">
+          <span className="w-16 shrink-0 text-right tabular-nums text-text-secondary">{formatNumber(stats.amount)}</span>
+          <span className="hidden w-20 shrink-0 text-right tabular-nums text-text-dim sm:block">
             {stats.hits} hits{stats.ambiguousHits > 0 ? `, ${stats.ambiguousHits} mixed` : ""}
           </span>
         </div>
@@ -215,10 +220,10 @@ function SpellBreakdown({
         const val  = s.damage || s.healing;
         const pct  = maxSpell > 0 ? (val / maxSpell) * 100 : 0;
         const schoolColors: Record<number, string> = {
-          1: "#c0c8d8", 2: "#f0c040", 4: "#e06030",
-          8: "#60c060", 16: "#80c8f0", 32: "#a070d0", 64: "#d080f0",
+          1: "var(--color-school-physical)", 2: "var(--color-school-holy)", 4: "var(--color-school-fire)",
+          8: "var(--color-school-nature)", 16: "var(--color-school-frost)", 32: "var(--color-school-shadow)", 64: "var(--color-school-arcane)",
         };
-        const color = schoolColors[s.school] ?? "#888";
+        const color = schoolColors[s.school] ?? "var(--color-text-dim)";
 
         return (
           <div key={spell} className="flex items-center gap-2 text-xs">
@@ -232,7 +237,7 @@ function SpellBreakdown({
             <span className="w-14 text-right tabular-nums text-text-secondary">
               {formatNumber(val)}
             </span>
-            <span className="w-12 text-right tabular-nums text-text-dim">
+            <span className="hidden w-12 text-right tabular-nums text-text-dim sm:block">
               {s.hits}h {Math.round(s.crits / Math.max(1, s.hits) * 100)}%c
             </span>
           </div>
