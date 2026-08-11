@@ -1,5 +1,17 @@
 import assert from "node:assert/strict";
-import { collectWowItemIconBackfills, gearNeedsEnrichment, normalizeArmoryGearSlots, normalizeImportedArmoryGear } from "../lib/warmane-armory";
+import { collectWowItemIconBackfills, extractWarmaneGearIconUrls, gearNeedsEnrichment, normalizeArmoryGearSlots, normalizeImportedArmoryGear } from "../lib/warmane-armory";
+
+assert.deepEqual(
+  extractWarmaneGearIconUrls(`
+    <div class="item-slot">
+      <a href="http://wotlk.cavernoftime.com/item=49986" rel="item=49986&amp;ench=3878">
+        <img src="http://cdn.warmane.com/wotlk/icons/large/inv_helmet_158.jpg" width="50" height="50" />
+      </a>
+    </div>
+    <a href="https://example.com/item=1"><img src="https://example.com/not-an-armory-icon.jpg" /></a>
+  `),
+  { "49986": "https://cdn.warmane.com/wotlk/icons/large/inv_helmet_158.jpg" },
+);
 
 const result = normalizeImportedArmoryGear({
   characterName: "Ashien",

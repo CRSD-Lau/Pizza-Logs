@@ -2,6 +2,8 @@
 
 ## Active Focus
 
+The current `codex-dev` candidate adds a first-party Armory gear quick look. Class avatars are 44px controls with a gear badge; hover, keyboard focus, or tap lazily loads current equipment, class/race/guild identity, GearScoreLite, average item level, and freshness through Pizza Logs. The public route only accepts known players/roster members, uses a five-minute cache, and falls back to the last healthy snapshot. Tampermonkey is not required for normal viewing.
+
 The current `codex-dev` candidate also completes the frontend audit remediation: readable metadata, shared page and surface contracts, asymmetric result hierarchy, paginated/progressively disclosed long reports, accessible 44px interactions, responsive analytics rows, and a homepage-only once-per-session cinematic intro. `DESIGN.md` is the implementation contract for follow-up UI work.
 
 The current release candidate completes the ordered platform modernization: analytical regression baselines, Node 24 everywhere, current Actions/dependencies, Next.js 16 + React 19, Prisma 5 -> 6 -> 7, Tailwind/Recharts/Zod/Dropzone majors, and a gated TypeScript 7 native CLI. Parser reliability remains the highest-risk product area, so frozen Skada totals and the complete parser suite remain mandatory.
@@ -21,6 +23,14 @@ Documentation metadata refresh: the README now links to the GitHub wiki, and the
 Codex works on `codex-dev`, pushes `origin/codex-dev`, and opens PRs into `main`. Codex does not push or merge `main` directly.
 
 ## This Session
+
+- Added `GET /api/players/[name]/gear` as the bounded public read path for known Pizza Logs characters.
+- Extended Armory snapshots with optional class, race, and guild identity returned by Warmane.
+- Turned class avatars into accessible live-gear quick-look controls and added class icons to encounter meters.
+- Added quick looks to player profiles, the player directory, session raid rosters, encounter rosters, and guild roster rows.
+- Kept browser userscripts only as optional bulk/background refresh tooling; the visible quick look has no Tampermonkey or admin-secret dependency.
+- Verified a live local Lausudo response with 18 items, Paladin/Human/Pizza Warriors identity, GearScore 6,267, average item level 270, and a fresh snapshot.
+- Passed 40 web tests, TypeScript 7, TypeScript 6 ecosystem checking, zero-warning ESLint, and the Next.js 16 production build. No parser, Prisma schema, or migration changed.
 
 - Completed the full frontend audit remediation without changing parser or persistence behavior.
 - Added shared `PageShell`, `PageHeader`, `PageSection`, and `DataPanel` primitives and standardized page rhythm across the app.

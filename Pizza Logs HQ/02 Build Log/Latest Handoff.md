@@ -91,6 +91,8 @@
 - Gear pages read cached Warmane snapshots, enrich from local AzerothCore `wow_items`, and attempt Warmane live fetches only as best effort.
 - Supported roster/gear refresh path is browser-assisted userscripts from `/admin`.
 - Player avatars intentionally use class icons, with initials fallback when class data or icon loading is unavailable.
+- Class avatars are now first-party gear quick-look controls. Hover, focus, or tap lazily loads current Warmane equipment, Armory class/race/guild identity, GearScoreLite, average item level, and freshness without Tampermonkey or an admin secret.
+- `GET /api/players/[name]/gear` is limited to known combat-log players or guild-roster members, refreshes on a five-minute window, and falls back to the last healthy gear snapshot when Warmane is unavailable.
 - Production userscripts still post to Railway production; local userscripts post to `http://127.0.0.1:3001`.
 - Gear userscript v1.8.1 requests the full refresh queue hourly from the
   existing Warmane tab; roster userscript v1.1.1 stores admin secrets per Pizza

@@ -301,9 +301,8 @@ export default async function PlayersPage({ searchParams }: Props) {
           {visiblePlayers.map((p, index) => {
             const color = getClassColor(p.class ?? p.name);
             return (
-              <Link
+              <article
                 key={p.id}
-                href={`/players/${encodeURIComponent(p.name)}`}
                 className={getRevealClassName({
                   className:
                     "group flex min-h-20 items-center gap-3 border-b border-gold-dim px-3 py-3 transition-colors hover:bg-bg-panel/55 sm:border-r",
@@ -323,12 +322,13 @@ export default async function PlayersPage({ searchParams }: Props) {
                 {/* Info */}
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center gap-2">
-                    <span
+                    <Link
+                      href={`/players/${encodeURIComponent(p.name)}`}
                       className="text-sm font-semibold truncate group-hover:text-gold-light transition-colors"
                       style={{ color }}
                     >
                       {p.name}
-                    </span>
+                    </Link>
                     {p.topRank === 1 && (
                       <span className="text-[10px] text-gold font-bold shrink-0">👑 #1</span>
                     )}
@@ -358,7 +358,7 @@ export default async function PlayersPage({ searchParams }: Props) {
                     </div>
                   )}
                 </div>
-              </Link>
+              </article>
             );
           })}
           </div>

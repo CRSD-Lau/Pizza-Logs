@@ -143,7 +143,9 @@ Player profiles merge:
 - cached Warmane gear snapshots from `armory_gear_cache`;
 - local item metadata from `wow_items`.
 
-Warmane live server fetches are best-effort and may fail from Railway or local scripts because of Cloudflare/403 behavior. The supported operational path is browser-assisted import from `/admin`:
+[Class avatars are first-party gear quick-look controls](docs/player-gear-quick-look.md). Hover, focus, or tap one to lazily request the known character through Pizza Logs, refresh the Warmane equipment snapshot on a five-minute window, and show class, gear icons, GearScoreLite, average item level, and freshness in a compact tooltip. Normal viewing does not require Tampermonkey, a bookmarklet, an admin secret, or an open Warmane tab. The last healthy database snapshot is used if a live Armory request fails.
+
+Warmane live server fetches remain best-effort because Cloudflare behavior can change. The browser-assisted tools under `/admin` remain available for scheduled bulk refreshes and roster imports:
 
 - Warmane Gear Sync userscript for hourly current-equipment refreshes and icon backfill.
 - Warmane Guild Roster userscript for hourly roster rank, class, race, professions, and member refreshes.
@@ -154,7 +156,7 @@ auto-open launchers; the userscripts refresh hourly inside existing Warmane tabs
 The guild roster has the same local Windows automation:
 [`docs/guild-roster-sync-windows-task.md`](docs/guild-roster-sync-windows-task.md).
 
-Player avatars intentionally use class icons instead of Warmane-rendered character portraits. The old portrait userscript URL remains only as a no-op compatibility update for existing installs.
+Player avatars intentionally use class icons instead of Warmane-rendered character portraits. The small shield badge identifies the live gear quick look. The old portrait userscript URL remains only as a no-op compatibility update for existing installs.
 
 Item names, item levels, stats, slot metadata, and GearScoreLite inputs come from the local AzerothCore `item_template` import:
 
@@ -162,7 +164,7 @@ Item names, item levels, stats, slot metadata, and GearScoreLite inputs come fro
 npm run db:import-items
 ```
 
-No runtime Wowhead API dependency is used. Icons are loaded from static `wow.zamimg.com` URLs when an icon slug is available.
+No runtime Wowhead API dependency is used. Live equipment and class icons use Warmane's static CDN; local item-template icon slugs can fall back to static `wow.zamimg.com` image URLs.
 
 ## Local Development
 

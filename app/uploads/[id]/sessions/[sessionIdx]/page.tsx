@@ -376,9 +376,8 @@ export default async function SessionDetailPage({ params }: Props) {
               const classColor = getClassColor(characterClass ?? name);
 
               return (
-                <Link
+                <div
                   key={name}
-                  href={`/raids/${id}/sessions/${sessionIndex}/players/${encodeURIComponent(name)}`}
                   className={getRevealClassName({
                     className:
                       "inline-flex min-h-11 items-center gap-2 rounded-sm px-2 py-1 text-sm transition-colors hover:bg-bg-card",
@@ -395,9 +394,14 @@ export default async function SessionDetailPage({ params }: Props) {
                     fallbackIconUrl={getClassIconUrl(characterClass)}
                     size="xs"
                   />
-                  <span className="text-text-primary font-medium">{name}</span>
+                  <Link
+                    href={`/raids/${id}/sessions/${sessionIndex}/players/${encodeURIComponent(name)}`}
+                    className="font-medium text-text-primary hover:text-gold-light"
+                  >
+                    {name}
+                  </Link>
                   {characterClass && <span className="text-text-dim">{characterClass}</span>}
-                </Link>
+                </div>
               );
             })}
           </div>

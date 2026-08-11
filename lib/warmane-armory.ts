@@ -19,6 +19,9 @@ export type ArmoryGearItem = {
 export type ArmoryCharacterGear = {
   characterName: string;
   realm: string;
+  className?: string;
+  raceName?: string;
+  guildName?: string;
   sourceUrl: string;
   fetchedAt: string;
   items: ArmoryGearItem[];
@@ -45,6 +48,9 @@ type WarmaneEquipmentItem = {
 type WarmaneCharacterSummary = {
   name?: unknown;
   realm?: unknown;
+  class?: unknown;
+  race?: unknown;
+  guild?: unknown;
   equipment?: unknown;
   error?: unknown;
 };
@@ -53,6 +59,12 @@ export type ImportedArmoryGearPayload = {
   characterName?: unknown;
   name?: unknown;
   realm?: unknown;
+  className?: unknown;
+  class?: unknown;
+  raceName?: unknown;
+  race?: unknown;
+  guildName?: unknown;
+  guild?: unknown;
   sourceUrl?: unknown;
   items?: unknown;
   equipment?: unknown;
@@ -133,6 +145,24 @@ function normalizeExternalIconUrl(value: unknown): string | undefined {
   } catch {
     return undefined;
   }
+}
+
+export function extractWarmaneGearIconUrls(html: string): Record<string, string> {
+  const icons: Record<string, string> = {};
+  const itemLinkPattern = /<a\b([^>]*)>([\s\S]*?)<\/a>/gi;
+
+  for (const match of html.matchAll(itemLinkPattern)) {
+    const attributes = match[1] ?? "";
+    const body = match[2] ?? "";
+    const itemId = attributes.match(/(?:href|rel)=["'][^"']*\bitem=(\d+)/i)?.[1];
+    const iconUrl = body.match(/<img\b[^>]*\bsrc=["']([^"']*cdn\.warmane\.com\/wotlk\/icons\/large\/[^"']+)["']/i)?.[1];
+    if (!itemId || !iconUrl) continue;
+
+    const normalized = normalizeExternalIconUrl(iconUrl);
+    if (normalized) icons[itemId] = normalized;
+  }
+
+  return icons;
 }
 
 function asNumber(value: unknown): number | undefined {
@@ -371,6 +401,15 @@ export function normalizeImportedArmoryGear(
     gear: {
       characterName,
       realm,
+      ...(asString(payload.className) ?? asString(payload.class)
+        ? { className: asString(payload.className) ?? asString(payload.class) }
+        : {}),
+      ...(asString(payload.raceName) ?? asString(payload.race)
+        ? { raceName: asString(payload.raceName) ?? asString(payload.race) }
+        : {}),
+      ...(asString(payload.guildName) ?? asString(payload.guild)
+        ? { guildName: asString(payload.guildName) ?? asString(payload.guild) }
+        : {}),
       sourceUrl: sanitizeSourceUrl(payload.sourceUrl, characterName, realm),
       fetchedAt: new Date().toISOString(),
       items,
@@ -398,13 +437,20 @@ async function fetchWarmaneGearLive(
   const timeout = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
 
   try {
-    const response = await fetch(getApiUrl(sanitizedName, sanitizedRealm), {
-      headers: {
-        Accept: "application/json,text/plain,*/*",
-        "User-Agent": USER_AGENT,
-      },
-      signal: controller.signal,
-    });
+    const requestHeaders = {
+      Accept: "application/json,text/plain,*/*",
+      "User-Agent": USER_AGENT,
+    };
+    const [response, armoryHtml] = await Promise.all([
+      fetch(getApiUrl(sanitizedName, sanitizedRealm), {
+        headers: requestHeaders,
+        signal: controller.signal,
+      }),
+      fetch(sourceUrl, {
+        headers: requestHeaders,
+        signal: controller.signal,
+      }).then(async pageResponse => pageResponse.ok ? pageResponse.text() : null).catch(() => null),
+    ]);
 
     if (!response.ok) {
       throw new Error(`Warmane Armory returned ${response.status}`);
@@ -415,14 +461,24 @@ async function fetchWarmaneGearLive(
       throw new Error("Warmane Armory returned an error response");
     }
 
+    const liveIcons = armoryHtml ? extractWarmaneGearIconUrls(armoryHtml) : {};
+    const equipment = normalizeEquipment(data.equipment).map(item => (
+      item.iconUrl || !item.itemId || !liveIcons[item.itemId]
+        ? item
+        : { ...item, iconUrl: liveIcons[item.itemId] }
+    ));
+
     return {
       ok: true,
       gear: {
         characterName: asString(data.name) ?? sanitizedName,
         realm: asString(data.realm) ?? sanitizedRealm,
+        ...(asString(data.class) ? { className: asString(data.class) } : {}),
+        ...(asString(data.race) ? { raceName: asString(data.race) } : {}),
+        ...(asString(data.guild) ? { guildName: asString(data.guild) } : {}),
         sourceUrl,
         fetchedAt: new Date().toISOString(),
-        items: normalizeArmoryGearSlots(await enrichGearWithLocalTemplate(normalizeEquipment(data.equipment))),
+        items: normalizeArmoryGearSlots(await enrichGearWithLocalTemplate(equipment)),
       },
     };
   } catch (error) {
@@ -561,7 +617,8 @@ async function markRefreshFailed(
 
 export async function getWarmaneCharacterGear(
   characterName: string,
-  realm: string = DEFAULT_REALM
+  realm: string = DEFAULT_REALM,
+  options?: { maxAgeMs?: number },
 ): Promise<ArmoryGearResult> {
   const sanitizedName = sanitizeCharacterName(characterName);
   const sanitizedRealm = sanitizeRealm(realm);
@@ -576,11 +633,12 @@ export async function getWarmaneCharacterGear(
   }
 
   let cachedGear = await readCachedGear(sanitizedName, sanitizedRealm);
-  if (shouldRefreshArmoryGearCache({ cachedGear, now: new Date() }) && cachedGear && gearNeedsEnrichment(cachedGear)) {
+  const maxAgeMs = options?.maxAgeMs ?? CACHE_MS;
+  if (shouldRefreshArmoryGearCache({ cachedGear, now: new Date(), maxAgeMs }) && cachedGear && gearNeedsEnrichment(cachedGear)) {
     cachedGear = await writeCachedGear(cachedGear);
   }
 
-  const cacheIsFresh = cachedGear && !shouldRefreshArmoryGearCache({ cachedGear, now: new Date() });
+  const cacheIsFresh = cachedGear && !shouldRefreshArmoryGearCache({ cachedGear, now: new Date(), maxAgeMs });
 
   if (cachedGear && cacheIsFresh) {
     // Always re-enrich details from local template at read time (fast batch lookup,
@@ -608,13 +666,15 @@ export async function getWarmaneCharacterGear(
 export function shouldRefreshArmoryGearCache({
   cachedGear,
   now,
+  maxAgeMs = CACHE_MS,
 }: {
   cachedGear?: ArmoryCharacterGear | null;
   now: Date;
+  maxAgeMs?: number;
 }): boolean {
   if (!cachedGear) return true;
   if (gearNeedsEnrichment(cachedGear)) return true;
 
   const cachedFetchedAt = new Date(cachedGear.fetchedAt).getTime();
-  return !Number.isFinite(cachedFetchedAt) || now.getTime() - cachedFetchedAt >= CACHE_MS;
+  return !Number.isFinite(cachedFetchedAt) || now.getTime() - cachedFetchedAt >= Math.max(0, maxAgeMs);
 }
