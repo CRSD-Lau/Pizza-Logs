@@ -7,6 +7,9 @@ import { MobBreakdown, type MobEntry } from "@/components/meter/MobBreakdown";
 import { AccordionSection } from "@/components/ui/AccordionSection";
 import { Badge } from "@/components/ui/Badge";
 import { StatCard } from "@/components/ui/StatCard";
+import { PlayerAvatar } from "@/components/players/PlayerAvatar";
+import { getClassIconUrl } from "@/lib/class-icons";
+import { getClassColor } from "@/lib/constants/classes";
 import { formatDuration, formatNumber } from "@/lib/utils";
 
 interface Props {
@@ -362,6 +365,14 @@ export default async function EncounterPage({ params }: Props) {
           {encounter.participants.map((p) => (
             <div key={p.id} className="flex items-center justify-between px-4 py-2.5 hover:bg-bg-hover transition-colors gap-3 flex-wrap">
               <div className="flex items-center gap-3 flex-wrap">
+                <PlayerAvatar
+                  name={p.player.name}
+                  realmName={encounter.upload.realm?.name}
+                  characterClass={p.player.class}
+                  color={getClassColor(p.player.class ?? p.player.name)}
+                  fallbackIconUrl={getClassIconUrl(p.player.class)}
+                  size="xs"
+                />
                 <Link
                   href={`/players/${encodeURIComponent(p.player.name)}`}
                   className="text-sm font-semibold hover:underline text-text-primary"

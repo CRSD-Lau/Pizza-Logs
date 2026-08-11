@@ -3,6 +3,7 @@
 import { useId, useState } from "react";
 import { cn, formatDps, formatNumber } from "@/lib/utils";
 import { getClassColor } from "@/lib/constants/classes";
+import { getClassIconUrl } from "@/lib/class-icons";
 import { getRevealClassName, getRevealStyle } from "@/lib/ui-animation";
 
 interface SpellEntry {
@@ -72,6 +73,7 @@ export function DamageMeter({ participants, metric = "dps" }: DamageMeterProps) 
           const fillPct  = maxVal > 0 ? (val / maxVal) * 100 : 0;
           const pct      = totalVal > 0 ? Math.round((val / totalVal) * 100) : 0;
           const color    = getClassColor(p.player.class ?? p.player.name);
+          const classIconUrl = getClassIconUrl(p.player.class);
           const isActive = selected === p.player.name;
 
           return (
@@ -98,10 +100,15 @@ export function DamageMeter({ participants, metric = "dps" }: DamageMeterProps) 
                 <div className="relative z-10 flex min-w-0 items-center gap-2">
                   <span className="w-4 text-right text-xs font-bold text-text-dim">{idx + 1}</span>
                   <span
-                    className="w-5 h-5 rounded-sm text-[9px] font-bold flex items-center justify-center shrink-0"
+                    className="flex h-6 w-6 shrink-0 items-center justify-center overflow-hidden rounded-xs border text-[9px] font-bold"
                     style={{ background: `${color}22`, color }}
                   >
-                    {(p.player.name).substring(0, 2).toUpperCase()}
+                    {classIconUrl ? (
+                      // eslint-disable-next-line @next/next/no-img-element -- Static WoW class icon host.
+                      <img src={classIconUrl} alt="" className="h-full w-full object-cover" />
+                    ) : (
+                      (p.player.name).substring(0, 2).toUpperCase()
+                    )}
                   </span>
                   <span className="text-[15px] font-semibold truncate" style={{ color }}>
                     {p.player.name}

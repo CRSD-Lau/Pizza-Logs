@@ -66,4 +66,25 @@ assert.equal(
   false,
 );
 
+assert.equal(
+  shouldRefreshArmoryGearCache({
+    cachedGear: {
+      ...freshButPartialGear,
+      fetchedAt: "2026-04-30T12:00:00.000Z",
+      items: [{
+        slot: "Head",
+        name: "Lightsworn Helmet",
+        itemId: "50326",
+        itemLevel: 251,
+        iconUrl: "https://wow.zamimg.com/images/wow/icons/large/inv_helmet_154.jpg",
+        equipLoc: "INVTYPE_HEAD",
+      }],
+    },
+    now: new Date("2026-04-30T12:06:00.000Z"),
+    maxAgeMs: 5 * 60 * 1000,
+  }),
+  true,
+  "the quick-look path can use a shorter cache window than full profile pages",
+);
+
 console.log("warmane-armory-cache tests passed");

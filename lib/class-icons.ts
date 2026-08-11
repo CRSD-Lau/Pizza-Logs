@@ -17,5 +17,5 @@ export function getClassIconUrl(className: string | null | undefined): string | 
   if (!key) return null;
 
   const slug = CLASS_ICON_SLUGS[key.replace(/\s+/g, " ")] ?? CLASS_ICON_SLUGS[key.replace(/\s+/g, "")];
-  return slug ? `https://wow.zamimg.com/images/wow/icons/large/${slug}.jpg` : null;
+  return slug ? `https://cdn.warmane.com/wotlk/icons/large/${slug}.jpg` : null;
 }

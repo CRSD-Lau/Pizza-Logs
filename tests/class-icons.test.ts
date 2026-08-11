@@ -3,15 +3,15 @@ import { getClassIconUrl } from "../lib/class-icons";
 
 assert.equal(
   getClassIconUrl("Death Knight"),
-  "https://wow.zamimg.com/images/wow/icons/large/classicon_deathknight.jpg",
+  "https://cdn.warmane.com/wotlk/icons/large/classicon_deathknight.jpg",
 );
 assert.equal(
   getClassIconUrl("deathknight"),
-  "https://wow.zamimg.com/images/wow/icons/large/classicon_deathknight.jpg",
+  "https://cdn.warmane.com/wotlk/icons/large/classicon_deathknight.jpg",
 );
 assert.equal(
   getClassIconUrl("  Mage  "),
-  "https://wow.zamimg.com/images/wow/icons/large/classicon_mage.jpg",
+  "https://cdn.warmane.com/wotlk/icons/large/classicon_mage.jpg",
 );
 assert.equal(getClassIconUrl("Unknown"), null);
 assert.equal(getClassIconUrl(null), null);
