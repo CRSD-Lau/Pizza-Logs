@@ -23,7 +23,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 5
     env:
-      PIZZA_LOGS_BASE_URL: ${{ inputs.base_url || github.event.deployment_status.environment_url || 'https://pizza-logs-production.up.railway.app' }}
+      PIZZA_LOGS_BASE_URL: ${{ inputs.base_url || 'https://pizza-logs-production.up.railway.app' }}
 
     steps:
       - name: Checkout

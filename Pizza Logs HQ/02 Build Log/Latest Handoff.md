@@ -54,6 +54,7 @@
 - PR #39 merged into `main` as `bc97634` after both required checks passed.
 - The standing release rule now authorizes Codex to merge green PRs automatically while preserving the PR-only, no-direct-push protection on `main`.
 - Fixed the Railway production-smoke trigger to accept its actual `Pizza Logs / production` environment name; the old exact equality check skipped every deployment-status run.
+- Fixed the smoke target URL: Railway's deployment `environment_url` points to its project dashboard, not the public app, so automated checks now use the canonical production URL while manual dispatches can still override it.
 - Guild roster refresh is an authenticated first-party control on `/admin`; no
   browser helper or open Warmane tab participates in the current data path.
 - README now includes a high-resolution app preview captured from a fresh local Next server on `http://127.0.0.1:3004`.
