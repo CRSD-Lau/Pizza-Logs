@@ -55,6 +55,7 @@
 - The standing release rule now authorizes Codex to merge green PRs automatically while preserving the PR-only, no-direct-push protection on `main`.
 - Fixed the Railway production-smoke trigger to accept its actual `Pizza Logs / production` environment name; the old exact equality check skipped every deployment-status run.
 - Fixed the smoke target URL: Railway's deployment `environment_url` points to its project dashboard, not the public app, so automated checks now use the canonical production URL while manual dispatches can still override it.
+- PR #41 (`7848041`) enabled the deployment trigger and exposed the dashboard-URL bug; PR #42 (`599e479`) fixed the target, deployed successfully on Railway, and Production Smoke run `31599979449` passed.
 - Guild roster refresh is an authenticated first-party control on `/admin`; no
   browser helper or open Warmane tab participates in the current data path.
 - README now includes a high-resolution app preview captured from a fresh local Next server on `http://127.0.0.1:3004`.
@@ -490,7 +491,6 @@
 
 ## Exact Next Step
 
-Verify the corrected Production Smoke workflow runs after its deployment, then
-continue the existing UwU re-upload acceptance step for historical parser data.
+Continue the existing UwU re-upload acceptance step for historical parser data.
 Future PRs merge automatically after required CI passes; Codex still does not
 commit or push `main` directly.
