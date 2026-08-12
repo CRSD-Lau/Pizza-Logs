@@ -18,6 +18,7 @@ import {
   PAPER_DOLL_WEAPON_SLOTS,
 } from "@/lib/gear-layout";
 import { cn } from "@/lib/utils";
+import { WarmaneCharacterModel } from "./WarmaneCharacterModel";
 
 type PlayerAvatarSize = "xs" | "sm" | "lg";
 
@@ -275,6 +276,9 @@ function GearPreviewPanel({
               <div className="relative flex min-h-80 flex-col items-center justify-center overflow-hidden rounded-sm border border-gold-dim/70 bg-[radial-gradient(circle_at_center,rgba(196,157,52,0.16),rgba(8,11,16,0.92)_62%)] shadow-inner shadow-black/80">
                 <div className="absolute inset-3 rounded-full border border-gold-dim/25" aria-hidden="true" />
                 <div className="absolute inset-7 rounded-full border border-gold-dim/15" aria-hidden="true" />
+                {preview.gear.appearance && (
+                  <WarmaneCharacterModel appearance={preview.gear.appearance} characterName={name} />
+                )}
                 {classIconUrl ? (
                   // eslint-disable-next-line @next/next/no-img-element -- Static WoW class icon host.
                   <img
@@ -285,12 +289,12 @@ function GearPreviewPanel({
                 ) : (
                   <span className="text-3xl font-bold text-gold/60">{getInitials(name)}</span>
                 )}
-                <p className="relative mt-4 text-sm font-bold text-gold-light">{name}</p>
-                <p className="relative mt-1 text-[10px] uppercase tracking-[0.18em] text-text-secondary">
+                <p className="relative z-20 mt-4 text-sm font-bold text-gold-light drop-shadow-[0_1px_2px_rgba(0,0,0,0.95)]">{name}</p>
+                <p className="relative z-20 mt-1 text-[10px] uppercase tracking-[0.18em] text-text-secondary drop-shadow-[0_1px_2px_rgba(0,0,0,0.95)]">
                   {[raceName, className].filter(Boolean).join(" · ") || "Warmane character"}
                 </p>
                 {preview.gearScore && (
-                  <div className="relative mt-4 border-y border-gold-dim/45 px-4 py-2 text-center">
+                  <div className="relative z-20 mt-4 border-y border-gold-dim/45 bg-bg-deep/65 px-4 py-2 text-center backdrop-blur-[1px]">
                     <p className="text-xl font-bold tabular-nums text-gold-light">
                       {preview.gearScore.score.toLocaleString()}
                     </p>

@@ -2,7 +2,7 @@
 
 ## Date
 
-2026-08-11
+2026-08-12
 
 ## Branch
 
@@ -48,6 +48,9 @@
   clutter the DPS/HPS by encounter trend.
 - Gear quick looks now refresh individual known characters on demand through the
   Pizza Logs server, with a five-minute cache and last-healthy-snapshot fallback.
+- Desktop gear quick looks now render Warmane's dressed 3D character from the
+  profile appearance recipe inside a restrictive script-only sandbox; mobile and
+  viewer failures keep the class-icon fallback.
 - Guild roster refresh is an authenticated first-party control on `/admin`; no
   browser helper or open Warmane tab participates in the current data path.
 - README now includes a high-resolution app preview captured from a fresh local Next server on `http://127.0.0.1:3004`.
@@ -90,7 +93,7 @@
   in Encounter Breakdown, but its line chart now builds from kill encounters only.
 - Gear pages read cached Warmane snapshots, enrich from local AzerothCore `wow_items`, and refresh known characters directly through Pizza Logs on a five-minute window.
 - The supported roster path is the authenticated **Refresh from Warmane** admin action; the public roster reads its durable database snapshot.
-- Player avatars intentionally use class icons, with initials fallback when class data or icon loading is unavailable.
+- Player list avatars intentionally use class icons, with initials fallback when class data or icon loading is unavailable; the desktop gear quick look adds the isolated Warmane 3D model.
 - Class avatars are now first-party gear quick-look controls. Hover, focus, or tap lazily loads current Warmane equipment, Armory class/race/guild identity, GearScoreLite, average item level, and freshness without Tampermonkey or an admin secret.
 - `GET /api/players/[name]/gear` is limited to known combat-log players or guild-roster members, refreshes on a five-minute window, and falls back to the last healthy gear snapshot when Warmane is unavailable.
 - Active gear/roster browser import APIs, admin install controls, bookmarklet code,
@@ -125,6 +128,14 @@
 - Railway CLI authentication is expired on the workstation, so no direct production database deletion was attempted. The protected admin control is the credential-safe reset path after deployment.
 - `npm run check:pr` passed: zero-warning ESLint, both TypeScript gates, all 36 web tests, and the Next.js 16 production build.
 - No parser, Prisma schema, migration, or combat-log behavior changed.
+
+## Warmane 3D Paper Doll Session
+
+- Parsed Warmane's bounded character appearance recipe and equipped display IDs from the public profile already used by the live gear request.
+- Added the dressed WebGL model to the desktop paper-doll center while preserving the class icon as a zero-layout-shift fallback.
+- Isolated Warmane's viewer in a script-only sandbox with a restrictive Content Security Policy, no same-origin access, no referrer, and no access to the Pizza Logs parent page.
+- Prevented the model viewer from loading below the desktop breakpoint; mobile keeps the complete compact equipment list.
+- Live-verified Lausudo's Human female model, armor, weapon, and shield in the local quick look.
 
 ## Quiet Warmane Sync Launch Session
 

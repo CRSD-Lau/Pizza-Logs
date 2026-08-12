@@ -41,6 +41,7 @@ assert.match(markup, /classicon_paladin/);
 assert.match(markup, /min-h-11 min-w-11/);
 
 const source = fs.readFileSync("components/players/PlayerAvatar.tsx", "utf8");
+const modelSource = fs.readFileSync("components/players/WarmaneCharacterModel.tsx", "utf8");
 assert.match(source, /\/api\/players\/\$\{encodeURIComponent\(name\)\}\/gear/);
 assert.match(source, /createPortal\(/);
 assert.match(source, /role="tooltip"/);
@@ -52,5 +53,11 @@ assert.match(source, /PAPER_DOLL_RIGHT_SLOTS\.map/);
 assert.match(source, /PAPER_DOLL_WEAPON_SLOTS\.map/);
 assert.match(source, /grid-cols-\[minmax\(0,1fr\)_11rem_minmax\(0,1fr\)\]/);
 assert.doesNotMatch(source, /max-h-\[min\(24rem,65vh\)\]|overflow-hidden px-3 py-3 sm:grid-cols-2/);
+assert.match(source, /<WarmaneCharacterModel appearance=\{preview\.gear\.appearance\}/);
+assert.match(modelSource, /sandbox="allow-scripts"/);
+assert.match(modelSource, /Content-Security-Policy/);
+assert.match(modelSource, /matchMedia\("\(min-width: 640px\)"\)/);
+assert.match(modelSource, /attempts >= 8 && canvas/);
+assert.doesNotMatch(modelSource, /allow-same-origin/);
 
 console.log("player-gear-quicklook tests passed");

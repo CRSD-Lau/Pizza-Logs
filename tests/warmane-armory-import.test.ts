@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { collectWowItemIconBackfills, extractWarmaneGearIconUrls, gearNeedsEnrichment, normalizeArmoryGearSlots, normalizeImportedArmoryGear } from "../lib/warmane-armory";
+import { collectWowItemIconBackfills, extractWarmaneCharacterAppearance, extractWarmaneGearIconUrls, gearNeedsEnrichment, normalizeArmoryGearSlots, normalizeImportedArmoryGear } from "../lib/warmane-armory";
 
 assert.deepEqual(
   extractWarmaneGearIconUrls(`
@@ -12,6 +12,34 @@ assert.deepEqual(
   `),
   { "49986": "https://cdn.warmane.com/wotlk/icons/large/inv_helmet_158.jpg" },
 );
+
+assert.deepEqual(
+  extractWarmaneCharacterAppearance(`
+    <script>
+      var charactermodel = {
+        type: ModelViewer.WOW,
+        sk: 3, ha: 8, hc: 1, fa: 7, fh: 1, fc: 0, ep: 0, ho: 0, ta: 0, cls: 2,
+        items: [[1,63830],[3,46957],[21,36970]],
+        models: { type: ModelViewer.Wow.Types.CHARACTER, id: 'humanfemale' }
+      };
+    </script>
+  `),
+  {
+    modelId: "humanfemale",
+    skin: 3,
+    hairStyle: 8,
+    hairColor: 1,
+    face: 7,
+    facialHair: 1,
+    faceColor: 0,
+    earPiercing: 0,
+    hornStyle: 0,
+    tattoo: 0,
+    classId: 2,
+    items: [[1, 63830], [3, 46957], [21, 36970]],
+  },
+);
+assert.equal(extractWarmaneCharacterAppearance("<html>No model</html>"), null);
 
 const result = normalizeImportedArmoryGear({
   characterName: "Ashien",

@@ -2,7 +2,7 @@
 
 ## Active Focus
 
-The current `codex-dev` candidate completes the first-party Warmane data path. Class avatars are 44px controls with a gear badge; hover, keyboard focus, or tap lazily loads current equipment, class/race/guild identity, GearScoreLite, average item level, and freshness through Pizza Logs. The public route only accepts known players/roster members, uses a five-minute cache, and falls back to the last healthy snapshot. Guild roster refresh is now an authenticated `/admin` action. Tampermonkey, bookmarklets, open Warmane tabs, and browser-stored admin secrets are not part of the active architecture.
+The current `codex-dev` candidate completes the first-party Warmane data path. Class avatars are 44px controls with a gear badge; hover, keyboard focus, or tap lazily loads current equipment, class/race/guild identity, GearScoreLite, average item level, freshness, and an isolated dressed 3D model on desktop through Pizza Logs. The public route only accepts known players/roster members, uses a five-minute cache, and falls back to the last healthy snapshot. Guild roster refresh is now an authenticated `/admin` action. Tampermonkey, bookmarklets, open Warmane tabs, and browser-stored admin secrets are not part of the active architecture.
 
 The current `codex-dev` candidate also completes the frontend audit remediation: readable metadata, shared page and surface contracts, asymmetric result hierarchy, paginated/progressively disclosed long reports, accessible 44px interactions, responsive analytics rows, and a homepage-only once-per-session cinematic intro. `DESIGN.md` is the implementation contract for follow-up UI work.
 
@@ -25,7 +25,8 @@ Codex works on `codex-dev`, pushes `origin/codex-dev`, and opens PRs into `main`
 ## This Session
 
 - Replaced the desktop gear list with a WoW-style equipment paper doll: armor slots on both sides, weapons below, and a central class/race/GearScore panel; mobile keeps the full two-column list.
-- Verified Warmane exposes character customization as a WebGL recipe rather than a portrait image. Kept remote model-viewer JavaScript out of Pizza Logs until an isolated, reliable renderer is proven.
+- Verified Warmane exposes character customization as a WebGL recipe rather than a portrait image, parsed its bounded appearance/display fields, and rendered the dressed model in a script-only sandbox with a class-icon fallback.
+- Confirmed the local Lausudo quick look visibly renders the Human female model with armor, weapon, and shield; mobile does not load the model viewer.
 - Fixed the gear quick-look overlay so complete 18-19 slot loadouts fit instead of clipping the weapon rows; it now uses two columns on narrow screens and three across a wider desktop panel.
 - Replaced the ambiguous gear-cache error total with the latest successful live-refresh timestamp in UTC and renamed the total to Cached Snapshots.
 - Added a protected, confirmation-gated Clear Gear Cache control that deletes only Armory gear snapshots.

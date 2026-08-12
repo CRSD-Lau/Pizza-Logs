@@ -8,6 +8,7 @@ const cachedGear: ArmoryCharacterGear = {
   sourceUrl: "https://armory.warmane.com/character/Aalaska/Lordaeron/summary",
   fetchedAt: "2026-04-30T12:00:00.000Z",
   items: [{ slot: "Head", name: "Cached Hat" }],
+  appearance: null,
 };
 
 const liveFailure: ArmoryGearResult = {
@@ -64,6 +65,17 @@ assert.equal(
     now: new Date("2026-04-30T12:05:00.000Z"),
   }),
   false,
+);
+
+const legacyGear: ArmoryCharacterGear = { ...cachedGear };
+delete legacyGear.appearance;
+assert.equal(
+  shouldRefreshArmoryGearCache({
+    cachedGear: legacyGear,
+    now: new Date("2026-04-30T12:01:00.000Z"),
+  }),
+  true,
+  "legacy snapshots without an appearance field refresh once",
 );
 
 assert.equal(
