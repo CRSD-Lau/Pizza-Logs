@@ -115,6 +115,8 @@
 
 ## Live Gear Cache Validation Session
 
+- Reworked the desktop quick look into a Wrath-style paper-doll screen: fixed eight-slot rails flank a central class/race panel, empty slots stay visible, and main-hand/off-hand/relic sit along the bottom. Mobile retains the complete two-column list.
+- Live Warmane profile inspection confirmed that appearance is exposed as a WebGL model recipe (`sk`, hair/face fields, race/sex model ID, and display-item IDs), not a stable portrait URL. The app does not load Warmane's large mutable remote viewer script; actual character rendering remains a separately gated follow-up.
 - Expanded the class-avatar gear quick look from 30rem/two columns to a viewport-safe 46rem/three-column desktop layout, with two columns on narrow screens, and removed the 24rem clipping cap so every equipped slot renders.
 - Replaced the misleading **Server Refresh Errors** total with **Latest Live Refresh**, sourced from the newest non-null `lastSuccessAt` and rendered explicitly in UTC.
 - Renamed **Cached Characters** to **Cached Snapshots** so the count is not confused with roster size.

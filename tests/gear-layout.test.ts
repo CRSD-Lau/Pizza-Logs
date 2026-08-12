@@ -1,5 +1,14 @@
 import assert from "node:assert/strict";
-import { getPlayerGearGroups } from "../lib/gear-layout";
+import {
+  getPlayerGearGroups,
+  PAPER_DOLL_LEFT_SLOTS,
+  PAPER_DOLL_RIGHT_SLOTS,
+  PAPER_DOLL_WEAPON_SLOTS,
+} from "../lib/gear-layout";
+
+assert.equal(PAPER_DOLL_LEFT_SLOTS.length, 8);
+assert.equal(PAPER_DOLL_RIGHT_SLOTS.length, 8);
+assert.deepEqual(PAPER_DOLL_WEAPON_SLOTS, ["Main Hand", "Off Hand", "Ranged/Relic"]);
 
 const groups = getPlayerGearGroups([
   { slot: "Head", name: "Head" },
