@@ -13,13 +13,13 @@ The `/admin` page, admin upload history, cleanup actions, and import APIs are pr
 - Production fails closed if `ADMIN_SECRET` is missing.
 - The admin login sets an `HttpOnly` `x-admin-secret` cookie.
 - `ADMIN_COOKIE_SECURE=false` is only for local HTTP compose and must not be set in Railway production.
-- Browser-assisted Warmane userscripts may temporarily store the admin secret in the admin's browser so they can post imported data back to Pizza Logs. Treat that browser storage as sensitive local state.
+- Warmane gear and roster refreshes stay within authenticated Pizza Logs server paths; the admin secret is not copied to Warmane pages or browser local storage.
 
 ## Current Risks
 
 - `/api/upload` does not yet enforce a hard server-side byte limit while streaming to the parser.
 - Upload rate limiting is not implemented in app code.
-- Warmane roster and gear flows depend on browser-assisted imports because direct server fetches can hit Cloudflare/403 behavior.
+- Warmane can still return Cloudflare/403 responses. Gear quick looks and the public roster use the last healthy database snapshot when a first-party refresh is unavailable.
 
 ## Reporting A Vulnerability
 

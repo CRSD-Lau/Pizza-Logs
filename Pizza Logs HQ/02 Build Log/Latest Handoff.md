@@ -46,10 +46,10 @@
   spell IDs, and Valithria heroic uses `Twisted Nightmares`.
 - Session player comparison charts now graph kills only, so wipe pulls no longer
   clutter the DPS/HPS by encounter trend.
-- Gear Sync now refreshes every known Pizza Logs character from Warmane once per
-  hour, instead of only importing players with missing or incomplete cached gear.
-- Windows no longer auto-opens Warmane pages. Gear and roster userscripts keep
-  hourly refreshes running inside existing Warmane tabs after Neil opens them.
+- Gear quick looks now refresh individual known characters on demand through the
+  Pizza Logs server, with a five-minute cache and last-healthy-snapshot fallback.
+- Guild roster refresh is an authenticated first-party control on `/admin`; no
+  browser helper or open Warmane tab participates in the current data path.
 - README now includes a high-resolution app preview captured from a fresh local Next server on `http://127.0.0.1:3004`.
 - README now links to the GitHub wiki, and the wiki has been refreshed for current upload, roster, gear, parser, roadmap, and branch workflow details.
 - Local repo-root launchers:
@@ -79,7 +79,7 @@
 - `/guild-roster` now keeps the roster table contained to 20 members per page, with URL-backed page navigation in the table footer.
 - GitHub Actions posts new, reopened, and ready-for-review PR summaries to Slack when `PR_SLACK_WEBHOOK_URL` is configured; if the secret is missing, the workflow warns and exits successfully.
 - `/uploads` and `/uploads/[id]` redirect to admin upload history; public raid/session pages use `/raids/...`.
-- `/admin`, `/admin/uploads`, cleanup actions, and admin import APIs are protected by `ADMIN_SECRET`.
+- `/admin`, `/admin/uploads`, cleanup actions, and first-party refresh actions are protected by `ADMIN_SECRET`.
 - Upload flow streams raw bytes from `app/api/upload/route.ts` to parser `/uploads/{uuid}/stream`, then uses the existing database and milestone path after full parsing. Legacy `/parse-stream` remains for plain multipart clients.
 - Parser supports both encounter marker and heuristic segmentation paths, with Skada-aligned damage/healing formulas documented in `docs/parser-contract.md`.
 - Parser heroic upgrade markers are boss-scoped to reduce mixed-raid false positives:
@@ -88,21 +88,30 @@
   IDs `71940`/`71941` or name are heroic evidence.
 - `/raids/[id]/sessions/[sessionIdx]/players/[playerName]` still lists all pulls
   in Encounter Breakdown, but its line chart now builds from kill encounters only.
-- Gear pages read cached Warmane snapshots, enrich from local AzerothCore `wow_items`, and attempt Warmane live fetches only as best effort.
-- Supported roster/gear refresh path is browser-assisted userscripts from `/admin`.
+- Gear pages read cached Warmane snapshots, enrich from local AzerothCore `wow_items`, and refresh known characters directly through Pizza Logs on a five-minute window.
+- The supported roster path is the authenticated **Refresh from Warmane** admin action; the public roster reads its durable database snapshot.
 - Player avatars intentionally use class icons, with initials fallback when class data or icon loading is unavailable.
 - Class avatars are now first-party gear quick-look controls. Hover, focus, or tap lazily loads current Warmane equipment, Armory class/race/guild identity, GearScoreLite, average item level, and freshness without Tampermonkey or an admin secret.
 - `GET /api/players/[name]/gear` is limited to known combat-log players or guild-roster members, refreshes on a five-minute window, and falls back to the last healthy gear snapshot when Warmane is unavailable.
-- Production userscripts still post to Railway production; local userscripts post to `http://127.0.0.1:3001`.
-- Gear userscript v1.8.1 requests the full refresh queue hourly from the
-  existing Warmane tab; roster userscript v1.1.1 stores admin secrets per Pizza
-  Logs target origin, shows the target in the Warmane panel, and schedules
-  hourly refreshes inside the existing Warmane tab after a secret is saved.
-- Windows gear cleanup/manual-open scripts live under `scripts/gear-sync/`;
-  docs live in `docs/gear-sync-windows-task.md`.
-- Windows guild roster cleanup/manual-open scripts live under
-  `scripts/guild-roster-sync/`; docs live in
-  `docs/guild-roster-sync-windows-task.md`.
+- Active gear/roster browser import APIs, admin install controls, bookmarklet code,
+  scheduled-task installers, and tab-opening launchers are removed.
+- Legacy gear/roster userscript update URLs serve inert version `2.0.0` cleanup
+  code so existing installs stop syncing and clear saved Pizza Logs secrets.
+- Only the two Windows uninstall scripts and npm cleanup commands remain for
+  removing previously installed scheduled tasks or Startup launchers; see
+  `docs/userscript-retirement.md`.
+
+## First-Party Armory Retirement Session
+
+- Removed Tampermonkey/userscript install links and browser-import instructions from `/admin`.
+- Connected the existing protected `syncGuildRosterFromAdmin` server action to a 44px **Refresh from Warmane** control with pending, success, and error states.
+- Verified the direct Warmane roster fetch live with 163 Pizza Warriors members, including class and rank data.
+- Kept gear fully on demand through the class-avatar quick look; no bulk browser refresh is required.
+- Removed the gear/roster browser import APIs, queue helper, task installers, tab launchers, related tests, and obsolete setup docs.
+- Retained exact legacy update URLs as inert version `2.0.0` retirement scripts and retained uninstall-only Windows cleanup commands.
+- `npm run check:pr` passed: zero-warning ESLint, both TypeScript gates, all 35 web tests, and the Next.js 16 production build.
+- Authenticated local admin verification showed the new refresh control at exactly 44px high, no install/userscript language, no horizontal overflow, and no console warnings or errors.
+- No parser, Prisma schema, migration, or combat-log behavior changed.
 
 ## Quiet Warmane Sync Launch Session
 

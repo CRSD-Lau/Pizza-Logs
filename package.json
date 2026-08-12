@@ -23,9 +23,7 @@
     "type-check:ecosystem": "tsc --noEmit",
     "db:seed-items": "tsx scripts/seed-wow-items.ts",
     "db:import-items": "tsx scripts/import-item-template.ts",
-    "gear-sync:install-task": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/gear-sync/install-windows-task.ps1",
     "gear-sync:uninstall-task": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/gear-sync/uninstall-windows-task.ps1",
-    "guild-roster-sync:install-task": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/guild-roster-sync/install-windows-task.ps1",
     "guild-roster-sync:uninstall-task": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/guild-roster-sync/uninstall-windows-task.ps1"
   },
   "dependencies": {

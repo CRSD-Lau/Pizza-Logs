@@ -3,7 +3,7 @@
  *
  * Downloads item_template.sql from AzerothCore GitHub, parses MySQL INSERT rows,
  * extracts 18 needed columns, and batch-upserts into wow_items.
- * Preserves existing iconName values (from Warmane/Tampermonkey cache).
+ * Preserves existing iconName values from Warmane gear snapshots.
  *
  * Usage:
  *   npm run db:import-items
@@ -139,7 +139,7 @@ async function upsertBatch(batch: ItemRow[]): Promise<number> {
   if (batch.length === 0) return 0;
 
   // Build parameterized bulk INSERT ... ON CONFLICT DO UPDATE
-  // We skip iconName deliberately (sourced from Tampermonkey cache)
+  // We skip iconName deliberately (sourced from Warmane gear snapshots)
   const values = batch.map(row =>
     Prisma.sql`(
       ${row.itemId}, ${row.name}, ${row.quality}, ${row.itemLevel},
@@ -179,7 +179,7 @@ async function upsertBatch(batch: ItemRow[]): Promise<number> {
       "socketColors" = EXCLUDED."socketColors",
       "socketBonus" = EXCLUDED."socketBonus",
       "importedAt" = EXCLUDED."importedAt"
-      -- iconName intentionally excluded: sourced from Tampermonkey cache
+      -- iconName intentionally excluded: sourced from Warmane gear snapshots
   `;
 
   return batch.length;

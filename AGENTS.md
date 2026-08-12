@@ -143,7 +143,7 @@ Update docs when behavior, commands, deployment, parser rules, or workflows chan
 - `ADMIN_SECRET`, `DATABASE_URL`, Railway tokens, API keys, private keys, and reset secrets must never be committed.
 - `.env.example` may contain placeholders only.
 - Production admin must fail closed if `ADMIN_SECRET` is missing.
-- Browser userscripts may ask an admin for a secret, but docs must call out that local browser storage is not equivalent to server-side secret storage.
+- Do not reintroduce browser userscripts, bookmarklets, or browser-stored admin secrets for Warmane gear or roster refreshes. Use the first-party server paths and durable cache fallback.
 
 ## Safe Refactoring Rules
 

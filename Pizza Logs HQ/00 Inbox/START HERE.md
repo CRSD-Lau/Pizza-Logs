@@ -64,7 +64,7 @@ Formal details: `docs/parser-contract.md`.
 - Admin diagnostics and admin upload history
 - Guild roster cache for PizzaWarriors/Lordaeron
 - Warmane gear cache, GearScoreLite display, AzerothCore item metadata
-- Browser userscripts for roster and gear imports
+- First-party Warmane roster refresh and on-demand gear quick looks
 - Desktop start/stop launchers for the local web, parser, and PostgreSQL services
 - Cinematic intro and responsive page polish
 

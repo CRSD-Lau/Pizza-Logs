@@ -48,14 +48,18 @@ async function main() {
   const portrait = await readLocalUserscript("../app/api/player-portraits/userscript.local.user.js/route");
 
   assert.match(gear, /Pizza Logs Warmane Gear Auto Sync \(Local\)/);
-  assert.match(gear, /\/\/ @version\s+1\.8\.1/);
+  assert.match(gear, /\/\/ @version\s+2\.0\.0/);
   assert.match(gear, new RegExp(LOCAL_USERSCRIPT_URL.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")));
   assert.match(gear, new RegExp(PIZZA_LOGS_LOCAL_ORIGIN.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")));
+  assert.match(gear, /Retired compatibility update/);
+  assert.doesNotMatch(gear, /GM_xmlhttpRequest|fetch\(|\/api\/admin\/armory-gear\/import/);
 
   assert.match(roster, /Pizza Logs Warmane Guild Roster Sync \(Local\)/);
-  assert.match(roster, /\/\/ @version\s+1\.1\.1/);
+  assert.match(roster, /\/\/ @version\s+2\.0\.0/);
   assert.match(roster, new RegExp(LOCAL_GUILD_ROSTER_USERSCRIPT_URL.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")));
   assert.match(roster, new RegExp(PIZZA_LOGS_LOCAL_ORIGIN.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")));
+  assert.match(roster, /Retired compatibility update/);
+  assert.doesNotMatch(roster, /GM_xmlhttpRequest|fetch\(|\/api\/admin\/guild-roster\/import/);
 
   assert.match(portrait, /Pizza Logs Warmane Portraits \(Local\)/);
   assert.match(portrait, new RegExp(LOCAL_PORTRAIT_USERSCRIPT_URL.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")));
