@@ -1,8 +1,5 @@
 import Link from "next/link";
-import {
-  GUILD_ROSTER_USERSCRIPT_URL,
-  LOCAL_GUILD_ROSTER_USERSCRIPT_URL,
-} from "../../lib/guild-roster-client-scripts";
+import { GuildRosterRefreshButton } from "./GuildRosterRefreshButton";
 
 export function GuildRosterSyncPanel({
   rosterCount,
@@ -27,69 +24,17 @@ export function GuildRosterSyncPanel({
       </div>
 
       <p className="text-sm text-text-secondary max-w-3xl">
-        Warmane blocks server-side requests from Railway, so the roster is synced via a
-        browser userscript. Install the userscript below, open the Warmane guild page, and
-        click the floating Pizza Logs Roster Sync button once to save the admin secret.
-        After that, leaving the guild page open can auto-sync the roster hourly without
-        Windows opening a new tab each time. The public roster page reads only from our
-        database, so it loads even when Warmane is unavailable.
+        Refreshing runs entirely on the Pizza Logs server and writes a durable roster snapshot.
+        The public roster continues to load from that snapshot if Warmane is temporarily
+        unavailable. No Tampermonkey install, open Warmane tab, or browser-stored admin secret
+        is required.
       </p>
 
-      <div className="flex flex-wrap items-center gap-4">
+      <div className="flex flex-wrap items-center gap-3">
+        <GuildRosterRefreshButton />
         <Link href="/guild-roster" className="text-sm text-gold hover:text-gold-light">
           View public roster &rarr;
         </Link>
-      </div>
-
-      <div className="rounded-sm border border-gold-dim bg-bg-card p-4 space-y-3">
-        <div>
-          <h3 className="heading-cinzel text-sm text-gold tracking-wide">Browser Roster Import</h3>
-          <p className="text-sm text-text-secondary mt-1">
-            Install this userscript with Tampermonkey, then open the Warmane guild page below.
-            The floating Pizza Logs Roster Sync button will import the full roster into Pizza Logs,
-            and a saved-secret Warmane tab can keep auto-syncing the roster hourly.
-          </p>
-        </div>
-        <div className="flex flex-wrap gap-2">
-          <a
-            href={GUILD_ROSTER_USERSCRIPT_URL}
-            target="_blank"
-            rel="noreferrer"
-            className="inline-flex rounded-sm border border-gold-dim px-4 py-2 text-sm text-gold transition-colors hover:border-gold hover:text-gold-light"
-          >
-            Install / Update Roster Userscript
-          </a>
-          <a
-            href={LOCAL_GUILD_ROSTER_USERSCRIPT_URL}
-            target="_blank"
-            rel="noreferrer"
-            className="inline-flex rounded-sm border border-gold-dim px-4 py-2 text-sm text-gold transition-colors hover:border-gold hover:text-gold-light"
-          >
-            Install Local Roster Userscript
-          </a>
-        </div>
-        <div className="space-y-2">
-          <label className="block text-xs font-bold uppercase tracking-widest text-text-dim">
-            Roster local install URL
-          </label>
-          <textarea
-            readOnly
-            rows={2}
-            value={LOCAL_GUILD_ROSTER_USERSCRIPT_URL}
-            className="w-full rounded-sm border border-gold-dim bg-bg-deep p-3 font-mono text-xs text-text-secondary"
-          />
-        </div>
-        <div className="space-y-2">
-          <label className="block text-xs font-bold uppercase tracking-widest text-text-dim">
-            Warmane guild page
-          </label>
-          <textarea
-            readOnly
-            rows={2}
-            value="https://armory.warmane.com/guild/Pizza+Warriors/Lordaeron/summary"
-            className="w-full rounded-sm border border-gold-dim bg-bg-deep p-3 font-mono text-xs text-text-secondary"
-          />
-        </div>
       </div>
     </div>
   );

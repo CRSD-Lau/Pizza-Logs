@@ -7,7 +7,6 @@ import { formatBytes } from "@/lib/utils";
 import { getDeploymentInfo } from "@/lib/deployment-info";
 import { ClearDatabaseButton } from "./ClearDatabaseButton";
 import { DeleteUploadButton } from "./DeleteUploadButton";
-import { GearImportBookmarklet } from "./GearImportBookmarklet";
 import { GuildRosterSyncPanel } from "./GuildRosterSyncPanel";
 
 export const metadata: Metadata = { title: "Admin / Diagnostics" };
@@ -171,9 +170,9 @@ export default async function AdminPage() {
         </div>
       </section>
 
-      {/* 3. Guild Roster — read-only stats */}
+      {/* 3. Guild Roster */}
       <section>
-        <SectionHeader title="Guild Roster" sub="Browser-assisted import for PizzaWarriors" />
+        <SectionHeader title="Guild Roster" sub="First-party Warmane refresh for PizzaWarriors" />
         <GuildRosterSyncPanel
           rosterCount={rosterCount}
           latestSync={latestRosterSync?.lastSyncedAt ?? null}
@@ -182,18 +181,18 @@ export default async function AdminPage() {
 
       {/* 4. Warmane Gear Cache */}
       <section>
-        <SectionHeader title="Warmane Gear Cache" sub="Browser-assisted import for player profile gear" />
+        <SectionHeader title="Warmane Gear Cache" sub="On-demand equipment snapshots for player quick looks" />
         <div className="bg-bg-panel border border-gold-dim rounded-sm p-4 space-y-4">
           <div className="grid grid-cols-2 gap-3">
             <StatCard label="Cached Characters"    value={gearCacheTotal} />
             <StatCard label="Server Refresh Errors" value={recentGearErrors} />
           </div>
           <p className="text-sm text-text-secondary max-w-3xl">
-            Player pages read gear from this database cache. Railway cannot reliably fetch
-            Warmane directly, so use the browser importer below from a Warmane Armory
-            character page to refresh known characters with their current equipment.
+            Class avatars fetch current equipment directly through Pizza Logs when a gear quick
+            look opens. Healthy snapshots are cached for five minutes, and the last successful
+            snapshot remains available if Warmane is temporarily unreachable. No browser helper,
+            open Armory tab, or copied admin secret is part of this path.
           </p>
-          <GearImportBookmarklet />
         </div>
       </section>
 

@@ -90,4 +90,4 @@ Update docs when behavior, setup, environment variables, deployment, parser rule
 
 Never commit `.env*`, Railway tokens, database URLs, admin secrets, combat logs, upload artifacts, caches, local screenshots, or generated build outputs.
 
-Admin pages and admin import APIs require `ADMIN_SECRET` in production. Browser userscripts may ask an admin for that secret; treat browser storage as sensitive local state.
+Admin pages and first-party refresh actions require `ADMIN_SECRET` in production. Do not add browser userscripts, bookmarklets, or client-side storage of the admin secret.

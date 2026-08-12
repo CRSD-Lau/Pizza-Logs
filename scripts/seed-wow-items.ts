@@ -1,7 +1,7 @@
 /**
  * Seed the WowItem table from data already in ArmoryGearCache.
  *
- * The gear imported by the Tampermonkey userscript already has itemLevel,
+ * Warmane gear snapshots already include itemLevel,
  * iconUrl, quality, and equipLoc enriched by the browser. This script
  * extracts those fields from the existing cache rows — no external API calls.
  *

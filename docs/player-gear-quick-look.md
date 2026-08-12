@@ -15,4 +15,4 @@ The client lazily calls `GET /api/players/[name]/gear`. The route rejects arbitr
 
 Quick looks use a five-minute Armory refresh window and a five-minute in-browser response cache. If Warmane is unavailable, the last healthy database snapshot is returned with a stale label. A page render does not fan out Armory requests for every player; only an opened quick look performs the read.
 
-Tampermonkey, bookmarklets, admin secrets, and open Warmane tabs are not required for this normal viewing path. The existing admin userscripts remain optional operational tools for bulk/background gear and guild-roster refreshes.
+Tampermonkey, bookmarklets, admin secrets, and open Warmane tabs are not part of this viewing path. Gear refresh is fully on demand, and guild-roster refresh is a first-party authenticated admin action.

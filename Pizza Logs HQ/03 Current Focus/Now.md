@@ -2,7 +2,7 @@
 
 ## Active Focus
 
-The current `codex-dev` candidate adds a first-party Armory gear quick look. Class avatars are 44px controls with a gear badge; hover, keyboard focus, or tap lazily loads current equipment, class/race/guild identity, GearScoreLite, average item level, and freshness through Pizza Logs. The public route only accepts known players/roster members, uses a five-minute cache, and falls back to the last healthy snapshot. Tampermonkey is not required for normal viewing.
+The current `codex-dev` candidate completes the first-party Warmane data path. Class avatars are 44px controls with a gear badge; hover, keyboard focus, or tap lazily loads current equipment, class/race/guild identity, GearScoreLite, average item level, and freshness through Pizza Logs. The public route only accepts known players/roster members, uses a five-minute cache, and falls back to the last healthy snapshot. Guild roster refresh is now an authenticated `/admin` action. Tampermonkey, bookmarklets, open Warmane tabs, and browser-stored admin secrets are not part of the active architecture.
 
 The current `codex-dev` candidate also completes the frontend audit remediation: readable metadata, shared page and surface contracts, asymmetric result hierarchy, paginated/progressively disclosed long reports, accessible 44px interactions, responsive analytics rows, and a homepage-only once-per-session cinematic intro. `DESIGN.md` is the implementation contract for follow-up UI work.
 
@@ -28,7 +28,11 @@ Codex works on `codex-dev`, pushes `origin/codex-dev`, and opens PRs into `main`
 - Extended Armory snapshots with optional class, race, and guild identity returned by Warmane.
 - Turned class avatars into accessible live-gear quick-look controls and added class icons to encounter meters.
 - Added quick looks to player profiles, the player directory, session raid rosters, encounter rosters, and guild roster rows.
-- Kept browser userscripts only as optional bulk/background refresh tooling; the visible quick look has no Tampermonkey or admin-secret dependency.
+- Removed gear/roster userscript controls and import APIs from admin; the roster now has a first-party authenticated refresh button.
+- Removed scheduled-task installers and Warmane tab launchers while retaining uninstall-only cleanup commands for previously configured machines.
+- Converted the old gear/roster userscript update URLs to inert version `2.0.0` retirement scripts that make no network calls and clear browser-stored Pizza Logs secrets.
+- Live-verified the direct Pizza Warriors roster fetch with 163 members and class/rank data.
+- Passed `npm run check:pr` with 35 tests, both TypeScript gates, zero-warning ESLint, and the Next.js 16 production build; authenticated local admin rendering also passed with a 44px refresh control, no overflow, and no console errors.
 - Verified a live local Lausudo response with 18 items, Paladin/Human/Pizza Warriors identity, GearScore 6,267, average item level 270, and a fresh snapshot.
 - Passed 40 web tests, TypeScript 7, TypeScript 6 ecosystem checking, zero-warning ESLint, and the Next.js 16 production build. No parser, Prisma schema, or migration changed.
 
@@ -243,10 +247,10 @@ Codex works on `codex-dev`, pushes `origin/codex-dev`, and opens PRs into `main`
 | Guild roster render coverage | DONE | Test covers page 1 and page 2 slicing |
 | README app preview | DONE | Added `docs/assets/readme-screenshot.png` and linked it from `README.md` |
 | README and wiki metadata refresh | DONE | Updated public README link and GitHub wiki content |
-| Userscript target-specific secrets | DONE | Gear `1.7.1`, roster `1.0.5`; local/prod secrets no longer collide |
-| Hourly Gear Sync refresh-all | DONE | Gear `1.8.1` refreshes all known DB/roster characters hourly from an existing Warmane tab |
-| Windows Gear Sync auto-open cleanup | DONE | No scheduled task or Startup launcher remains; existing Warmane tab handles hourly sync |
-| Windows Guild Roster Sync auto-open cleanup | DONE | No scheduled task or Startup launcher remains; existing Warmane tab handles hourly sync |
+| Browser gear/roster sync retirement | DONE | Active userscripts/import APIs are removed; exact legacy update URLs now serve inert secret-cleanup scripts |
+| First-party gear refresh | DONE | Known-character quick looks refresh on demand through Pizza Logs with five-minute caching and stale fallback |
+| First-party roster refresh | DONE | Authenticated admin control refreshes the durable Pizza Warriors snapshot directly from Warmane |
+| Windows browser-sync cleanup | DONE | Installers/launchers removed; uninstall-only commands remain for previously configured machines |
 | ICC difficulty marker fix | DONE | Saurfang `Rune of Blood` stays normal-capable; Saurfang `Scent of Blood` IDs and Valithria `Twisted Nightmares` now mark heroic |
 | Session player chart kill filter | DONE | DPS/HPS by encounter chart excludes wipes; Encounter Breakdown still lists all pulls |
 
@@ -263,7 +267,7 @@ Codex works on `codex-dev`, pushes `origin/codex-dev`, and opens PRs into `main`
 - Confirm the fresh docs-only PR posts to Slack now that `PR_SLACK_WEBHOOK_URL` is configured.
 - Add hard server-side upload size enforcement.
 - Decide whether app-level upload rate limiting is needed or Railway-level controls are enough.
-- After the quiet sync PR deploys, reinstall/update the production Gear Sync and Guild Roster Sync userscripts from `/admin`; keep one Warmane character tab and one guild page tab open for hourly refreshes.
+- After deployment, uninstall the retired Gear Sync and Guild Roster Sync browser scripts and run the two cleanup commands in `docs/userscript-retirement.md` only if old Windows launchers were previously installed.
 - After this parser fix deploys, reprocess or re-upload the affected latest raid so stored Saurfang and Valithria difficulties are regenerated.
 - Add more encounter-specific useful-damage exclusions as real Skada comparison data becomes available.
 - Link Railway with `railway link` only when intentionally working on Railway configuration; do not deploy without explicit instruction.

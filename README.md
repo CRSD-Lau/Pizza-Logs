@@ -20,9 +20,9 @@ Wiki: https://github.com/CRSD-Lau/Pizza-Logs/wiki
 - Boss encounter, raid session, player, weekly, and leaderboard pages.
 - File-level and encounter-level deduplication.
 - Milestones for all-time DPS/HPS records.
-- Admin-only diagnostics, upload history, cleanup controls, and import helpers.
+- Admin-only diagnostics, upload history, cleanup controls, and first-party roster refresh.
 - Header player search across combat-log players and PizzaWarriors/Lordaeron roster-only members.
-- Browser-assisted Warmane guild roster and gear import flows.
+- First-party Warmane guild roster refresh and on-demand player gear quick looks.
 - Gear display backed by cached Warmane equipment plus local AzerothCore item metadata.
 - Player avatars use WoW class icons, falling back to initials when class data or icon loading is unavailable.
 - Railway production deployment with separate web and parser services.
@@ -145,16 +145,7 @@ Player profiles merge:
 
 [Class avatars are first-party gear quick-look controls](docs/player-gear-quick-look.md). Hover, focus, or tap one to lazily request the known character through Pizza Logs, refresh the Warmane equipment snapshot on a five-minute window, and show class, gear icons, GearScoreLite, average item level, and freshness in a compact tooltip. Normal viewing does not require Tampermonkey, a bookmarklet, an admin secret, or an open Warmane tab. The last healthy database snapshot is used if a live Armory request fails.
 
-Warmane live server fetches remain best-effort because Cloudflare behavior can change. The browser-assisted tools under `/admin` remain available for scheduled bulk refreshes and roster imports:
-
-- Warmane Gear Sync userscript for hourly current-equipment refreshes and icon backfill.
-- Warmane Guild Roster userscript for hourly roster rank, class, race, professions, and member refreshes.
-
-For Windows safety, the repo includes cleanup scripts that remove old Windows
-auto-open launchers; the userscripts refresh hourly inside existing Warmane tabs:
-[`docs/gear-sync-windows-task.md`](docs/gear-sync-windows-task.md).
-The guild roster has the same local Windows automation:
-[`docs/guild-roster-sync-windows-task.md`](docs/guild-roster-sync-windows-task.md).
+Warmane live server fetches remain best-effort because Cloudflare behavior can change. Gear quick looks fall back to the last healthy snapshot, while an authenticated **Refresh from Warmane** control on `/admin` updates the durable guild-roster snapshot. There is no active Tampermonkey, bookmarklet, open-tab, or browser-stored-secret dependency. Existing installations can be removed using the [browser sync retirement guide](docs/userscript-retirement.md).
 
 Player avatars intentionally use class icons instead of Warmane-rendered character portraits. The small shield badge identifies the live gear quick look. The old portrait userscript URL remains only as a no-op compatibility update for existing installs.
 
@@ -325,6 +316,6 @@ Short version: keep parser correctness first, avoid direct `main` pushes, keep s
 
 - Fully absorbed missed events without a numeric absorbed amount cannot be measured; multi-shield damage is conservatively attributed to the newest active supported shield and marked ambiguous.
 - Boss-specific UwU "useful damage" formulas and global spell-search pages are not copied; generic boss/target damage remains available and the parity boundary is documented.
-- Warmane server-side roster/gear fetches are unreliable; browser-assisted imports are the supported path.
+- Warmane server-side roster/gear fetches can be temporarily unavailable; first-party requests use durable cached snapshots as fallback.
 - Hodir Hard Mode and Sartharion drake modes remain unsupported and return `UNKNOWN`.
 - Upload concurrency is bounded in-process; distributed rate limiting across multiple Railway replicas is not implemented.

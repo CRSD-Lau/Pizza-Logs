@@ -16,7 +16,7 @@ failure from PR #29 is resolved in `main`.
 | Exact UwU ZIP is not publicly downloadable | Synthetic regressions prove each repaired behavior, but cannot reproduce every event in the linked report | Use the frozen public five-pull baseline now; Neil's post-merge re-upload is the real-log acceptance gate |
 | Spec/role evidence can be absent | Short pulls or unobserved signature spells can leave a spec unset or role conservative | Use observed spell, healing, output, and damage-taken evidence; never force a spec from weak evidence |
 | UwU boss-specific useful/mechanic reports are not universal | Generic target damage exists, but Valkyr grabs, Defile targets, and opinionated boss-specific useful formulas are not all first-class reports | Add one boss rule at a time with Warmane fixtures and keep it supplemental to Skada totals |
-| Warmane direct server fetches can regress behind Cloudflare/403 | A live gear quick look can temporarily show the last healthy snapshot; bulk gear/roster refreshes can also pause | First-party quick look uses a five-minute cache plus stale fallback; browser userscripts remain optional bulk/background refresh tools |
+| Warmane direct server fetches can regress behind Cloudflare/403 | A live gear quick look or admin roster refresh can temporarily show/use the last healthy snapshot | First-party quick look uses a five-minute cache plus stale fallback; roster refresh preserves the durable database snapshot on failure |
 | Hodir Hard Mode and Sartharion drake modes are unsupported | Those attempts cannot be ranked by an auditable mode | Return `UNKNOWN` until explicit evidence rules exist |
 | Orphaned pets can remain unmatched | A pet already active before logging and lacking summon or owner-exclusive spell evidence remains intentionally unattributed | Propagate permanent-pet ownership only after defensible owner evidence; never infer from generic raid healing |
 | Migration history began after the original schema was created by `db push` | A brand-new empty database is not reconstructable from migrations alone | Existing production is supported by `start.sh` migration baselining; create and rehearse a greenfield baseline before provisioning a replacement database |
@@ -27,7 +27,8 @@ failure from PR #29 is resolved in `main`.
 | Issue | Resolution |
 |---|---|
 | Low-contrast 9-12px metadata disappeared against dark surfaces | Raised semantic metadata tokens to AA-readable values, established a 12px decorative and 14px normal metadata floor, and added a frontend contract test |
-| Viewing current gear required a Tampermonkey-assisted refresh path | Class avatars now lazy-load a first-party five-minute Armory quick look with equipment icons, class identity, GearScoreLite, and cached fallback; no helper or admin secret is required for normal viewing |
+| Viewing current gear required a Tampermonkey-assisted refresh path | Class avatars now lazy-load a first-party five-minute Armory quick look with equipment icons, class identity, GearScoreLite, and cached fallback; no helper or admin secret is required |
+| Gear and roster operations depended on browser userscripts and open Warmane tabs | Removed browser import controls/APIs and task installers; gear is on demand, roster has an authenticated first-party admin refresh, and legacy update URLs serve inert secret-cleanup scripts |
 | Long player, boss, and leaderboard pages exposed every record at once | Players now paginate at 30; inactive bosses and per-boss leaderboards use accessible progressive disclosure |
 | Damage and target meter rows were mouse-only clickable divs | Rows are native buttons with visible focus, `aria-expanded`, stable controlled regions, and responsive mobile summaries |
 | Cinematic intro blocked hard-loaded report routes | Intro now runs only on the homepage and only once per browser session |
@@ -94,5 +95,5 @@ failure from PR #29 is resolved in `main`.
 ## Not Bugs
 
 - uwu-logs differences are expected when uwu uses different encounter windows or damage math.
-- Warmane live fetch failure is expected; cached/browser-assisted import is the supported path.
+- A temporary Warmane fetch failure is expected; first-party refresh plus cached snapshots is the supported path.
 - Rendered portraits are intentionally not used; class icons are the supported avatar path.
