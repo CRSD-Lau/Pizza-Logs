@@ -29,6 +29,7 @@ failure from PR #29 is resolved in `main`.
 | Low-contrast 9-12px metadata disappeared against dark surfaces | Raised semantic metadata tokens to AA-readable values, established a 12px decorative and 14px normal metadata floor, and added a frontend contract test |
 | Viewing current gear required a Tampermonkey-assisted refresh path | Class avatars now lazy-load a first-party five-minute Armory quick look with equipment icons, class identity, GearScoreLite, and cached fallback; no helper or admin secret is required |
 | Gear and roster operations depended on browser userscripts and open Warmane tabs | Removed browser import controls/APIs and task installers; gear is on demand, roster has an authenticated first-party admin refresh, and legacy update URLs serve inert secret-cleanup scripts |
+| Admin showed a cumulative-looking `Server Refresh Errors` count that actually represented per-character last-attempt state | Replaced it with the latest successful live-refresh timestamp, clarified cached snapshots, and added a protected cache-reset control |
 | Long player, boss, and leaderboard pages exposed every record at once | Players now paginate at 30; inactive bosses and per-boss leaderboards use accessible progressive disclosure |
 | Damage and target meter rows were mouse-only clickable divs | Rows are native buttons with visible focus, `aria-expanded`, stable controlled regions, and responsive mobile summaries |
 | Cinematic intro blocked hard-loaded report routes | Intro now runs only on the homepage and only once per browser session |

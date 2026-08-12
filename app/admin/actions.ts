@@ -47,6 +47,18 @@ export async function deleteUpload(
   return { ok: true };
 }
 
+export async function clearArmoryGearCache(): Promise<
+  | { ok: true; deleted: number }
+  | { ok: false; error: string }
+> {
+  if (!(await verifyAdmin())) return { ok: false, error: "Unauthorized" };
+
+  const result = await db.armoryGearCache.deleteMany();
+  revalidatePath("/admin");
+
+  return { ok: true, deleted: result.count };
+}
+
 export async function syncGuildRosterFromAdmin(): Promise<
   | { ok: true; count: number; skipped?: boolean }
   | { ok: false; error: string }

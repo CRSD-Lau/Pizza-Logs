@@ -6,6 +6,7 @@ import { StatCard } from "@/components/ui/StatCard";
 import { formatBytes } from "@/lib/utils";
 import { getDeploymentInfo } from "@/lib/deployment-info";
 import { ClearDatabaseButton } from "./ClearDatabaseButton";
+import { ClearGearCacheButton } from "./ClearGearCacheButton";
 import { DeleteUploadButton } from "./DeleteUploadButton";
 import { GuildRosterSyncPanel } from "./GuildRosterSyncPanel";
 
@@ -25,6 +26,7 @@ type RecentUploadRow = {
 type TopUploaderRow = { uploaderName: string | null; _count: { uploaderName: number } };
 type LatestRosterSyncRow = { lastSyncedAt: Date } | null;
 type LatestItemImportRow = { importedAt: Date | null } | null;
+type LatestGearRefreshRow = { lastSuccessAt: Date | null } | null;
 
 export default async function AdminPage() {
   const deployment = getDeploymentInfo();
@@ -41,7 +43,7 @@ export default async function AdminPage() {
   let topUploaders: TopUploaderRow[] = [];
   let bossCount = 0;
   let gearCacheTotal = 0;
-  let recentGearErrors = 0;
+  let latestGearRefresh: LatestGearRefreshRow = null;
   let rosterCount = 0;
   let latestRosterSync: LatestRosterSyncRow = null;
   let itemImportCount = 0;
@@ -60,7 +62,7 @@ export default async function AdminPage() {
       topUploaders,
       bossCount,
       gearCacheTotal,
-      recentGearErrors,
+      latestGearRefresh,
       rosterCount,
       latestRosterSync,
       itemImportCount,
@@ -91,7 +93,11 @@ export default async function AdminPage() {
       }),
       db.boss.count(),
       db.armoryGearCache.count(),
-      db.armoryGearCache.count({ where: { lastError: { not: null } } }),
+      db.armoryGearCache.findFirst({
+        where: { lastSuccessAt: { not: null } },
+        orderBy: { lastSuccessAt: "desc" },
+        select: { lastSuccessAt: true },
+      }),
       db.guildRosterMember.count(),
       db.guildRosterMember.findFirst({
         orderBy: { lastSyncedAt: "desc" },
@@ -184,15 +190,31 @@ export default async function AdminPage() {
         <SectionHeader title="Warmane Gear Cache" sub="On-demand equipment snapshots for player quick looks" />
         <div className="bg-bg-panel border border-gold-dim rounded-sm p-4 space-y-4">
           <div className="grid grid-cols-2 gap-3">
-            <StatCard label="Cached Characters"    value={gearCacheTotal} />
-            <StatCard label="Server Refresh Errors" value={recentGearErrors} />
+            <StatCard label="Cached Snapshots" value={gearCacheTotal} />
+            <StatCard
+              label="Latest Live Refresh"
+              value={latestGearRefresh?.lastSuccessAt
+                ? latestGearRefresh.lastSuccessAt.toLocaleString("en-US", {
+                    month: "short",
+                    day: "numeric",
+                    year: "numeric",
+                    hour: "numeric",
+                    minute: "2-digit",
+                    timeZone: "UTC",
+                    timeZoneName: "short",
+                  })
+                : "Never"}
+            />
           </div>
-          <p className="text-sm text-text-secondary max-w-3xl">
-            Class avatars fetch current equipment directly through Pizza Logs when a gear quick
-            look opens. Healthy snapshots are cached for five minutes, and the last successful
-            snapshot remains available if Warmane is temporarily unreachable. No browser helper,
-            open Armory tab, or copied admin secret is part of this path.
-          </p>
+          <div className="flex flex-wrap items-start justify-between gap-4">
+            <p className="text-sm text-text-secondary max-w-3xl">
+              Class avatars fetch current equipment directly through Pizza Logs when a gear quick
+              look opens. Healthy snapshots are cached for five minutes, and the last successful
+              snapshot remains available if Warmane is temporarily unreachable. No browser helper,
+              open Armory tab, or copied admin secret is part of this path.
+            </p>
+            <ClearGearCacheButton />
+          </div>
         </div>
       </section>
 
