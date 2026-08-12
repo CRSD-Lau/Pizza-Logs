@@ -24,6 +24,12 @@ Codex works on `codex-dev`, pushes `origin/codex-dev`, and opens PRs into `main`
 
 ## This Session
 
+- Replaced the ambiguous gear-cache error total with the latest successful live-refresh timestamp in UTC and renamed the total to Cached Snapshots.
+- Added a protected, confirmation-gated Clear Gear Cache control that deletes only Armory gear snapshots.
+- Live-tested production: Maximusboom refreshed non-stale with 19 items and GearScore 6,245; Azyia demonstrated the intended stale-snapshot fallback during an individual Warmane failure.
+- Kept production data intact because the local Railway CLI login is expired; the new admin control is the safe reset mechanism after deployment.
+- Passed 36 web tests, both TypeScript gates, zero-warning ESLint, and the Next.js 16 production build.
+
 - Added `GET /api/players/[name]/gear` as the bounded public read path for known Pizza Logs characters.
 - Extended Armory snapshots with optional class, race, and guild identity returned by Warmane.
 - Turned class avatars into accessible live-gear quick-look controls and added class icons to encounter meters.

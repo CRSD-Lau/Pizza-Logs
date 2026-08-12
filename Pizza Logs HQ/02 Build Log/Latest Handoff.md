@@ -113,6 +113,16 @@
 - Authenticated local admin verification showed the new refresh control at exactly 44px high, no install/userscript language, no horizontal overflow, and no console warnings or errors.
 - No parser, Prisma schema, migration, or combat-log behavior changed.
 
+## Live Gear Cache Validation Session
+
+- Replaced the misleading **Server Refresh Errors** total with **Latest Live Refresh**, sourced from the newest non-null `lastSuccessAt` and rendered explicitly in UTC.
+- Renamed **Cached Characters** to **Cached Snapshots** so the count is not confused with roster size.
+- Added an authenticated, confirmation-gated **Clear Gear Cache** control that deletes only `armory_gear_cache`; players, roster, item metadata, uploads, and reports are untouched.
+- Production live probes proved both paths: Maximusboom returned a new non-stale 19-item snapshot at `2026-08-12T01:46:44Z` with GearScore 6,245, while Azyia safely returned a stale July 27 snapshot when that request could not refresh.
+- Railway CLI authentication is expired on the workstation, so no direct production database deletion was attempted. The protected admin control is the credential-safe reset path after deployment.
+- `npm run check:pr` passed: zero-warning ESLint, both TypeScript gates, all 36 web tests, and the Next.js 16 production build.
+- No parser, Prisma schema, migration, or combat-log behavior changed.
+
 ## Quiet Warmane Sync Launch Session
 
 - Investigated Neil's report that hourly sync was opening too many browser tabs
