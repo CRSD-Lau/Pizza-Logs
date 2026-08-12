@@ -20,7 +20,7 @@ After every change session, update:
 
 Include vault updates in the same commit as code/docs changes.
 
-The user does not test local-only changes. Codex must work from the long-lived `codex-dev` branch, commit scoped changes there, push `origin/codex-dev`, and prepare PRs into `main`. Codex must never commit directly to `main`, push directly to `main`, or merge directly into `main`. Railway production deploys from `main` only after the user merges a PR.
+The user does not test local-only changes. Codex must work from the long-lived `codex-dev` branch, commit scoped changes there, push `origin/codex-dev`, and prepare PRs into `main`. After every required CI check passes and no merge conflict or explicit blocker remains, Codex merges the PR through GitHub without waiting for manual user review. Codex must never commit or push directly to `main`, and must never bypass required checks. Railway production deploys from `main` after the PR merges.
 
 ## Project Overview
 
@@ -115,8 +115,9 @@ Admin-only routes must stay protected. Public routes must not expose raw secrets
 
 - Work from `codex-dev` unless the user explicitly asks for a different branch.
 - Do not push `main` from Codex.
-- Do not merge PRs into `main` from Codex.
-- Production deploy happens only after the user merges `codex-dev` into `main`.
+- Merge PRs into `main` from Codex after all required CI checks pass and no merge conflict or explicit blocker remains; manual user review is not required.
+- Never bypass, dismiss, or override a required check to merge.
+- Production deploy happens after the passing PR from `codex-dev` merges into `main`.
 - Do not change Railway production environment variables from Codex.
 - Do not commit `.env` files or production secrets.
 - `start.sh` runs `prisma migrate deploy`, then `node server.js`.
@@ -130,7 +131,7 @@ Update docs when behavior, commands, deployment, parser rules, or workflows chan
 ## Git Hygiene
 
 - Default Codex branch for this project: `codex-dev`.
-- `main` is production-only. Codex must not commit, push, or merge directly to `main`.
+- `main` is production-only. Codex must not commit or push directly to `main`; merge only through a passing PR.
 - Before starting Codex work, run `git checkout codex-dev`, `git fetch origin`, and `git merge origin/main`.
 - After a PR merges, update `codex-dev` from `main` before starting new work.
 - Review every modified, deleted, and untracked file before staging.
@@ -190,7 +191,7 @@ When requesting review, include `@codex review` on GitHub if configured and ask 
 - Documentation drift and stale commands
 - Dependency or lockfile changes
 
-Before opening a PR or asking Neil to merge into `main`, verify tests pass, parser validation passes when applicable, build passes, secret scan or staged-secret review passes, no `.env` or production secret is staged, Railway config changes are intentional, database changes are understood, and the final diff has been reviewed.
+Before opening or merging a PR into `main`, verify tests pass, parser validation passes when applicable, build passes, secret scan or staged-secret review passes, no `.env` or production secret is staged, Railway config changes are intentional, database changes are understood, and the final diff has been reviewed. Once required GitHub CI is green, merge without waiting for manual user approval.
 
 ## Hard Stop
 

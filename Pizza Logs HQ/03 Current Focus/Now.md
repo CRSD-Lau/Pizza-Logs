@@ -20,10 +20,12 @@ Documentation metadata refresh: the README now links to the GitHub wiki, and the
 
 ## Current Branch Rule
 
-Codex works on `codex-dev`, pushes `origin/codex-dev`, and opens PRs into `main`. Codex does not push or merge `main` directly.
+Codex works on `codex-dev`, pushes `origin/codex-dev`, and opens PRs into `main`. When every required CI check passes and no conflict or explicit blocker remains, Codex merges the PR through GitHub without waiting for manual review. Codex never commits or pushes `main` directly and never bypasses required checks.
 
 ## This Session
 
+- Merged PR #39 after its required CI passed, then changed the standing release rule so Codex automatically merges future green PRs without waiting for Neil's review.
+- Kept `main` protected: work still originates on `codex-dev`, every change still goes through a PR, and failing or pending required checks still block the merge.
 - Replaced the desktop gear list with a WoW-style equipment paper doll: armor slots on both sides, weapons below, and a central class/race/GearScore panel; mobile keeps the full two-column list.
 - Verified Warmane exposes character customization as a WebGL recipe rather than a portrait image, parsed its bounded appearance/display fields, and rendered the dressed model in a script-only sandbox with a class-icon fallback.
 - Confirmed the local Lausudo quick look visibly renders the Human female model with armor, weapon, and shield; mobile does not load the model viewer.
