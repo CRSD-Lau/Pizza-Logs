@@ -31,6 +31,7 @@ failure from PR #29 is resolved in `main`.
 | Gear and roster operations depended on browser userscripts and open Warmane tabs | Removed browser import controls/APIs and task installers; gear is on demand, roster has an authenticated first-party admin refresh, and legacy update URLs serve inert secret-cleanup scripts |
 | Gear quick looks clipped the final equipment rows because the item grid was capped at 24rem with hidden overflow | Removed the clipping cap and expanded the responsive loadout grid to two columns on narrow screens and three on desktop |
 | Gear quick looks read like a generic item grid rather than the in-game character equipment screen | Desktop now uses fixed left/right armor rails, a central character panel, visible empty slots, and bottom weapon slots; mobile retains the complete compact list |
+| The WoW-style paper doll center had only a large class icon | Warmane appearance and equipped display IDs now drive a dressed WebGL character in an isolated desktop frame, with the class icon retained as the failure/mobile fallback |
 | Admin showed a cumulative-looking `Server Refresh Errors` count that actually represented per-character last-attempt state | Replaced it with the latest successful live-refresh timestamp, clarified cached snapshots, and added a protected cache-reset control |
 | Long player, boss, and leaderboard pages exposed every record at once | Players now paginate at 30; inactive bosses and per-boss leaderboards use accessible progressive disclosure |
 | Damage and target meter rows were mouse-only clickable divs | Rows are native buttons with visible focus, `aria-expanded`, stable controlled regions, and responsive mobile summaries |
@@ -99,4 +100,4 @@ failure from PR #29 is resolved in `main`.
 
 - uwu-logs differences are expected when uwu uses different encounter windows or damage math.
 - A temporary Warmane fetch failure is expected; first-party refresh plus cached snapshots is the supported path.
-- Rendered portraits are intentionally not used; class icons are the supported avatar path.
+- Player-list portraits intentionally remain class icons; the desktop gear quick look uses the isolated Warmane 3D model when available.

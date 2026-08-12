@@ -143,11 +143,11 @@ Player profiles merge:
 - cached Warmane gear snapshots from `armory_gear_cache`;
 - local item metadata from `wow_items`.
 
-[Class avatars are first-party gear quick-look controls](docs/player-gear-quick-look.md). Hover, focus, or tap one to lazily request the known character through Pizza Logs, refresh the Warmane equipment snapshot on a five-minute window, and show class, gear icons, GearScoreLite, average item level, and freshness in a compact tooltip. Normal viewing does not require Tampermonkey, a bookmarklet, an admin secret, or an open Warmane tab. The last healthy database snapshot is used if a live Armory request fails.
+[Class avatars are first-party gear quick-look controls](docs/player-gear-quick-look.md). Hover, focus, or tap one to lazily request the known character through Pizza Logs, refresh the Warmane equipment snapshot on a five-minute window, and show a WoW-style equipment pane with gear icons, GearScoreLite, average item level, freshness, and a dressed Warmane 3D model on desktop. Normal viewing does not require Tampermonkey, a bookmarklet, an admin secret, or an open Warmane tab. The last healthy database snapshot is used if a live Armory request fails.
 
 Warmane live server fetches remain best-effort because Cloudflare behavior can change. Gear quick looks fall back to the last healthy snapshot, while an authenticated **Refresh from Warmane** control on `/admin` updates the durable guild-roster snapshot. Admin diagnostics show the latest successful live gear refresh and provide a confirmation-gated gear-cache reset. There is no active Tampermonkey, bookmarklet, open-tab, or browser-stored-secret dependency. Existing installations can be removed using the [browser sync retirement guide](docs/userscript-retirement.md).
 
-Player avatars intentionally use class icons instead of Warmane-rendered character portraits. The small shield badge identifies the live gear quick look. The old portrait userscript URL remains only as a no-op compatibility update for existing installs.
+Player list avatars intentionally remain fast class icons, and the small shield badge identifies the live gear quick look. Inside the desktop quick look, Warmane's model recipe renders in a tightly sandboxed frame with the class icon as its fallback. The old portrait userscript URL remains only as a no-op compatibility update for existing installs.
 
 Item names, item levels, stats, slot metadata, and GearScoreLite inputs come from the local AzerothCore `item_template` import:
 
@@ -155,7 +155,7 @@ Item names, item levels, stats, slot metadata, and GearScoreLite inputs come fro
 npm run db:import-items
 ```
 
-No runtime Wowhead API dependency is used. Live equipment and class icons use Warmane's static CDN; local item-template icon slugs can fall back to static `wow.zamimg.com` image URLs.
+No runtime Wowhead API dependency is used. Live equipment, class icons, and the isolated desktop character model use Warmane's public profile/CDN data; local item-template icon slugs can fall back to static `wow.zamimg.com` image URLs.
 
 ## Local Development
 

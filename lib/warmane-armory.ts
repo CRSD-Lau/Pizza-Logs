@@ -16,6 +16,21 @@ export type ArmoryGearItem = {
   gems?: string[];
 };
 
+export type ArmoryCharacterAppearance = {
+  modelId: string;
+  skin: number;
+  hairStyle: number;
+  hairColor: number;
+  face: number;
+  facialHair: number;
+  faceColor: number;
+  earPiercing: number;
+  hornStyle: number;
+  tattoo: number;
+  classId: number;
+  items: Array<[number, number]>;
+};
+
 export type ArmoryCharacterGear = {
   characterName: string;
   realm: string;
@@ -25,6 +40,7 @@ export type ArmoryCharacterGear = {
   sourceUrl: string;
   fetchedAt: string;
   items: ArmoryGearItem[];
+  appearance?: ArmoryCharacterAppearance | null;
 };
 
 export type ArmoryGearResult =
@@ -163,6 +179,56 @@ export function extractWarmaneGearIconUrls(html: string): Record<string, string>
   }
 
   return icons;
+}
+
+export function extractWarmaneCharacterAppearance(html: string): ArmoryCharacterAppearance | null {
+  const recipe = html.match(/var\s+charactermodel\s*=\s*\{([\s\S]*?)\s*\};/i)?.[1];
+  if (!recipe) return null;
+
+  const readInt = (key: string, max = 255): number | null => {
+    const raw = recipe.match(new RegExp(`\\b${key}\\s*:\\s*(\\d+)`, "i"))?.[1];
+    const value = raw ? Number(raw) : NaN;
+    return Number.isInteger(value) && value >= 0 && value <= max ? value : null;
+  };
+
+  const modelId = recipe.match(/\bmodels\s*:\s*\{[\s\S]*?\bid\s*:\s*['"]([a-z]+)['"]/i)?.[1]?.toLowerCase();
+  if (!modelId || !/^[a-z]{3,32}$/.test(modelId)) return null;
+
+  const itemBlock = recipe.match(/\bitems\s*:\s*\[([\s\S]*?)\]\s*,?\s*models\s*:/i)?.[1] ?? "";
+  const items = Array.from(itemBlock.matchAll(/\[\s*(\d+)\s*,\s*(\d+)\s*\]/g))
+    .slice(0, 24)
+    .map((match): [number, number] => [Number(match[1]), Number(match[2])])
+    .filter(([slot, displayId]) => slot > 0 && slot <= 32 && displayId > 0 && displayId <= 1_000_000);
+
+  const values = {
+    skin: readInt("sk"),
+    hairStyle: readInt("ha"),
+    hairColor: readInt("hc"),
+    face: readInt("fa"),
+    facialHair: readInt("fh"),
+    faceColor: readInt("fc"),
+    earPiercing: readInt("ep"),
+    hornStyle: readInt("ho"),
+    tattoo: readInt("ta"),
+    classId: readInt("cls", 20),
+  };
+
+  if (Object.values(values).some((value) => value === null)) return null;
+
+  return {
+    modelId,
+    skin: values.skin!,
+    hairStyle: values.hairStyle!,
+    hairColor: values.hairColor!,
+    face: values.face!,
+    facialHair: values.facialHair!,
+    faceColor: values.faceColor!,
+    earPiercing: values.earPiercing!,
+    hornStyle: values.hornStyle!,
+    tattoo: values.tattoo!,
+    classId: values.classId!,
+    items,
+  };
 }
 
 function asNumber(value: unknown): number | undefined {
@@ -462,6 +528,7 @@ async function fetchWarmaneGearLive(
     }
 
     const liveIcons = armoryHtml ? extractWarmaneGearIconUrls(armoryHtml) : {};
+    const appearance = armoryHtml ? extractWarmaneCharacterAppearance(armoryHtml) : null;
     const equipment = normalizeEquipment(data.equipment).map(item => (
       item.iconUrl || !item.itemId || !liveIcons[item.itemId]
         ? item
@@ -479,6 +546,7 @@ async function fetchWarmaneGearLive(
         sourceUrl,
         fetchedAt: new Date().toISOString(),
         items: normalizeArmoryGearSlots(await enrichGearWithLocalTemplate(equipment)),
+        appearance,
       },
     };
   } catch (error) {
@@ -673,6 +741,7 @@ export function shouldRefreshArmoryGearCache({
   maxAgeMs?: number;
 }): boolean {
   if (!cachedGear) return true;
+  if (cachedGear.appearance === undefined) return true;
   if (gearNeedsEnrichment(cachedGear)) return true;
 
   const cachedFetchedAt = new Date(cachedGear.fetchedAt).getTime();
