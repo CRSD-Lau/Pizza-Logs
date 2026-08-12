@@ -17,9 +17,37 @@ const liveFailure: ArmoryGearResult = {
   message: "Gear data is temporarily unavailable from Warmane Armory.",
 };
 
+const liveAppearance = {
+  modelId: "draeneifemale",
+  skin: 0,
+  hairStyle: 5,
+  hairColor: 3,
+  face: 7,
+  facialHair: 0,
+  faceColor: 0,
+  earPiercing: 0,
+  hornStyle: 4,
+  tattoo: 0,
+  classId: 2,
+  items: [[1, 63931], [16, 48563]] as Array<[number, number]>,
+};
+
 assert.deepEqual(
   resolveArmoryGearResult({ cachedGear, liveResult: liveFailure }),
   { ok: true, gear: cachedGear, stale: true },
+);
+
+assert.deepEqual(
+  resolveArmoryGearResult({
+    cachedGear,
+    liveResult: { ...liveFailure, appearance: liveAppearance },
+  }),
+  {
+    ok: true,
+    gear: { ...cachedGear, appearance: liveAppearance },
+    stale: true,
+  },
+  "a healthy profile recipe upgrades cached gear even when the equipment API fails",
 );
 
 const liveGear: ArmoryCharacterGear = {

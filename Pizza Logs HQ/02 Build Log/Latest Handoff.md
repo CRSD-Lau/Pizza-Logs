@@ -56,6 +56,8 @@
 - Fixed the Railway production-smoke trigger to accept its actual `Pizza Logs / production` environment name; the old exact equality check skipped every deployment-status run.
 - Fixed the smoke target URL: Railway's deployment `environment_url` points to its project dashboard, not the public app, so automated checks now use the canonical production URL while manual dispatches can still override it.
 - PR #41 (`7848041`) enabled the deployment trigger and exposed the dashboard-URL bug; PR #42 (`599e479`) fixed the target, deployed successfully on Railway, and Production Smoke run `31599979449` passed.
+- Fixed legacy cached gear fallbacks dropping an otherwise healthy Warmane appearance recipe when the separate equipment JSON request failed. Cached gear now keeps its stale label while gaining and persisting the live 3D model recipe.
+- Reproduced Mothrmonster on production: the initial screenshot showed a pre-appearance `Cached fallback`; a fresh request returned 18 items plus `draeneifemale`, and the dressed Draenei rendered successfully.
 - Guild roster refresh is an authenticated first-party control on `/admin`; no
   browser helper or open Warmane tab participates in the current data path.
 - README now includes a high-resolution app preview captured from a fresh local Next server on `http://127.0.0.1:3004`.

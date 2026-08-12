@@ -45,7 +45,12 @@ export type ArmoryCharacterGear = {
 
 export type ArmoryGearResult =
   | { ok: true; gear: ArmoryCharacterGear; stale?: boolean }
-  | { ok: false; sourceUrl: string; message: string };
+  | {
+      ok: false;
+      sourceUrl: string;
+      message: string;
+      appearance?: ArmoryCharacterAppearance;
+    };
 
 type WarmaneEquipmentItem = {
   name?: unknown;
@@ -483,7 +488,7 @@ export function normalizeImportedArmoryGear(
   };
 }
 
-async function fetchWarmaneGearLive(
+export async function fetchWarmaneGearLive(
   characterName: string,
   realm: string = DEFAULT_REALM
 ): Promise<ArmoryGearResult> {
@@ -501,13 +506,14 @@ async function fetchWarmaneGearLive(
 
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
+  let liveAppearance: ArmoryCharacterAppearance | null = null;
 
   try {
     const requestHeaders = {
       Accept: "application/json,text/plain,*/*",
       "User-Agent": USER_AGENT,
     };
-    const [response, armoryHtml] = await Promise.all([
+    const [summaryResult, profileResult] = await Promise.allSettled([
       fetch(getApiUrl(sanitizedName, sanitizedRealm), {
         headers: requestHeaders,
         signal: controller.signal,
@@ -515,8 +521,15 @@ async function fetchWarmaneGearLive(
       fetch(sourceUrl, {
         headers: requestHeaders,
         signal: controller.signal,
-      }).then(async pageResponse => pageResponse.ok ? pageResponse.text() : null).catch(() => null),
+      }).then(async pageResponse => pageResponse.ok ? pageResponse.text() : null),
     ]);
+    const armoryHtml = profileResult.status === "fulfilled" ? profileResult.value : null;
+    liveAppearance = armoryHtml ? extractWarmaneCharacterAppearance(armoryHtml) : null;
+
+    if (summaryResult.status === "rejected") {
+      throw summaryResult.reason;
+    }
+    const response = summaryResult.value;
 
     if (!response.ok) {
       throw new Error(`Warmane Armory returned ${response.status}`);
@@ -528,7 +541,6 @@ async function fetchWarmaneGearLive(
     }
 
     const liveIcons = armoryHtml ? extractWarmaneGearIconUrls(armoryHtml) : {};
-    const appearance = armoryHtml ? extractWarmaneCharacterAppearance(armoryHtml) : null;
     const equipment = normalizeEquipment(data.equipment).map(item => (
       item.iconUrl || !item.itemId || !liveIcons[item.itemId]
         ? item
@@ -546,7 +558,7 @@ async function fetchWarmaneGearLive(
         sourceUrl,
         fetchedAt: new Date().toISOString(),
         items: normalizeArmoryGearSlots(await enrichGearWithLocalTemplate(equipment)),
-        appearance,
+        appearance: liveAppearance,
       },
     };
   } catch (error) {
@@ -560,6 +572,7 @@ async function fetchWarmaneGearLive(
       ok: false,
       sourceUrl,
       message: "Gear data is temporarily unavailable from Warmane Armory.",
+      ...(liveAppearance ? { appearance: liveAppearance } : {}),
     };
   } finally {
     clearTimeout(timeout);
@@ -574,7 +587,15 @@ export function resolveArmoryGearResult({
   liveResult: ArmoryGearResult;
 }): ArmoryGearResult {
   if (liveResult.ok) return liveResult;
-  if (cachedGear) return { ok: true, gear: cachedGear, stale: true };
+  if (cachedGear) {
+    return {
+      ok: true,
+      gear: liveResult.appearance
+        ? { ...cachedGear, appearance: liveResult.appearance }
+        : cachedGear,
+      stale: true,
+    };
+  }
   return liveResult;
 }
 
@@ -662,7 +683,8 @@ async function markRefreshFailed(
   characterName: string,
   realm: string,
   sourceUrl: string,
-  message: string
+  message: string,
+  cachedGear?: ArmoryCharacterGear | null,
 ): Promise<void> {
   try {
     await db.armoryGearCache.update({
@@ -676,6 +698,7 @@ async function markRefreshFailed(
         sourceUrl,
         lastAttemptAt: new Date(),
         lastError: message,
+        ...(cachedGear ? { gear: cachedGear } : {}),
       },
     });
   } catch {
@@ -720,7 +743,10 @@ export async function getWarmaneCharacterGear(
   if (liveResult.ok) {
     await writeCachedGear(liveResult.gear);
   } else {
-    await markRefreshFailed(sanitizedName, sanitizedRealm, sourceUrl, liveResult.message);
+    if (cachedGear && liveResult.appearance) {
+      cachedGear = { ...cachedGear, appearance: liveResult.appearance };
+    }
+    await markRefreshFailed(sanitizedName, sanitizedRealm, sourceUrl, liveResult.message, cachedGear);
   }
 
   const baseResult = resolveArmoryGearResult({ cachedGear, liveResult });
