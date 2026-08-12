@@ -11,7 +11,7 @@
 ## Current State
 
 - Pizza Logs is Codex-first: work happens on `codex-dev`, then PRs go into `main`.
-- Railway production deploys from `main` after Neil merges a PR.
+- Railway production deploys from `main` after a PR merges. Codex now merges automatically when all required CI checks pass and no conflict or explicit blocker remains; manual user review is not required.
 - Live app: https://pizza-logs-production.up.railway.app
 - Canonical local checkout on Neil's desktop: `C:\Projects\PizzaLogs`
 - Local app target on Neil's desktop: http://127.0.0.1:3001
@@ -51,6 +51,8 @@
 - Desktop gear quick looks now render Warmane's dressed 3D character from the
   profile appearance recipe inside a restrictive script-only sandbox; mobile and
   viewer failures keep the class-icon fallback.
+- PR #39 merged into `main` as `bc97634` after both required checks passed.
+- The standing release rule now authorizes Codex to merge green PRs automatically while preserving the PR-only, no-direct-push protection on `main`.
 - Guild roster refresh is an authenticated first-party control on `/admin`; no
   browser helper or open Warmane tab participates in the current data path.
 - README now includes a high-resolution app preview captured from a fresh local Next server on `http://127.0.0.1:3004`.
@@ -486,8 +488,7 @@
 
 ## Exact Next Step
 
-Review the frontend audit remediation PR from `codex-dev` into `main`. Railway
-will deploy only after Neil merges it. After deployment, smoke-check one
-populated session and encounter on a real mobile browser, then continue the
-existing UwU re-upload acceptance step for historical parser data. Codex does
-not merge or push `main` directly.
+Verify Railway has deployed `bc97634`, smoke-check the live gear quick look, and
+continue the existing UwU re-upload acceptance step for historical parser data.
+Future PRs merge automatically after required CI passes; Codex still does not
+commit or push `main` directly.

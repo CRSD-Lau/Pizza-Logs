@@ -268,7 +268,7 @@ Parser changes must include fixture or focused pytest validation. See `parser/te
 
 ## Deployment
 
-Production deploys from `origin/main` on Railway. Codex does not push or merge `main` directly.
+Production deploys from `origin/main` on Railway. Codex never pushes `main` directly; it lands changes only through passing PRs.
 
 Workflow:
 
@@ -277,7 +277,7 @@ Workflow:
 3. Run validation.
 4. Commit and push `origin/codex-dev`.
 5. Open a PR from `codex-dev` to `main`.
-6. Neil merges the PR when ready; Railway deploys `main`.
+6. After every required CI check passes, Codex merges the PR without waiting for manual review; Railway deploys `main`.
 
 Railway startup for the web service runs `start.sh`, which resolves the Prisma CLI entry point, marks historical migrations as applied when needed, runs `prisma migrate deploy`, then starts `node server.js`.
 
