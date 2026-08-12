@@ -1,7 +1,11 @@
 import type { ArmoryGearItem } from "./warmane-armory";
 
-const LEFT_SLOTS = new Set(["Head", "Neck", "Shoulder", "Back", "Chest", "Shirt", "Tabard", "Wrist"]);
-const RIGHT_SLOTS = new Set(["Hands", "Waist", "Legs", "Feet", "Finger 1", "Finger 2", "Trinket 1", "Trinket 2"]);
+export const PAPER_DOLL_LEFT_SLOTS = ["Head", "Neck", "Shoulder", "Back", "Chest", "Shirt", "Tabard", "Wrist"] as const;
+export const PAPER_DOLL_RIGHT_SLOTS = ["Hands", "Waist", "Legs", "Feet", "Finger 1", "Finger 2", "Trinket 1", "Trinket 2"] as const;
+export const PAPER_DOLL_WEAPON_SLOTS = ["Main Hand", "Off Hand", "Ranged/Relic"] as const;
+
+const LEFT_SLOTS = new Set<string>(PAPER_DOLL_LEFT_SLOTS);
+const RIGHT_SLOTS = new Set<string>(PAPER_DOLL_RIGHT_SLOTS);
 const WEAPON_SLOTS = new Set(["Main Hand", "Off Hand", "Ranged", "Ranged/Relic"]);
 
 const SLOT_ORDER = new Map([

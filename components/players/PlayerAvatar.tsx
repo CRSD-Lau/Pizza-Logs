@@ -12,6 +12,11 @@ import { createPortal } from "react-dom";
 import { Shield } from "lucide-react";
 import type { ArmoryCharacterGear } from "@/lib/warmane-armory";
 import { getClassIconUrl } from "@/lib/class-icons";
+import {
+  PAPER_DOLL_LEFT_SLOTS,
+  PAPER_DOLL_RIGHT_SLOTS,
+  PAPER_DOLL_WEAPON_SLOTS,
+} from "@/lib/gear-layout";
 import { cn } from "@/lib/utils";
 
 type PlayerAvatarSize = "xs" | "sm" | "lg";
@@ -74,6 +79,72 @@ function getPreviewKey(name: string, realmName?: string | null): string {
   return `${name.trim().toLowerCase()}@${(realmName ?? "Lordaeron").trim().toLowerCase()}`;
 }
 
+function GearSlotRailItem({
+  slot,
+  item,
+  side,
+}: {
+  slot: string;
+  item?: ArmoryCharacterGear["items"][number];
+  side: "left" | "right";
+}) {
+  const icon = (
+    <div className="flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-xs border border-gold-dim bg-bg-card shadow-inner shadow-black/70">
+      {item?.iconUrl ? (
+        // eslint-disable-next-line @next/next/no-img-element -- Item icon URLs are normalized and supplied by the Armory/item cache.
+        <img src={item.iconUrl} alt="" className="h-full w-full object-cover" />
+      ) : (
+        <span className="text-[9px] font-bold text-text-dim">—</span>
+      )}
+    </div>
+  );
+
+  const label = (
+    <div className={cn("min-w-0", side === "left" ? "text-right" : "text-left")}>
+      <p className="truncate text-[9px] uppercase tracking-[0.12em] text-text-dim">{slot}</p>
+      <p className={cn("truncate text-[11px] font-semibold", item ? "text-text-primary" : "text-text-dim")}>
+        {item?.name ?? "Empty"}
+      </p>
+    </div>
+  );
+
+  return (
+    <div className={cn(
+      "flex min-w-0 items-center gap-2 border-b border-gold-dim/45 py-1",
+      side === "left" ? "justify-end" : "justify-start",
+    )}>
+      {side === "left" ? <>{label}{icon}</> : <>{icon}{label}</>}
+    </div>
+  );
+}
+
+function WeaponSlotItem({
+  slot,
+  item,
+}: {
+  slot: string;
+  item?: ArmoryCharacterGear["items"][number];
+}) {
+  return (
+    <div className="flex min-w-0 items-center gap-2 rounded-xs border border-gold-dim/55 bg-bg-panel/80 p-1.5">
+      <div className="flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-xs border border-gold-dim bg-bg-card shadow-inner shadow-black/70">
+        {item?.iconUrl ? (
+          // eslint-disable-next-line @next/next/no-img-element -- Item icon URLs are normalized and supplied by the Armory/item cache.
+          <img src={item.iconUrl} alt="" className="h-full w-full object-cover" />
+        ) : (
+          <span className="text-[9px] font-bold text-text-dim">—</span>
+        )}
+      </div>
+      <div className="min-w-0">
+        <p className="truncate text-[9px] uppercase tracking-[0.12em] text-text-dim">{slot}</p>
+        <p className={cn("truncate text-[11px] font-semibold", item ? "text-text-primary" : "text-text-dim")}>
+          {item?.name ?? "Empty"}
+        </p>
+      </div>
+    </div>
+  );
+}
+
 export function getPlayerGearTooltipPosition(
   anchorRect: Pick<DOMRect, "left" | "right" | "top" | "bottom">,
   tooltipSize: { width: number; height: number },
@@ -115,6 +186,9 @@ function GearPreviewPanel({
   const classIconUrl = getClassIconUrl(className);
   const raceName = preview?.ok ? preview.raceName : initialRace;
   const guildName = preview?.ok ? preview.guildName : initialGuild;
+  const itemsBySlot = preview?.ok
+    ? new Map(preview.gear.items.map((item) => [item.slot === "Ranged" ? "Ranged/Relic" : item.slot, item]))
+    : new Map<string, ArmoryCharacterGear["items"][number]>();
 
   return (
     <div
@@ -169,7 +243,7 @@ function GearPreviewPanel({
 
       {!loading && preview?.ok && (
         <>
-          <div className="grid grid-cols-2 gap-x-3 px-3 py-3 sm:grid-cols-3">
+          <div className="grid grid-cols-2 gap-x-3 px-3 py-3 sm:hidden">
             {preview.gear.items.map((item, index) => (
               <div
                 key={`${item.slot}-${item.itemId ?? item.name}-${index}`}
@@ -189,6 +263,54 @@ function GearPreviewPanel({
                 </div>
               </div>
             ))}
+          </div>
+          <div className="hidden px-3 py-3 sm:block">
+            <div className="grid grid-cols-[minmax(0,1fr)_11rem_minmax(0,1fr)] gap-x-3">
+              <div className="min-w-0">
+                {PAPER_DOLL_LEFT_SLOTS.map((slot) => (
+                  <GearSlotRailItem key={slot} slot={slot} item={itemsBySlot.get(slot)} side="left" />
+                ))}
+              </div>
+
+              <div className="relative flex min-h-80 flex-col items-center justify-center overflow-hidden rounded-sm border border-gold-dim/70 bg-[radial-gradient(circle_at_center,rgba(196,157,52,0.16),rgba(8,11,16,0.92)_62%)] shadow-inner shadow-black/80">
+                <div className="absolute inset-3 rounded-full border border-gold-dim/25" aria-hidden="true" />
+                <div className="absolute inset-7 rounded-full border border-gold-dim/15" aria-hidden="true" />
+                {classIconUrl ? (
+                  // eslint-disable-next-line @next/next/no-img-element -- Static WoW class icon host.
+                  <img
+                    src={classIconUrl}
+                    alt=""
+                    className="h-24 w-24 rounded-full border border-gold-dim/70 object-cover opacity-55 grayscale-[20%] shadow-2xl shadow-black"
+                  />
+                ) : (
+                  <span className="text-3xl font-bold text-gold/60">{getInitials(name)}</span>
+                )}
+                <p className="relative mt-4 text-sm font-bold text-gold-light">{name}</p>
+                <p className="relative mt-1 text-[10px] uppercase tracking-[0.18em] text-text-secondary">
+                  {[raceName, className].filter(Boolean).join(" · ") || "Warmane character"}
+                </p>
+                {preview.gearScore && (
+                  <div className="relative mt-4 border-y border-gold-dim/45 px-4 py-2 text-center">
+                    <p className="text-xl font-bold tabular-nums text-gold-light">
+                      {preview.gearScore.score.toLocaleString()}
+                    </p>
+                    <p className="text-[9px] uppercase tracking-[0.18em] text-text-dim">GearScore</p>
+                  </div>
+                )}
+              </div>
+
+              <div className="min-w-0">
+                {PAPER_DOLL_RIGHT_SLOTS.map((slot) => (
+                  <GearSlotRailItem key={slot} slot={slot} item={itemsBySlot.get(slot)} side="right" />
+                ))}
+              </div>
+            </div>
+
+            <div className="mx-auto mt-3 grid max-w-2xl grid-cols-3 gap-2">
+              {PAPER_DOLL_WEAPON_SLOTS.map((slot) => (
+                <WeaponSlotItem key={slot} slot={slot} item={itemsBySlot.get(slot)} />
+              ))}
+            </div>
           </div>
           <div className="flex items-center justify-between gap-3 border-t border-gold-dim bg-bg-panel px-3 py-2 text-[11px] text-text-dim">
             <span>
