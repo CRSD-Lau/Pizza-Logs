@@ -75,6 +75,7 @@ failure from PR #29 is resolved in `main`.
 | Cinematic intro overlay existed but stayed invisible | Replaced dynamically composed Tailwind phase class with static class strings so `frozen-intro-overlay--showing` is emitted |
 | Cinematic intro audio was missing | Render scripts preserve audio tracks, and the intro overlay now has a sound toggle while still starting muted for autoplay |
 | Missing PR Slack webhook failed PR checks | Workflow now warns and exits successfully when `PR_SLACK_WEBHOOK_URL` is absent |
+| Railway production deployments skipped the Production Smoke job | The workflow now accepts Railway's `Pizza Logs / production` environment name by matching the `production` suffix, with a source regression test |
 | Local `rg` resolved to Codex app bundle and failed with Access denied | Installed standalone `ripgrep` with WinGet and prioritized its package directory in User PATH via `scripts/dev/setup-tooling.ps1` |
 | PR Slack message read like a raw dump | Reworked Slack blocks into a compact header, metadata fields, trimmed description, and cleaner changed-file list |
 | PR description headings showed unsupported Slack markdown | Added markdown normalization so GitHub headings become Slack bold labels |
