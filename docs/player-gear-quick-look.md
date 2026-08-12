@@ -18,6 +18,6 @@ Warmane's public profile exposes a WebGL model recipe rather than a stable portr
 
 The client lazily calls `GET /api/players/[name]/gear`. The route rejects arbitrary names and only serves a character already present in `players` or `guild_roster_members`. Pizza Logs then reads or refreshes `armory_gear_cache` through the Warmane character JSON endpoint, reads the display recipe from the matching public profile, and enriches the equipment from local `wow_items` metadata.
 
-Quick looks use a five-minute Armory refresh window and a five-minute in-browser response cache. If Warmane is unavailable, the last healthy database snapshot is returned with a stale label. A page render does not fan out Armory requests for every player; only an opened quick look performs the read.
+Quick looks use a five-minute Armory refresh window and a five-minute in-browser response cache. If Warmane's equipment endpoint is unavailable, the last healthy database snapshot is returned with a stale label. The independent public profile response can still supply and persist the appearance recipe, so cached equipment does not unnecessarily fall back to a class icon. A page render does not fan out Armory requests for every player; only an opened quick look performs the read.
 
 Tampermonkey, bookmarklets, admin secrets, and open Warmane tabs are not part of this viewing path. Gear refresh is fully on demand, and guild-roster refresh is a first-party authenticated admin action.

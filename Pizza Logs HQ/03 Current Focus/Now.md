@@ -29,6 +29,8 @@ Codex works on `codex-dev`, pushes `origin/codex-dev`, and opens PRs into `main`
 - Found that Railway reports the production environment as `Pizza Logs / production`, causing the exact-name Production Smoke condition to skip; changed it to a suffix match and added a source regression test.
 - The newly active smoke run exposed Railway's dashboard URL being mistaken for the app URL; pinned deployment-triggered checks to the canonical Pizza Logs production address and retained the manual-dispatch override.
 - Merged the follow-up automatically after green CI; Railway deployed `599e479` successfully and Production Smoke run `31599979449` passed against the public app.
+- Investigated Mothrmonster showing only a class icon: the gear endpoint had returned a pre-3D cached fallback even though the independent Warmane profile still exposed `draeneifemale`. Preserve and persist that partial appearance result during equipment failures.
+- Live browser reproduction now shows Mothrmonster's dressed Draenei model; a focused failure-path regression plus all 38 web tests pass.
 - Replaced the desktop gear list with a WoW-style equipment paper doll: armor slots on both sides, weapons below, and a central class/race/GearScore panel; mobile keeps the full two-column list.
 - Verified Warmane exposes character customization as a WebGL recipe rather than a portrait image, parsed its bounded appearance/display fields, and rendered the dressed model in a script-only sandbox with a class-icon fallback.
 - Confirmed the local Lausudo quick look visibly renders the Human female model with armor, weapon, and shield; mobile does not load the model viewer.
