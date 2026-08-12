@@ -46,5 +46,8 @@ assert.match(source, /createPortal\(/);
 assert.match(source, /role="tooltip"/);
 assert.match(source, /Pulling current gear from Warmane/);
 assert.match(source, /Live Armory/);
+assert.match(source, /w-\[min\(46rem,calc\(100vw-1\.5rem\)\)\]/);
+assert.match(source, /grid-cols-2[^\n]*sm:grid-cols-3/);
+assert.doesNotMatch(source, /max-h-\[min\(24rem,65vh\)\]|overflow-hidden px-3 py-3 sm:grid-cols-2/);
 
 console.log("player-gear-quicklook tests passed");

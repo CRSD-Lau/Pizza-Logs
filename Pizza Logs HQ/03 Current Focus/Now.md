@@ -24,6 +24,7 @@ Codex works on `codex-dev`, pushes `origin/codex-dev`, and opens PRs into `main`
 
 ## This Session
 
+- Fixed the gear quick-look overlay so complete 18-19 slot loadouts fit instead of clipping the weapon rows; it now uses two columns on narrow screens and three across a wider desktop panel.
 - Replaced the ambiguous gear-cache error total with the latest successful live-refresh timestamp in UTC and renamed the total to Cached Snapshots.
 - Added a protected, confirmation-gated Clear Gear Cache control that deletes only Armory gear snapshots.
 - Live-tested production: Maximusboom refreshed non-stale with 19 items and GearScore 6,245; Azyia demonstrated the intended stale-snapshot fallback during an individual Warmane failure.

@@ -61,6 +61,7 @@ const SIZE_CLASSES: Record<PlayerAvatarSize, string> = {
 
 const TOOLTIP_GAP = 10;
 const VIEWPORT_PADDING = 12;
+const TOOLTIP_MAX_WIDTH = 736;
 const CLIENT_CACHE_MS = 5 * 60 * 1000;
 const previewCache = new Map<string, { expiresAt: number; data: GearPreviewResponse }>();
 const previewRequests = new Map<string, Promise<GearPreviewResponse>>();
@@ -120,7 +121,7 @@ function GearPreviewPanel({
       ref={tooltipRef}
       id={tooltipId}
       role="tooltip"
-      className="pointer-events-none fixed z-2147483647 w-[min(30rem,calc(100vw-1.5rem))] overflow-hidden rounded-sm border border-gold bg-bg-deep text-left shadow-2xl shadow-black/60"
+      className="pointer-events-none fixed z-2147483647 w-[min(46rem,calc(100vw-1.5rem))] overflow-hidden rounded-sm border border-gold bg-bg-deep text-left shadow-2xl shadow-black/60"
       style={{ left: position.left, top: position.top }}
     >
       <div className="flex items-center gap-3 border-b border-gold-dim bg-bg-panel px-3 py-3">
@@ -168,11 +169,11 @@ function GearPreviewPanel({
 
       {!loading && preview?.ok && (
         <>
-          <div className="grid max-h-[min(24rem,65vh)] grid-cols-1 gap-x-3 overflow-hidden px-3 py-3 sm:grid-cols-2">
+          <div className="grid grid-cols-2 gap-x-3 px-3 py-3 sm:grid-cols-3">
             {preview.gear.items.map((item, index) => (
               <div
                 key={`${item.slot}-${item.itemId ?? item.name}-${index}`}
-                className="flex min-w-0 items-center gap-2 border-b border-gold-dim/55 py-1.5 last:border-b-0 sm:[&:nth-last-child(-n+2)]:border-b-0"
+                className="flex min-w-0 items-center gap-2 border-b border-gold-dim/55 py-1.5 [&:nth-last-child(-n+2)]:border-b-0 sm:[&:nth-last-child(-n+3)]:border-b-0"
               >
                 <div className="flex h-8 w-8 shrink-0 items-center justify-center overflow-hidden rounded-xs border border-gold-dim bg-bg-card">
                   {item.iconUrl ? (
@@ -232,7 +233,7 @@ export function PlayerAvatar({
     const anchorRect = buttonRef.current.getBoundingClientRect();
     const tooltipRect = tooltipRef.current?.getBoundingClientRect();
     setPosition(getPlayerGearTooltipPosition(anchorRect, {
-      width: tooltipRect?.width ?? Math.min(480, window.innerWidth - VIEWPORT_PADDING * 2),
+      width: tooltipRect?.width ?? Math.min(TOOLTIP_MAX_WIDTH, window.innerWidth - VIEWPORT_PADDING * 2),
       height: tooltipRect?.height ?? 420,
     }, {
       width: window.innerWidth,

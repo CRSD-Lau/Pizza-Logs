@@ -115,6 +115,7 @@
 
 ## Live Gear Cache Validation Session
 
+- Expanded the class-avatar gear quick look from 30rem/two columns to a viewport-safe 46rem/three-column desktop layout, with two columns on narrow screens, and removed the 24rem clipping cap so every equipped slot renders.
 - Replaced the misleading **Server Refresh Errors** total with **Latest Live Refresh**, sourced from the newest non-null `lastSuccessAt` and rendered explicitly in UTC.
 - Renamed **Cached Characters** to **Cached Snapshots** so the count is not confused with roster size.
 - Added an authenticated, confirmation-gated **Clear Gear Cache** control that deletes only `armory_gear_cache`; players, roster, item metadata, uploads, and reports are untouched.
