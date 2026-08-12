@@ -53,6 +53,7 @@
   viewer failures keep the class-icon fallback.
 - PR #39 merged into `main` as `bc97634` after both required checks passed.
 - The standing release rule now authorizes Codex to merge green PRs automatically while preserving the PR-only, no-direct-push protection on `main`.
+- Fixed the Railway production-smoke trigger to accept its actual `Pizza Logs / production` environment name; the old exact equality check skipped every deployment-status run.
 - Guild roster refresh is an authenticated first-party control on `/admin`; no
   browser helper or open Warmane tab participates in the current data path.
 - README now includes a high-resolution app preview captured from a fresh local Next server on `http://127.0.0.1:3004`.
@@ -488,7 +489,7 @@
 
 ## Exact Next Step
 
-Verify Railway has deployed `bc97634`, smoke-check the live gear quick look, and
+Verify the corrected Production Smoke workflow runs after its deployment, then
 continue the existing UwU re-upload acceptance step for historical parser data.
 Future PRs merge automatically after required CI passes; Codex still does not
 commit or push `main` directly.
