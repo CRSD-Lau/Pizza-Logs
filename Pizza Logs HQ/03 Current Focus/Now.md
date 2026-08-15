@@ -2,6 +2,11 @@
 
 ## Active Focus
 
+Public session, player, and encounter pages now use Pizza Logs-native metric
+labels. External report-brand references and `Custom Slice` terminology remain
+available only in internal analytical documentation where provenance matters;
+they are blocked from rendered TSX by a source regression.
+
 The 2026-08-14 ICC acceptance raid exposed two coupled parser failures. The
 second and third Blood Prince Council attempts shared the old five-minute
 fingerprint bucket, so the real heroic kill collided during persistence. The
@@ -30,6 +35,14 @@ Documentation metadata refresh: the README now links to the GitHub wiki, and the
 Codex works on `codex-dev`, pushes `origin/codex-dev`, and opens PRs into `main`. When every required CI check passes and no conflict or explicit blocker remains, Codex merges the PR through GitHub without waiting for manual review. Codex never commits or pushes `main` directly and never bypasses required checks.
 
 ## This Session
+
+- Removed all five visible external report-brand labels from session, player,
+  and encounter report pages.
+- Renamed `Custom Slice` to `Full Session Breakdown`; calculations and stored
+  analytics remain unchanged.
+- Added a recursive UI-source regression blocking both terms from public TSX.
+- Passed the focused regression and `npm run check:pr`: zero-warning ESLint,
+  both TypeScript checks, all 38 web tests, and the production build.
 
 - Compared the rendered UwU and Pizza Logs reports for the 2026-08-14 raid.
 - Parsed the complete 264,268,876-byte source log and reproduced 24 parser
@@ -293,6 +306,7 @@ Codex works on `codex-dev`, pushes `origin/codex-dev`, and opens PRs into `main`
 | Session player chart kill filter | DONE | DPS/HPS by encounter chart excludes wipes; Encounter Breakdown still lists all pulls |
 | BPC fingerprint collision | DONE | Exact pull starts distinguish the 00:55 wipe from the 00:59 heroic kill |
 | LK scripted finale segmentation | DONE | Fury of Frostmourne keeps the roleplay and final burn in one normal kill |
+| Public report terminology | DONE | Session, player, and encounter pages use Pizza Logs-native labels with a source regression preventing external report-brand copy |
 | 2026-08-14 production report regeneration | PENDING | Deploy first, then delete only the broken upload and re-upload its original ZIP |
 
 ## Open Follow-Ups

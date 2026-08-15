@@ -29,6 +29,7 @@ the existing production row still needs deletion and re-upload after deployment.
 
 | Issue | Resolution |
 |---|---|
+| Public report pages exposed external report-brand and `Custom Slice` terminology | Replaced it with Pizza Logs-native session and encounter labels and added a recursive TSX source guard so those terms cannot return to rendered UI |
 | Back-to-back BPC attempts with the same roster collided and dropped the kill | Encounter fingerprints now use the exact normalized pull start instead of a five-minute bucket; the complete source log produces 23 unique fingerprints and retains all three BPC attempts |
 | Lich King 10% roleplay split a one-shot kill into WIPE plus UNKNOWN | `Fury of Frostmourne` now opens a bounded five-minute scripted-finale grace window so the resumed burn and real boss death remain one 25N KILL |
 | Low-contrast 9-12px metadata disappeared against dark surfaces | Raised semantic metadata tokens to AA-readable values, established a 12px decorative and 14px normal metadata floor, and added a frontend contract test |
