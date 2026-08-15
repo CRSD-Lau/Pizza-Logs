@@ -61,7 +61,8 @@ export function AccordionSection({
           open ? "grid-rows-[1fr] opacity-100" : "grid-rows-[0fr] opacity-0"
         )}
       >
-        <div className={cn("overflow-hidden", open && "pt-3")}>
+        {/* Match data-panel's mobile gutter bleed so the height-animation clip does not trim either edge. */}
+        <div className={cn("-mx-4 overflow-hidden px-4 sm:mx-0 sm:px-0", open && "pt-3")}>
           {children}
         </div>
       </div>

@@ -30,6 +30,9 @@
   Lich King's scripted `Fury of Frostmourne` finale.
 - The frontend now uses a shared page/header/section/data-panel contract, readable metadata colors, 44px controls, asymmetric metric summaries, responsive analytical rows, and progressive disclosure for long directories and reports.
 - Full-session analytics and guild roster data now use mobile-native cards instead of wide clipped tables; desktop tables return only at widths where their columns fit.
+- Accordion-contained data panels now expand their mobile animation clip to the
+  same full-bleed gutter as the panel, so damage, healing, absorb, target, and
+  session-mob meter rows no longer lose 16px from either edge.
 - The cinematic intro is homepage-only and runs once per browser session; hard-loaded report and profile routes are never blocked by it.
 - Difficulty now uses per-attempt `pizza-difficulty-v2` boss/mode spell sets, explicit Ulduar rules, conflict-to-`UNKNOWN`, and auditable evidence.
 - Browser uploads now use one raw UUID-keyed request for `.txt`, `.log`, or `.zip`; the parser atomically finalizes, validates, emits quick modes, then runs full parsing on bounded workers.
@@ -77,6 +80,29 @@
   - `C:\Projects\PizzaLogs\Start Pizza Logs Local.cmd`
   - `C:\Projects\PizzaLogs\Stop Pizza Logs Local.cmd`
 - Imported local Codex discussion history lives under `Pizza Logs HQ/08 AI Control Center/Imported Codex Chats/`.
+
+## 2026-08-15 Mobile Meter Clip Repair
+
+- Reproduced the live Festergut encounter at 320px. Each full-bleed meter panel
+  measured 315px wide, but the accordion's `overflow-hidden` animation wrapper
+  remained inside the 16px page gutters at 283px, visibly clipping both sides.
+- Repaired the shared `AccordionSection` boundary by expanding its mobile clip
+  box into the gutter and adding matching inner padding. Normal accordion
+  content remains aligned; `data-panel` surfaces can now use their intended
+  full width without being cut off.
+- The shared fix covers encounter Damage, Healing + Absorbs, Effective Healing,
+  Absorbs, Target Breakdown, and the raid-session Mob Damage drill-down.
+- Audited the other class-color bar families. Boss/weekly leaderboard bars and
+  player class-overview bars were already contained inside their mobile gutters
+  and did not need changes.
+- Added `tests/mobile-meter-source.test.ts` to lock the clipping contract, all
+  shared meter call sites, mobile-native grids, and absence of forced widths.
+- Local rendered geometry matched at 320, 390, 639, 640, 768, and 1440 CSS
+  pixels with zero document overflow; the 640px desktop transition also fit.
+- `npm run check:pr` passed zero-warning lint, both TypeScript compilers, all 49
+  web tests, and the Next.js 16 production build.
+- No parser, persistence schema, migration, API, or analytical calculation
+  changed.
 
 ## 2026-08-15 Mobile Table Repair
 

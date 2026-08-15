@@ -15,6 +15,11 @@ two-column summary on phones; the roster uses member cards until its eleven
 desktop columns genuinely fit. The tabular layouts remain unchanged at their
 appropriate wider breakpoints.
 
+Per-boss and session meter panels now share a mobile-safe accordion boundary.
+The collapse animation's overflow clip expands into the same 16px gutters as
+the full-bleed data panel, so class-color damage/healing bars, target rows, and
+their drill-downs keep both edges visible on phones.
+
 Public raid links now use the raid date as their identity. New links use an ISO
 slug such as `/sessions/2026-08-14`, visible raid/player labels use the formatted
 date, and Discord receives matching Open Graph title, description, and canonical
@@ -53,6 +58,21 @@ Documentation metadata refresh: the README now links to the GitHub wiki, and the
 Codex works on `codex-dev`, pushes `origin/codex-dev`, and opens PRs into `main`. When every required CI check passes and no conflict or explicit blocker remains, Codex merges the PR through GitHub without waiting for manual review. Codex never commits or pushes `main` directly and never bypasses required checks.
 
 ## This Session
+
+- Reproduced the live Festergut Damage Breakdown at 320px and proved the panel
+  was 315px wide inside a 283px accordion clip, losing exactly 16px per side.
+- Expanded the shared accordion animation boundary into the mobile gutter while
+  preserving normal child alignment with matching padding and desktop resets.
+- Confirmed the repair covers Damage, Healing + Absorbs, Effective Healing,
+  Absorbs, Target Breakdown, and session Mob Damage through the shared
+  `DamageMeter` and `MobBreakdown` components.
+- Audited boss/weekly leaderboard bars and player class-overview bars; both were
+  already contained and measured without mobile overflow.
+- Added a failing-then-passing mobile meter source regression.
+- Verified rendered geometry at 320, 390, 639, 640, 768, and 1440 CSS pixels
+  with matched clip/panel edges and no document overflow.
+- Passed `npm run check:pr`: zero-warning lint, both TypeScript compilers, all
+  49 web tests, and the Next.js 16 production build.
 
 - Reproduced the live August 14 raid session at 390px and measured its forced
   760px table inside the clipped mobile accordion.
@@ -375,6 +395,7 @@ Codex works on `codex-dev`, pushes `origin/codex-dev`, and opens PRs into `main`
 | Date-based raid links | DONE | ISO slugs, permanent compatibility redirects, and social metadata pass the full local release gate |
 | Readable public raid slugs | DONE | Guild-labelled aliases hide internal CUIDs while legacy links permanently redirect |
 | Mobile session and roster tables | DONE | Phone/tablet views use contained metric/member cards; fitted tables remain at wider breakpoints |
+| Mobile accordion meter clipping | DONE | Shared Damage/Healing/Absorb/Target/Mob panels keep their full width through the animated clip boundary |
 | 2026-08-14 production report regeneration | PENDING | Deploy first, then delete only the broken upload and re-upload its original ZIP |
 
 ## Open Follow-Ups

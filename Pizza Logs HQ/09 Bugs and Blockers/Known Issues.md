@@ -29,6 +29,7 @@ the existing production row still needs deletion and re-upload after deployment.
 
 | Issue | Resolution |
 |---|---|
+| Per-boss class-color meter rows were clipped on both phone edges | Full-bleed data panels and the accordion's animated overflow clip now expand through the same mobile gutters; the shared repair covers damage, healing, absorbs, targets, and session mob meters with 320-1440px geometry coverage |
 | Full-session and guild roster tables were badly cut off on mobile | Replaced their narrow-screen table strips with semantic two-column player metrics and compact roster member cards; desktop tables return only at fitted breakpoints, with 320-1440px containment coverage |
 | Clean CI builds could fail when Google Fonts returned 404 for Cinzel | Replaced `next/font/google` downloads with pinned OFL-licensed Fontsource packages for the existing Cinzel and Rajdhani Latin weights; production builds now bundle the fonts locally |
 | Shared raid links exposed `Session 1` and Discord showed generic metadata | Public raid URLs now use the raid date, legacy numeric paths redirect permanently, and date-specific canonical/Open Graph/Twitter metadata describes the actual report |
