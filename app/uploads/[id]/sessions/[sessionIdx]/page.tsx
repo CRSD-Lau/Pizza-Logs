@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { notFound } from "next/navigation";
+import { notFound, permanentRedirect } from "next/navigation";
 import { db } from "@/lib/db";
 import { MobBreakdown, type MobEntry } from "@/components/meter/MobBreakdown";
 import { PlayerAvatar } from "@/components/players/PlayerAvatar";
@@ -8,6 +8,13 @@ import { AccordionSection } from "@/components/ui/AccordionSection";
 import { StatCard } from "@/components/ui/StatCard";
 import { getClassColor } from "@/lib/constants/classes";
 import { getClassIconUrl } from "@/lib/class-icons";
+import {
+  formatRaidDateLabel,
+  formatRaidSessionTitle,
+  getRaidSessionPath,
+} from "@/lib/raid-session-slug";
+import { getRaidSessionRoutes, resolveRaidSession } from "@/lib/raid-session-routing.server";
+import { PIZZA_LOGS_ORIGIN } from "@/lib/site";
 import { getRevealClassName, getRevealStyle, orderBossDisplayEntries } from "@/lib/ui-animation";
 import { cn, formatDuration, formatDurationPrecise, formatNumber } from "@/lib/utils";
 
@@ -37,14 +44,71 @@ interface SessionAnalytics {
 }
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
-  const { sessionIdx } = await params;
-  return { title: `Session ${Number(sessionIdx) + 1}` };
+  const { id, sessionIdx } = await params;
+  const resolution = await resolveRaidSession(id, sessionIdx);
+  if (!resolution) return { title: "Raid" };
+
+  const { route } = resolution;
+  const [upload, encounters] = await Promise.all([
+    db.upload.findUnique({
+      where: { id },
+      select: { guild: { select: { name: true } } },
+    }),
+    db.encounter.findMany({
+      where: { uploadId: id, sessionIndex: route.sessionIndex },
+      select: {
+        outcome: true,
+        boss: { select: { raid: true } },
+      },
+    }),
+  ]);
+
+  const title = formatRaidSessionTitle(route);
+  const socialTitle = `${title} | Pizza Logs`;
+  const dateLabel = formatRaidDateLabel(route.startedAt);
+  const raidNames = [...new Set(encounters.map(encounter => encounter.boss.raid))];
+  const raidLabel = raidNames.length > 0 ? raidNames.join(" + ") : "Raid";
+  const guildLabel = upload?.guild?.name ? ` for ${upload.guild.name}` : "";
+  const kills = encounters.filter(encounter => encounter.outcome === "KILL").length;
+  const wipes = encounters.filter(encounter => encounter.outcome === "WIPE").length;
+  const description = `${raidLabel} raid report${guildLabel} on ${dateLabel}. ${kills} kills, ${wipes} wipes, ${encounters.length} pulls.`;
+  const canonical = `${PIZZA_LOGS_ORIGIN}${getRaidSessionPath(id, route)}`;
+
+  return {
+    title,
+    description,
+    alternates: { canonical },
+    openGraph: {
+      title: socialTitle,
+      description,
+      url: canonical,
+      type: "article",
+      siteName: "Pizza Logs",
+    },
+    twitter: {
+      card: "summary",
+      title: socialTitle,
+      description,
+    },
+  };
 }
 
 export default async function SessionDetailPage({ params }: Props) {
   const { id, sessionIdx } = await params;
-  const sessionIndex = parseInt(sessionIdx, 10);
-  if (isNaN(sessionIndex)) notFound();
+  const resolution = await resolveRaidSession(id, sessionIdx);
+  if (!resolution) notFound();
+
+  const { route: sessionRoute } = resolution;
+  const sessionPath = getRaidSessionPath(id, sessionRoute);
+  if (resolution.isLegacyIndex) permanentRedirect(sessionPath);
+
+  const sessionIndex = sessionRoute.sessionIndex;
+  const sessionRoutes = await getRaidSessionRoutes(id);
+  const sessionPosition = sessionRoutes.findIndex(route => route.sessionIndex === sessionIndex);
+  const previousSession = sessionPosition > 0 ? sessionRoutes[sessionPosition - 1] : null;
+  const nextSession = sessionPosition >= 0 && sessionPosition < sessionRoutes.length - 1
+    ? sessionRoutes[sessionPosition + 1]
+    : null;
 
   const upload = await db.upload.findUnique({
     where: { id },
@@ -102,10 +166,8 @@ export default async function SessionDetailPage({ params }: Props) {
       || right.damageTaken - left.damageTaken
     );
 
-  const sessionCount = await db.encounter.groupBy({
-    by: ["sessionIndex"],
-    where: { uploadId: id },
-  }).then(r => r.length);
+  const sessionCount = sessionRoutes.length;
+  const sessionTitle = formatRaidSessionTitle(sessionRoute);
 
   const playerSet = new Map<string, string | null>();
   for (const enc of orderedEncounters) {
@@ -195,21 +257,19 @@ export default async function SessionDetailPage({ params }: Props) {
       <div className="flex flex-wrap items-center gap-1 text-sm text-text-dim">
         <Link href="/raids" className="inline-flex min-h-11 items-center hover:text-gold">Raids</Link>
         <span>&gt;</span>
-        <span className="text-text-secondary">
-          {sessionCount === 1 ? "Raid Session" : `Session ${sessionIndex + 1} of ${sessionCount}`}
-        </span>
+        <span className="text-text-secondary">{sessionTitle}</span>
       </div>
 
       {sessionCount > 1 && (
         <div className="flex items-center gap-3 text-xs flex-wrap">
-          {sessionIndex > 0 && (
-            <Link href={`/raids/${id}/sessions/${sessionIndex - 1}`} className="text-gold hover:text-gold-light">
-              Previous session
+          {previousSession && (
+            <Link href={getRaidSessionPath(id, previousSession)} className="text-gold hover:text-gold-light">
+              Previous raid
             </Link>
           )}
-          {sessionIndex < sessionCount - 1 && (
-            <Link href={`/raids/${id}/sessions/${sessionIndex + 1}`} className="text-gold hover:text-gold-light sm:ml-auto">
-              Next session
+          {nextSession && (
+            <Link href={getRaidSessionPath(id, nextSession)} className="text-gold hover:text-gold-light sm:ml-auto">
+              Next raid
             </Link>
           )}
         </div>
@@ -218,7 +278,7 @@ export default async function SessionDetailPage({ params }: Props) {
       <div className="flex items-start justify-between flex-wrap gap-4">
         <div>
           <h1 className="heading-cinzel text-2xl font-bold text-gold-light text-glow-gold">
-            {sessionCount === 1 ? "Raid Session" : `Session ${sessionIndex + 1}`}
+            {sessionTitle}
           </h1>
           <div className="mt-2 flex flex-wrap items-center gap-2 text-xs text-text-dim">
             <span>{[...raidGroups.keys()].join(" - ")}</span>
@@ -228,10 +288,10 @@ export default async function SessionDetailPage({ params }: Props) {
             <span>-</span>
             <span>
               {new Date(startedAt).toLocaleString("en-US", {
-                weekday: "short", month: "short", day: "numeric", hour: "2-digit", minute: "2-digit",
+                weekday: "short", month: "short", day: "numeric", hour: "2-digit", minute: "2-digit", timeZone: "UTC",
               })}
               {" -> "}
-              {new Date(endedAt).toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" })}
+              {new Date(endedAt).toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit", timeZone: "UTC" })}
             </span>
           </div>
         </div>
@@ -269,7 +329,7 @@ export default async function SessionDetailPage({ params }: Props) {
                       <td className="px-4 py-2.5 text-left">
                         {encounterPlayerNames.has(name) ? (
                           <Link
-                            href={`/raids/${id}/sessions/${sessionIndex}/players/${encodeURIComponent(name)}`}
+                            href={`${sessionPath}/players/${encodeURIComponent(name)}`}
                             className="font-semibold hover:text-gold transition-colors"
                             style={{ color }}
                           >
@@ -342,7 +402,7 @@ export default async function SessionDetailPage({ params }: Props) {
                         <span>{formatNumber(enc.totalDamage)} dmg</span>
                         <span>{rdps.toLocaleString()} rdps</span>
                         <span className="text-text-dim">
-                          {new Date(enc.startedAt).toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" })}
+                          {new Date(enc.startedAt).toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit", timeZone: "UTC" })}
                         </span>
                       </div>
                     </Link>
@@ -395,7 +455,7 @@ export default async function SessionDetailPage({ params }: Props) {
                     size="xs"
                   />
                   <Link
-                    href={`/raids/${id}/sessions/${sessionIndex}/players/${encodeURIComponent(name)}`}
+                    href={`${sessionPath}/players/${encodeURIComponent(name)}`}
                     className="font-medium text-text-primary hover:text-gold-light"
                   >
                     {name}

@@ -76,9 +76,9 @@ The scripts crop the bottom-right Veo watermark out of the frame, preserve 16:9 
 | Route | Purpose |
 |---|---|
 | `/` | Upload form and recent records |
-| `/raids` | Raid history grouped by upload/session |
-| `/raids/[id]/sessions/[idx]` | Public raid-session detail |
-| `/raids/[id]/sessions/[idx]/players/[name]` | Session-scoped player detail |
+| `/raids` | Raid history grouped by upload and raid date |
+| `/raids/[id]/sessions/[yyyy-mm-dd]` | Public raid detail with a canonical date slug |
+| `/raids/[id]/sessions/[yyyy-mm-dd]/players/[name]` | Date-scoped raid player detail |
 | `/encounters/[id]` | Single boss pull breakdown |
 | `/bosses` and `/bosses/[slug]` | Boss ranking pages |
 | `/leaderboards` | Aggregate DPS/HPS leaderboards |
@@ -88,7 +88,10 @@ The scripts crop the bottom-right Veo watermark out of the frame, preserve 16:9 
 | `/admin` | Protected diagnostics and import tools |
 | `/admin/uploads` | Protected upload history |
 
-`/uploads` and `/uploads/[id]` redirect to the admin upload history. Public session URLs use `/raids/...`.
+`/uploads` and `/uploads/[id]` redirect to the admin upload history. Public raid
+URLs use ISO dates such as `/sessions/2026-08-14`; a second raid from the same
+upload on that date uses `/sessions/2026-08-14-2`. Legacy numeric session URLs
+redirect permanently to the dated canonical URL.
 
 ## Upload And Parsing Flow
 

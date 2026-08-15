@@ -3,6 +3,7 @@ import { Cinzel, Rajdhani } from "next/font/google";
 import "./globals.css";
 import { FrozenLogbookIntro } from "@/components/intro/FrozenLogbookIntro";
 import { Nav } from "@/components/layout/Nav";
+import { PIZZA_LOGS_ORIGIN } from "@/lib/site";
 
 const cinzel = Cinzel({
   subsets: ["latin"],
@@ -19,6 +20,7 @@ const rajdhani = Rajdhani({
 });
 
 export const metadata: Metadata = {
+  metadataBase: new URL(PIZZA_LOGS_ORIGIN),
   title: {
     default: "Pizza Logs — WoW Raid Analytics",
     template: "%s | Pizza Logs",

@@ -2,6 +2,11 @@
 
 ## Active Focus
 
+Public raid links now use the raid date as their identity. New links use an ISO
+slug such as `/sessions/2026-08-14`, visible raid/player labels use the formatted
+date, and Discord receives matching Open Graph title, description, and canonical
+URL metadata. Old numeric links remain valid through permanent redirects.
+
 Public session, player, and encounter pages now use Pizza Logs-native metric
 labels. External report-brand references and `Custom Slice` terminology remain
 available only in internal analytical documentation where provenance matters;
@@ -35,6 +40,17 @@ Documentation metadata refresh: the README now links to the GitHub wiki, and the
 Codex works on `codex-dev`, pushes `origin/codex-dev`, and opens PRs into `main`. When every required CI check passes and no conflict or explicit blocker remains, Codex merges the PR through GitHub without waiting for manual review. Codex never commits or pushes `main` directly and never bypasses required checks.
 
 ## This Session
+
+- Replaced zero-based public session indexes with canonical ISO raid-date slugs.
+- Used the persisted full-raid start when available and added stable same-date
+  suffixes for the rare multi-raid case.
+- Added permanent compatibility redirects for existing numeric URLs.
+- Added date-based raid and player titles, canonical links, Open Graph metadata
+  for Discord, and Twitter card metadata.
+- Updated every generated raid link across upload results, history, encounter
+  breadcrumbs, and admin views, with focused routing/source regressions.
+- `npm run check:pr` passed zero-warning ESLint, both TypeScript checks, all 44
+  web tests, and the Next.js 16 production build.
 
 - Removed all five visible external report-brand labels from session, player,
   and encounter report pages.
@@ -307,6 +323,7 @@ Codex works on `codex-dev`, pushes `origin/codex-dev`, and opens PRs into `main`
 | BPC fingerprint collision | DONE | Exact pull starts distinguish the 00:55 wipe from the 00:59 heroic kill |
 | LK scripted finale segmentation | DONE | Fury of Frostmourne keeps the roleplay and final burn in one normal kill |
 | Public report terminology | DONE | Session, player, and encounter pages use Pizza Logs-native labels with a source regression preventing external report-brand copy |
+| Date-based raid links | DONE | ISO slugs, permanent compatibility redirects, and social metadata pass the full local release gate |
 | 2026-08-14 production report regeneration | PENDING | Deploy first, then delete only the broken upload and re-upload its original ZIP |
 
 ## Open Follow-Ups

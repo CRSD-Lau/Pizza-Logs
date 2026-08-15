@@ -4,6 +4,7 @@ import { db } from "@/lib/db";
 import { DatabaseUnavailable } from "@/components/ui/DatabaseUnavailable";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { isDatabaseConnectionError } from "@/lib/database-errors";
+import { buildRaidSessionRoutesWithAnalytics } from "@/lib/raid-session-slug";
 import { getRevealClassName, getRevealStyle } from "@/lib/ui-animation";
 import { PageHeader } from "@/components/ui/PageLayout";
 
@@ -17,6 +18,7 @@ async function getRaidUploads() {
     take: 50,
     select: {
       id: true,
+      sessionAnalytics: true,
       realm: { select: { name: true, host: true } },
       guild: { select: { name: true } },
       encounters: {
@@ -47,6 +49,7 @@ export default async function RaidsPage() {
   type SessionCard = {
     uploadId: string;
     sessionIndex: number;
+    routeSlug: string;
     startedAt: Date;
     endedAt: Date;
     raids: string[];
@@ -60,6 +63,16 @@ export default async function RaidsPage() {
   const sessions: SessionCard[] = [];
 
   for (const upload of uploads) {
+    const routeBySessionIndex = new Map(
+      buildRaidSessionRoutesWithAnalytics(
+        upload.encounters.map(encounter => ({
+          sessionIndex: encounter.sessionIndex,
+          startedAt: encounter.startedAt,
+        })),
+        upload.sessionAnalytics,
+      ).map(route => [route.sessionIndex, route]),
+    );
+
     const sessionMap = new Map<number, typeof upload.encounters>();
     for (const enc of upload.encounters) {
       const arr = sessionMap.get(enc.sessionIndex) ?? [];
@@ -67,11 +80,14 @@ export default async function RaidsPage() {
       sessionMap.set(enc.sessionIndex, arr);
     }
     for (const [sessionIndex, encs] of Array.from(sessionMap.entries()).sort((a, b) => a[0] - b[0])) {
+      const route = routeBySessionIndex.get(sessionIndex);
+      if (!route) continue;
       const raids = [...new Set(encs.map(e => e.boss.raid))];
       sessions.push({
         uploadId: upload.id,
         sessionIndex,
-        startedAt: encs[0].startedAt,
+        routeSlug: route.slug,
+        startedAt: route.startedAt,
         endedAt: encs[encs.length - 1].endedAt,
         raids,
         kills: encs.filter(e => e.outcome === "KILL").length,
@@ -88,7 +104,7 @@ export default async function RaidsPage() {
   const byDay = new Map<string, SessionCard[]>();
   for (const s of sessions) {
     const day = new Date(s.startedAt).toLocaleDateString("en-US", {
-      weekday: "long", year: "numeric", month: "long", day: "numeric",
+      weekday: "long", year: "numeric", month: "long", day: "numeric", timeZone: "UTC",
     });
     const arr = byDay.get(day) ?? [];
     arr.push(s);
@@ -127,7 +143,7 @@ export default async function RaidsPage() {
                 {daySessions.map((s, index) => (
                   <Link
                     key={`${s.uploadId}-${s.sessionIndex}`}
-                    href={`/raids/${s.uploadId}/sessions/${s.sessionIndex}`}
+                    href={`/raids/${s.uploadId}/sessions/${s.routeSlug}`}
                     className={getRevealClassName({
                       boss: true,
                       className:
@@ -147,9 +163,9 @@ export default async function RaidsPage() {
                         </div>
                         <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-text-dim">
                           <span>
-                            {new Date(s.startedAt).toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" })}
+                            {new Date(s.startedAt).toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit", timeZone: "UTC" })}
                             {" - "}
-                            {new Date(s.endedAt).toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" })}
+                            {new Date(s.endedAt).toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit", timeZone: "UTC" })}
                           </span>
                           {s.realmName && <span>{s.realmName}</span>}
                         </div>

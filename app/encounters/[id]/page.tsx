@@ -10,6 +10,8 @@ import { StatCard } from "@/components/ui/StatCard";
 import { PlayerAvatar } from "@/components/players/PlayerAvatar";
 import { getClassIconUrl } from "@/lib/class-icons";
 import { getClassColor } from "@/lib/constants/classes";
+import { getRaidSessionRouteByIndex } from "@/lib/raid-session-routing.server";
+import { formatRaidSessionTitle, getRaidSessionPath } from "@/lib/raid-session-slug";
 import { formatDuration, formatNumber } from "@/lib/utils";
 
 interface Props {
@@ -48,6 +50,11 @@ export default async function EncounterPage({ params }: Props) {
   });
 
   if (!encounter) notFound();
+
+  const raidSessionRoute = await getRaidSessionRouteByIndex(
+    encounter.upload.id,
+    encounter.sessionIndex,
+  );
 
   const bossName = encounter.boss.name;
   const participantsWithBossDmg = encounter.participants.map((p) => {
@@ -173,9 +180,16 @@ export default async function EncounterPage({ params }: Props) {
       <div className="flex flex-wrap items-center gap-1 text-sm text-text-dim">
         <Link href="/raids" className="inline-flex min-h-11 items-center hover:text-gold">Raids</Link>
         <span>&gt;</span>
-        <Link href={`/raids/${encounter.upload.id}/sessions/${encounter.sessionIndex}`} className="inline-flex min-h-11 items-center hover:text-gold">
-          Raid Session
-        </Link>
+        {raidSessionRoute ? (
+          <Link
+            href={getRaidSessionPath(encounter.upload.id, raidSessionRoute)}
+            className="inline-flex min-h-11 items-center hover:text-gold"
+          >
+            {formatRaidSessionTitle(raidSessionRoute)}
+          </Link>
+        ) : (
+          <span>Raid</span>
+        )}
         <span>&gt;</span>
         <Link href="/bosses" className="inline-flex min-h-11 items-center hover:text-gold">Bosses</Link>
         <span>&gt;</span>
