@@ -29,6 +29,7 @@
   second and third BPC pulls and the generic 30-second heuristic gap splitting
   Lich King's scripted `Fury of Frostmourne` finale.
 - The frontend now uses a shared page/header/section/data-panel contract, readable metadata colors, 44px controls, asymmetric metric summaries, responsive analytical rows, and progressive disclosure for long directories and reports.
+- Full-session analytics and guild roster data now use mobile-native cards instead of wide clipped tables; desktop tables return only at widths where their columns fit.
 - The cinematic intro is homepage-only and runs once per browser session; hard-loaded report and profile routes are never blocked by it.
 - Difficulty now uses per-attempt `pizza-difficulty-v2` boss/mode spell sets, explicit Ulduar rules, conflict-to-`UNKNOWN`, and auditable evidence.
 - Browser uploads now use one raw UUID-keyed request for `.txt`, `.log`, or `.zip`; the parser atomically finalizes, validates, emits quick modes, then runs full parsing on bounded workers.
@@ -76,6 +77,26 @@
   - `C:\Projects\PizzaLogs\Start Pizza Logs Local.cmd`
   - `C:\Projects\PizzaLogs\Stop Pizza Logs Local.cmd`
 - Imported local Codex discussion history lives under `Pizza Logs HQ/08 AI Control Center/Imported Codex Chats/`.
+
+## 2026-08-15 Mobile Table Repair
+
+- Reproduced the live August 14 session at 390px: its 760px full-session table
+  exposed only Player, Total Damage, and DPS while Heal, HPS, Damage Taken, and
+  DTPS sat off-screen inside the accordion.
+- Replaced that phone layout with one semantic player list whose six metrics are
+  always visible in a two-column summary. The seven-column table remains for
+  `md` and wider layouts and fits without internal or document overflow.
+- Audited every other real table in the app. The guild roster's 1,098px table now
+  becomes compact member cards through tablet and small-desktop widths, then
+  returns at `xl` when all eleven columns fit.
+- Added `tests/mobile-table-source.test.ts` to lock the mobile/desktop variants,
+  metric coverage, and removal of the forced 760px session width.
+- Browser verification passed at 320, 390, 768, 1024, 1280, and 1440 CSS pixels
+  with no horizontal overflow and no console warnings or errors.
+- `npm run check:pr` passed zero-warning lint, both TypeScript compilers, all 48
+  web tests, and the Next.js 16 production build.
+- No parser, persistence schema, migration, API, or analytical calculation
+  changed.
 
 ## 2026-08-15 Frontend Terminology Cleanup
 

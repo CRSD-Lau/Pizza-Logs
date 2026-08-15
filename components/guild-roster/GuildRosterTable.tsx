@@ -128,7 +128,79 @@ export function GuildRosterTable({ members, currentPage = 1 }: GuildRosterTableP
 
   return (
     <div className="overflow-hidden border border-gold-dim bg-bg-panel rounded-sm">
-      <div className="overflow-x-auto">
+      <ul aria-label="Guild roster members" className="divide-y divide-gold-dim xl:hidden">
+        {visibleMembers.map((member, index) => {
+          const classColor = getClassColor(member.className ?? member.characterName);
+
+          return (
+            <li
+              key={member.id}
+              className={getRevealClassName({ className: "px-4 py-4" })}
+              style={getRevealStyle(index)}
+            >
+              <div className="flex items-start gap-3">
+                <PlayerAvatar
+                  name={member.characterName}
+                  realmName={member.realm}
+                  characterClass={member.className}
+                  raceName={member.raceName}
+                  guildName={member.guildName}
+                  color={classColor}
+                  fallbackIconUrl={getClassIconUrl(member.className)}
+                  size="xs"
+                />
+                <div className="min-w-0 flex-1">
+                  <Link
+                    href={`/players/${encodeURIComponent(member.characterName)}`}
+                    className="inline-flex min-h-11 items-center text-sm font-semibold transition-colors hover:text-gold-light"
+                    style={{ color: classColor }}
+                  >
+                    {member.characterName}
+                  </Link>
+                  <p className="text-sm text-text-secondary">
+                    {member.className ?? "Unknown"} · {member.raceName ?? "Unknown"}
+                    {member.level ? ` · Level ${member.level}` : ""}
+                  </p>
+                </div>
+              </div>
+
+              <dl className="mt-4 grid grid-cols-2 gap-x-4 gap-y-3">
+                <div>
+                  <dt className="text-xs uppercase tracking-wide text-text-dim">Rank</dt>
+                  <dd className="mt-1 text-sm text-text-primary">{member.rankName ?? "-"}</dd>
+                </div>
+                <div>
+                  <dt className="text-xs uppercase tracking-wide text-text-dim">Gear Score</dt>
+                  <dd className="mt-1 text-sm text-text-primary tabular-nums">
+                    {member.gearScore ? member.gearScore.toLocaleString() : "-"}
+                  </dd>
+                </div>
+                <div className="col-span-2">
+                  <dt className="text-xs uppercase tracking-wide text-text-dim">Professions</dt>
+                  <dd className="mt-1 text-sm text-text-secondary">{formatProfessions(member.professionsJson)}</dd>
+                </div>
+              </dl>
+
+              <div className="mt-3 flex items-center justify-between gap-4 border-t border-gold-dim/70 pt-3">
+                <dl>
+                  <div>
+                    <dt className="text-xs uppercase tracking-wide text-text-dim">Last Synced</dt>
+                    <dd className="mt-1 text-sm text-text-secondary tabular-nums">{formatSyncedAt(member.lastSyncedAt)}</dd>
+                  </div>
+                </dl>
+                <Link
+                  href={`/players/${encodeURIComponent(member.characterName)}`}
+                  className="inline-flex min-h-11 items-center text-xs font-semibold uppercase tracking-wide text-gold transition-colors hover:text-gold-light"
+                >
+                  View profile
+                </Link>
+              </div>
+            </li>
+          );
+        })}
+      </ul>
+
+      <div className="hidden overflow-x-auto xl:block">
         <table className="min-w-full text-sm">
           <thead className="bg-bg-card text-text-dim">
             <tr className="text-left text-xs uppercase tracking-widest">
