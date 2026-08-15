@@ -1,5 +1,6 @@
 import { NextRequest } from "next/server";
 import { db } from "@/lib/db";
+import { buildRaidSessionRoutesWithAnalytics } from "@/lib/raid-session-slug";
 import { ParseResultSchema, UploadRequestSchema } from "@/lib/schema";
 import { computeMilestones } from "@/lib/actions/milestones";
 
@@ -119,6 +120,14 @@ export async function POST(req: NextRequest) {
           return;
         }
 
+        const firstSessionSlug = buildRaidSessionRoutesWithAnalytics(
+          parseResult.encounters.map(encounter => ({
+            sessionIndex: encounter.sessionIndex,
+            startedAt: encounter.startedAt,
+          })),
+          parseResult.sessionAnalytics,
+        )[0]?.slug;
+
         // ── Dedup check ─────────────────────────────────────────
         const existingUpload = await db.upload.findUnique({
           where:  { fileHash: parseResult.fileHash },
@@ -129,6 +138,7 @@ export async function POST(req: NextRequest) {
             type: "complete",
             result: {
               uploadId:            existingUpload.id,
+              firstSessionSlug,
               status:              "DUPLICATE",
               encountersFound:     parseResult.encounters.length,
               encountersInserted:  0,
@@ -324,6 +334,7 @@ export async function POST(req: NextRequest) {
           type: "complete",
           result: {
             uploadId:            upload.id,
+            firstSessionSlug,
             status:              "DONE",
             encountersFound:     parseResult.encounters.length,
             encountersInserted,

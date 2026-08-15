@@ -5,6 +5,11 @@ import { db } from "@/lib/db";
 import { Badge } from "@/components/ui/Badge";
 import { SectionHeader } from "@/components/ui/SectionHeader";
 import { StatCard } from "@/components/ui/StatCard";
+import {
+  buildRaidSessionRoutesWithAnalytics,
+  formatRaidSessionTitle,
+  getRaidSessionPath,
+} from "@/lib/raid-session-slug";
 import { cn, formatBytes, formatDuration, formatNumber } from "@/lib/utils";
 
 interface Props {
@@ -43,6 +48,16 @@ export default async function AdminUploadDetailPage({ params }: Props) {
   });
 
   if (!upload) notFound();
+
+  const routeBySessionIndex = new Map(
+    buildRaidSessionRoutesWithAnalytics(
+      upload.encounters.map(encounter => ({
+        sessionIndex: encounter.sessionIndex,
+        startedAt: encounter.startedAt,
+      })),
+      upload.sessionAnalytics,
+    ).map(route => [route.sessionIndex, route]),
+  );
 
   const sessionMap = new Map<number, typeof upload.encounters>();
   for (const enc of upload.encounters) {
@@ -92,7 +107,7 @@ export default async function AdminUploadDetailPage({ params }: Props) {
       </div>
 
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-        <StatCard label="Sessions" value={String(sessions.length)} highlight />
+        <StatCard label="Raids" value={String(sessions.length)} highlight />
         <StatCard label="Kills / Wipes" value={`${totalKills} / ${totalWipes}`} />
         <StatCard label="Total Damage" value={formatNumber(totalDmg)} />
         <StatCard label="Active Time" value={formatDuration(totalSecs)} sub="sum of all pulls" />
@@ -103,10 +118,11 @@ export default async function AdminUploadDetailPage({ params }: Props) {
       ) : (
         <section className="space-y-4">
           <SectionHeader
-            title={sessions.length === 1 ? "Raid Session" : "Raid Sessions"}
-            sub={`${sessions.length} session${sessions.length !== 1 ? "s" : ""} detected in this log`}
+            title={sessions.length === 1 ? "Raid" : "Raids"}
+            sub={`${sessions.length} raid${sessions.length !== 1 ? "s" : ""} detected in this log`}
           />
           {sessions.map(([sessionIdx, encs]) => {
+            const route = routeBySessionIndex.get(sessionIdx);
             const kills = encs.filter(e => e.outcome === "KILL").length;
             const wipes = encs.filter(e => e.outcome === "WIPE").length;
             const dmg = encs.reduce((sum, e) => sum + e.totalDamage, 0);
@@ -121,7 +137,7 @@ export default async function AdminUploadDetailPage({ params }: Props) {
                   <div>
                     <div className="flex items-center gap-2 flex-wrap">
                       <span className="heading-cinzel text-base font-bold text-gold-light">
-                        {sessions.length === 1 ? "Raid Session" : `Session ${sessionIdx + 1}`}
+                        {route ? formatRaidSessionTitle(route) : "Raid"}
                       </span>
                       {raids.map((r) => (
                         <span key={r} className="text-[11px] text-text-dim bg-bg-card border border-gold-dim rounded-sm px-1.5 py-0.5">
@@ -132,19 +148,21 @@ export default async function AdminUploadDetailPage({ params }: Props) {
                     {start && (
                       <div className="text-xs text-text-dim mt-1">
                         {new Date(start).toLocaleString("en-US", {
-                          weekday: "short", month: "short", day: "numeric", hour: "2-digit", minute: "2-digit",
+                          weekday: "short", month: "short", day: "numeric", hour: "2-digit", minute: "2-digit", timeZone: "UTC",
                         })}
-                        {end && ` -> ${new Date(end).toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" })}`}
+                        {end && ` -> ${new Date(end).toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit", timeZone: "UTC" })}`}
                       </div>
                     )}
                   </div>
 
-                  <Link
-                    href={`/raids/${id}/sessions/${sessionIdx}`}
-                    className="text-xs text-gold hover:text-gold-light transition-colors"
-                  >
-                    Open public raid view &rarr;
-                  </Link>
+                  {route && (
+                    <Link
+                      href={getRaidSessionPath(id, route)}
+                      className="text-xs text-gold hover:text-gold-light transition-colors"
+                    >
+                      Open public raid view &rarr;
+                    </Link>
+                  )}
                 </div>
 
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs">

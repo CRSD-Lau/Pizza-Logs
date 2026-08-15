@@ -4,6 +4,7 @@ import { db } from "@/lib/db";
 import { Badge } from "@/components/ui/Badge";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { SectionHeader } from "@/components/ui/SectionHeader";
+import { buildRaidSessionRoutesWithAnalytics, getRaidSessionPath } from "@/lib/raid-session-slug";
 import { formatBytes } from "@/lib/utils";
 import { cn } from "@/lib/utils";
 
@@ -20,6 +21,8 @@ export default async function AdminUploadsPage() {
       encounters: {
         select: {
           id: true,
+          sessionIndex: true,
+          startedAt: true,
           outcome: true,
           difficulty: true,
           boss: { select: { name: true, slug: true } },
@@ -46,6 +49,14 @@ export default async function AdminUploadsPage() {
           <SectionHeader title="Recent Uploads" sub="Admin-only file history and parsing status" />
           <div className="space-y-2">
             {uploads.map((u) => {
+              const raidRoutes = buildRaidSessionRoutesWithAnalytics(
+                u.encounters.map(encounter => ({
+                  sessionIndex: encounter.sessionIndex,
+                  startedAt: encounter.startedAt,
+                })),
+                u.sessionAnalytics,
+              );
+              const firstRaidRoute = raidRoutes[0];
               const kills = u.encounters.filter(e => e.outcome === "KILL").length;
               const wipes = u.encounters.filter(e => e.outcome === "WIPE").length;
               const effectivelyDone = u.status === "DONE" || (u.status === "PARSING" && u.encounters.length > 0);
@@ -118,7 +129,7 @@ export default async function AdminUploadsPage() {
                     <p className="text-xs text-danger">{u.errorMessage}</p>
                   )}
 
-                  {effectivelyDone && (
+                  {effectivelyDone && firstRaidRoute && (
                     <div className="flex flex-wrap items-center gap-4">
                       <Link
                         href={`/admin/uploads/${u.id}`}
@@ -127,10 +138,10 @@ export default async function AdminUploadsPage() {
                         View upload details &rarr;
                       </Link>
                       <Link
-                        href={`/raids/${u.id}/sessions/0`}
+                        href={getRaidSessionPath(u.id, firstRaidRoute)}
                         className="text-xs text-text-secondary hover:text-text-primary transition-colors"
                       >
-                        Open first raid session &rarr;
+                        Open first raid &rarr;
                       </Link>
                     </div>
                   )}

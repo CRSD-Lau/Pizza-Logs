@@ -86,6 +86,26 @@
 - `npm run check:pr` passed zero-warning ESLint, both TypeScript checks, all 38
   web tests, and the Next.js 16 production build.
 
+## 2026-08-15 Date-Based Raid Links And Share Metadata
+
+- Public raid and raid-player links now use an ISO raid-date slug such as
+  `/raids/[uploadId]/sessions/2026-08-14` instead of exposing `Session 1` or
+  zero-based indexes.
+- The slug uses the persisted full-raid `sessionAnalytics.startedAt` when
+  available, falling back to the earliest detected encounter. Duplicate dates
+  within one upload receive stable `-2`, `-3`, and later suffixes.
+- Legacy numeric URLs issue permanent redirects to their dated canonical URL,
+  so existing Discord messages and bookmarks remain valid.
+- Raid metadata now supplies a date-based title, raid/guild kill-wipe-pull
+  description, canonical URL, Open Graph fields for Discord, and Twitter card
+  fields. Raid-player metadata and visible breadcrumbs use the same date.
+- Upload results, raid history, encounter breadcrumbs, and admin public links
+  all generate dated URLs.
+- Added focused date-routing and source-contract regressions. `npm run check:pr`
+  passed zero-warning ESLint, both TypeScript checks, all 44 web tests, and the
+  Next.js 16 production build.
+- No parser, persistence schema, migration, or combat-log math changed.
+
 ## 2026-08-15 BPC And Lich King Repair
 
 - Compared the linked UwU and Pizza Logs reports in the rendered browser.

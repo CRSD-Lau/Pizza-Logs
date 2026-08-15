@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { notFound } from "next/navigation";
+import { notFound, permanentRedirect } from "next/navigation";
 import { db } from "@/lib/db";
 import { AccordionSection } from "@/components/ui/AccordionSection";
 import { PlayerAvatar } from "@/components/players/PlayerAvatar";
@@ -9,6 +9,13 @@ import type { ChartPoint, PlayerLine } from "@/components/charts/SessionLineChar
 import { StatCard } from "@/components/ui/StatCard";
 import { getClassColor } from "@/lib/constants/classes";
 import { getClassIconUrl } from "@/lib/class-icons";
+import {
+  formatRaidDateLabel,
+  formatRaidSessionTitle,
+  getRaidSessionPath,
+} from "@/lib/raid-session-slug";
+import { resolveRaidSession } from "@/lib/raid-session-routing.server";
+import { PIZZA_LOGS_ORIGIN } from "@/lib/site";
 import { getRevealClassName, getRevealStyle, orderBossDisplayEntries } from "@/lib/ui-animation";
 import { buildSessionPlayerMetricChart } from "@/lib/session-player-chart";
 import { cn, formatDps, formatDuration } from "@/lib/utils";
@@ -18,17 +25,50 @@ interface Props {
 }
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
-  const { playerName, sessionIdx } = await params;
+  const { id, playerName, sessionIdx } = await params;
   const name = decodeURIComponent(playerName);
-  return { title: `${name} - Session ${Number(sessionIdx) + 1}` };
+  const resolution = await resolveRaidSession(id, sessionIdx);
+  if (!resolution) return { title: name };
+
+  const raidTitle = formatRaidSessionTitle(resolution.route);
+  const title = `${name} - ${raidTitle}`;
+  const description = `${name}'s performance across the ${formatRaidDateLabel(resolution.route.startedAt)} raid.`;
+  const canonicalPath = `${getRaidSessionPath(id, resolution.route)}/players/${encodeURIComponent(name)}`;
+  const canonical = `${PIZZA_LOGS_ORIGIN}${canonicalPath}`;
+
+  return {
+    title,
+    description,
+    alternates: { canonical },
+    openGraph: {
+      title: `${title} | Pizza Logs`,
+      description,
+      url: canonical,
+      type: "article",
+      siteName: "Pizza Logs",
+    },
+    twitter: {
+      card: "summary",
+      title: `${title} | Pizza Logs`,
+      description,
+    },
+  };
 }
 
 export default async function SessionPlayerPage({ params }: Props) {
   const { id, sessionIdx, playerName } = await params;
-  const sessionIndex = parseInt(sessionIdx, 10);
   const name = decodeURIComponent(playerName);
+  const resolution = await resolveRaidSession(id, sessionIdx);
 
-  if (isNaN(sessionIndex)) notFound();
+  if (!resolution) notFound();
+
+  const { route: sessionRoute } = resolution;
+  const sessionPath = getRaidSessionPath(id, sessionRoute);
+  if (resolution.isLegacyIndex) {
+    permanentRedirect(`${sessionPath}/players/${encodeURIComponent(name)}`);
+  }
+
+  const sessionIndex = sessionRoute.sessionIndex;
 
   const encounters = await db.encounter.findMany({
     where: { uploadId: id, sessionIndex },
@@ -141,22 +181,15 @@ export default async function SessionPlayerPage({ params }: Props) {
     color: pName === name ? "var(--color-gold)" : classColor,
   }));
 
-  const sessionCount = await db.encounter.groupBy({
-    by: ["sessionIndex"],
-    where: { uploadId: id },
-  }).then(r => r.length);
-
-  const sessionLabel = sessionCount === 1 ? "Raid Session" : `Session ${sessionIndex + 1} of ${sessionCount}`;
-  const sessionDate = new Date(encounters[0].startedAt).toLocaleDateString("en-US", {
-    weekday: "long", month: "long", day: "numeric",
-  });
+  const sessionLabel = formatRaidSessionTitle(sessionRoute);
+  const sessionDate = formatRaidDateLabel(sessionRoute.startedAt);
 
   return (
     <div className="page-shell">
       <div className="text-xs text-text-dim flex items-center gap-1 flex-wrap">
         <Link href="/raids" className="hover:text-gold">Raids</Link>
         <span>&gt;</span>
-        <Link href={`/raids/${id}/sessions/${sessionIndex}`} className="hover:text-gold">
+        <Link href={sessionPath} className="hover:text-gold">
           {sessionLabel}
         </Link>
         <span>&gt;</span>

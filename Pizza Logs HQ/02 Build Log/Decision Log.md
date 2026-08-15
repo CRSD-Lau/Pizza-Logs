@@ -4,6 +4,21 @@
 
 ---
 
+## 2026-08-15 — Public raid URLs use the raid date
+
+**Decision:** Generate canonical public raid paths from the full raid start as
+`/raids/[uploadId]/sessions/YYYY-MM-DD`. If one upload contains multiple raids
+on the same UTC log date, append `-2`, `-3`, and so on in session-index order.
+
+**Why:** The date identifies a shared raid meaningfully in Discord, bookmarks,
+and browser metadata; an internal zero-based session index does not.
+
+**Tradeoff:** Existing numeric links must remain valid. They issue permanent
+redirects to the dated path, while new links and canonical metadata use only the
+date slug.
+
+---
+
 ## 2026-04-20 — Session splitting threshold = 60 min
 
 **Decision:** Encounters with >60 min gap between them = new sessionIndex  
@@ -31,7 +46,8 @@
 
 ## 2026-04-20 — Session-scoped player page instead of global profile in roster
 
-**Decision:** Raid roster links go to `/uploads/[id]/sessions/[idx]/players/[name]` not `/players/[name]`  
+**Decision:** Raid roster links go to `/raids/[id]/sessions/[date]/players/[name]` not `/players/[name]`
+
 **Why:** When reviewing a specific raid, you want stats from that raid, not all-time stats. All-time profile is still accessible via link at the bottom.  
 **Tradeoff:** More URLs to maintain. Worth it for the contextual value.
 
