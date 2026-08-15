@@ -2,6 +2,13 @@
 
 ## Active Focus
 
+Public raid URLs now hide the internal upload CUID behind a readable, persisted
+alias such as `pizza-warriors-7k2m9x4`. The database keeps the original CUID for
+relations and API compatibility, while generated links and canonical metadata
+use the public alias. Existing CUID and numeric routes permanently redirect.
+Cinzel and Rajdhani are now served from pinned local Fontsource packages, so a
+clean production build does not depend on Google Fonts being reachable.
+
 Public raid links now use the raid date as their identity. New links use an ISO
 slug such as `/sessions/2026-08-14`, visible raid/player labels use the formatted
 date, and Discord receives matching Open Graph title, description, and canonical
@@ -40,6 +47,26 @@ Documentation metadata refresh: the README now links to the GitHub wiki, and the
 Codex works on `codex-dev`, pushes `origin/codex-dev`, and opens PRs into `main`. When every required CI check passes and no conflict or explicit blocker remains, Codex merges the PR through GitHub without waiting for manual review. Codex never commits or pushes `main` directly and never bypasses required checks.
 
 ## This Session
+
+- Added a unique `Upload.publicSlug` and a safe migration/backfill for every
+  existing upload.
+- Generated guild-labelled slugs with a seven-character URL-safe code and a
+  `raid-...` fallback when no usable guild label exists.
+- Switched raid history, report/player metadata, breadcrumbs, upload results,
+  and admin public links to the readable slug.
+- Kept CUID and numeric URLs working through one permanent redirect to the
+  canonical readable slug plus ISO date.
+- Validated the SQL migration in an isolated PostgreSQL schema and removed the
+  fixture schema afterward.
+- Passed `npm run check:pr`: zero-warning ESLint, both TypeScript compilers, all
+  47 web tests, and the Next.js 16 production build.
+- Diagnosed PR #48's clean Linux build failure as a Google Fonts 404 while
+  Next.js generated the Cinzel module; the URL implementation and test suites
+  had passed before the build step.
+- Replaced both `next/font/google` families with pinned Fontsource 5.3.0 Latin
+  weights, preserving Cinzel/Rajdhani while removing build-time font downloads.
+- Re-ran `npm run check:pr`; all 47 web tests, both TypeScript gates, lint, and
+  the offline-font Next.js production build pass.
 
 - Replaced zero-based public session indexes with canonical ISO raid-date slugs.
 - Used the persisted full-raid start when available and added stable same-date
@@ -324,10 +351,13 @@ Codex works on `codex-dev`, pushes `origin/codex-dev`, and opens PRs into `main`
 | LK scripted finale segmentation | DONE | Fury of Frostmourne keeps the roleplay and final burn in one normal kill |
 | Public report terminology | DONE | Session, player, and encounter pages use Pizza Logs-native labels with a source regression preventing external report-brand copy |
 | Date-based raid links | DONE | ISO slugs, permanent compatibility redirects, and social metadata pass the full local release gate |
+| Readable public raid slugs | DONE | Guild-labelled aliases hide internal CUIDs while legacy links permanently redirect |
 | 2026-08-14 production report regeneration | PENDING | Deploy first, then delete only the broken upload and re-upload its original ZIP |
 
 ## Open Follow-Ups
 
+- After deployment, verify one readable production raid URL, the permanent
+  redirect from its old CUID URL, and the canonical/Open Graph URL.
 - Merge the frontend audit remediation PR, confirm the Railway commit and Production Smoke workflow, then re-upload Neil's original ZIP and compare all five pulls against the frozen acceptance baseline. Historical database rows will not update automatically.
 - Re-upload an affected mixed heroic/normal raid after deployment and confirm stored difficulties plus the new analytical sections.
 - Compare absorbs/spec/role against one privacy-safe real Warmane pull; synthetic and fixture gates pass, but real overlapping-shield evidence is the next calibration input.

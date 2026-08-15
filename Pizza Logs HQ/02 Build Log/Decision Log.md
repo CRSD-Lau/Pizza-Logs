@@ -4,10 +4,27 @@
 
 ---
 
+## 2026-08-15 — Public raid URLs hide internal upload CUIDs
+
+**Decision:** Persist one unique, readable public slug per upload, such as
+`pizza-warriors-7k2m9x4`, and use it in every generated raid, raid-player,
+encounter breadcrumb, upload-result, and admin public link. Keep the existing
+CUID as the database primary key only.
+
+**Why:** CUIDs are implementation details and make shared links look machine
+generated. A guild label plus a short collision-protected code is easier to
+recognize while remaining stable and globally unique.
+
+**Tradeoff:** This adds one non-null unique database column and a backfill for
+existing uploads. Full-CUID links remain valid and issue permanent redirects to
+the public slug, so Discord messages and bookmarks do not break.
+
+---
+
 ## 2026-08-15 — Public raid URLs use the raid date
 
 **Decision:** Generate canonical public raid paths from the full raid start as
-`/raids/[uploadId]/sessions/YYYY-MM-DD`. If one upload contains multiple raids
+`/raids/[public-report-slug]/sessions/YYYY-MM-DD`. If one upload contains multiple raids
 on the same UTC log date, append `-2`, `-3`, and so on in session-index order.
 
 **Why:** The date identifies a shared raid meaningfully in Discord, bookmarks,

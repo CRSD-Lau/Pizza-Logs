@@ -158,6 +158,7 @@ export type ParseResult = z.infer<typeof ParseResultSchema>;
 
 export const UploadResponseSchema = z.object({
   uploadId:           z.string(),
+  publicReportSlug:   z.string(),
   firstSessionSlug:   z.string().optional(),
   status:             z.enum(["DONE", "FAILED", "DUPLICATE", "PARTIAL"]),
   encountersFound:    z.number(),

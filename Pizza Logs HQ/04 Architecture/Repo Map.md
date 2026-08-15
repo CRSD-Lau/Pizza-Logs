@@ -52,8 +52,8 @@ public/               Favicon, icons, intro media
 
 - `/`
 - `/raids`
-- `/raids/[id]/sessions/[yyyy-mm-dd]`
-- `/raids/[id]/sessions/[yyyy-mm-dd]/players/[playerName]`
+- `/raids/[public-report-slug]/sessions/[yyyy-mm-dd]`
+- `/raids/[public-report-slug]/sessions/[yyyy-mm-dd]/players/[playerName]`
 - `/encounters/[id]`
 - `/bosses`
 - `/bosses/[bossSlug]`

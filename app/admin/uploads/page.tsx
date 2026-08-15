@@ -138,7 +138,7 @@ export default async function AdminUploadsPage() {
                         View upload details &rarr;
                       </Link>
                       <Link
-                        href={getRaidSessionPath(u.id, firstRaidRoute)}
+                        href={getRaidSessionPath(u.publicSlug, firstRaidRoute)}
                         className="text-xs text-text-secondary hover:text-text-primary transition-colors"
                       >
                         Open first raid &rarr;

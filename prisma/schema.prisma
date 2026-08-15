@@ -60,6 +60,7 @@ model Boss {
 
 model Upload {
   id             String       @id @default(cuid())
+  publicSlug     String       @unique @default(dbgenerated("('raid-'::text || substr(md5(((random())::text || (clock_timestamp())::text)), 1, 7))"))
   filename       String
   fileHash       String       @unique // SHA-256 hex — prevents exact duplicate uploads
   fileSize       Int          // bytes

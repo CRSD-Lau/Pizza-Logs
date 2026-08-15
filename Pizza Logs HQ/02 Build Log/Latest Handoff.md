@@ -20,6 +20,8 @@
 - Parser correctness remains the highest-risk area.
 - Public report pages now use Pizza Logs-native terminology only; external
   report-brand and `Custom Slice` labels are not rendered in the frontend.
+- Newly generated public raid links now use readable upload aliases such as
+  `pizza-warriors-7k2m9x4`; the 25-character database CUID stays internal.
 - The 2026-08-14 raid source log now parses the third Blood Prince Council pull
   as a distinct `25H KILL` and keeps the Lich King 10% roleplay plus final burn
   inside one `25N KILL`.
@@ -105,6 +107,34 @@
   passed zero-warning ESLint, both TypeScript checks, all 44 web tests, and the
   Next.js 16 production build.
 - No parser, persistence schema, migration, or combat-log math changed.
+
+## 2026-08-15 Clean Public Raid Slugs
+
+- Added one persisted, unique `Upload.publicSlug` for human-facing raid links.
+  New Pizza Warriors uploads use a shape such as `pizza-warriors-7k2m9x4`;
+  guildless uploads use a `raid-...` fallback.
+- Canonical raid and raid-player metadata, raid history, encounter breadcrumbs,
+  duplicate-upload results, and admin public links now use the readable slug.
+- The internal upload CUID remains the primary/foreign key and is still returned
+  in the upload API for compatibility, but newly generated public URLs do not
+  expose it.
+- Existing full-CUID URLs and numeric session URLs resolve the same upload and
+  issue a permanent redirect to the readable slug plus date route.
+- Added migration `20260815151000_add_public_report_slug`. It backfills existing
+  rows from the guild label plus a deterministic seven-character code, enforces
+  non-null uniqueness, and keeps a database default for rollout compatibility.
+- The migration ran successfully against existing/guildless/future fixture rows
+  in an isolated PostgreSQL schema; that temporary schema was removed.
+- `npm run check:pr` passed zero-warning ESLint, both TypeScript checks, all 47
+  web tests, and the Next.js 16 production build.
+- PR #48's first clean Linux build exposed an unrelated build-time dependency on
+  Google Fonts: `fonts.gstatic.com` returned 404 for Cinzel, so Turbopack could
+  not resolve the generated font module.
+- Cinzel and Rajdhani now use pinned OFL-licensed Fontsource packages with the
+  same Latin weights. The production build no longer needs Google Fonts network
+  access, and the complete local `npm run check:pr` gate passes afterward.
+- No parser, encounter persistence, report calculations, or combat-log math
+  changed.
 
 ## 2026-08-15 BPC And Lich King Repair
 
@@ -386,6 +416,17 @@
 
 ## Verification This Session
 
+### Clean public raid slugs
+
+- Focused slug tests cover guild-label normalization, URL-safe random codes,
+  fallback labels, malformed values, and rejection of internal CUIDs.
+- Routing source coverage requires public slugs across every generated report
+  link and requires legacy CUID redirects to remain present.
+- The additive SQL migration passed in an isolated PostgreSQL schema with a
+  `pizza-warriors-...` backfill, a `raid-...` fallback, and a future-row default.
+- `npm run check:pr` passed lint, both TypeScript compilers, all 47 web tests,
+  and the Next.js 16 production build.
+
 ### 2026-08-14 BPC and Lich King repair
 
 - The complete 264,268,876-byte raid log produced 23 encounters and 23 unique
@@ -509,6 +550,9 @@
 
 ## Remaining Risks
 
+- The public-slug migration updates every existing upload before applying the
+  non-null unique index. The table is currently small and the migration deletes
+  nothing, but production startup should still be watched through Railway.
 - Source `Veo.mp4` is 1280x720, so 1440p/4K variants are upscale derivatives rather than native high-resolution renders.
 - Local visual validation covered desktop in the in-app browser plus extracted mobile frames; test devices should still smoke-check iPhone Safari and Android Chrome after deployment.
 - Upload concurrency limits are process-local; multiple Railway parser replicas would need a shared limiter if production traffic warrants it.
@@ -562,7 +606,7 @@
 
 ## Exact Next Step
 
-Ship the BPC/Lich King parser repair through `codex-dev` -> PR -> `main`, wait
-for required CI and Railway deployment, then regenerate only the linked
-2026-08-14 upload from its original ZIP. Codex still does not commit or push
-`main` directly.
+Ship the clean public-slug migration through `codex-dev` -> PR -> `main`, wait
+for required CI and Railway deployment, then verify the clean production URL,
+the permanent redirect from the existing CUID URL, and canonical share metadata.
+Codex still does not commit or push `main` directly.

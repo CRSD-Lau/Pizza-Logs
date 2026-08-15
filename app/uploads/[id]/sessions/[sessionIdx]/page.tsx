@@ -48,14 +48,14 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const resolution = await resolveRaidSession(id, sessionIdx);
   if (!resolution) return { title: "Raid" };
 
-  const { route } = resolution;
+  const { route, uploadId, publicSlug } = resolution;
   const [upload, encounters] = await Promise.all([
     db.upload.findUnique({
-      where: { id },
+      where: { id: uploadId },
       select: { guild: { select: { name: true } } },
     }),
     db.encounter.findMany({
-      where: { uploadId: id, sessionIndex: route.sessionIndex },
+      where: { uploadId, sessionIndex: route.sessionIndex },
       select: {
         outcome: true,
         boss: { select: { raid: true } },
@@ -72,7 +72,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const kills = encounters.filter(encounter => encounter.outcome === "KILL").length;
   const wipes = encounters.filter(encounter => encounter.outcome === "WIPE").length;
   const description = `${raidLabel} raid report${guildLabel} on ${dateLabel}. ${kills} kills, ${wipes} wipes, ${encounters.length} pulls.`;
-  const canonical = `${PIZZA_LOGS_ORIGIN}${getRaidSessionPath(id, route)}`;
+  const canonical = `${PIZZA_LOGS_ORIGIN}${getRaidSessionPath(publicSlug, route)}`;
 
   return {
     title,
@@ -98,12 +98,12 @@ export default async function SessionDetailPage({ params }: Props) {
   const resolution = await resolveRaidSession(id, sessionIdx);
   if (!resolution) notFound();
 
-  const { route: sessionRoute } = resolution;
-  const sessionPath = getRaidSessionPath(id, sessionRoute);
-  if (resolution.isLegacyIndex) permanentRedirect(sessionPath);
+  const { route: sessionRoute, uploadId, publicSlug } = resolution;
+  const sessionPath = getRaidSessionPath(publicSlug, sessionRoute);
+  if (resolution.isLegacyUploadId || resolution.isLegacyIndex) permanentRedirect(sessionPath);
 
   const sessionIndex = sessionRoute.sessionIndex;
-  const sessionRoutes = await getRaidSessionRoutes(id);
+  const sessionRoutes = await getRaidSessionRoutes(uploadId);
   const sessionPosition = sessionRoutes.findIndex(route => route.sessionIndex === sessionIndex);
   const previousSession = sessionPosition > 0 ? sessionRoutes[sessionPosition - 1] : null;
   const nextSession = sessionPosition >= 0 && sessionPosition < sessionRoutes.length - 1
@@ -111,9 +111,8 @@ export default async function SessionDetailPage({ params }: Props) {
     : null;
 
   const upload = await db.upload.findUnique({
-    where: { id },
+    where: { id: uploadId },
     select: {
-      id: true,
       sessionDamage: true,
       sessionAnalytics: true,
       realm: { select: { name: true, host: true } },
@@ -123,7 +122,7 @@ export default async function SessionDetailPage({ params }: Props) {
   if (!upload) notFound();
 
   const encounters = await db.encounter.findMany({
-    where: { uploadId: id, sessionIndex },
+    where: { uploadId, sessionIndex },
     orderBy: { startedAt: "asc" },
     include: {
       boss: { select: { name: true, slug: true, raid: true } },
@@ -263,12 +262,12 @@ export default async function SessionDetailPage({ params }: Props) {
       {sessionCount > 1 && (
         <div className="flex items-center gap-3 text-xs flex-wrap">
           {previousSession && (
-            <Link href={getRaidSessionPath(id, previousSession)} className="text-gold hover:text-gold-light">
+            <Link href={getRaidSessionPath(publicSlug, previousSession)} className="text-gold hover:text-gold-light">
               Previous raid
             </Link>
           )}
           {nextSession && (
-            <Link href={getRaidSessionPath(id, nextSession)} className="text-gold hover:text-gold-light sm:ml-auto">
+            <Link href={getRaidSessionPath(publicSlug, nextSession)} className="text-gold hover:text-gold-light sm:ml-auto">
               Next raid
             </Link>
           )}

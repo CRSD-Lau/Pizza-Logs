@@ -34,6 +34,7 @@ export default async function EncounterPage({ params }: Props) {
       upload: {
         select: {
           id: true,
+          publicSlug: true,
           guild: { select: { name: true } },
           realm: { select: { name: true, host: true } },
         },
@@ -182,7 +183,7 @@ export default async function EncounterPage({ params }: Props) {
         <span>&gt;</span>
         {raidSessionRoute ? (
           <Link
-            href={getRaidSessionPath(encounter.upload.id, raidSessionRoute)}
+            href={getRaidSessionPath(encounter.upload.publicSlug, raidSessionRoute)}
             className="inline-flex min-h-11 items-center hover:text-gold"
           >
             {formatRaidSessionTitle(raidSessionRoute)}

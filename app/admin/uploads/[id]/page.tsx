@@ -157,7 +157,7 @@ export default async function AdminUploadDetailPage({ params }: Props) {
 
                   {route && (
                     <Link
-                      href={getRaidSessionPath(id, route)}
+                      href={getRaidSessionPath(upload.publicSlug, route)}
                       className="text-xs text-gold hover:text-gold-light transition-colors"
                     >
                       Open public raid view &rarr;

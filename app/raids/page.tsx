@@ -17,7 +17,7 @@ async function getRaidUploads() {
     orderBy: { createdAt: "desc" },
     take: 50,
     select: {
-      id: true,
+      publicSlug: true,
       sessionAnalytics: true,
       realm: { select: { name: true, host: true } },
       guild: { select: { name: true } },
@@ -47,7 +47,7 @@ export default async function RaidsPage() {
   }
 
   type SessionCard = {
-    uploadId: string;
+    publicReportSlug: string;
     sessionIndex: number;
     routeSlug: string;
     startedAt: Date;
@@ -84,7 +84,7 @@ export default async function RaidsPage() {
       if (!route) continue;
       const raids = [...new Set(encs.map(e => e.boss.raid))];
       sessions.push({
-        uploadId: upload.id,
+        publicReportSlug: upload.publicSlug,
         sessionIndex,
         routeSlug: route.slug,
         startedAt: route.startedAt,
@@ -142,8 +142,8 @@ export default async function RaidsPage() {
               <div className="space-y-3">
                 {daySessions.map((s, index) => (
                   <Link
-                    key={`${s.uploadId}-${s.sessionIndex}`}
-                    href={`/raids/${s.uploadId}/sessions/${s.routeSlug}`}
+                    key={`${s.publicReportSlug}-${s.sessionIndex}`}
+                    href={`/raids/${s.publicReportSlug}/sessions/${s.routeSlug}`}
                     className={getRevealClassName({
                       boss: true,
                       className:

@@ -1,23 +1,16 @@
 import type { Metadata } from "next";
-import { Cinzel, Rajdhani } from "next/font/google";
+import "@fontsource/cinzel/latin-400.css";
+import "@fontsource/cinzel/latin-600.css";
+import "@fontsource/cinzel/latin-700.css";
+import "@fontsource/rajdhani/latin-300.css";
+import "@fontsource/rajdhani/latin-400.css";
+import "@fontsource/rajdhani/latin-500.css";
+import "@fontsource/rajdhani/latin-600.css";
+import "@fontsource/rajdhani/latin-700.css";
 import "./globals.css";
 import { FrozenLogbookIntro } from "@/components/intro/FrozenLogbookIntro";
 import { Nav } from "@/components/layout/Nav";
 import { PIZZA_LOGS_ORIGIN } from "@/lib/site";
-
-const cinzel = Cinzel({
-  subsets: ["latin"],
-  weight: ["400", "600", "700"],
-  variable: "--font-cinzel",
-  display: "swap",
-});
-
-const rajdhani = Rajdhani({
-  subsets: ["latin"],
-  weight: ["300", "400", "500", "600", "700"],
-  variable: "--font-rajdhani",
-  display: "swap",
-});
 
 export const metadata: Metadata = {
   metadataBase: new URL(PIZZA_LOGS_ORIGIN),
@@ -32,7 +25,7 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en" className={`${cinzel.variable} ${rajdhani.variable}`}>
+    <html lang="en">
       <body className="min-h-screen bg-bg-deep text-text-primary antialiased">
         <FrozenLogbookIntro />
         <div className="page-glow">
