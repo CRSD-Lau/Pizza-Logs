@@ -2,8 +2,11 @@
 
 ## Active Bugs
 
-No confirmed active production outage is open. The Prisma 7 Railway startup
-failure from PR #29 is resolved in `main`.
+The linked 2026-08-14 raid is a partial stored upload: a coarse encounter
+fingerprint collision inserted 23 encounters, omitted the third Blood Prince
+Council kill, and prevented finalization. Its Lich King pull was also split at
+the scripted 10% roleplay. The parser repair is verified on the source log, but
+the existing production row still needs deletion and re-upload after deployment.
 
 ## Active Limitations And Blockers
 
@@ -26,6 +29,8 @@ failure from PR #29 is resolved in `main`.
 
 | Issue | Resolution |
 |---|---|
+| Back-to-back BPC attempts with the same roster collided and dropped the kill | Encounter fingerprints now use the exact normalized pull start instead of a five-minute bucket; the complete source log produces 23 unique fingerprints and retains all three BPC attempts |
+| Lich King 10% roleplay split a one-shot kill into WIPE plus UNKNOWN | `Fury of Frostmourne` now opens a bounded five-minute scripted-finale grace window so the resumed burn and real boss death remain one 25N KILL |
 | Low-contrast 9-12px metadata disappeared against dark surfaces | Raised semantic metadata tokens to AA-readable values, established a 12px decorative and 14px normal metadata floor, and added a frontend contract test |
 | Viewing current gear required a Tampermonkey-assisted refresh path | Class avatars now lazy-load a first-party five-minute Armory quick look with equipment icons, class identity, GearScoreLite, and cached fallback; no helper or admin secret is required |
 | Gear and roster operations depended on browser userscripts and open Warmane tabs | Removed browser import controls/APIs and task installers; gear is on demand, roster has an authenticated first-party admin refresh, and legacy update URLs serve inert secret-cleanup scripts |

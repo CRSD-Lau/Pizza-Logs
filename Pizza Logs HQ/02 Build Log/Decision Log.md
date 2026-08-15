@@ -79,4 +79,14 @@
 
 **Decision:** Two dedup layers: SHA-256 of file (Upload.fileHash) + SHA-256 of boss+difficulty+timeblock+sorted_player_names (Encounter.fingerprint)  
 **Why:** File-level catches exact re-uploads. Encounter-level catches the same fight appearing in two different log files (e.g. two officers both upload a log from the same night).  
-**Tradeoff:** Fingerprint is approximate (5-min timeblock). Acceptable — collision probability is negligible in practice.
+**Tradeoff:** The original five-minute time block was superseded on 2026-08-15 after two back-to-back Blood Prince Council attempts with the same roster collided and dropped the actual kill.
+
+---
+
+## 2026-08-15 — Exact pull starts in encounter fingerprints
+
+**Decision:** Encounter fingerprints use the exact normalized combat-log start timestamp instead of a five-minute bucket.
+
+**Why:** Exact timestamps are stable when the same pull appears in overlapping logs, while two distinct attempts can begin inside the same five-minute window with an unchanged roster.
+
+**Status:** Implemented with a regression reproducing the 2026-08-14 Blood Prince Council collision.

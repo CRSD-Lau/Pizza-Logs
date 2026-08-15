@@ -2,6 +2,13 @@
 
 ## Active Focus
 
+The 2026-08-14 ICC acceptance raid exposed two coupled parser failures. The
+second and third Blood Prince Council attempts shared the old five-minute
+fingerprint bucket, so the real heroic kill collided during persistence. The
+Lich King's `Fury of Frostmourne` finale exceeded the generic 30-second gap and
+split one normal kill into WIPE plus UNKNOWN. The candidate uses exact pull-start
+fingerprints and keeps the bounded LK roleplay/final burn in one encounter.
+
 The current `codex-dev` candidate completes the first-party Warmane data path. Class avatars are 44px controls with a gear badge; hover, keyboard focus, or tap lazily loads current equipment, class/race/guild identity, GearScoreLite, average item level, freshness, and an isolated dressed 3D model on desktop through Pizza Logs. The public route only accepts known players/roster members, uses a five-minute cache, and falls back to the last healthy snapshot. Guild roster refresh is now an authenticated `/admin` action. Tampermonkey, bookmarklets, open Warmane tabs, and browser-stored admin secrets are not part of the active architecture.
 
 The current `codex-dev` candidate also completes the frontend audit remediation: readable metadata, shared page and surface contracts, asymmetric result hierarchy, paginated/progressively disclosed long reports, accessible 44px interactions, responsive analytics rows, and a homepage-only once-per-session cinematic intro. `DESIGN.md` is the implementation contract for follow-up UI work.
@@ -23,6 +30,20 @@ Documentation metadata refresh: the README now links to the GitHub wiki, and the
 Codex works on `codex-dev`, pushes `origin/codex-dev`, and opens PRs into `main`. When every required CI check passes and no conflict or explicit blocker remains, Codex merges the PR through GitHub without waiting for manual review. Codex never commits or pushes `main` directly and never bypasses required checks.
 
 ## This Session
+
+- Compared the rendered UwU and Pizza Logs reports for the 2026-08-14 raid.
+- Parsed the complete 264,268,876-byte source log and reproduced 24 parser
+  segments before the fix, including colliding BPC fingerprints and split LK.
+- Added focused regressions that failed on both defects before implementation.
+- Changed encounter fingerprints from five-minute buckets to exact normalized
+  start timestamps.
+- Added a five-minute Lich King scripted-finale grace window after spell `72350`
+  so the roleplay gap does not terminate the pull.
+- Re-ran the complete source log: 23 encounters and 23 unique fingerprints,
+  with the third BPC as `25H KILL` and LK as one `25N KILL`.
+- Passed all 111 parser-core tests and the full 297-test parser suite.
+- Passed `npm run check:pr`: zero-warning ESLint, both TypeScript checks, all 38
+  web tests, and the Next.js 16 production build.
 
 - Merged PR #39 after its required CI passed, then changed the standing release rule so Codex automatically merges future green PRs without waiting for Neil's review.
 - Kept `main` protected: work still originates on `codex-dev`, every change still goes through a PR, and failing or pending required checks still block the merge.
@@ -270,6 +291,9 @@ Codex works on `codex-dev`, pushes `origin/codex-dev`, and opens PRs into `main`
 | Windows browser-sync cleanup | DONE | Installers/launchers removed; uninstall-only commands remain for previously configured machines |
 | ICC difficulty marker fix | DONE | Saurfang `Rune of Blood` stays normal-capable; Saurfang `Scent of Blood` IDs and Valithria `Twisted Nightmares` now mark heroic |
 | Session player chart kill filter | DONE | DPS/HPS by encounter chart excludes wipes; Encounter Breakdown still lists all pulls |
+| BPC fingerprint collision | DONE | Exact pull starts distinguish the 00:55 wipe from the 00:59 heroic kill |
+| LK scripted finale segmentation | DONE | Fury of Frostmourne keeps the roleplay and final burn in one normal kill |
+| 2026-08-14 production report regeneration | PENDING | Deploy first, then delete only the broken upload and re-upload its original ZIP |
 
 ## Open Follow-Ups
 
@@ -286,6 +310,9 @@ Codex works on `codex-dev`, pushes `origin/codex-dev`, and opens PRs into `main`
 - Decide whether app-level upload rate limiting is needed or Railway-level controls are enough.
 - After deployment, uninstall the retired Gear Sync and Guild Roster Sync browser scripts and run the two cleanup commands in `docs/userscript-retirement.md` only if old Windows launchers were previously installed.
 - After this parser fix deploys, reprocess or re-upload the affected latest raid so stored Saurfang and Valithria difficulties are regenerated.
+- After the BPC/LK repair deploys, delete only upload `cmstyog32000q01js0kirs6ev`
+  through protected admin and re-upload `WoWCombatLog.zip`; the current row is
+  partial and its exact file hash otherwise routes back to the stale report.
 - Add more encounter-specific useful-damage exclusions as real Skada comparison data becomes available.
 - Link Railway with `railway link` only when intentionally working on Railway configuration; do not deploy without explicit instruction.
 

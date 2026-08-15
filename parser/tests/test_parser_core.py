@@ -14,7 +14,7 @@ from parser_core import (
     CombatLogParser, ParsedEncounter, DMG_EVENTS,
     UNIT_DIED_EVENT, ENCOUNTER_START, ENCOUNTER_END,
     GUNSHIP_CREW_NAMES,
-    _decode_difficulty, _is_player,
+    _decode_difficulty, _fingerprint, _is_player,
 )
 from bosses import lookup_boss
 
@@ -716,6 +716,83 @@ def test_wipe_window_ignores_boss_outgoing_damage_after_last_boss_target_event()
     assert enc is not None
     assert enc.duration_seconds == pytest.approx(250.0)
     assert enc.total_damage_taken == 0
+
+
+def test_lk_fury_roleplay_gap_remains_one_kill_segment():
+    """Fury of Frostmourne starts LK's scripted finale, not a wipe/new pull."""
+    pre_roleplay = [
+        _log_line(
+            f"4/19 13:00:{second:02d}.000",
+            _spell_damage_parts(
+                PLAYER_GUID,
+                "Phyre",
+                NPC_GUID,
+                "The Lich King",
+                10_000,
+                spell_id=73779 if second == 0 else 133,
+            ),
+        )
+        for second in range(10)
+    ]
+    fury = _log_line(
+        "4/19 13:00:10.000",
+        [
+            "SPELL_CAST_START",
+            NPC_GUID,
+            '"The Lich King"',
+            "0x10a48",
+            "0x0000000000000000",
+            "nil",
+            "0x80000000",
+            "72350",
+            '"Fury of Frostmourne"',
+            "32",
+        ],
+    )
+    post_roleplay = [
+        _log_line(
+            f"4/19 13:03:{30 + second:02d}.000",
+            _spell_damage_parts(
+                PLAYER_GUID,
+                "Phyre",
+                NPC_GUID,
+                "The Lich King",
+                5_000,
+            ),
+        )
+        for second in range(10)
+    ]
+    death = _log_line("4/19 13:03:40.000", _unit_died_parts("The Lich King"))
+
+    encounters = CombatLogParser(file_year=2026).parse_file(
+        io.StringIO("".join([*pre_roleplay, fury, *post_roleplay, death]))
+    )
+
+    assert len(encounters) == 1
+    assert encounters[0].boss_name == "The Lich King"
+    assert encounters[0].difficulty == "25N"
+    assert encounters[0].outcome == "KILL"
+    assert encounters[0].duration_seconds == pytest.approx(220.0)
+
+
+def test_fingerprint_distinguishes_same_roster_pulls_within_five_minutes():
+    """Back-to-back attempts must not collide merely because the roster matches."""
+    roster = ["Phyre", "Tank", "Healer"]
+
+    first = _fingerprint(
+        "Blood Prince Council",
+        "25H",
+        "2026-08-15T00:55:45.164000+00:00",
+        roster,
+    )
+    second = _fingerprint(
+        "Blood Prince Council",
+        "25H",
+        "2026-08-15T00:59:44.255000+00:00",
+        roster,
+    )
+
+    assert first != second
 
 
 def test_lady_total_damage_includes_adds_like_uwu_total_damage():

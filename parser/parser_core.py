@@ -121,6 +121,12 @@ PLAYER_GUID_RE = re.compile(r"^Player-", re.I)
 # Gap in seconds that signals a new encounter when no ENCOUNTER events present
 ENCOUNTER_GAP_SECONDS = 30
 
+# The Lich King pauses combat for a scripted finale after Fury of Frostmourne
+# at 10% health. Warmane's roleplay lasts longer than the generic inactivity
+# window before the raid resumes and the boss emits its real death event.
+LICH_KING_FURY_OF_FROSTMOURNE_ID = "72350"
+LICH_KING_ROLEPLAY_GRACE_SECONDS = 300
+
 # Minimum events to treat a fight segment as a real encounter
 MIN_ENCOUNTER_EVENTS = 10
 
@@ -795,6 +801,7 @@ class CombatLogParser:
         # A fight ends when 30s pass with no boss-name event.
         heuristic_active = False
         last_boss_ts: float = 0.0
+        lich_king_roleplay_ts: Optional[float] = None
         heuristic_segment: list[tuple[str, list[str], float]] = []
         all_buffer: list[tuple[str, list[str], float]] = []  # rolling buffer of recent events
 
@@ -877,13 +884,20 @@ class CombatLogParser:
             is_boss = self._is_boss_event(parts)
 
             if heuristic_active:
-                if ts - last_boss_ts > ENCOUNTER_GAP_SECONDS:
+                if _is_lich_king_fury_event(parts):
+                    lich_king_roleplay_ts = ts
+                inside_lich_king_roleplay = (
+                    lich_king_roleplay_ts is not None
+                    and ts - lich_king_roleplay_ts <= LICH_KING_ROLEPLAY_GRACE_SECONDS
+                )
+                if ts - last_boss_ts > ENCOUNTER_GAP_SECONDS and not inside_lich_king_roleplay:
                     # A long quiet gap always closes the previous attempt, even
                     # when the first line after the gap also names the boss.
                     if len(heuristic_segment) >= MIN_ENCOUNTER_EVENTS:
                         emit(heuristic_segment)
                     heuristic_segment = []
                     heuristic_active = False
+                    lich_king_roleplay_ts = None
                     if is_boss and (event in DMG_EVENTS or event in HEAL_EVENTS or event == UNIT_DIED_EVENT):
                         heuristic_active = True
                         last_boss_ts = ts
@@ -1744,18 +1758,38 @@ def _fingerprint(
 ) -> str:
     """
     Deterministic SHA-256 fingerprint for deduplication.
-    Uses boss name + difficulty + ISO week + sorted participant names.
+    Uses boss name + difficulty + exact normalized start + sorted participants.
+
+    The exact combat-log timestamp is stable across overlapping copies of the
+    same pull. A former five-minute bucket made back-to-back attempts with an
+    unchanged roster collide and caused one encounter insert to be lost.
     """
-    # Round to nearest minute to tolerate small time offsets
     try:
         dt = datetime.fromisoformat(started_at.replace("Z", "+00:00"))
-        # Truncate to nearest 5 minutes
-        minute_block = (dt.hour * 60 + dt.minute) // 5
-        week = dt.isocalendar()
-        time_key = f"{week[0]}-W{week[1]}-{week[2]}-{minute_block}"
+        if dt.tzinfo is None:
+            dt = dt.replace(tzinfo=timezone.utc)
+        else:
+            dt = dt.astimezone(timezone.utc)
+        time_key = dt.isoformat(timespec="milliseconds")
     except Exception:
-        time_key = started_at[:16]
+        time_key = started_at
 
     sorted_names = "|".join(sorted(participants[:25]))  # top 25 is enough
     raw = f"{boss_name.lower()}|{difficulty}|{time_key}|{sorted_names}"
     return hashlib.sha256(raw.encode()).hexdigest()
+
+
+def _is_lich_king_fury_event(parts: list[str]) -> bool:
+    """Return whether a log event starts LK's scripted 10% victory finale."""
+    if len(parts) < 9:
+        return False
+    source_name = parts[2].strip('"').strip().lower()
+    spell_id = parts[7].strip()
+    spell_name = parts[8].strip('"').strip().lower()
+    return (
+        source_name in {"the lich king", "lich king", "arthas"}
+        and (
+            spell_id == LICH_KING_FURY_OF_FROSTMOURNE_ID
+            or spell_name == "fury of frostmourne"
+        )
+    )

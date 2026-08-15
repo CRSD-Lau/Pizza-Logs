@@ -42,7 +42,10 @@ ENCOUNTER_END fields: `[0]=ENCOUNTER_END [1]=bossId [2]=bossName [3]=difficultyI
 
 If no ENCOUNTER_START is present, the parser anchors on boss-name events: any
 event where `src_name` or `dst_name` matches a known boss or alias. A 30-second
-inactivity window closes the encounter.
+inactivity window normally closes the encounter. The Lich King's spell
+`Fury of Frostmourne` (`72350`) starts the scripted 10% finale, so that specific
+attempt stays open for up to five minutes of roleplay while the raid is dead.
+The resumed burn and the boss death therefore remain part of the same pull.
 
 ### Minimum event floor
 
@@ -83,6 +86,9 @@ an encounter.
 - **Exception: Valithria Dreamwalker** (healing encounter):
   - KILL: "Green Dragon Combat Trigger" or "Combat Trigger" dies
   - WIPE: "Valithria Dreamwalker" dies
+- **Exception: The Lich King** — `Fury of Frostmourne` starts the scripted
+  victory finale. A roleplay gap after that spell does not create a wipe or a
+  second attempt; the later Lich King death resolves the original pull as KILL.
 
 ---
 
@@ -274,6 +280,19 @@ A GUID is considered a player if it matches any of:
 - **KILL**: duration = `boss_died_ts - first_boss_event_ts`
   (uses `UNIT_DIED` timestamp of boss, not last event in segment — excludes post-kill tail)
 - **WIPE/UNKNOWN**: duration = last event timestamp - first event timestamp
+
+For The Lich King, a successful heuristic pull includes the 10% roleplay and
+uses the final `UNIT_DIED` timestamp, matching the single in-game attempt.
+
+---
+
+## Encounter Fingerprints
+
+Encounter fingerprints use boss, difficulty, the exact normalized pull-start
+timestamp, and sorted participant names. Exact timestamps keep overlapping
+copies of one pull deterministic while preventing back-to-back attempts with
+the same roster from colliding. File-level SHA-256 remains the first guard
+against an exact re-upload.
 
 ---
 
