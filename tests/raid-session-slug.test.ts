@@ -95,7 +95,7 @@ test("formats canonical public paths and dates deterministically in UTC", () => 
 
   assert.equal(formatRaidDateLabel(route.startedAt), "August 14, 2026");
   assert.equal(
-    getRaidSessionPath("upload-123", route),
-    "/raids/upload-123/sessions/2026-08-14",
+    getRaidSessionPath("pizza-warriors-7k2m9x4", route),
+    "/raids/pizza-warriors-7k2m9x4/sessions/2026-08-14",
   );
 });

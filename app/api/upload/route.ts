@@ -1,5 +1,7 @@
 import { NextRequest } from "next/server";
+import { Prisma } from "@/generated/prisma/client";
 import { db } from "@/lib/db";
+import { createPublicReportSlug } from "@/lib/public-report-slug";
 import { buildRaidSessionRoutesWithAnalytics } from "@/lib/raid-session-slug";
 import { ParseResultSchema, UploadRequestSchema } from "@/lib/schema";
 import { computeMilestones } from "@/lib/actions/milestones";
@@ -8,6 +10,14 @@ export const maxDuration = 300;
 
 const enc = new TextEncoder();
 const sse = (data: object) => enc.encode(`data: ${JSON.stringify(data)}\n\n`);
+
+function isPublicReportSlugCollision(error: unknown): boolean {
+  if (!(error instanceof Prisma.PrismaClientKnownRequestError) || error.code !== "P2002") {
+    return false;
+  }
+
+  return JSON.stringify(error.meta?.target ?? "").includes("publicSlug");
+}
 
 export async function POST(req: NextRequest) {
   // ── Parse metadata from query params ─────────────────────────
@@ -131,13 +141,14 @@ export async function POST(req: NextRequest) {
         // ── Dedup check ─────────────────────────────────────────
         const existingUpload = await db.upload.findUnique({
           where:  { fileHash: parseResult.fileHash },
-          select: { id: true },
+          select: { id: true, publicSlug: true },
         });
         if (existingUpload) {
           send({
             type: "complete",
             result: {
               uploadId:            existingUpload.id,
+              publicReportSlug:    existingUpload.publicSlug,
               firstSessionSlug,
               status:              "DUPLICATE",
               encountersFound:     parseResult.encounters.length,
@@ -167,18 +178,28 @@ export async function POST(req: NextRequest) {
         }
 
         // ── Upload record ────────────────────────────────────────
-        const upload = await db.upload.create({
-          data: {
-            filename:     filename,
-            fileHash:     parseResult.fileHash,
-            fileSize:     fileSize || 0,
-            status:       "PARSING",
-            realmId:      realm.id,
-            guildId:      guildId ?? null,
-            uploaderName: uploaderName,
-            rawLineCount: parseResult.rawLineCount,
-          },
-        });
+        let upload: { id: string; publicSlug: string } | null = null;
+        for (let attempt = 0; attempt < 5 && !upload; attempt += 1) {
+          try {
+            upload = await db.upload.create({
+              data: {
+                publicSlug:    createPublicReportSlug(guildName ?? realmName),
+                filename:      filename,
+                fileHash:      parseResult.fileHash,
+                fileSize:      fileSize || 0,
+                status:        "PARSING",
+                realmId:       realm.id,
+                guildId:       guildId ?? null,
+                uploaderName:  uploaderName,
+                rawLineCount:  parseResult.rawLineCount,
+              },
+              select: { id: true, publicSlug: true },
+            });
+          } catch (error) {
+            if (!isPublicReportSlugCollision(error)) throw error;
+          }
+        }
+        if (!upload) throw new Error("Could not allocate a unique public report slug");
 
         send({ type: "progress", pct: 92, msg: "Saving to database…" });
 
@@ -334,6 +355,7 @@ export async function POST(req: NextRequest) {
           type: "complete",
           result: {
             uploadId:            upload.id,
+            publicReportSlug:    upload.publicSlug,
             firstSessionSlug,
             status:              "DONE",
             encountersFound:     parseResult.encounters.length,

@@ -77,8 +77,8 @@ The scripts crop the bottom-right Veo watermark out of the frame, preserve 16:9 
 |---|---|
 | `/` | Upload form and recent records |
 | `/raids` | Raid history grouped by upload and raid date |
-| `/raids/[id]/sessions/[yyyy-mm-dd]` | Public raid detail with a canonical date slug |
-| `/raids/[id]/sessions/[yyyy-mm-dd]/players/[name]` | Date-scoped raid player detail |
+| `/raids/[public-report-slug]/sessions/[yyyy-mm-dd]` | Public raid detail with a readable guild/report slug and canonical date |
+| `/raids/[public-report-slug]/sessions/[yyyy-mm-dd]/players/[name]` | Date-scoped raid player detail |
 | `/encounters/[id]` | Single boss pull breakdown |
 | `/bosses` and `/bosses/[slug]` | Boss ranking pages |
 | `/leaderboards` | Aggregate DPS/HPS leaderboards |
@@ -89,9 +89,11 @@ The scripts crop the bottom-right Veo watermark out of the frame, preserve 16:9 
 | `/admin/uploads` | Protected upload history |
 
 `/uploads` and `/uploads/[id]` redirect to the admin upload history. Public raid
-URLs use ISO dates such as `/sessions/2026-08-14`; a second raid from the same
-upload on that date uses `/sessions/2026-08-14-2`. Legacy numeric session URLs
-redirect permanently to the dated canonical URL.
+URLs use readable aliases such as
+`/raids/pizza-warriors-7k2m9x4/sessions/2026-08-14`; internal database CUIDs are
+not used in newly generated public links. A second raid from the same upload on
+that date uses `/sessions/2026-08-14-2`. Legacy CUID-based and numeric session
+URLs redirect permanently to the clean dated canonical URL.
 
 ## Upload And Parsing Flow
 

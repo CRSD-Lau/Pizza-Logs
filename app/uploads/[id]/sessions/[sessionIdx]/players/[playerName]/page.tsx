@@ -33,7 +33,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const raidTitle = formatRaidSessionTitle(resolution.route);
   const title = `${name} - ${raidTitle}`;
   const description = `${name}'s performance across the ${formatRaidDateLabel(resolution.route.startedAt)} raid.`;
-  const canonicalPath = `${getRaidSessionPath(id, resolution.route)}/players/${encodeURIComponent(name)}`;
+  const canonicalPath = `${getRaidSessionPath(resolution.publicSlug, resolution.route)}/players/${encodeURIComponent(name)}`;
   const canonical = `${PIZZA_LOGS_ORIGIN}${canonicalPath}`;
 
   return {
@@ -62,16 +62,16 @@ export default async function SessionPlayerPage({ params }: Props) {
 
   if (!resolution) notFound();
 
-  const { route: sessionRoute } = resolution;
-  const sessionPath = getRaidSessionPath(id, sessionRoute);
-  if (resolution.isLegacyIndex) {
+  const { route: sessionRoute, uploadId, publicSlug } = resolution;
+  const sessionPath = getRaidSessionPath(publicSlug, sessionRoute);
+  if (resolution.isLegacyUploadId || resolution.isLegacyIndex) {
     permanentRedirect(`${sessionPath}/players/${encodeURIComponent(name)}`);
   }
 
   const sessionIndex = sessionRoute.sessionIndex;
 
   const encounters = await db.encounter.findMany({
-    where: { uploadId: id, sessionIndex },
+    where: { uploadId, sessionIndex },
     orderBy: { startedAt: "asc" },
     include: {
       boss: { select: { name: true, slug: true, raid: true } },
@@ -97,7 +97,7 @@ export default async function SessionPlayerPage({ params }: Props) {
   const playerClass = firstParticipation.player.class ?? null;
   const classColor = getClassColor(playerClass ?? name);
   const upload = await db.upload.findUnique({
-    where: { id },
+    where: { id: uploadId },
     select: {
       realm: { select: { name: true } },
       guild: { select: { name: true } },

@@ -385,10 +385,10 @@ function UploadResult({
         </button>
       </div>
 
-      {isDuplicate && result.uploadId && result.firstSessionSlug && (
+      {isDuplicate && result.publicReportSlug && result.firstSessionSlug && (
         <div className="px-5 py-4 flex items-center gap-3 flex-wrap">
           <Link
-            href={`/raids/${result.uploadId}/sessions/${result.firstSessionSlug}`}
+            href={`/raids/${result.publicReportSlug}/sessions/${result.firstSessionSlug}`}
             className="inline-flex items-center gap-1.5 px-4 py-2 rounded-sm border border-gold/60 bg-gold/5 text-sm text-gold-light hover:border-gold hover:bg-gold/10 transition-colors"
           >
             View your raid report &rarr;

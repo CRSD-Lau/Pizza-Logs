@@ -111,6 +111,6 @@ export function formatRaidSessionTitle(route: RaidSessionRoute): string {
   return `${formatRaidDateLabel(route.startedAt)} Raid${suffix}`;
 }
 
-export function getRaidSessionPath(uploadId: string, route: RaidSessionRoute): string {
-  return `/raids/${uploadId}/sessions/${route.slug}`;
+export function getRaidSessionPath(publicReportSlug: string, route: RaidSessionRoute): string {
+  return `/raids/${publicReportSlug}/sessions/${route.slug}`;
 }
