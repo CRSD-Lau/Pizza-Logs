@@ -127,6 +127,12 @@
   in an isolated PostgreSQL schema; that temporary schema was removed.
 - `npm run check:pr` passed zero-warning ESLint, both TypeScript checks, all 47
   web tests, and the Next.js 16 production build.
+- PR #48's first clean Linux build exposed an unrelated build-time dependency on
+  Google Fonts: `fonts.gstatic.com` returned 404 for Cinzel, so Turbopack could
+  not resolve the generated font module.
+- Cinzel and Rajdhani now use pinned OFL-licensed Fontsource packages with the
+  same Latin weights. The production build no longer needs Google Fonts network
+  access, and the complete local `npm run check:pr` gate passes afterward.
 - No parser, encounter persistence, report calculations, or combat-log math
   changed.
 

@@ -6,6 +6,8 @@ Public raid URLs now hide the internal upload CUID behind a readable, persisted
 alias such as `pizza-warriors-7k2m9x4`. The database keeps the original CUID for
 relations and API compatibility, while generated links and canonical metadata
 use the public alias. Existing CUID and numeric routes permanently redirect.
+Cinzel and Rajdhani are now served from pinned local Fontsource packages, so a
+clean production build does not depend on Google Fonts being reachable.
 
 Public raid links now use the raid date as their identity. New links use an ISO
 slug such as `/sessions/2026-08-14`, visible raid/player labels use the formatted
@@ -58,6 +60,13 @@ Codex works on `codex-dev`, pushes `origin/codex-dev`, and opens PRs into `main`
   fixture schema afterward.
 - Passed `npm run check:pr`: zero-warning ESLint, both TypeScript compilers, all
   47 web tests, and the Next.js 16 production build.
+- Diagnosed PR #48's clean Linux build failure as a Google Fonts 404 while
+  Next.js generated the Cinzel module; the URL implementation and test suites
+  had passed before the build step.
+- Replaced both `next/font/google` families with pinned Fontsource 5.3.0 Latin
+  weights, preserving Cinzel/Rajdhani while removing build-time font downloads.
+- Re-ran `npm run check:pr`; all 47 web tests, both TypeScript gates, lint, and
+  the offline-font Next.js production build pass.
 
 - Replaced zero-based public session indexes with canonical ISO raid-date slugs.
 - Used the persisted full-raid start when available and added stable same-date

@@ -29,6 +29,7 @@ the existing production row still needs deletion and re-upload after deployment.
 
 | Issue | Resolution |
 |---|---|
+| Clean CI builds could fail when Google Fonts returned 404 for Cinzel | Replaced `next/font/google` downloads with pinned OFL-licensed Fontsource packages for the existing Cinzel and Rajdhani Latin weights; production builds now bundle the fonts locally |
 | Shared raid links exposed `Session 1` and Discord showed generic metadata | Public raid URLs now use the raid date, legacy numeric paths redirect permanently, and date-specific canonical/Open Graph/Twitter metadata describes the actual report |
 | Public report pages exposed external report-brand and `Custom Slice` terminology | Replaced it with Pizza Logs-native session and encounter labels and added a recursive TSX source guard so those terms cannot return to rendered UI |
 | Back-to-back BPC attempts with the same roster collided and dropped the kill | Encounter fingerprints now use the exact normalized pull start instead of a five-minute bucket; the complete source log produces 23 unique fingerprints and retains all three BPC attempts |
