@@ -2,7 +2,7 @@
 
 ## Date
 
-2026-08-12
+2026-08-15
 
 ## Branch
 
@@ -18,6 +18,12 @@
 - Local Git executable fallback: `C:\Program Files\Git\cmd\git.exe`
 - GitHub CLI executable: `C:\Program Files\GitHub CLI\gh.exe`
 - Parser correctness remains the highest-risk area.
+- The 2026-08-14 raid source log now parses the third Blood Prince Council pull
+  as a distinct `25H KILL` and keeps the Lich King 10% roleplay plus final burn
+  inside one `25N KILL`.
+- Root causes were a five-minute encounter-fingerprint collision between the
+  second and third BPC pulls and the generic 30-second heuristic gap splitting
+  Lich King's scripted `Fury of Frostmourne` finale.
 - The frontend now uses a shared page/header/section/data-panel contract, readable metadata colors, 44px controls, asymmetric metric summaries, responsive analytical rows, and progressive disclosure for long directories and reports.
 - The cinematic intro is homepage-only and runs once per browser session; hard-loaded report and profile routes are never blocked by it.
 - Difficulty now uses per-attempt `pizza-difficulty-v2` boss/mode spell sets, explicit Ulduar rules, conflict-to-`UNKNOWN`, and auditable evidence.
@@ -66,6 +72,23 @@
   - `C:\Projects\PizzaLogs\Start Pizza Logs Local.cmd`
   - `C:\Projects\PizzaLogs\Stop Pizza Logs Local.cmd`
 - Imported local Codex discussion history lives under `Pizza Logs HQ/08 AI Control Center/Imported Codex Chats/`.
+
+## 2026-08-15 BPC And Lich King Repair
+
+- Compared the linked UwU and Pizza Logs reports in the rendered browser.
+- Reproduced production output against the complete 264,268,876-byte local
+  `WoWCombatLog.txt` from the raid.
+- Proved the 00:55 BPC wipe and 00:59 BPC kill had the same old fingerprint:
+  both occupied one five-minute bucket with the same 25-player roster.
+- Replaced the lossy time bucket with the exact normalized pull-start timestamp.
+- Added a Lich King scripted-finale rule keyed to `Fury of Frostmourne` spell ID
+  `72350`; it holds the heuristic segment open for up to five minutes of roleplay.
+- Added failing-then-passing focused regressions for both defects.
+- Full-log acceptance now returns 23 unique encounters: two BPC wipes, one BPC
+  `25H KILL` at 5:18.617, and one LK `25N KILL` at 13:27.510.
+- The existing production report is historical stored output. After this repair
+  deploys, delete only upload `cmstyog32000q01js0kirs6ev` through the protected
+  admin control and re-upload the original ZIP to regenerate it.
 
 ## Frontend Polish Session
 
@@ -330,6 +353,19 @@
 
 ## Verification This Session
 
+### 2026-08-14 BPC and Lich King repair
+
+- The complete 264,268,876-byte raid log produced 23 encounters and 23 unique
+  fingerprints after the fix, including the 5:18.617 BPC `25H KILL` and one
+  13:27.510 LK `25N KILL` ending at the real boss death.
+- `parser\.venv\Scripts\python.exe -m pytest tests/test_parser_core.py -v`
+  passed all 111 parser-core tests.
+- `parser\.venv\Scripts\python.exe -m pytest tests/ -v` passed the full 297-test
+  parser suite.
+- `npm run check:pr` passed zero-warning ESLint, both TypeScript checks, all 38
+  web tests, and the Next.js 16 production build.
+- `git diff --check` passed.
+
 ### Full site and ticket audit
 
 - Verified all primary public routes, protected admin redirects, deep session/encounter/player pages, player search, roster pagination, client navigation, and the mobile menu against Railway production.
@@ -493,6 +529,7 @@
 
 ## Exact Next Step
 
-Continue the existing UwU re-upload acceptance step for historical parser data.
-Future PRs merge automatically after required CI passes; Codex still does not
-commit or push `main` directly.
+Ship the BPC/Lich King parser repair through `codex-dev` -> PR -> `main`, wait
+for required CI and Railway deployment, then regenerate only the linked
+2026-08-14 upload from its original ZIP. Codex still does not commit or push
+`main` directly.

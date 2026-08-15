@@ -104,7 +104,7 @@ Duplicate handling:
 | Level | Method |
 |---|---|
 | File | SHA-256 of full file content via `Upload.fileHash` |
-| Encounter | SHA-256 fingerprint from boss, difficulty, time block, and sorted participant names |
+| Encounter | SHA-256 fingerprint from boss, difficulty, exact normalized pull start, and sorted participant names |
 
 The upload protocol, security limits, states, compatibility endpoint, and benchmark are documented in `docs/archive-upload-protocol.md`.
 
