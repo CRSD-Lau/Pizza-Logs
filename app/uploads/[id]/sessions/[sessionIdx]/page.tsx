@@ -178,6 +178,19 @@ export default async function SessionDetailPage({ params }: Props) {
   for (const [name] of sessionPlayers) {
     if (!playerSet.has(name)) playerSet.set(name, null);
   }
+  const sessionBreakdownRows = sessionPlayers.map(([name, metrics]) => ({
+    name,
+    href: encounterPlayerNames.has(name)
+      ? `${sessionPath}/players/${encodeURIComponent(name)}`
+      : null,
+    color: getClassColor(playerSet.get(name) ?? name),
+    totalDamage: Math.round(metrics.totalDamage).toLocaleString(),
+    dps: (metrics.totalDamage / durationSeconds).toLocaleString(undefined, { maximumFractionDigits: 1 }),
+    heal: Math.round(metrics.heal).toLocaleString(),
+    hps: (metrics.heal / durationSeconds).toLocaleString(undefined, { maximumFractionDigits: 1 }),
+    damageTaken: Math.round(metrics.damageTaken).toLocaleString(),
+    dtps: (metrics.damageTaken / durationSeconds).toLocaleString(undefined, { maximumFractionDigits: 1 }),
+  }));
   const realmName = upload.realm?.name ?? "Lordaeron";
   const guildName = upload.guild?.name ?? null;
   const rosterMembers = playerSet.size > 0
@@ -306,47 +319,95 @@ export default async function SessionDetailPage({ params }: Props) {
 
       {sessionPlayers.length > 0 && (
         <AccordionSection title="Full Session Breakdown" count={sessionPlayers.length} defaultOpen={false}>
-          <div className="data-panel overflow-x-auto">
-            <table className="w-full min-w-[760px] text-xs tabular-nums">
+          <div className="data-panel md:hidden">
+            <ul aria-label="Full session player metrics" className="divide-y divide-gold-dim">
+              {sessionBreakdownRows.map(row => (
+                <li key={row.name} className="px-4 py-3">
+                  {row.href ? (
+                    <Link
+                      href={row.href}
+                      className="inline-flex min-h-11 items-center text-sm font-semibold transition-colors hover:text-gold"
+                      style={{ color: row.color }}
+                    >
+                      {row.name}
+                    </Link>
+                  ) : (
+                    <span
+                      className="flex min-h-11 items-center text-sm font-semibold"
+                      style={{ color: row.color }}
+                    >
+                      {row.name}
+                    </span>
+                  )}
+
+                  <dl className="grid grid-cols-2 gap-x-4 gap-y-3 pb-1">
+                    <div>
+                      <dt className="text-xs uppercase tracking-wide text-text-dim">Total Damage</dt>
+                      <dd className="mt-1 text-sm text-text-primary tabular-nums">{row.totalDamage}</dd>
+                    </div>
+                    <div>
+                      <dt className="text-xs uppercase tracking-wide text-text-dim">DPS</dt>
+                      <dd className="mt-1 text-sm text-text-secondary tabular-nums">{row.dps}</dd>
+                    </div>
+                    <div>
+                      <dt className="text-xs uppercase tracking-wide text-text-dim">Heal</dt>
+                      <dd className="mt-1 text-sm text-text-primary tabular-nums">{row.heal}</dd>
+                    </div>
+                    <div>
+                      <dt className="text-xs uppercase tracking-wide text-text-dim">HPS</dt>
+                      <dd className="mt-1 text-sm text-text-secondary tabular-nums">{row.hps}</dd>
+                    </div>
+                    <div>
+                      <dt className="text-xs uppercase tracking-wide text-text-dim">Damage Taken</dt>
+                      <dd className="mt-1 text-sm text-text-primary tabular-nums">{row.damageTaken}</dd>
+                    </div>
+                    <div>
+                      <dt className="text-xs uppercase tracking-wide text-text-dim">DTPS</dt>
+                      <dd className="mt-1 text-sm text-text-secondary tabular-nums">{row.dtps}</dd>
+                    </div>
+                  </dl>
+                </li>
+              ))}
+            </ul>
+          </div>
+
+          <div className="data-panel hidden md:block">
+            <table className="w-full text-xs tabular-nums">
               <thead className="bg-bg-card text-text-dim uppercase tracking-wider">
                 <tr>
-                  <th className="px-4 py-3 text-left">Player</th>
-                  <th className="px-4 py-3 text-right">Total Damage</th>
-                  <th className="px-4 py-3 text-right">DPS</th>
-                  <th className="px-4 py-3 text-right">Heal</th>
-                  <th className="px-4 py-3 text-right">HPS</th>
-                  <th className="px-4 py-3 text-right">Damage Taken</th>
-                  <th className="px-4 py-3 text-right">DTPS</th>
+                  <th className="px-3 py-3 text-left">Player</th>
+                  <th className="px-3 py-3 text-right">Total Damage</th>
+                  <th className="px-3 py-3 text-right">DPS</th>
+                  <th className="px-3 py-3 text-right">Heal</th>
+                  <th className="px-3 py-3 text-right">HPS</th>
+                  <th className="px-3 py-3 text-right">Damage Taken</th>
+                  <th className="px-3 py-3 text-right">DTPS</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gold-dim">
-                {sessionPlayers.map(([name, metrics]) => {
-                  const cls = playerSet.get(name) ?? null;
-                  const color = getClassColor(cls ?? name);
-                  return (
-                    <tr key={name} className="hover:bg-bg-hover transition-colors">
-                      <td className="px-4 py-2.5 text-left">
-                        {encounterPlayerNames.has(name) ? (
-                          <Link
-                            href={`${sessionPath}/players/${encodeURIComponent(name)}`}
-                            className="font-semibold hover:text-gold transition-colors"
-                            style={{ color }}
-                          >
-                            {name}
-                          </Link>
-                        ) : (
-                          <span className="font-semibold" style={{ color }}>{name}</span>
-                        )}
-                      </td>
-                      <td className="px-4 py-2.5 text-right text-text-primary">{Math.round(metrics.totalDamage).toLocaleString()}</td>
-                      <td className="px-4 py-2.5 text-right text-text-secondary">{(metrics.totalDamage / durationSeconds).toLocaleString(undefined, { maximumFractionDigits: 1 })}</td>
-                      <td className="px-4 py-2.5 text-right text-text-primary">{Math.round(metrics.heal).toLocaleString()}</td>
-                      <td className="px-4 py-2.5 text-right text-text-secondary">{(metrics.heal / durationSeconds).toLocaleString(undefined, { maximumFractionDigits: 1 })}</td>
-                      <td className="px-4 py-2.5 text-right text-text-primary">{Math.round(metrics.damageTaken).toLocaleString()}</td>
-                      <td className="px-4 py-2.5 text-right text-text-secondary">{(metrics.damageTaken / durationSeconds).toLocaleString(undefined, { maximumFractionDigits: 1 })}</td>
-                    </tr>
-                  );
-                })}
+                {sessionBreakdownRows.map(row => (
+                  <tr key={row.name} className="hover:bg-bg-hover transition-colors">
+                    <td className="px-3 py-2.5 text-left">
+                      {row.href ? (
+                        <Link
+                          href={row.href}
+                          className="font-semibold hover:text-gold transition-colors"
+                          style={{ color: row.color }}
+                        >
+                          {row.name}
+                        </Link>
+                      ) : (
+                        <span className="font-semibold" style={{ color: row.color }}>{row.name}</span>
+                      )}
+                    </td>
+                    <td className="whitespace-nowrap px-3 py-2.5 text-right text-text-primary">{row.totalDamage}</td>
+                    <td className="whitespace-nowrap px-3 py-2.5 text-right text-text-secondary">{row.dps}</td>
+                    <td className="whitespace-nowrap px-3 py-2.5 text-right text-text-primary">{row.heal}</td>
+                    <td className="whitespace-nowrap px-3 py-2.5 text-right text-text-secondary">{row.hps}</td>
+                    <td className="whitespace-nowrap px-3 py-2.5 text-right text-text-primary">{row.damageTaken}</td>
+                    <td className="whitespace-nowrap px-3 py-2.5 text-right text-text-secondary">{row.dtps}</td>
+                  </tr>
+                ))}
               </tbody>
             </table>
           </div>

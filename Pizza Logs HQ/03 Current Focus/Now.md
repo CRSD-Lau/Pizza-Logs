@@ -9,6 +9,12 @@ use the public alias. Existing CUID and numeric routes permanently redirect.
 Cinzel and Rajdhani are now served from pinned local Fontsource packages, so a
 clean production build does not depend on Google Fonts being reachable.
 
+Full-session and guild roster tables now have mobile-native layouts. Session
+player totals expose Damage/DPS, Heal/HPS, and Damage Taken/DTPS in a readable
+two-column summary on phones; the roster uses member cards until its eleven
+desktop columns genuinely fit. The tabular layouts remain unchanged at their
+appropriate wider breakpoints.
+
 Public raid links now use the raid date as their identity. New links use an ISO
 slug such as `/sessions/2026-08-14`, visible raid/player labels use the formatted
 date, and Discord receives matching Open Graph title, description, and canonical
@@ -47,6 +53,22 @@ Documentation metadata refresh: the README now links to the GitHub wiki, and the
 Codex works on `codex-dev`, pushes `origin/codex-dev`, and opens PRs into `main`. When every required CI check passes and no conflict or explicit blocker remains, Codex merges the PR through GitHub without waiting for manual review. Codex never commits or pushes `main` directly and never bypasses required checks.
 
 ## This Session
+
+- Reproduced the live August 14 raid session at 390px and measured its forced
+  760px table inside the clipped mobile accordion.
+- Replaced the mobile full-session table with semantic two-column player metric
+  summaries while keeping a fitted seven-column table from `md` upward.
+- Audited the only other real app table and replaced the guild roster's mobile
+  and tablet horizontal strip with compact member cards; its eleven-column table
+  now appears at `xl`.
+- Added a focused mobile-table source regression.
+- Verified 320, 390, 768, 1024, 1280, and 1440 widths with no horizontal
+  overflow or browser console warnings/errors.
+- Passed `npm run check:pr`: lint, both TypeScript compilers, all 48 web tests,
+  and the Next.js 16 production build.
+- Used a backed-up local fixture for rendered session QA, then removed the
+  fixture and temporary column and verified the local database returned to zero
+  uploads/encounters before removing the temporary backup.
 
 - Added a unique `Upload.publicSlug` and a safe migration/backfill for every
   existing upload.
@@ -352,6 +374,7 @@ Codex works on `codex-dev`, pushes `origin/codex-dev`, and opens PRs into `main`
 | Public report terminology | DONE | Session, player, and encounter pages use Pizza Logs-native labels with a source regression preventing external report-brand copy |
 | Date-based raid links | DONE | ISO slugs, permanent compatibility redirects, and social metadata pass the full local release gate |
 | Readable public raid slugs | DONE | Guild-labelled aliases hide internal CUIDs while legacy links permanently redirect |
+| Mobile session and roster tables | DONE | Phone/tablet views use contained metric/member cards; fitted tables remain at wider breakpoints |
 | 2026-08-14 production report regeneration | PENDING | Deploy first, then delete only the broken upload and re-upload its original ZIP |
 
 ## Open Follow-Ups

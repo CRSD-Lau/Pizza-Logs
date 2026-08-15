@@ -29,6 +29,7 @@ the existing production row still needs deletion and re-upload after deployment.
 
 | Issue | Resolution |
 |---|---|
+| Full-session and guild roster tables were badly cut off on mobile | Replaced their narrow-screen table strips with semantic two-column player metrics and compact roster member cards; desktop tables return only at fitted breakpoints, with 320-1440px containment coverage |
 | Clean CI builds could fail when Google Fonts returned 404 for Cinzel | Replaced `next/font/google` downloads with pinned OFL-licensed Fontsource packages for the existing Cinzel and Rajdhani Latin weights; production builds now bundle the fonts locally |
 | Shared raid links exposed `Session 1` and Discord showed generic metadata | Public raid URLs now use the raid date, legacy numeric paths redirect permanently, and date-specific canonical/Open Graph/Twitter metadata describes the actual report |
 | Public report pages exposed external report-brand and `Custom Slice` terminology | Replaced it with Pizza Logs-native session and encounter labels and added a recursive TSX source guard so those terms cannot return to rendered UI |
