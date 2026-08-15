@@ -193,7 +193,7 @@ export default async function SessionPlayerPage({ params }: Props) {
         <StatCard label={`Best ${metric}`} value={formatDps(bestMetric)} sub="single pull" />
         <StatCard label={`Avg ${metric}`} value={formatDps(avgKillMetric)} sub="on kills" />
         <StatCard label="Best APS" value={formatDps(bestAps)} sub="single pull" />
-        <StatCard label="Best H+A PS" value={formatDps(bestHealAndAbsorbPs)} sub="UwU-compatible single pull" />
+        <StatCard label="Best H+A PS" value={formatDps(bestHealAndAbsorbPs)} sub="single pull" />
       </div>
 
       {chartData.length > 1 && (

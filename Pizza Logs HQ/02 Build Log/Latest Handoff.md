@@ -18,6 +18,8 @@
 - Local Git executable fallback: `C:\Program Files\Git\cmd\git.exe`
 - GitHub CLI executable: `C:\Program Files\GitHub CLI\gh.exe`
 - Parser correctness remains the highest-risk area.
+- Public report pages now use Pizza Logs-native terminology only; external
+  report-brand and `Custom Slice` labels are not rendered in the frontend.
 - The 2026-08-14 raid source log now parses the third Blood Prince Council pull
   as a distinct `25H KILL` and keeps the Lich King 10% roleplay plus final burn
   inside one `25N KILL`.
@@ -72,6 +74,17 @@
   - `C:\Projects\PizzaLogs\Start Pizza Logs Local.cmd`
   - `C:\Projects\PizzaLogs\Stop Pizza Logs Local.cmd`
 - Imported local Codex discussion history lives under `Pizza Logs HQ/08 AI Control Center/Imported Codex Chats/`.
+
+## 2026-08-15 Frontend Terminology Cleanup
+
+- Removed five visible external report-brand references from session, player,
+  and encounter pages without changing calculations or persisted data.
+- Renamed the session table from `Custom Slice` to `Full Session Breakdown` and
+  replaced comparison captions with neutral Pizza Logs descriptions.
+- Added a recursive source regression that rejects the external brand name or
+  `Custom Slice` anywhere in public `app` and `components` TSX.
+- `npm run check:pr` passed zero-warning ESLint, both TypeScript checks, all 38
+  web tests, and the Next.js 16 production build.
 
 ## 2026-08-15 BPC And Lich King Repair
 

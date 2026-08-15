@@ -239,14 +239,14 @@ export default async function SessionDetailPage({ params }: Props) {
 
       <div className="grid grid-cols-2 items-stretch gap-y-2 rounded-sm bg-bg-panel/40 p-2 sm:grid-cols-3 lg:grid-cols-6">
         <StatCard label="Kills / Wipes" value={`${kills}K / ${wipes}W`} highlight className="col-span-2" />
-        <StatCard label="Total Damage" value={formatNumber(fullSessionDmg)} sub="UwU full custom slice" />
+        <StatCard label="Total Damage" value={formatNumber(fullSessionDmg)} sub="full raid session" />
         <StatCard label="Heal" value={formatNumber(fullSessionHeal)} sub="effective healing + absorbs" />
-        <StatCard label="Damage Taken" value={formatNumber(fullSessionDamageTaken)} sub="UwU full custom slice" />
+        <StatCard label="Damage Taken" value={formatNumber(fullSessionDamageTaken)} sub="full raid session" />
         <StatCard label="Duration" value={formatDurationPrecise(durationMs)} sub="first to last log event" className="col-span-2 sm:col-span-1" />
       </div>
 
       {sessionPlayers.length > 0 && (
-        <AccordionSection title="Custom Slice" count={sessionPlayers.length} defaultOpen={false}>
+        <AccordionSection title="Full Session Breakdown" count={sessionPlayers.length} defaultOpen={false}>
           <div className="data-panel overflow-x-auto">
             <table className="w-full min-w-[760px] text-xs tabular-nums">
               <thead className="bg-bg-card text-text-dim uppercase tracking-wider">

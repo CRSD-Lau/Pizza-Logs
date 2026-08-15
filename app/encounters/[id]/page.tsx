@@ -213,7 +213,7 @@ export default async function EncounterPage({ params }: Props) {
         <StatCard label="Effective Healing" value={formatNumber(encounter.totalHealing)} />
         <StatCard label="Effective HPS" value={totalHps.toLocaleString()} sub="per second" />
         <StatCard label="Absorbs" value={formatNumber(encounter.totalAbsorbs)} sub={`${totalAps.toLocaleString()} per second`} />
-        <StatCard label="Heal + Absorbs" value={formatNumber(totalHealAndAbsorb)} sub={`${totalHealAndAbsorbPs.toLocaleString()} per second - UwU metric`} className="col-span-2" />
+        <StatCard label="Heal + Absorbs" value={formatNumber(totalHealAndAbsorb)} sub={`${totalHealAndAbsorbPs.toLocaleString()} per second`} className="col-span-2" />
       </div>
 
       {encounter.milestones.length > 0 && (
@@ -247,7 +247,7 @@ export default async function EncounterPage({ params }: Props) {
 
       {healAndAbsorbParts.length > 0 && (
         <AccordionSection
-          title="Healing + Absorbs (UwU-compatible)"
+          title="Healing + Absorbs"
           sub={encounter.unattributedAbsorbs > 0
             ? `${formatNumber(encounter.unattributedAbsorbs)} absorbs are included in the total but not yet assigned in player ranks`
             : "Effective healing plus attributed shields"}
