@@ -10,14 +10,14 @@ This project follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) an
 
 - Branded social preview plus canonical Open Graph, Twitter, sitemap, robots, and web-app manifest metadata.
 - Content Security Policy and modern browser security headers.
-- CodeQL, dependency review, Dependabot, CODEOWNERS, and immutable GitHub Action pins.
+- CodeQL, dependency review, Dependabot, CODEOWNERS, immutable GitHub Action pins, and production-container CI builds.
 - Weekly dependency audits and a manifest-to-hash-lock consistency gate.
 - Hash-locked Python runtime/development dependencies and an unprivileged parser image.
 - Maintained architecture, development, operations, security, privacy, license, and ADR documentation.
 
 ### Changed
 
-- Upgraded Next.js and `eslint-config-next` to 16.3.1 and Uvicorn to 0.52.3.
+- Upgraded Next.js and `eslint-config-next` to 16.3.1, Python to 3.14, Uvicorn to 0.52.3, and `pip-tools` to 7.6.1.
 - Public uploads now use only the bounded UUID streaming protocol and persist parser-observed byte size.
 - Agent/contributor work now uses short-lived task branches, issues/PRs, ADRs, and the changelog instead of a long-lived `codex-dev` plus mandatory Obsidian handoffs.
 - Intro rendering writes canonical generated files directly to `public/animations`.

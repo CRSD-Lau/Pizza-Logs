@@ -18,7 +18,7 @@ concurrency:
 jobs:
   test-build:
     runs-on: ubuntu-latest
-    timeout-minutes: 25
+    timeout-minutes: 35
     env:
       DATABASE_URL: postgresql://pizzalogs:pizzalogs@localhost:5432/pizzalogs?schema=public
       PARSER_SERVICE_URL: http://localhost:8000
@@ -37,7 +37,7 @@ jobs:
       - name: Setup Python
         uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7
         with:
-          python-version: "3.12"
+          python-version: "3.14"
 
       - name: Install dependencies
         run: npm ci --legacy-peer-deps
@@ -60,6 +60,11 @@ jobs:
       - name: Test
         run: npm test --if-present
 
+      - name: Documentation and lock consistency
+        run: |
+          npm run docs:check
+          npm run locks:check
+
       - name: Parser tests
         run: |
           pip install --require-hashes -r parser/requirements-dev.lock
@@ -74,6 +79,11 @@ jobs:
 
       - name: Build
         run: npm run build
+
+      - name: Build production containers
+        run: |
+          docker build -t pizza-logs-web:ci .
+          docker build -f parser/Dockerfile -t pizza-logs-parser:ci .
 
   dependency-review:
     if: github.event_name == 'pull_request'

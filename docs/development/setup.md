@@ -3,7 +3,7 @@
 ## Prerequisites
 
 - Node.js 24.x and npm 11+
-- Python 3.12
+- Python 3.14
 - PostgreSQL 16 or Docker Desktop
 - Git; GitHub CLI is useful for maintainers
 - FFmpeg only when regenerating intro media

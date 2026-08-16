@@ -45,7 +45,7 @@ The browser never receives database credentials, parser filesystem paths, or the
 | Language | TypeScript 7 native CLI plus TypeScript 6 ecosystem check |
 | UI | Tailwind CSS 4, Recharts 3 |
 | Data | PostgreSQL, Prisma 7 |
-| Parser | Python 3.12, FastAPI, Pydantic |
+| Parser | Python 3.14, FastAPI, Pydantic |
 | Hosting | Railway, separate web and parser services |
 | Security automation | CodeQL, Dependabot, dependency review, pinned Actions |
 
@@ -54,7 +54,7 @@ The browser never receives database credentials, parser filesystem paths, or the
 Prerequisites:
 
 - Node.js 24.x and npm 11+
-- Python 3.12
+- Python 3.14
 - PostgreSQL 16, or Docker Desktop
 
 Install the web dependencies and create local configuration:
