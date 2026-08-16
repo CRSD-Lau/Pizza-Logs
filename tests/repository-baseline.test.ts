@@ -40,7 +40,7 @@ const workflows = [
   ".github/workflows/production-smoke.yml",
 ].map(file => fs.readFileSync(file, "utf8")).join("\n");
 assert.doesNotMatch(workflows, /uses:\s*[^\s]+@v\d+/i, "Actions must use immutable commit pins");
-assert.match(workflows, /actions\/dependency-review-action@[0-9a-f]{40}/);
+assert.match(workflows, /actions\/dependency-review-action@a1d282b36b6f3519aa1f3fc636f609c47dddb294/);
 assert.match(workflows, /github\/codeql-action\/analyze@[0-9a-f]{40}/);
 
 const parserSource = fs.readFileSync("parser/main.py", "utf8");
