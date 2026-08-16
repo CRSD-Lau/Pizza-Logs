@@ -163,7 +163,7 @@ export default async function SessionPlayerPage({ params }: Props) {
   const chartPlayers: PlayerLine[] = allPlayers.map((pName) => ({
     name: pName,
     isSubject: pName === name,
-    color: pName === name ? "var(--color-gold)" : classColor,
+    color: pName === name ? "var(--color-gold-light)" : classColor,
   }));
 
   const sessionLabel = formatRaidSessionTitle(sessionRoute);

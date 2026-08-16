@@ -27,6 +27,10 @@ Pet and absorb ownership are conservative. Summon or owner-exclusive spell evide
 
 Player pages and report detail can show per-spell/target output, role/spec evidence, aura uptime, consumables, power gains, deaths with the preceding incoming-damage window, class peers, records, and cached Warmane gear.
 
+Spell-detail bars compare each ability's damage or healing volume with the largest ability in that expanded row. DPS rows use damage volume; HPS and H+A rows use healing volume, with absorbs shown separately. **Overall crit** is the participant's critical-hit percentage across recorded output events. Spell rows label their combined stored damage/healing event count and critical percentage as total events and overall crit rather than using the older `%c` abbreviation.
+
+Aura Uptime and Power Gains can be filtered by player and ability using partial text or the provided suggestions. Long result sets show 50 rows at a time with an explicit show-more control. Aura rows name the raid member the aura was observed on, which is not necessarily the caster. Power rows name the raid member who received the resource. Invalid entries and player/ability combinations with no matching row are reported inline.
+
 Warmane gear is best effort. A stale badge means Pizza Logs is showing the last healthy cached snapshot because the upstream request was unavailable.
 
 ## Historical Reports

@@ -8,6 +8,7 @@ import { AccordionSection } from "@/components/ui/AccordionSection";
 import { Badge } from "@/components/ui/Badge";
 import { StatCard } from "@/components/ui/StatCard";
 import { PlayerAvatar } from "@/components/players/PlayerAvatar";
+import { FilteredAnalyticsBreakdown } from "@/components/analytics/FilteredAnalyticsBreakdown";
 import { getClassIconUrl } from "@/lib/class-icons";
 import { getClassColor } from "@/lib/constants/classes";
 import { getRaidSessionRouteByIndex } from "@/lib/raid-session-routing.server";
@@ -320,16 +321,21 @@ export default async function EncounterPage({ params }: Props) {
 
       {auraRows.length > 0 && (
         <AccordionSection title="Aura Uptime" sub="Buffs and debuffs observed on raid members" count={auraRows.length} defaultOpen={false}>
-          <div className="divide-y divide-gold-dim border-y border-gold-dim">
-            {auraRows.map((row) => (
-              <div key={`${row.player}-${row.aura}`} className="grid grid-cols-[minmax(0,1fr)_auto] gap-x-3 gap-y-1 px-2 py-3 text-sm sm:grid-cols-[minmax(0,1fr)_minmax(0,2fr)_auto_auto] sm:px-4">
-                <span className="font-semibold text-text-primary truncate">{row.player}</span>
-                <span className="row-start-2 truncate text-text-secondary sm:row-start-auto">{row.aura}</span>
-                <span className="col-start-2 row-start-1 tabular-nums text-gold sm:col-start-auto sm:row-start-auto">{row.uptimePct.toFixed(1)}%</span>
-                <span className="col-start-2 row-start-2 tabular-nums text-text-dim sm:col-start-auto sm:row-start-auto">{row.applications}x</span>
-              </div>
-            ))}
-          </div>
+          <FilteredAnalyticsBreakdown
+            rows={auraRows.map(row => ({
+              id: `${row.player}-${row.aura}`,
+              player: row.player,
+              ability: row.aura,
+              value: `${row.uptimePct.toFixed(1)}%`,
+              occurrences: `${row.applications.toLocaleString()} applications`,
+            }))}
+            abilityLabel="Aura"
+            abilityPlaceholder="Sacred Shield or Slice and Dice"
+            valueLabel="Uptime"
+            occurrencesLabel="Applications"
+            entryLabel="aura entries"
+            playerHelp="Player means the raid member the aura was observed on."
+          />
         </AccordionSection>
       )}
 
@@ -349,16 +355,21 @@ export default async function EncounterPage({ params }: Props) {
 
       {powerRows.length > 0 && (
         <AccordionSection title="Power Gains" sub="Resource gains emitted by combat-log energize events" count={powerRows.length} defaultOpen={false}>
-          <div className="divide-y divide-gold-dim border-y border-gold-dim">
-            {powerRows.map((row) => (
-              <div key={`${row.player}-${row.spell}-${row.powerType}`} className="grid grid-cols-[minmax(0,1fr)_auto] gap-x-3 gap-y-1 px-2 py-3 text-sm sm:grid-cols-[minmax(0,1fr)_minmax(0,2fr)_auto_auto] sm:px-4">
-                <span className="font-semibold text-text-primary truncate">{row.player}</span>
-                <span className="row-start-2 truncate text-text-secondary sm:row-start-auto">{row.spell}</span>
-                <span className="col-start-2 row-start-1 tabular-nums text-gold sm:col-start-auto sm:row-start-auto">{formatNumber(row.amount)}</span>
-                <span className="col-start-2 row-start-2 tabular-nums text-text-dim sm:col-start-auto sm:row-start-auto">{row.events}x</span>
-              </div>
-            ))}
-          </div>
+          <FilteredAnalyticsBreakdown
+            rows={powerRows.map(row => ({
+              id: `${row.player}-${row.spell}-${row.powerType}`,
+              player: row.player,
+              ability: row.spell,
+              value: formatNumber(row.amount),
+              occurrences: `${row.events.toLocaleString()} events`,
+            }))}
+            abilityLabel="Power source"
+            abilityPlaceholder="Spiritual Attunement or Rapture"
+            valueLabel="Power gained"
+            occurrencesLabel="Events"
+            entryLabel="power entries"
+            playerHelp="Player means the raid member who received the resource."
+          />
         </AccordionSection>
       )}
 

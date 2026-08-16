@@ -10,9 +10,28 @@ const mobBreakdown = readFileSync("components/meter/MobBreakdown.tsx", "utf8");
 const playersPage = readFileSync("app/players/page.tsx", "utf8");
 const leaderboardsPage = readFileSync("app/leaderboards/page.tsx", "utf8");
 const encounterPage = readFileSync("app/encounters/[id]/page.tsx", "utf8");
+const analyticsBreakdown = readFileSync("components/analytics/FilteredAnalyticsBreakdown.tsx", "utf8");
+const sessionChart = readFileSync("components/charts/SessionLineChart.tsx", "utf8");
+const playerSessionPage = readFileSync("app/uploads/[id]/sessions/[sessionIdx]/players/[playerName]/page.tsx", "utf8");
 
-assert.match(tailwind, /"text-dim": "#918772"/);
-assert.match(tailwind, /"text-secondary": "#b3a68c"/);
+assert.doesNotMatch(tailwind, /colors:/, "Tailwind v4 theme variables are the single color source");
+for (const variable of [
+  "bg-card",
+  "gold",
+  "gold-light",
+  "text-primary",
+  "text-secondary",
+  "text-dim",
+  "school-physical",
+  "school-holy",
+  "school-fire",
+  "school-nature",
+  "school-frost",
+  "school-shadow",
+  "school-arcane",
+]) {
+  assert.match(globals, new RegExp(`--color-${variable}:`), `${variable} is available to utilities and inline SVG styles`);
+}
 assert.match(globals, /@utility page-shell/);
 assert.match(globals, /@utility page-section/);
 assert.match(globals, /@utility data-panel/);
@@ -27,6 +46,10 @@ assert.match(accordion, /aria-controls=\{contentId\}/);
 assert.match(damageMeter, /<button/);
 assert.match(damageMeter, /aria-expanded=\{isActive\}/);
 assert.match(damageMeter, /sm:grid-cols-\[minmax\(0,2fr\)_repeat\(4,minmax\(0,1fr\)\)\]/);
+assert.match(damageMeter, /spell\[outputMetric\]/);
+assert.match(damageMeter, /metric === "dps" \? "damage" : "healing"/);
+assert.match(damageMeter, /total events · .*% overall crit/);
+assert.doesNotMatch(damageMeter, /bg-holy/);
 assert.doesNotMatch(damageMeter, /gridTemplateColumns: "2fr 1fr 1fr 1fr 1fr"/);
 assert.match(mobBreakdown, /aria-expanded=\{isOpen\}/);
 assert.doesNotMatch(mobBreakdown, /gridTemplateColumns: "2fr 1fr 1fr 1fr"/);
@@ -35,6 +58,11 @@ assert.match(playersPage, /PLAYERS_PER_PAGE = 30/);
 assert.match(playersPage, /visiblePlayers/);
 assert.match(leaderboardsPage, /<details/);
 assert.match(encounterPage, /defaultOpen=\{false\}/);
-assert.match(encounterPage, /sm:grid-cols-\[minmax\(0,1fr\)_minmax\(0,2fr\)_auto_auto\]/);
+assert.match(analyticsBreakdown, /sm:grid-cols-\[minmax\(0,1fr\)_minmax\(0,2fr\)_auto_auto\]/);
+assert.match(sessionChart, /var\(--color-text-secondary\)/);
+assert.match(sessionChart, /strokeOpacity=\{p\.isSubject \? 1 : 0\.78\}/);
+assert.match(sessionChart, /interval="preserveStartEnd"/);
+assert.match(sessionChart, /minTickGap=\{18\}/);
+assert.match(playerSessionPage, /var\(--color-gold-light\)/);
 
 console.log("frontend foundation source tests passed");
