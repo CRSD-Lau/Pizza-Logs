@@ -40,7 +40,7 @@ pytest tests/test_archive_upload.py -v
 
 Parser behavior changes require a focused pytest or fixture. Full-suite success is still required before shipping.
 
-After editing a Python input manifest, regenerate both platform-aware hash locks with Python 3.12 and the pinned `pip-tools`:
+After editing a Python input manifest, regenerate both platform-aware hash locks with Python 3.14 and the pinned `pip-tools`:
 
 ```bash
 python -m piptools compile --generate-hashes --strip-extras --output-file=parser/requirements.lock parser/requirements.txt

@@ -71,7 +71,7 @@ Result: all direct dependency licenses are compatible with distribution of this 
 | `ruff` | 0.16.3 | MIT |
 | `bandit` | 1.9.4 | Apache-2.0 |
 | `pip-audit` | 2.10.1 | Apache-2.0 |
-| `pip-tools` | 7.6.0 | BSD-3-Clause |
+| `pip-tools` | 7.6.1 | BSD-3-Clause |
 
 ## Transitive Review
 

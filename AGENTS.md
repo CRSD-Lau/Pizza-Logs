@@ -35,7 +35,7 @@ There is no mandatory handoff file or Obsidian-vault workflow. GitHub issues and
 - `prisma/` — schema, migrations, and seed data
 - `docs/` — maintained architecture, operations, security, guides, and ADRs
 
-Stack: Next.js 16, React 19, TypeScript, Tailwind CSS, Prisma/PostgreSQL, Python 3.12/FastAPI, and Railway.
+Stack: Next.js 16, React 19, TypeScript, Tailwind CSS, Prisma/PostgreSQL, Python 3.14/FastAPI, and Railway.
 
 ## Parser Contract
 

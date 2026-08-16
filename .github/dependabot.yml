@@ -13,6 +13,16 @@ updates:
         update-types:
           - minor
           - patch
+    # These majors need coordinated framework/runtime migrations. The project
+    # already checks TypeScript 7 through @typescript/native while the ESLint
+    # ecosystem remains on its compatible stable majors.
+    ignore:
+      - dependency-name: "@types/node"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: eslint
+        update-types: ["version-update:semver-major"]
+      - dependency-name: typescript
+        update-types: ["version-update:semver-major"]
 
   - package-ecosystem: pip
     directory: /parser
@@ -45,6 +55,11 @@ updates:
       time: "09:45"
       timezone: America/Halifax
     open-pull-requests-limit: 3
+    # Production follows Node LTS. Major upgrades are reviewed when the next
+    # release reaches LTS rather than while it is in the Current channel.
+    ignore:
+      - dependency-name: node
+        update-types: ["version-update:semver-major"]
 
   - package-ecosystem: docker
     directory: /parser
