@@ -90,18 +90,21 @@ export function SessionLineChart({ data, players, metric }: Props) {
         <CartesianGrid strokeDasharray="3 3" stroke="color-mix(in srgb, var(--color-gold) 7%, transparent)" />
         <XAxis
           dataKey="bossName"
-          tick={{ fill: "var(--color-text-dim)", fontSize: 12 }}
+          tick={{ fill: "var(--color-text-secondary)", fontSize: 12, fontWeight: 600 }}
           tickLine={false}
           axisLine={{ stroke: "color-mix(in srgb, var(--color-gold) 15%, transparent)" }}
-          interval={0}
+          interval="preserveStartEnd"
+          minTickGap={18}
+          tickMargin={8}
           tickFormatter={(v: string) => {
-            // Abbreviate long boss names to last word
+            if (v === "Gunship Battle") return "Gunship";
+            if (v === "The Lich King") return "Lich King";
             const words = v.split(" ");
-            return words.length > 2 ? words[words.length - 1] : v;
+            return words.length > 1 ? words[words.length - 1] : v;
           }}
         />
         <YAxis
-          tick={{ fill: "var(--color-text-dim)", fontSize: 12 }}
+          tick={{ fill: "var(--color-text-secondary)", fontSize: 12, fontWeight: 600 }}
           tickLine={false}
           axisLine={false}
           tickFormatter={(v: number) => formatNumber(v)}
@@ -121,9 +124,19 @@ export function SessionLineChart({ data, players, metric }: Props) {
             dataKey={p.name}
             stroke={p.color}
             strokeWidth={p.isSubject ? 2.5 : 1.5}
-            strokeOpacity={p.isSubject ? 1 : 0.55}
-            dot={{ r: p.isSubject ? 4 : 2.5, fill: p.color, strokeWidth: 0 }}
-            activeDot={{ r: p.isSubject ? 6 : 4, strokeWidth: 0 }}
+            strokeOpacity={p.isSubject ? 1 : 0.78}
+            dot={{
+              r: p.isSubject ? 4.5 : 3,
+              fill: p.color,
+              stroke: "var(--color-bg-panel)",
+              strokeWidth: 1.25,
+            }}
+            activeDot={{
+              r: p.isSubject ? 6 : 4.5,
+              fill: p.color,
+              stroke: "var(--color-text-primary)",
+              strokeWidth: 1.25,
+            }}
             connectNulls={false}
           />
         ))}

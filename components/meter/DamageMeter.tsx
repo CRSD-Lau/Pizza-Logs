@@ -62,7 +62,9 @@ export function DamageMeter({ participants, metric = "dps" }: DamageMeterProps) 
         <span>Player</span>
         <span className="text-right">{metric === "hps" ? "Healing" : metric === "aps" ? "Absorbs" : metric === "ha" ? "Heal + Absorb" : "Damage"}</span>
         <span className="text-right">{metric === "ha" ? "H+A PS" : metric.toUpperCase()}</span>
-        <span className="text-right">Hits</span>
+        <span className="text-right">
+          {metric === "aps" ? "Absorb hits" : metric === "ha" ? "Overall crit / absorbs" : "Overall crit"}
+        </span>
         <span className="text-right">% total</span>
       </div>
 
@@ -140,10 +142,10 @@ export function DamageMeter({ participants, metric = "dps" }: DamageMeterProps) 
                   <span className="text-xs text-text-secondary tabular-nums">
                     {p.deaths > 0 && <span className="text-danger mr-1">☠{p.deaths}</span>}
                     {metric === "aps"
-                      ? absorbHitCount(p.absorbBreakdown)
+                      ? `${absorbHitCount(p.absorbBreakdown).toLocaleString()} hits`
                       : metric === "ha"
-                        ? `${p.critPct.toFixed(0)}%c / ${absorbHitCount(p.absorbBreakdown)}`
-                        : `${p.critPct.toFixed(0)}%c`}
+                        ? `${p.critPct.toFixed(0)}% overall crit · ${absorbHitCount(p.absorbBreakdown).toLocaleString()} absorbs`
+                        : `${p.critPct.toFixed(0)}% overall crit`}
                   </span>
                 </div>
 
@@ -159,7 +161,10 @@ export function DamageMeter({ participants, metric = "dps" }: DamageMeterProps) 
                   <AbsorbBreakdown breakdown={p.absorbBreakdown} />
                 )}
                 {isActive && metric !== "aps" && isSpellBreakdown(p.spellBreakdown) && (
-                  <SpellBreakdown breakdown={p.spellBreakdown} />
+                  <SpellBreakdown
+                    breakdown={p.spellBreakdown}
+                    outputMetric={metric === "dps" ? "damage" : "healing"}
+                  />
                 )}
                 {isActive && metric === "ha" && isAbsorbBreakdown(p.absorbBreakdown) && (
                   <AbsorbBreakdown breakdown={p.absorbBreakdown} />
@@ -179,29 +184,42 @@ function isAbsorbBreakdown(value: unknown): value is Record<string, AbsorbEntry>
   return !!value && typeof value === "object" && !Array.isArray(value);
 }
 
-function absorbHitCount(value: unknown): string {
-  if (!isAbsorbBreakdown(value)) return "0h";
-  return `${Object.values(value).reduce((sum, entry) => sum + entry.hits, 0)}h`;
+function absorbHitCount(value: unknown): number {
+  if (!isAbsorbBreakdown(value)) return 0;
+  return Object.values(value).reduce((sum, entry) => sum + entry.hits, 0);
 }
 
 function AbsorbBreakdown({ breakdown }: { breakdown: Record<string, AbsorbEntry> }) {
   const entries = Object.entries(breakdown).sort((a, b) => b[1].amount - a[1].amount);
-  const maxAmount = entries[0]?.[1].amount ?? 1;
+  const maxAmount = Math.max(...entries.map(([, stats]) => stats.amount), 0);
 
   return (
     <div className="bg-bg-panel border border-gold-dim border-t-0 rounded-b px-3 py-2 mb-1 space-y-1 animate-fade-in-up">
-      {entries.map(([spell, stats]) => (
-        <div key={spell} className="flex items-center gap-2 text-xs">
-          <span className="w-40 text-text-primary truncate font-medium">{spell}</span>
-          <div className="flex-1 h-3 bg-bg-hover rounded-sm overflow-hidden">
-            <div className="h-full rounded-sm bg-holy" style={{ width: `${stats.amount / maxAmount * 100}%` }} />
+      {entries.map(([spell, stats]) => {
+        const pct = maxAmount > 0
+          ? Math.min(100, Math.max(0, (stats.amount / maxAmount) * 100))
+          : 0;
+
+        return (
+          <div key={spell} className="flex items-center gap-2 text-xs">
+            <span className="w-40 text-text-primary truncate font-medium">{spell}</span>
+            <div
+              className="flex-1 h-3 bg-bg-hover rounded-sm overflow-hidden"
+              role="meter"
+              aria-label={`${spell} relative absorb volume`}
+              aria-valuemin={0}
+              aria-valuemax={100}
+              aria-valuenow={Math.round(pct)}
+            >
+              <div className="h-full rounded-sm bg-school-holy" style={{ width: `${pct}%` }} />
+            </div>
+            <span className="w-16 shrink-0 text-right tabular-nums text-text-secondary">{formatNumber(stats.amount)}</span>
+            <span className="hidden w-20 shrink-0 text-right tabular-nums text-text-dim sm:block">
+              {stats.hits} hits{stats.ambiguousHits > 0 ? `, ${stats.ambiguousHits} mixed` : ""}
+            </span>
           </div>
-          <span className="w-16 shrink-0 text-right tabular-nums text-text-secondary">{formatNumber(stats.amount)}</span>
-          <span className="hidden w-20 shrink-0 text-right tabular-nums text-text-dim sm:block">
-            {stats.hits} hits{stats.ambiguousHits > 0 ? `, ${stats.ambiguousHits} mixed` : ""}
-          </span>
-        </div>
-      ))}
+        );
+      })}
     </div>
   );
 }
@@ -212,20 +230,28 @@ function isSpellBreakdown(value: unknown): value is Record<string, SpellEntry> {
 
 function SpellBreakdown({
   breakdown,
+  outputMetric,
 }: {
   breakdown: Record<string, SpellEntry>;
+  outputMetric: "damage" | "healing";
 }) {
   const entries = Object.entries(breakdown)
-    .sort((a, b) => (b[1].damage + b[1].healing) - (a[1].damage + a[1].healing))
+    .filter(([, spell]) => spell[outputMetric] > 0)
+    .sort((a, b) => b[1][outputMetric] - a[1][outputMetric])
     .slice(0, 15);
 
-  const maxSpell = entries[0] ? (entries[0][1].damage || entries[0][1].healing) : 1;
+  const maxSpell = Math.max(
+    ...entries.map(([, spell]) => spell[outputMetric]),
+    0,
+  );
 
   return (
     <div className="bg-bg-panel border border-gold-dim border-t-0 rounded-b px-3 py-2 mb-1 space-y-1 animate-fade-in-up">
       {entries.map(([spell, s]) => {
-        const val  = s.damage || s.healing;
-        const pct  = maxSpell > 0 ? (val / maxSpell) * 100 : 0;
+        const val = s[outputMetric];
+        const pct = maxSpell > 0
+          ? Math.min(100, Math.max(0, (val / maxSpell) * 100))
+          : 0;
         const schoolColors: Record<number, string> = {
           1: "var(--color-school-physical)", 2: "var(--color-school-holy)", 4: "var(--color-school-fire)",
           8: "var(--color-school-nature)", 16: "var(--color-school-frost)", 32: "var(--color-school-shadow)", 64: "var(--color-school-arcane)",
@@ -235,7 +261,14 @@ function SpellBreakdown({
         return (
           <div key={spell} className="flex items-center gap-2 text-xs">
             <span className="w-32 text-text-primary truncate font-medium">{spell}</span>
-            <div className="flex-1 h-3 bg-bg-hover rounded-sm overflow-hidden">
+            <div
+              className="flex-1 h-3 bg-bg-hover rounded-sm overflow-hidden"
+              role="meter"
+              aria-label={`${spell} relative ${outputMetric} volume`}
+              aria-valuemin={0}
+              aria-valuemax={100}
+              aria-valuenow={Math.round(pct)}
+            >
               <div
                 className="h-full rounded-sm"
                 style={{ width: `${pct}%`, background: color }}
@@ -244,8 +277,8 @@ function SpellBreakdown({
             <span className="w-14 text-right tabular-nums text-text-secondary">
               {formatNumber(val)}
             </span>
-            <span className="hidden w-12 text-right tabular-nums text-text-dim sm:block">
-              {s.hits}h {Math.round(s.crits / Math.max(1, s.hits) * 100)}%c
+            <span className="hidden w-40 shrink-0 text-right tabular-nums text-text-dim sm:block">
+              {s.hits.toLocaleString()} total events · {Math.round(s.crits / Math.max(1, s.hits) * 100)}% overall crit
             </span>
           </div>
         );

@@ -77,8 +77,8 @@ export function MobBreakdown({ mobs, title }: MobBreakdownProps) {
               >
                 {/* Bar fill */}
                 <div
-                  className="absolute inset-0 pointer-events-none"
-                  style={{ background: "var(--color-gold)", opacity: 0.1, width: `${fillPct}%` }}
+                  className="absolute inset-0 pointer-events-none bg-gold/10"
+                  style={{ width: `${fillPct}%` }}
                 />
 
                 <span className="relative z-10 text-sm font-semibold text-text-primary truncate">
@@ -88,7 +88,7 @@ export function MobBreakdown({ mobs, title }: MobBreakdownProps) {
                   {formatNumber(mob.totalDamage)}
                 </span>
                 <span className="relative z-10 hidden text-right text-xs tabular-nums text-text-secondary sm:block">
-                  {mob.hits.toLocaleString()} · {critPct}%c
+                  {mob.hits.toLocaleString()} hits · {critPct}% crit
                 </span>
                 <span className="relative z-10 col-start-2 row-start-1 text-right text-sm tabular-nums text-text-secondary sm:col-start-auto sm:row-start-auto">
                   {pct}%
@@ -118,8 +118,8 @@ export function MobBreakdown({ mobs, title }: MobBreakdownProps) {
                           <span className="w-14 text-right tabular-nums text-text-secondary">
                             {formatNumber(p.damage)}
                           </span>
-                          <span className="hidden w-16 text-right tabular-nums text-text-dim sm:block">
-                            {p.hits}h {playerCrit}%c
+                          <span className="hidden w-28 shrink-0 text-right tabular-nums text-text-dim sm:block">
+                            {p.hits.toLocaleString()} hits · {playerCrit}% crit
                           </span>
                           <span className="w-8 shrink-0 text-right tabular-nums text-text-dim">{playerPct}%</span>
                         </div>

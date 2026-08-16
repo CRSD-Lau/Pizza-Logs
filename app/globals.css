@@ -4,6 +4,46 @@
 @source inline('reveal-item boss-reveal-item');
 
 /*
+  Keep the product palette in Tailwind's v4 theme layer so utilities and
+  inline SVG styles share the same semantic CSS variables. Recharts and the
+  proportional meter fills cannot consume Tailwind utility classes directly.
+*/
+@theme {
+  --color-bg-deep: #0a0c10;
+  --color-bg-panel: #10141c;
+  --color-bg-card: #161b26;
+  --color-bg-hover: #1d2333;
+  --color-gold: #c8a84b;
+  --color-gold-light: #f0d080;
+  --color-gold-dim: #7a6530;
+  --color-text-primary: #e8dfc8;
+  --color-text-secondary: #b3a68c;
+  --color-text-dim: #918772;
+  --color-school-physical: #c0c8d8;
+  --color-school-holy: #f0c040;
+  --color-school-fire: #e06030;
+  --color-school-nature: #60c060;
+  --color-school-frost: #80c8f0;
+  --color-school-shadow: #a070d0;
+  --color-school-arcane: #d080f0;
+  --color-class-paladin: #f4a0c0;
+  --color-class-warrior: #c89040;
+  --color-class-mage: #80c0f0;
+  --color-class-druid: #f0a040;
+  --color-class-priest: #e8e8e8;
+  --color-class-shaman: #0090f8;
+  --color-class-warlock: #9482c9;
+  --color-class-hunter: #aad372;
+  --color-class-dk: #c41e3a;
+  --color-class-rogue: #fff468;
+  --color-class-monk: #00ff98;
+  --color-class-dh: #a330c9;
+  --color-success: #50a050;
+  --color-danger: #c84040;
+  --color-warning: #c89040;
+}
+
+/*
   The default border color has changed to `currentcolor` in Tailwind CSS v4,
   so we've added these compatibility styles to make sure everything still
   looks the same as it did with Tailwind CSS v3.
