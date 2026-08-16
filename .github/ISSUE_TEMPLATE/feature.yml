@@ -1,0 +1,45 @@
+name: Feature request
+description: Propose a focused product, parser, or operational improvement
+title: "[Feature]: "
+labels:
+  - enhancement
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem
+      description: What user or maintainer problem should be solved?
+    validations:
+      required: true
+  - type: textarea
+    id: outcome
+    attributes:
+      label: Desired outcome
+      description: Describe the behavior or decision, not only a UI implementation.
+    validations:
+      required: true
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area
+      options:
+        - Parser/analytics
+        - Upload flow
+        - Reports/leaderboards
+        - Player/roster/gear
+        - Operations/security
+        - Documentation/developer experience
+        - Other
+    validations:
+      required: true
+  - type: textarea
+    id: evidence
+    attributes:
+      label: Evidence and constraints
+      description: Include metric definitions, sanitized examples, compatibility needs, or operational constraints.
+  - type: checkboxes
+    id: compatibility
+    attributes:
+      label: Compatibility
+      options:
+        - label: I considered parser correctness, existing public URLs, and historic reports where relevant.

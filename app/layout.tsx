@@ -15,12 +15,42 @@ import { PIZZA_LOGS_ORIGIN } from "@/lib/site";
 export const metadata: Metadata = {
   metadataBase: new URL(PIZZA_LOGS_ORIGIN),
   title: {
-    default: "Pizza Logs — WoW Raid Analytics",
+    default: "Pizza Logs — WotLK Raid Analytics",
     template: "%s | Pizza Logs",
   },
   description:
-    "Premium World of Warcraft combat log analytics for PizzaWarriors. Track DPS, HPS, milestones, and all-time records across every raid boss.",
-  keywords: ["WoW", "combat log", "raid analytics", "DPS", "WotLK", "PizzaWarriors"],
+    "Server-side Wrath of the Lich King combat-log analytics for raid encounters, DPS, HPS, player records, and progression.",
+  applicationName: "Pizza Logs",
+  authors: [{ name: "Neil Mitchell", url: "https://github.com/CRSD-Lau" }],
+  creator: "Neil Mitchell",
+  publisher: "Neil Mitchell",
+  category: "games",
+  keywords: ["World of Warcraft", "WotLK", "combat log", "raid analytics", "DPS", "HPS", "Warmane"],
+  openGraph: {
+    type: "website",
+    locale: "en_CA",
+    siteName: "Pizza Logs",
+    title: "Pizza Logs — WotLK Raid Analytics",
+    description: "Upload combat logs, analyze raid encounters, and track WotLK performance records.",
+    images: [
+      {
+        url: "/social-preview.jpg",
+        width: 1280,
+        height: 640,
+        alt: "Pizza Logs — WotLK Raid Analytics",
+      },
+    ],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Pizza Logs — WotLK Raid Analytics",
+    description: "Upload combat logs, analyze raid encounters, and track WotLK performance records.",
+    images: ["/social-preview.jpg"],
+  },
+  icons: {
+    icon: [{ url: "/favicon.ico" }, { url: "/icon.svg", type: "image/svg+xml" }],
+  },
+  manifest: "/manifest.webmanifest",
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

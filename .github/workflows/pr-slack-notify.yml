@@ -12,10 +12,11 @@ jobs:
   notify:
     name: Send pull request summary to Slack
     runs-on: ubuntu-latest
+    timeout-minutes: 5
 
     steps:
       - name: Post PR details
-        uses: actions/github-script@v9
+        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9
         env:
           SLACK_WEBHOOK_URL: ${{ secrets.PR_SLACK_WEBHOOK_URL }}
         with:
@@ -47,12 +48,17 @@ jobs:
               changed: "Changed",
               unchanged: "Unchanged",
             };
+            const escapeSlackText = (value) => String(value)
+              .replace(/&/g, "&amp;")
+              .replace(/</g, "&lt;")
+              .replace(/>/g, "&gt;")
+              .replace(/@(channel|here|everyone)/gi, "@\u200b$1");
 
             const fileSummary = files
               .slice(0, maxFiles)
               .map((file) => {
                 const status = statusLabels[file.status] || file.status;
-                return `- *${status}* \`${file.filename}\`  +${file.additions} / -${file.deletions}`;
+                return `- *${status}* \`${escapeSlackText(file.filename)}\`  +${file.additions} / -${file.deletions}`;
               })
               .join("\n");
             const fileOverflow = files.length > maxFiles
@@ -61,8 +67,7 @@ jobs:
 
             const body = (pr.body || "_No PR description provided._").trim();
             const bodyLimit = 1200;
-            const formatDescriptionForSlack = (text) => text
-              .replace(/@(channel|here|everyone)/gi, "@\u200b$1")
+            const formatDescriptionForSlack = (text) => escapeSlackText(text)
               .replace(/^#{1,6}\s+(.+)$/gm, "*$1*")
               .replace(/^\s*[-*]\s+/gm, "- ")
               .replace(/\n{3,}/g, "\n\n")
@@ -73,8 +78,9 @@ jobs:
               ? "\n\n_Description trimmed. Open the PR for the full text._"
               : "";
 
-            const base = pr.base.ref;
-            const head = pr.head.ref;
+            const base = escapeSlackText(pr.base.ref);
+            const head = escapeSlackText(pr.head.ref);
+            const author = escapeSlackText(pr.user.login);
             const draftLabel = pr.draft ? "Draft" : "Ready";
             const reviewUrl = `${pr.html_url}/files`;
             const checksUrl = `${pr.html_url}/checks`;
@@ -85,6 +91,7 @@ jobs:
               text: {
                 type: "mrkdwn",
                 text: text.slice(0, 3000),
+                verbatim: true,
               },
             });
 
@@ -101,7 +108,8 @@ jobs:
                 elements: [
                   {
                     type: "mrkdwn",
-                    text: `*${actionLabel}* by *${pr.user.login}* | *${draftLabel}* | \`${head}\` -> \`${base}\``,
+                    text: `*${actionLabel}* by *${author}* | *${draftLabel}* | \`${head}\` -> \`${base}\``,
+                    verbatim: true,
                   },
                 ],
               },
@@ -142,8 +150,8 @@ jobs:
             ];
 
             const fallbackText = [
-              `Pizza Logs PR #${pr.number}: ${pr.title}`,
-              `${actionLabel} by ${pr.user.login} | ${draftLabel} | ${head} -> ${base}`,
+              `Pizza Logs PR #${pr.number}: ${escapeSlackText(pr.title)}`,
+              `${actionLabel} by ${author} | ${draftLabel} | ${head} -> ${base}`,
               `${files.length} changed file(s)`,
               pr.html_url,
             ].join("\n");

@@ -25,8 +25,9 @@ export async function GET(
       headers: { "Cache-Control": "no-store" },
     });
   } catch (error) {
+    console.error("[upload-status] parser request failed", { uploadId, error });
     return Response.json(
-      { error: `Parser status unavailable: ${String(error)}` },
+      { error: "Parser status is temporarily unavailable." },
       { status: 503 },
     );
   }

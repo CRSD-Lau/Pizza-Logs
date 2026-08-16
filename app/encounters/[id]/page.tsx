@@ -13,6 +13,7 @@ import { getClassColor } from "@/lib/constants/classes";
 import { getRaidSessionRouteByIndex } from "@/lib/raid-session-routing.server";
 import { formatRaidSessionTitle, getRaidSessionPath } from "@/lib/raid-session-slug";
 import { formatDuration, formatNumber } from "@/lib/utils";
+import { buildPageMetadata } from "@/lib/page-metadata";
 
 interface Props {
   params: Promise<{ id: string }>;
@@ -20,8 +21,19 @@ interface Props {
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { id } = await params;
-  const enc = await db.encounter.findUnique({ where: { id }, include: { boss: true } });
-  return { title: enc ? `${enc.boss.name} - ${enc.outcome}` : "Encounter" };
+  const enc = await db.encounter.findUnique({
+    where: { id },
+    select: { outcome: true, difficulty: true, boss: { select: { name: true } } },
+  });
+  const title = enc ? `${enc.boss.name} — ${enc.outcome}` : "Encounter";
+  return buildPageMetadata({
+    title,
+    description: enc
+      ? `${enc.difficulty} ${enc.boss.name} ${enc.outcome.toLowerCase()} with damage, healing, absorbs, and player breakdowns.`
+      : "WotLK raid encounter analytics.",
+    path: `/encounters/${encodeURIComponent(id)}`,
+    type: "article",
+  });
 }
 
 export default async function EncounterPage({ params }: Props) {

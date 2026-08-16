@@ -2,9 +2,8 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass
 import re
-from typing import Iterable, Iterator, TextIO
+from typing import Iterator, TextIO
 
 from bosses import ALL_BOSS_NAMES, lookup_boss, lookup_boss_by_id
 from combat_log_events import parse_combat_log_line

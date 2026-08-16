@@ -1,4 +1,3 @@
-import type { Metadata } from "next";
 import Link from "next/link";
 import { db } from "@/lib/db";
 import { SectionHeader } from "@/components/ui/SectionHeader";
@@ -11,7 +10,13 @@ import { isDatabaseConnectionError } from "@/lib/database-errors";
 import { getRevealClassName, getRevealStyle } from "@/lib/ui-animation";
 import { PageHeader, PageShell } from "@/components/ui/PageLayout";
 
-export const metadata: Metadata = { title: "Boss Rankings" };
+import { buildPageMetadata } from "@/lib/page-metadata";
+
+export const metadata = buildPageMetadata({
+  title: "Boss Rankings",
+  description: "Explore WotLK boss history, kill totals, and performance rankings.",
+  path: "/bosses",
+});
 export const dynamic = "force-dynamic";
 
 const BOSS_GRID_COLUMNS = "2fr 60px 60px 60px 120px 100px";

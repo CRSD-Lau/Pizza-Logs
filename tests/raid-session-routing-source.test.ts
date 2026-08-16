@@ -16,6 +16,7 @@ const rootLayout = readFileSync("app/layout.tsx", "utf8");
 const schema = readFileSync("lib/schema.ts", "utf8");
 const prismaSchema = readFileSync("prisma/schema.prisma", "utf8");
 const routingServer = readFileSync("lib/raid-session-routing.server.ts", "utf8");
+const pageMetadata = readFileSync("lib/page-metadata.ts", "utf8");
 const publicSlugMigration = readFileSync(
   "prisma/migrations/20260815151000_add_public_report_slug/migration.sql",
   "utf8",
@@ -33,9 +34,11 @@ const generatedLinkSources = [
 assert.match(sessionPage, /resolveRaidSession/);
 assert.match(sessionPage, /permanentRedirect/);
 assert.match(sessionPage, /isLegacyUploadId/);
-assert.match(sessionPage, /alternates:\s*\{\s*canonical/);
-assert.match(sessionPage, /openGraph:\s*\{/);
-assert.match(sessionPage, /twitter:\s*\{/);
+assert.match(sessionPage, /buildPageMetadata\(\{ title, description, path: canonical, type: "article" \}\)/);
+assert.match(pageMetadata, /alternates:\s*\{\s*canonical:\s*path/);
+assert.match(pageMetadata, /openGraph:\s*\{/);
+assert.match(pageMetadata, /twitter:\s*\{/);
+assert.match(pageMetadata, /social-preview\.jpg/);
 assert.doesNotMatch(sessionPage, /title:\s*`Session /);
 
 assert.match(playerPage, /resolveRaidSession/);

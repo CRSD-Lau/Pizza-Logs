@@ -1,9 +1,14 @@
-import type { Metadata } from "next";
 import { GuildRosterTable } from "@/components/guild-roster/GuildRosterTable";
 import { DEFAULT_GUILD_NAME, DEFAULT_GUILD_REALM, readGuildRosterMembers } from "@/lib/warmane-guild-roster";
 import { PageHeader } from "@/components/ui/PageLayout";
 
-export const metadata: Metadata = { title: "Guild Roster" };
+import { buildPageMetadata } from "@/lib/page-metadata";
+
+export const metadata = buildPageMetadata({
+  title: "Guild Roster",
+  description: "Browse the cached PizzaWarriors roster and character profiles on Warmane Lordaeron.",
+  path: "/guild-roster",
+});
 export const dynamic = "force-dynamic";
 
 interface Props {

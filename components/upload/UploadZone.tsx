@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useDropzone } from "react-dropzone";
 import { Button } from "@/components/ui/Button";
 import type { UploadResponse } from "@/lib/schema";
+import { MAX_UPLOAD_BYTES } from "@/lib/upload-security";
 import { cn } from "@/lib/utils";
 
 interface UploadZoneProps {
@@ -22,8 +23,6 @@ interface UploadState {
   result?: UploadResponse & { filename: string };
   error?: string;
 }
-
-const MAX_UPLOAD_BYTES = 100 * 1024 * 1024;
 
 export function UploadZone({ onComplete }: UploadZoneProps) {
   const [state, setState] = useState<UploadState>({
@@ -110,7 +109,6 @@ export function UploadZone({ onComplete }: UploadZoneProps) {
         headers: {
           "content-type": "application/octet-stream",
           "x-upload-id": uploadId,
-          "x-filename": file.name,
         },
         body: file,
       });

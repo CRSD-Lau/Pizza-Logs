@@ -13,7 +13,6 @@ import pytest
 from parser_core import (
     CombatLogParser, ParsedEncounter, DMG_EVENTS,
     UNIT_DIED_EVENT, ENCOUNTER_START, ENCOUNTER_END,
-    GUNSHIP_CREW_NAMES,
     _decode_difficulty, _fingerprint, _is_player,
 )
 from bosses import lookup_boss

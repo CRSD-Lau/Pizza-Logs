@@ -16,6 +16,7 @@ import { formatDps } from "@/lib/utils";
 import { getClassColor } from "@/lib/constants/classes";
 import { getRevealClassName, getRevealStyle } from "@/lib/ui-animation";
 import { cn } from "@/lib/utils";
+import { buildPageMetadata } from "@/lib/page-metadata";
 
 interface Props { params: Promise<{ playerName: string }> }
 
@@ -26,7 +27,12 @@ async function PlayerGear({ name, realm, playerClass }: { name: string; realm?: 
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { playerName } = await params;
-  return { title: decodeURIComponent(playerName) };
+  const name = decodeURIComponent(playerName);
+  return buildPageMetadata({
+    title: name,
+    description: `${name}'s WotLK raid history, records, performance, and cached Warmane gear.`,
+    path: `/players/${encodeURIComponent(name)}`,
+  });
 }
 
 export default async function PlayerPage({ params }: Props) {

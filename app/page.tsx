@@ -6,6 +6,14 @@ import { PageHeader, PageSection, PageShell } from "@/components/ui/PageLayout";
 import { DatabaseUnavailable } from "@/components/ui/DatabaseUnavailable";
 import { getWeekBounds } from "@/lib/utils";
 import { isDatabaseConnectionError } from "@/lib/database-errors";
+import { buildPageMetadata } from "@/lib/page-metadata";
+
+export const metadata = buildPageMetadata({
+  title: "Pizza Logs — WotLK Raid Analytics",
+  description: "Upload combat logs, analyze raid encounters, and track WotLK performance records.",
+  path: "/",
+  absoluteTitle: true,
+});
 
 export const dynamic = "force-dynamic";
 

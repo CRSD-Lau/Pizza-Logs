@@ -173,6 +173,7 @@ async def test_actual_upload_to_quick_classification_and_full_parse_flow(tmp_pat
     assert events[event_types.index("quick-result")]["result"]["encounters"][0]["mode"] == "10N"
     done = events[event_types.index("done")]["data"]
     assert done["encounters"][0]["difficulty"] == "10N"
+    assert done["receivedBytes"] == len(body)
     assert done["uploadTimings"]["finalByteToQuickResultMs"] >= 0
     assert main._upload_states[upload_id]["state"] == "complete"
     assert not list(main.UPLOAD_TEMP_DIR.glob("*.part"))

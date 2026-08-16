@@ -1,0 +1,59 @@
+name: Bug report
+description: Report reproducible incorrect behavior in Pizza Logs
+title: "[Bug]: "
+labels:
+  - bug
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Do not include secrets, raw private combat logs, or vulnerability details. Use a private security advisory for security issues.
+  - type: textarea
+    id: summary
+    attributes:
+      label: What happened?
+      description: Describe the observed behavior and what you expected instead.
+    validations:
+      required: true
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area
+      options:
+        - Upload/parsing
+        - Raid or encounter report
+        - Player, roster, or gear
+        - Leaderboard or weekly analytics
+        - Admin/operations
+        - Documentation/developer experience
+        - Other
+    validations:
+      required: true
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Reproduction
+      description: Provide steps and a public/sanitized report URL when possible. Do not attach a private raw log.
+      placeholder: |
+        1. Open ...
+        2. Select ...
+        3. Observe ...
+    validations:
+      required: true
+  - type: input
+    id: report
+    attributes:
+      label: Public report URL
+      description: Optional; use only if the report is already intended to be public.
+  - type: textarea
+    id: environment
+    attributes:
+      label: Environment
+      description: Browser/device, route, deployment, and approximate date/time.
+  - type: checkboxes
+    id: privacy
+    attributes:
+      label: Safety check
+      options:
+        - label: I removed secrets, private raw logs, and personal machine paths.
+          required: true

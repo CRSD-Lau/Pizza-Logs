@@ -7,13 +7,24 @@ import { StatCard } from "@/components/ui/StatCard";
 import { LeaderboardBar } from "@/components/charts/LeaderboardBar";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { formatDps, formatDuration } from "@/lib/utils";
+import { buildPageMetadata } from "@/lib/page-metadata";
 
 interface Props { params: Promise<{ bossSlug: string }> }
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { bossSlug } = await params;
-  const boss = await db.boss.findUnique({ where: { slug: bossSlug } });
-  return { title: boss?.name ?? "Boss" };
+  const boss = await db.boss.findUnique({
+    where: { slug: bossSlug },
+    select: { name: true, raid: true },
+  });
+  const title = boss?.name ?? "Boss";
+  return buildPageMetadata({
+    title,
+    description: boss
+      ? `View ${boss.name} kills, wipes, DPS, and HPS rankings from ${boss.raid}.`
+      : "View WotLK boss attempts and rankings.",
+    path: `/bosses/${encodeURIComponent(bossSlug)}`,
+  });
 }
 
 async function getBossData(slug: string) {

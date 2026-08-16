@@ -11,20 +11,6 @@ const renderSh = readFileSync(path.join(root, "scripts", "render-intro-videos.sh
 
 const expectedAssets = [
   "animations/source/Veo.mp4",
-  "animations/desktop/intro-1080p.webm",
-  "animations/desktop/intro-1440p.webm",
-  "animations/desktop/intro-4k.webm",
-  "animations/desktop/intro-1080p.mp4",
-  "animations/desktop/intro-1440p.mp4",
-  "animations/desktop/intro-4k.mp4",
-  "animations/mobile/intro-mobile-720x1280.webm",
-  "animations/mobile/intro-mobile-1080x1920.webm",
-  "animations/mobile/intro-mobile-1440x2560.webm",
-  "animations/mobile/intro-mobile-720x1280.mp4",
-  "animations/mobile/intro-mobile-1080x1920.mp4",
-  "animations/mobile/intro-mobile-1440x2560.mp4",
-  "animations/posters/desktop-poster.jpg",
-  "animations/posters/mobile-poster.jpg",
   "public/animations/desktop/intro-1080p.webm",
   "public/animations/desktop/intro-1440p.webm",
   "public/animations/desktop/intro-4k.webm",
@@ -119,5 +105,7 @@ assert.match(renderSh, /-map '0:a:0\?'/);
 assert.match(renderSh, /-c:a libopus/);
 assert.match(renderSh, /-c:a aac/);
 assert.doesNotMatch(renderSh, / -an\b/);
+assert.doesNotMatch(renderPs1, /"animations\/(?:desktop|mobile|posters)/);
+assert.doesNotMatch(renderSh, /"animations\/(?:desktop|mobile|posters)/);
 
 console.log("frozen-intro source tests passed");

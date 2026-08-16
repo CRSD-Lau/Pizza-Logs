@@ -1,4 +1,3 @@
-import type { Metadata } from "next";
 import Link from "next/link";
 import { db } from "@/lib/db";
 import { DatabaseUnavailable } from "@/components/ui/DatabaseUnavailable";
@@ -14,7 +13,13 @@ import { getRevealClassName, getRevealStyle } from "@/lib/ui-animation";
 import { PageHeader, PageShell } from "@/components/ui/PageLayout";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 
-export const metadata: Metadata = { title: "Players" };
+import { buildPageMetadata } from "@/lib/page-metadata";
+
+export const metadata = buildPageMetadata({
+  title: "Players",
+  description: "Find PizzaWarriors players, raid history, records, and cached Warmane gear.",
+  path: "/players",
+});
 export const dynamic = "force-dynamic";
 
 interface Props {

@@ -9,6 +9,7 @@ import asyncio
 import concurrent.futures
 import hashlib
 import json
+import logging
 import os
 import tempfile
 import threading
@@ -20,9 +21,8 @@ from typing import AsyncGenerator, Optional
 
 import uvicorn
 from fastapi import FastAPI, File, Form, Header, HTTPException, Request, UploadFile
-from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, Field
 
 from archive_upload import (
     MAX_COMPRESSED_BYTES,
@@ -31,24 +31,23 @@ from archive_upload import (
     open_combat_log,
     validate_upload,
 )
-from parser_core import CombatLogParser, ParsedEncounter, DebugInfo
-from bosses import lookup_boss, lookup_boss_by_id
+from parser_core import CombatLogParser, ParsedEncounter
 from quick_classifier import quick_classify
 
 # ── App setup ─────────────────────────────────────────────────────
+
+PARSER_DOCS_ENABLED = os.getenv("ENABLE_PARSER_DOCS", "").lower() in {"1", "true", "yes"}
 
 app = FastAPI(
     title="Pizza Logs Parser",
     description="WoW combat log parsing service",
     version="0.1.0",
+    docs_url="/docs" if PARSER_DOCS_ENABLED else None,
+    redoc_url=None,
+    openapi_url="/openapi.json" if PARSER_DOCS_ENABLED else None,
 )
 
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
+logger = logging.getLogger("pizza_logs.parser")
 
 UPLOAD_TEMP_DIR = Path(os.getenv(
     "UPLOAD_TEMP_DIR",
@@ -61,6 +60,7 @@ UPLOAD_RECEIVE_TIMEOUT_SECONDS = int(os.getenv("UPLOAD_RECEIVE_TIMEOUT_SECONDS",
 UPLOAD_CONCURRENCY = max(1, int(os.getenv("UPLOAD_CONCURRENCY", "4")))
 FULL_PROCESSING_WORKERS = max(1, int(os.getenv("FULL_PROCESSING_WORKERS", "2")))
 QUICK_CLASSIFICATION_WORKERS = max(1, int(os.getenv("QUICK_CLASSIFICATION_WORKERS", "2")))
+LEGACY_PARSER_ROUTES_ENABLED = os.getenv("ENABLE_LEGACY_PARSER_ROUTES", "").lower() in {"1", "true", "yes"}
 
 _upload_slots = asyncio.Semaphore(UPLOAD_CONCURRENCY)
 _full_executor = concurrent.futures.ThreadPoolExecutor(
@@ -75,31 +75,6 @@ _upload_states: dict[str, dict[str, object]] = {}
 _upload_states_lock = threading.Lock()
 
 # ── Response models ───────────────────────────────────────────────
-
-class SpellBreakdownEntry(BaseModel):
-    damage:  float
-    healing: float
-    hits:    int
-    crits:   int
-    school:  int
-
-
-class ParticipantOut(BaseModel):
-    model_config = ConfigDict(populate_by_name=True)
-
-    name:           str
-    class_:         Optional[str] = None
-    totalDamage:    float
-    totalHealing:   float
-    totalAbsorbs:   float = 0
-    damageTaken:    float
-    dps:            float
-    hps:            float
-    aps:            float = 0
-    deaths:         int
-    critPct:        float
-    spellBreakdown: dict[str, SpellBreakdownEntry] = Field(default_factory=dict)
-
 
 class EncounterOut(BaseModel):
     bossName:         str
@@ -129,10 +104,16 @@ class ParseResponse(BaseModel):
     warnings:      list[str] = Field(default_factory=list)
     sessionDamage: dict[str, float] = Field(default_factory=dict)
     sessionAnalytics: dict[str, dict] = Field(default_factory=dict)
+    receivedBytes: int
 
 
 def session_analytics_payload(parser: CombatLogParser) -> dict[str, dict]:
     return {str(k): v for k, v in parser.session_analytics.items()}
+
+
+def _require_legacy_parser_routes() -> None:
+    if not LEGACY_PARSER_ROUTES_ENABLED:
+        raise HTTPException(404, "Not found")
 
 
 # ── Routes ────────────────────────────────────────────────────────
@@ -152,11 +133,13 @@ async def parse_log(
     Accepts multipart/form-data with 'file' field.
     Streams to disk to avoid loading the entire file into memory.
     """
+    _require_legacy_parser_routes()
     if file.filename and not file.filename.lower().endswith((".txt", ".log")):
         raise HTTPException(400, "Only .txt and .log files are supported")
 
     # Stream upload to a temp file while computing SHA-256 in chunks
     sha256 = hashlib.sha256()
+    received_bytes = 0
     tmp_path: str | None = None
     try:
         with tempfile.NamedTemporaryFile(
@@ -169,14 +152,22 @@ async def parse_log(
                 chunk = await file.read(chunk_size)
                 if not chunk:
                     break
+                received_bytes += len(chunk)
+                if received_bytes > MAX_COMPRESSED_BYTES:
+                    raise HTTPException(413, "Upload exceeds the compressed-size limit.")
                 sha256.update(chunk)
                 if not first_chunk:
                     first_chunk = chunk[:4096]
                 tmp.write(chunk)
-    except Exception as exc:
+    except HTTPException:
         if tmp_path:
             os.unlink(tmp_path)
-        raise HTTPException(500, f"Failed to read uploaded file: {exc}") from exc
+        raise
+    except Exception as exc:
+        logger.exception("Failed to receive legacy parser upload")
+        if tmp_path:
+            os.unlink(tmp_path)
+        raise HTTPException(500, "Failed to receive uploaded file.") from exc
 
     file_hash = sha256.hexdigest()
     file_year = year_hint if year_hint > 2000 else _infer_year(first_chunk)
@@ -187,7 +178,8 @@ async def parse_log(
         with open(tmp_path, "r", encoding="utf-8", errors="replace") as fh:
             encounters_raw = parser.parse_file(fh)
     except Exception as exc:
-        raise HTTPException(500, f"Parse error: {exc}") from exc
+        logger.exception("Legacy parser route failed")
+        raise HTTPException(500, "Combat log parsing failed.") from exc
     finally:
         os.unlink(tmp_path)
 
@@ -226,66 +218,7 @@ async def parse_log(
         warnings      = warnings,
         sessionDamage = {str(k): v for k, v in parser.session_damage.items()},
         sessionAnalytics = session_analytics_payload(parser),
-    )
-
-
-@app.post("/parse-path")
-async def parse_log_by_path(body: dict) -> ParseResponse:
-    """
-    Parse a log file already on disk (used when the Next.js app has saved
-    the file locally and wants to avoid re-uploading it over HTTP).
-    """
-    path = body.get("path")
-    year_hint = int(body.get("year_hint", 0))
-    if not path or not Path(path).exists():
-        raise HTTPException(404, "File not found")
-
-    p = Path(path)
-    sha256 = hashlib.sha256()
-    first_chunk = b""
-    with p.open("rb") as raw:
-        while chunk := raw.read(8 * 1024 * 1024):
-            if not first_chunk:
-                first_chunk = chunk[:4096]
-            sha256.update(chunk)
-    file_hash = sha256.hexdigest()
-    file_year = year_hint if year_hint > 2000 else _infer_year(first_chunk)
-
-    parser = CombatLogParser(file_year=file_year)
-    with p.open("r", encoding="utf-8", errors="replace") as fh:
-        encounters_raw = parser.parse_file(fh)
-
-    encounters_out = [
-        EncounterOut(
-            bossName         = e.boss_name,
-            bossId           = e.boss_id,
-            difficulty       = e.difficulty,
-            groupSize        = e.group_size,
-            outcome          = e.outcome,
-            durationSeconds  = e.duration_seconds,
-            durationMs       = round(e.duration_seconds * 1000),
-            startedAt        = e.started_at,
-            endedAt          = e.ended_at,
-            totalDamage      = e.total_damage,
-            totalHealing     = e.total_healing,
-            totalAbsorbs     = e.total_absorbs,
-            unattributedAbsorbs = e.unattributed_absorbs,
-            totalDamageTaken = e.total_damage_taken,
-            fingerprint      = e.fingerprint,
-            participants     = e.participants,
-            difficultyDetection = e.difficulty_detection.as_dict(),
-        )
-        for e in encounters_raw
-    ]
-
-    return ParseResponse(
-        filename      = p.name,
-        fileHash      = file_hash,
-        rawLineCount  = parser.raw_count,
-        encounters    = encounters_out,
-        warnings      = parser.warnings,
-        sessionDamage = {str(k): v for k, v in parser.session_damage.items()},
-        sessionAnalytics = session_analytics_payload(parser),
+        receivedBytes = received_bytes,
     )
 
 
@@ -320,6 +253,7 @@ class DebugParseResponse(BaseModel):
     sessionDamage: dict[str, float]
     sessionAnalytics: dict[str, dict]
     debugInfo: list[DebugInfoOut]
+    receivedBytes: int
 
 
 @app.post("/parse-debug", response_model=DebugParseResponse)
@@ -329,11 +263,13 @@ async def parse_debug(
 ) -> DebugParseResponse:
     """Admin-only: parse and return per-encounter debug metadata.
     Not exposed in production UI."""
+    _require_legacy_parser_routes()
     if file.filename and not file.filename.lower().endswith((".txt", ".log")):
         raise HTTPException(400, "Only .txt and .log files are supported")
 
     # Stream upload to a temp file while computing SHA-256 in chunks
     sha256 = hashlib.sha256()
+    received_bytes = 0
     tmp_path: str | None = None
     try:
         with tempfile.NamedTemporaryFile(
@@ -346,14 +282,22 @@ async def parse_debug(
                 chunk = await file.read(chunk_size)
                 if not chunk:
                     break
+                received_bytes += len(chunk)
+                if received_bytes > MAX_COMPRESSED_BYTES:
+                    raise HTTPException(413, "Upload exceeds the compressed-size limit.")
                 sha256.update(chunk)
                 if not first_chunk:
                     first_chunk = chunk[:4096]
                 tmp.write(chunk)
-    except Exception as exc:
+    except HTTPException:
         if tmp_path:
             os.unlink(tmp_path)
-        raise HTTPException(500, f"Failed to read uploaded file: {exc}") from exc
+        raise
+    except Exception as exc:
+        logger.exception("Failed to receive legacy debug upload")
+        if tmp_path:
+            os.unlink(tmp_path)
+        raise HTTPException(500, "Failed to receive uploaded file.") from exc
 
     file_hash = sha256.hexdigest()
     file_year = year_hint if year_hint > 2000 else _infer_year(first_chunk)
@@ -396,7 +340,8 @@ async def parse_debug(
                         parserWarnings=dbg.parser_warnings,
                     ))
     except Exception as exc:
-        raise HTTPException(500, f"Parse error: {exc}") from exc
+        logger.exception("Legacy debug parser route failed")
+        raise HTTPException(500, "Combat log parsing failed.") from exc
     finally:
         if tmp_path:
             os.unlink(tmp_path)
@@ -437,6 +382,7 @@ async def parse_debug(
         sessionDamage = {str(k): v for k, v in parser.session_damage.items()},
         sessionAnalytics = session_analytics_payload(parser),
         debugInfo     = debug_infos,
+        receivedBytes = received_bytes,
     )
 
 
@@ -613,9 +559,10 @@ async def upload_archive_stream(
         _set_upload_state(upload_id, "error", errorCode="UPLOAD_TIMEOUT", error="Upload receive timeout.")
         _upload_slots.release()
         raise HTTPException(408, "Upload receive timeout.") from exc
-    except Exception as exc:
+    except Exception:
         part_path.unlink(missing_ok=True)
-        _set_upload_state(upload_id, "error", errorCode="UPLOAD_RECEIVE_ERROR", error=str(exc))
+        logger.exception("Streamed upload receive failed", extra={"upload_id": upload_id})
+        _set_upload_state(upload_id, "error", errorCode="UPLOAD_RECEIVE_ERROR", error="Upload receive failed.")
         _upload_slots.release()
         raise
 
@@ -733,6 +680,7 @@ async def upload_archive_stream(
                     "sessionDamage": {str(k): v for k, v in parser.session_damage.items()},
                     "sessionAnalytics": session_analytics_payload(parser),
                     "uploadId": upload_id,
+                    "receivedBytes": received_bytes,
                     "uploadTimings": timings,
                 },
             })
@@ -742,9 +690,10 @@ async def upload_archive_stream(
         except asyncio.TimeoutError:
             _set_upload_state(upload_id, "error", errorCode="PROCESSING_TIMEOUT", error="Upload processing timed out.")
             yield _sse({"type": "error", "uploadId": upload_id, "code": "PROCESSING_TIMEOUT", "msg": "Upload processing timed out."})
-        except Exception as exc:
-            _set_upload_state(upload_id, "error", errorCode="PROCESSING_ERROR", error=str(exc))
-            yield _sse({"type": "error", "uploadId": upload_id, "code": "PROCESSING_ERROR", "msg": f"Upload processing failed: {exc}"})
+        except Exception:
+            logger.exception("Streamed upload processing failed", extra={"upload_id": upload_id})
+            _set_upload_state(upload_id, "error", errorCode="PROCESSING_ERROR", error="Upload processing failed.")
+            yield _sse({"type": "error", "uploadId": upload_id, "code": "PROCESSING_ERROR", "msg": "Upload processing failed."})
         finally:
             quick_cancel.set()
             full_cancel.set()
@@ -781,12 +730,14 @@ async def parse_log_stream(
     FastAPI closes UploadFile when the endpoint function returns, so the async
     generator cannot read from `file` after that point.
     """
+    _require_legacy_parser_routes()
     if file.filename and not file.filename.lower().endswith((".txt", ".log")):
         raise HTTPException(400, "Only .txt and .log files are supported")
 
     # ── Write file to disk NOW (before returning StreamingResponse) ──
     sha256     = hashlib.sha256()
     first_chunk= b""
+    received_bytes = 0
     tmp_path: Optional[str] = None
     try:
         with tempfile.NamedTemporaryFile(mode="wb", suffix=".txt", delete=False) as tmp:
@@ -795,14 +746,22 @@ async def parse_log_stream(
                 chunk = await file.read(8 * 1024 * 1024)
                 if not chunk:
                     break
+                received_bytes += len(chunk)
+                if received_bytes > MAX_COMPRESSED_BYTES:
+                    raise HTTPException(413, "Upload exceeds the compressed-size limit.")
                 sha256.update(chunk)
                 if not first_chunk:
                     first_chunk = chunk[:4096]
                 tmp.write(chunk)
-    except Exception as exc:
+    except HTTPException:
         if tmp_path and os.path.exists(tmp_path):
             os.unlink(tmp_path)
-        raise HTTPException(500, f"Failed to receive file: {exc}") from exc
+        raise
+    except Exception as exc:
+        logger.exception("Failed to receive legacy streamed upload")
+        if tmp_path and os.path.exists(tmp_path):
+            os.unlink(tmp_path)
+        raise HTTPException(500, "Failed to receive uploaded file.") from exc
 
     file_hash = sha256.hexdigest()
     file_year = year_hint if year_hint > 2000 else _infer_year(first_chunk)
@@ -818,9 +777,10 @@ async def parse_log_stream(
         try:
             with open(tmp_path, "r", encoding="utf-8", errors="replace") as fh:
                 total_lines = sum(1 for _ in fh)
-        except Exception as exc:
+        except Exception:
             os.unlink(tmp_path)
-            yield _sse({"type": "error", "msg": f"Line count failed: {exc}"})
+            logger.exception("Legacy streamed upload line count failed")
+            yield _sse({"type": "error", "code": "PROCESSING_ERROR", "msg": "Upload processing failed."})
             return
 
         yield _sse({"type": "progress", "pct": 33, "msg": "Parser reading combat events…"})
@@ -859,8 +819,9 @@ async def parse_log_stream(
         # Get result (raises if parser threw)
         try:
             parser, encounters_raw = await parse_task
-        except Exception as exc:
-            yield _sse({"type": "error", "msg": f"Parse error: {exc}"})
+        except Exception:
+            logger.exception("Legacy streamed upload parse failed")
+            yield _sse({"type": "error", "code": "PROCESSING_ERROR", "msg": "Upload processing failed."})
             return
 
         yield _sse({"type": "progress", "pct": 90, "msg": "Building encounters…"})
@@ -881,6 +842,7 @@ async def parse_log_stream(
                 "warnings":      warnings,
                 "sessionDamage": {str(k): v for k, v in parser.session_damage.items()},
                 "sessionAnalytics": session_analytics_payload(parser),
+                "receivedBytes": received_bytes,
             },
         })
 
@@ -908,4 +870,5 @@ def _infer_year(content: bytes) -> int:
 
 if __name__ == "__main__":
     port = int(os.getenv("PORT", "8000"))
-    uvicorn.run("main:app", host="0.0.0.0", port=port, reload=False)
+    # Container ingress requires binding beyond loopback; host exposure is set by the platform.
+    uvicorn.run("main:app", host="0.0.0.0", port=port, reload=False)  # nosec B104

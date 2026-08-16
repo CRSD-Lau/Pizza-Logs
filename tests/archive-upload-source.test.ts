@@ -16,8 +16,10 @@ assert.match(uploadZone, /application\/zip/, "ZIP archives must be selectable");
 assert.match(uploadZone, /quick-result/, "quick classification must be visible before full completion");
 assert.doesNotMatch(uploadZone, /new FormData\(/, "new upload path must not rebuild multipart bodies");
 
-assert.match(uploadRoute, /\/uploads\/\$\{encodeURIComponent\(clientUploadId!\)\}\/stream/);
+assert.match(uploadRoute, /\/uploads\/\$\{encodeURIComponent\(clientUploadId\)\}\/stream/);
 assert.match(uploadRoute, /body:\s+req\.body/, "Next.js must forward the request stream directly");
+assert.doesNotMatch(uploadRoute, /\/parse-stream/, "public uploads must not fall back to the legacy parser path");
+assert.match(uploadRoute, /parseResult\.receivedBytes \?\? declaredFileSize/, "stored size should use parser-observed bytes");
 assert.match(uploadRoute, /X-Upload-ID/, "upload response must expose the upload ID");
 assert.match(
   uploadRoute,

@@ -11,8 +11,6 @@ export const WOW_CLASSES = [
   "Warrior",
 ] as const;
 
-export type WowClass = (typeof WOW_CLASSES)[number];
-
 export const CLASS_COLORS: Record<string, string> = {
   "Death Knight": "#c41e3a",
   Druid:          "#f0a040",
@@ -27,42 +25,6 @@ export const CLASS_COLORS: Record<string, string> = {
   Warrior:        "#c89040",
   "Demon Hunter": "#a330c9",
   Unknown:        "#888888",
-};
-
-export const CLASS_ABBREV: Record<string, string> = {
-  "Death Knight": "DK",
-  Druid:          "DR",
-  Hunter:         "HU",
-  Mage:           "MA",
-  Monk:           "MO",
-  Paladin:        "PA",
-  Priest:         "PR",
-  Rogue:          "RO",
-  Shaman:         "SH",
-  Warlock:        "WL",
-  Warrior:        "WA",
-  "Demon Hunter": "DH",
-  Unknown:        "??",
-};
-
-export const SCHOOL_NAMES: Record<number, string> = {
-  1:  "Physical",
-  2:  "Holy",
-  4:  "Fire",
-  8:  "Nature",
-  16: "Frost",
-  32: "Shadow",
-  64: "Arcane",
-};
-
-export const SCHOOL_COLORS: Record<number, string> = {
-  1:  "#c0c8d8",
-  2:  "#f0c040",
-  4:  "#e06030",
-  8:  "#60c060",
-  16: "#80c8f0",
-  32: "#a070d0",
-  64: "#d080f0",
 };
 
 // Stable palette for unknown classes — consistent per player name

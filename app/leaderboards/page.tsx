@@ -1,4 +1,3 @@
-import type { Metadata } from "next";
 import { db } from "@/lib/db";
 import { LeaderboardBar } from "@/components/charts/LeaderboardBar";
 import { DatabaseUnavailable } from "@/components/ui/DatabaseUnavailable";
@@ -9,7 +8,13 @@ import { sortBossesByICCOrder } from "@/lib/constants/bosses";
 import { getRevealClassName, getRevealStyle } from "@/lib/ui-animation";
 import { PageHeader, PageShell } from "@/components/ui/PageLayout";
 
-export const metadata: Metadata = { title: "Leaderboards" };
+import { buildPageMetadata } from "@/lib/page-metadata";
+
+export const metadata = buildPageMetadata({
+  title: "Leaderboards",
+  description: "Compare all-time WotLK boss DPS and HPS records from parsed raid kills.",
+  path: "/leaderboards",
+});
 export const dynamic = "force-dynamic";
 
 async function getLeaderboardBoards() {

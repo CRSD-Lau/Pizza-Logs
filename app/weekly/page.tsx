@@ -1,4 +1,3 @@
-import type { Metadata } from "next";
 import Link from "next/link";
 import { SectionHeader } from "@/components/ui/SectionHeader";
 import { StatCard } from "@/components/ui/StatCard";
@@ -11,7 +10,13 @@ import { isDatabaseConnectionError } from "@/lib/database-errors";
 import { buildWeeklyBossKills } from "@/lib/weekly-stats";
 import { PageHeader } from "@/components/ui/PageLayout";
 
-export const metadata: Metadata = { title: "This Week" };
+import { buildPageMetadata } from "@/lib/page-metadata";
+
+export const metadata = buildPageMetadata({
+  title: "This Week",
+  description: "Review this week's WotLK boss kills, damage, healing, and raid performance.",
+  path: "/weekly",
+});
 export const dynamic = "force-dynamic";
 
 async function getWeeklyData() {

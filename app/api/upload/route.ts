@@ -5,11 +5,26 @@ import { createPublicReportSlug } from "@/lib/public-report-slug";
 import { buildRaidSessionRoutesWithAnalytics } from "@/lib/raid-session-slug";
 import { ParseResultSchema, UploadRequestSchema } from "@/lib/schema";
 import { computeMilestones } from "@/lib/actions/milestones";
+import {
+  UploadRequestError,
+  isUploadId,
+  parseUploadSize,
+  parserEventErrorMessage,
+  parserHttpErrorMessage,
+  sanitizeUploadFilename,
+} from "@/lib/upload-security";
 
 export const maxDuration = 300;
 
 const enc = new TextEncoder();
 const sse = (data: object) => enc.encode(`data: ${JSON.stringify(data)}\n\n`);
+
+function uploadErrorResponse(message: string, status: number): Response {
+  return new Response(sse({ type: "error", msg: message }), {
+    status,
+    headers: { "Content-Type": "text/event-stream" },
+  });
+}
 
 function isPublicReportSlugCollision(error: unknown): boolean {
   if (!(error instanceof Prisma.PrismaClientKnownRequestError) || error.code !== "P2002") {
@@ -22,8 +37,22 @@ function isPublicReportSlugCollision(error: unknown): boolean {
 export async function POST(req: NextRequest) {
   // ── Parse metadata from query params ─────────────────────────
   const { searchParams } = new URL(req.url);
-  const filename = searchParams.get("filename") ?? "WoWCombatLog.txt";
-  const fileSize = parseInt(searchParams.get("fileSize") ?? "0", 10);
+  const filename = sanitizeUploadFilename(searchParams.get("filename"));
+  if (!filename) {
+    return uploadErrorResponse("Only .txt, .log, and .zip uploads are supported.", 400);
+  }
+
+  let declaredFileSize: number;
+  try {
+    declaredFileSize = parseUploadSize(searchParams.get("fileSize"), "fileSize");
+    const contentLength = req.headers.get("content-length");
+    if (contentLength !== null) parseUploadSize(contentLength, "Content-Length");
+  } catch (error) {
+    if (error instanceof UploadRequestError) {
+      return uploadErrorResponse(error.message, error.status);
+    }
+    return uploadErrorResponse("Invalid upload size.", 400);
+  }
 
   const meta = UploadRequestSchema.safeParse({
     uploaderName: searchParams.get("uploaderName") ?? undefined,
@@ -33,16 +62,15 @@ export async function POST(req: NextRequest) {
     expansion:    searchParams.get("expansion") ?? "wotlk",
   });
   if (!meta.success) {
-    return new Response(
-      sse({ type: "error", msg: meta.error.message }),
-      { status: 400, headers: { "Content-Type": "text/event-stream" } },
-    );
+    return uploadErrorResponse(meta.error.message, 400);
   }
   const { uploaderName, guildName, realmName, realmHost, expansion } = meta.data;
   const parserUrl = process.env.PARSER_SERVICE_URL ?? "http://localhost:8000";
   const contentType = req.headers.get("content-type") ?? "";
   const clientUploadId = req.headers.get("x-upload-id");
-  const useArchiveProtocol = Boolean(clientUploadId) && contentType.startsWith("application/octet-stream");
+  if (!isUploadId(clientUploadId) || !contentType.startsWith("application/octet-stream") || !req.body) {
+    return uploadErrorResponse("Invalid streamed upload request.", 400);
+  }
 
   const stream = new ReadableStream({
     async start(controller) {
@@ -58,30 +86,27 @@ export async function POST(req: NextRequest) {
         // ── Forward to parser SSE endpoint ──────────────────────
         let parserRes: Response;
         try {
-          const parserEndpoint = useArchiveProtocol
-            ? `${parserUrl}/uploads/${encodeURIComponent(clientUploadId!)}/stream`
-            : `${parserUrl}/parse-stream`;
-          const parserHeaders: Record<string, string> = useArchiveProtocol
-            ? {
-                "content-type": "application/octet-stream",
-                "x-filename": filename,
-              }
-            : { "content-type": contentType };
+          const parserEndpoint = `${parserUrl}/uploads/${encodeURIComponent(clientUploadId)}/stream`;
           parserRes = await fetch(parserEndpoint, {
             method:  "POST",
-            headers: parserHeaders,
+            headers: {
+              "content-type": "application/octet-stream",
+              "x-filename": filename,
+            },
             body:    req.body,
             duplex:  "half",
             signal:  AbortSignal.timeout(270_000),
           } as RequestInit & { duplex: string });
         } catch (err) {
-          send({ type: "error", msg: `Parser unreachable: ${String(err)}` });
+          console.error("[upload] parser request failed", err);
+          send({ type: "error", msg: "Parser service is unavailable. Please try again shortly." });
           return;
         }
 
         if (!parserRes.ok || !parserRes.body) {
-          const text = await parserRes.text().catch(() => "");
-          send({ type: "error", msg: `Parser ${parserRes.status}: ${text}` });
+          const details = await parserRes.text().catch(() => "");
+          console.error("[upload] parser rejected request", { status: parserRes.status, details });
+          send({ type: "error", msg: parserHttpErrorMessage(parserRes.status) });
           return;
         }
 
@@ -102,7 +127,7 @@ export async function POST(req: NextRequest) {
           for (const chunk of chunks) {
             for (const line of chunk.split("\n")) {
               if (!line.startsWith("data: ")) continue;
-              let event: { type: string; pct?: number; msg?: string; data?: unknown; };
+              let event: { type: string; pct?: number; msg?: string; code?: string; data?: unknown; };
               try { event = JSON.parse(line.slice(6)); }
               catch { continue; }
 
@@ -116,7 +141,7 @@ export async function POST(req: NextRequest) {
                 parseResult = validated.data;
                 send({ type: "progress", pct: 91, msg: "Saving to database…" });
               } else if (event.type === "error") {
-                send({ type: "error", msg: event.msg ?? "Parser error" });
+                send({ type: "error", msg: parserEventErrorMessage(event.code) });
                 break outer;
               } else {
                 // Forward progress straight through
@@ -186,7 +211,7 @@ export async function POST(req: NextRequest) {
                 publicSlug:    createPublicReportSlug(guildName ?? realmName),
                 filename:      filename,
                 fileHash:      parseResult.fileHash,
-                fileSize:      fileSize || 0,
+                fileSize:      parseResult.receivedBytes ?? declaredFileSize,
                 status:        "PARSING",
                 realmId:       realm.id,
                 guildId:       guildId ?? null,
@@ -367,7 +392,7 @@ export async function POST(req: NextRequest) {
         });
       } catch (err) {
         console.error("[upload] unhandled error:", err);
-        send({ type: "error", msg: "Internal server error: " + String(err) });
+        send({ type: "error", msg: "Upload processing failed. Please try again." });
       } finally {
         close();
       }

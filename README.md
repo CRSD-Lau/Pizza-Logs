@@ -1,326 +1,195 @@
 # Pizza Logs
 
-Pizza Logs is a Warmane / WotLK 3.3.5a combat-log parser and leaderboard app for the PizzaWarriors guild. Raiders upload `WoWCombatLog.txt`; the app parses boss encounters with Skada-WoTLK-aligned rules, stores reports in PostgreSQL, and shows raid sessions, DPS/HPS rankings, boss history, player profiles, gear, guild roster data, and admin diagnostics.
+![Pizza Logs — WotLK Raid Analytics](public/social-preview.jpg)
 
-Live app: https://pizza-logs-production.up.railway.app
+[![CI](https://github.com/CRSD-Lau/Pizza-Logs/actions/workflows/ci.yml/badge.svg)](https://github.com/CRSD-Lau/Pizza-Logs/actions/workflows/ci.yml)
+[![CodeQL](https://github.com/CRSD-Lau/Pizza-Logs/actions/workflows/codeql.yml/badge.svg)](https://github.com/CRSD-Lau/Pizza-Logs/actions/workflows/codeql.yml)
+[![Production Smoke](https://github.com/CRSD-Lau/Pizza-Logs/actions/workflows/production-smoke.yml/badge.svg)](https://github.com/CRSD-Lau/Pizza-Logs/actions/workflows/production-smoke.yml)
+[![MIT License](https://img.shields.io/github/license/CRSD-Lau/Pizza-Logs)](LICENSE)
 
-Wiki: https://github.com/CRSD-Lau/Pizza-Logs/wiki
+Pizza Logs turns Wrath of the Lich King combat logs into readable raid sessions, boss pulls, DPS/HPS records, player profiles, gear snapshots, and progression summaries. It is built for PizzaWarriors on Warmane Lordaeron, while remaining useful for compatible WotLK 3.3.5a logs.
 
-## App Preview
+[Open the live app](https://pizza-logs-production.up.railway.app) · [Read the docs](docs/README.md) · [Report a bug](https://github.com/CRSD-Lau/Pizza-Logs/issues/new/choose) · [Report a vulnerability privately](https://github.com/CRSD-Lau/Pizza-Logs/security/advisories/new)
 
-![Pizza Logs upload dashboard screenshot](docs/assets/readme-screenshot.png)
+## What It Does
 
-## Current Features
+- Streams `.txt`, `.log`, or `.zip` uploads with live progress and bounded server-side validation.
+- Detects boss encounters even when Warmane omits useful encounter markers.
+- Preserves Skada-WoTLK damage/healing primitives and explicit UwU-compatible analytical views.
+- Reports raid sessions, boss attempts, target damage, healing, absorbs, deaths, auras, consumables, power gains, specs, roles, and pets.
+- Tracks all-time records, weekly results, boss history, and player performance.
+- Adds first-party Warmane roster and gear lookups with durable cached fallback.
+- Protects diagnostics, cleanup, import, and refresh controls behind server-side admin authentication.
+- Runs as separate Next.js and FastAPI services backed by PostgreSQL on Railway.
 
-- Single-request streamed text/ZIP upload with Server-Sent Events progress and early difficulty results.
-- Python FastAPI parser service for WotLK combat logs.
-- Skada-WoTLK-aligned damage/healing event handling.
-- Separate absorb/APS plus an explicitly labeled UwU-compatible healing + absorbs view.
-- Spec/role, aura uptime, consumable, power-gain, target-damage, and death-timeline analytics.
-- Boss encounter, raid session, player, weekly, and leaderboard pages.
-- File-level and encounter-level deduplication.
-- Milestones for all-time DPS/HPS records.
-- Admin-only diagnostics, upload history, cleanup controls, and first-party roster refresh.
-- Header player search across combat-log players and PizzaWarriors/Lordaeron roster-only members.
-- First-party Warmane guild roster refresh and on-demand player gear quick looks.
-- Gear display backed by cached Warmane equipment plus local AzerothCore item metadata.
-- Player avatars use WoW class icons, falling back to initials when class data or icon loading is unavailable.
-- Railway production deployment with separate web and parser services.
+## How It Fits Together
 
-## Supported Assumptions
+```mermaid
+flowchart LR
+  Browser["Browser"] -->|"SSE upload and reports"| Web["Next.js web service"]
+  Web -->|"bounded byte stream"| Parser["FastAPI parser service"]
+  Parser -->|"validated analytics"| Web
+  Web <--> Database["PostgreSQL via Prisma"]
+  Web -->|"best-effort server fetch"| Warmane["Warmane Armory/CDN"]
+  Railway["Railway main deployment"] --> Web
+  Railway --> Parser
+```
 
-- Primary target: Warmane WotLK 3.3.5a logs for PizzaWarriors on Lordaeron.
-- Other WotLK-style logs may work, but Warmane edge cases drive the parser rules.
-- Logs do not need reliable `ENCOUNTER_START` / `ENCOUNTER_END`; the parser has a heuristic path.
-- If encounter markers exist, the parser can use them, then still applies Warmane-specific heroic correction.
-- Skada-WoTLK remains the source of truth for outgoing damage and effective-healing primitives. Adopted public report definitions are aligned with UwU where users compare the two products.
-- Effective healing and absorbs remain separate stored metrics; reports also expose the explicit combined healing + absorbs value used for UwU comparisons.
+The browser never receives database credentials, parser filesystem paths, or the admin secret. Raw uploads are streamed through the web service, validated by the parser, reduced to structured analytics, and removed from parser temporary storage after processing.
 
 ## Stack
 
-| Layer | Tech |
-|---|---|
+| Layer | Technology |
+| --- | --- |
 | Web | Next.js 16.3, React 19.2, Node.js 24 |
-| TypeScript | TypeScript 7 native CLI, TypeScript 6 ecosystem API |
-| Styling | Tailwind CSS 4 |
-| Database | PostgreSQL, Prisma 7 with PostgreSQL driver adapter |
-| Parser | Python 3.12, FastAPI 0.141 |
-| Charts | Recharts 3 |
-| Hosting | Railway |
+| Language | TypeScript 7 native CLI plus TypeScript 6 ecosystem check |
+| UI | Tailwind CSS 4, Recharts 3 |
+| Data | PostgreSQL, Prisma 7 |
+| Parser | Python 3.12, FastAPI, Pydantic |
+| Hosting | Railway, separate web and parser services |
+| Security automation | CodeQL, Dependabot, dependency review, pinned Actions |
 
-Railway has two app services:
-
-- `Web Service`: Next.js standalone app.
-- `parser-py`: FastAPI parser service.
-
-## Cinematic Intro Assets
-
-The site intro is rendered from `animations/source/Veo.mp4` with FFmpeg. The canonical generated assets live in `animations/desktop`, `animations/mobile`, and `animations/posters`; matching web-served copies are mirrored to `public/animations`.
-
-Render all responsive variants after replacing the source video:
-
-```powershell
-powershell -ExecutionPolicy Bypass -File scripts/render-intro-videos.ps1
-```
-
-On macOS/Linux:
-
-```bash
-bash scripts/render-intro-videos.sh
-```
-
-The scripts crop the bottom-right Veo watermark out of the frame, preserve 16:9 desktop and 9:16 mobile aspect ratios, retain source audio as WebM/Opus and MP4/AAC, encode WebM/VP9 primary assets plus H.264 MP4 fallbacks, and regenerate posters. The intro starts muted for autoplay compatibility, exposes a sound toggle, plays on full page load or refresh, then stays dismissed during normal in-app link navigation.
-
-## Main Routes
-
-| Route | Purpose |
-|---|---|
-| `/` | Upload form and recent records |
-| `/raids` | Raid history grouped by upload and raid date |
-| `/raids/[public-report-slug]/sessions/[yyyy-mm-dd]` | Public raid detail with a readable guild/report slug and canonical date |
-| `/raids/[public-report-slug]/sessions/[yyyy-mm-dd]/players/[name]` | Date-scoped raid player detail |
-| `/encounters/[id]` | Single boss pull breakdown |
-| `/bosses` and `/bosses/[slug]` | Boss ranking pages |
-| `/leaderboards` | Aggregate DPS/HPS leaderboards |
-| `/players` and `/players/[name]` | Player roster and all-time profiles |
-| `/guild-roster` | Cached PizzaWarriors roster |
-| `/weekly` | Weekly DPS/HPS and boss-kill summary |
-| `/admin` | Protected diagnostics and import tools |
-| `/admin/uploads` | Protected upload history |
-
-`/uploads` and `/uploads/[id]` redirect to the admin upload history. Public raid
-URLs use readable aliases such as
-`/raids/pizza-warriors-7k2m9x4/sessions/2026-08-14`; internal database CUIDs are
-not used in newly generated public links. A second raid from the same upload on
-that date uses `/sessions/2026-08-14-2`. Legacy CUID-based and numeric session
-URLs redirect permanently to the clean dated canonical URL.
-
-## Upload And Parsing Flow
-
-1. Browser creates a random upload UUID and posts raw `.txt`, `.log`, or `.zip` bytes to `POST /api/upload` while reading SSE progress.
-2. Next.js forwards the request body directly to the parser's UUID upload endpoint.
-3. The parser streams to a unique `.part` file, hashes incrementally, atomically finalizes it, validates limits and archive safety, then emits a quick per-attempt difficulty result.
-4. A bounded background worker performs full DPS/HPS parsing while the same SSE request stays open.
-5. Next.js validates the final parser payload with Zod and uses the existing realm/guild/player/encounter persistence path.
-6. The upload is marked `DONE`, milestones are computed, and the browser links to the stored raid session.
-
-Duplicate handling:
-
-| Level | Method |
-|---|---|
-| File | SHA-256 of full file content via `Upload.fileHash` |
-| Encounter | SHA-256 fingerprint from boss, difficulty, exact normalized pull start, and sorted participant names |
-
-The upload protocol, security limits, states, compatibility endpoint, and benchmark are documented in `docs/archive-upload-protocol.md`.
-
-## Parser Behavior
-
-The formal parser contract is in `docs/parser-contract.md`; detector evidence and Ulduar rules are in `docs/difficulty-detector.md`.
-
-Key rules:
-
-- Damage events match Skada `Damage.lua`: `SPELL_DAMAGE`, `SWING_DAMAGE`, `RANGE_DAMAGE`, `SPELL_PERIODIC_DAMAGE`, `DAMAGE_SHIELD`, `DAMAGE_SPLIT`, and `SPELL_BUILDING_DAMAGE`.
-- Healing events match Skada `Healing.lua`: `SPELL_HEAL` and `SPELL_PERIODIC_HEAL`.
-- Headline encounter and full-session Total Damage use the raw damage-event `amount`, matching UwU's Total Damage column. Overkill and absorbed metadata remain available for separate useful/effective analysis.
-- Encounter damage includes all matched pull targets, including Lady Deathwhisper adds and Blood Prince Council mechanics; boss-only damage remains a separate analytical breakdown.
-- Damage taken uses the raw incoming amount reported by the combat log, matching UwU's headline taken value.
-- Effective healing is `max(0, gross - overheal)`.
-- `SPELL_HEAL_ABSORBED` is not healing done in Skada.
-- `SWING_DAMAGE` uses shifted indexes because it has no spell fields.
-- Encounter windows end at the last boss-destination event; KILL duration uses boss death time and boss outgoing attacks, stale wipe markers, or post-fight trash cannot extend the pull.
-- Session reports persist one UwU-style Custom Slice from the first to last log event, including wipes, trash, and downtime, with Total Damage, effective healing plus attributed absorbs, Damage Taken, and per-player rates sharing the same duration.
-- Gunship kill detection has a Warmane crew-death override.
-- Difficulty is classified per attempt from boss-specific spell ranks and explicit Ulduar rules; conflicts, missing evidence, and unsupported cases return `UNKNOWN` instead of defaulting to Normal.
-- Malformed combat-log lines are counted and returned as parser warnings instead of crashing uploads.
-- Absorb amounts are taken from damage events and attributed to the newest active supported shield aura; recently removed shields remain eligible for 0.5 seconds, Discipline critical-heal evidence can identify Divine Aegis, ambiguous multi-shield hits are labeled, and missing evidence remains unattributed.
-- Permanent pet ownership propagates across repeated Warmane GUID instances only after summon or owner-exclusive spell evidence establishes the owner.
-- Player spec/role uses observed WotLK spell signatures plus healing and damage-taken evidence; uncertain cases remain `UNKNOWN` or fall back to output role.
-- Aura uptime, consumables, power gains, and a death timeline with the preceding 15 seconds of incoming damage are stored per participant.
-
-The feature-by-feature comparison against the inspected UwU revision is in [`docs/uwu-analytics-parity.md`](docs/uwu-analytics-parity.md).
-
-## Player, Gear, And Roster Data
-
-Player profiles merge:
-
-- combat-log `players` data when the character has uploaded raid participation;
-- PizzaWarriors/Lordaeron `guild_roster_members` data for roster-only characters;
-- cached Warmane gear snapshots from `armory_gear_cache`;
-- local item metadata from `wow_items`.
-
-[Class avatars are first-party gear quick-look controls](docs/player-gear-quick-look.md). Hover, focus, or tap one to lazily request the known character through Pizza Logs, refresh the Warmane equipment snapshot on a five-minute window, and show a WoW-style equipment pane with gear icons, GearScoreLite, average item level, freshness, and a dressed Warmane 3D model on desktop. Normal viewing does not require Tampermonkey, a bookmarklet, an admin secret, or an open Warmane tab. The last healthy database snapshot is used if a live Armory request fails.
-
-Warmane live server fetches remain best-effort because Cloudflare behavior can change. Gear quick looks fall back to the last healthy snapshot, while an authenticated **Refresh from Warmane** control on `/admin` updates the durable guild-roster snapshot. Admin diagnostics show the latest successful live gear refresh and provide a confirmation-gated gear-cache reset. There is no active Tampermonkey, bookmarklet, open-tab, or browser-stored-secret dependency. Existing installations can be removed using the [browser sync retirement guide](docs/userscript-retirement.md).
-
-Player list avatars intentionally remain fast class icons, and the small shield badge identifies the live gear quick look. Inside the desktop quick look, Warmane's model recipe renders in a tightly sandboxed frame with the class icon as its fallback. The old portrait userscript URL remains only as a no-op compatibility update for existing installs.
-
-Item names, item levels, stats, slot metadata, and GearScoreLite inputs come from the local AzerothCore `item_template` import:
-
-```bash
-npm run db:import-items
-```
-
-No runtime Wowhead API dependency is used. Live equipment, class icons, and the isolated desktop character model use Warmane's public profile/CDN data; local item-template icon slugs can fall back to static `wow.zamimg.com` image URLs.
-
-## Local Development
-
-For Windows CLI prerequisites, PATH repair, and repeatable local tooling checks, see [`docs/dev/TOOLING.md`](docs/dev/TOOLING.md).
+## Quick Start
 
 Prerequisites:
 
-- Node.js 24.x (the `.nvmrc`, package engine, CI, Docker, and Railway image all agree)
-- Python 3.12+
-- PostgreSQL 16, or Docker for the local database
+- Node.js 24.x and npm 11+
+- Python 3.12
+- PostgreSQL 16, or Docker Desktop
 
-Install web dependencies:
+Install the web dependencies and create local configuration:
 
 ```bash
 npm ci --legacy-peer-deps
-```
-
-Copy the local environment template:
-
-```bash
 cp .env.example .env.local
-```
-
-Required app variables:
-
-| Variable | Local example | Notes |
-|---|---|---|
-| `DATABASE_URL` | `postgresql://pizzalogs:pizzalogs@localhost:5432/pizzalogs?schema=public` | Prisma/Postgres connection |
-| `PARSER_SERVICE_URL` | `http://localhost:8000` | FastAPI parser service |
-| `ADMIN_SECRET` | local placeholder | Required in production |
-| `ADMIN_COOKIE_SECURE` | unset | Set `false` only for local HTTP production-mode compose |
-
-Database setup:
-
-```bash
 npm run db:generate
 npm run db:push
 npm run db:seed
-npm run db:import-items
 ```
 
-Parser setup:
+Install the parser from the reviewed, hash-locked dependency set:
 
 ```bash
-cd parser
-python -m venv .venv
-.venv\Scripts\activate
-pip install -r requirements.txt
-python main.py
+python -m venv parser/.venv
 ```
 
-Start the web app:
+Install dependencies with the virtual environment's interpreter:
+
+```powershell
+# Windows
+.\parser\.venv\Scripts\python.exe -m pip install --require-hashes -r .\parser\requirements-dev.lock
+```
 
 ```bash
+# macOS/Linux
+parser/.venv/bin/python -m pip install --require-hashes -r parser/requirements-dev.lock
+```
+
+Start the parser and web app in separate terminals:
+
+```powershell
+# Windows
+.\parser\.venv\Scripts\python.exe .\parser\main.py
+```
+
+```bash
+# macOS/Linux
+parser/.venv/bin/python parser/main.py
+```
+
+```bash
+# Either platform, in the web-app terminal
 npm run dev
 ```
 
-Docker compose is available for a local production-style stack:
+Then open <http://localhost:3000>. A local production-style stack is also available:
 
 ```bash
 docker compose up --build
 ```
 
-On Neil's Windows desktop, the preferred local workflow is the two launchers in the repo root:
+See [development setup](docs/development/setup.md) for database, item metadata, Windows launchers, and environment details.
 
-```powershell
-C:\Projects\PizzaLogs\Start Pizza Logs Local.cmd
-C:\Projects\PizzaLogs\Stop Pizza Logs Local.cmd
-```
+## Configuration
 
-The launchers call repo scripts that manage the local web app on `127.0.0.1:3001`, the parser on `127.0.0.1:8000`, and the local PostgreSQL service. They also keep the old repeating `PizzaLogsLocalTestServer` scheduled task disabled so PowerShell does not pop up every few minutes.
+| Variable | Required | Purpose |
+| --- | --- | --- |
+| `DATABASE_URL` | Yes | PostgreSQL connection used by Prisma |
+| `PARSER_SERVICE_URL` | Yes | Internal FastAPI service base URL |
+| `ADMIN_SECRET` | Yes | Long random secret for admin authentication; every environment fails closed without it |
+| `ADMIN_COOKIE_SECURE` | Local HTTP only | Set `false` only for local production-mode HTTP |
+| `ENABLE_LEGACY_PARSER_ROUTES` | No | Local parser compatibility escape hatch; disabled by default |
 
-If Windows blocks stopping PostgreSQL, right-click `Stop Pizza Logs Local.cmd` and choose **Run as administrator**. The web and parser processes stop without elevation.
+Never commit local `.env` files. The checked-in [`.env.example`](.env.example) contains placeholders only.
 
-The underlying scripts can be run directly:
+## Validation
 
-```powershell
-powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\start-local-test-server.ps1 -DisableScheduledTask
-powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\stop-local-test-server.ps1 -DisableScheduledTask -StopPostgres
-```
-
-## Testing And Validation
-
-Common checks:
-
-```bash
-npm run lint
-npm run type-check
-npm run type-check:ecosystem
-npm test
-npm run build
-```
-
-Full PR gate:
+The complete web/TypeScript gate is:
 
 ```bash
 npm run check:pr
 ```
 
-Parser suite:
+The parser gate is:
 
 ```bash
 cd parser
 pytest tests/ -v
 ```
 
-Focused TypeScript tests use `npx tsx tests/<file>.test.ts`. `npm test` runs every `tests/*.test.ts` file through the Node test runner.
+Parser behavior changes require focused pytest or fixture coverage. `parser/tests/fixtures/README.md` explains the fixture format. Useful additional checks are documented in [testing](docs/development/testing.md).
 
-Parser changes must include fixture or focused pytest validation. See `parser/tests/fixtures/README.md`.
+## Parser Guarantees
 
-## Deployment
+Parser correctness is the product. The detailed contract lives in [docs/parser-contract.md](docs/parser-contract.md); the short version is:
 
-Production deploys from `origin/main` on Railway. Codex never pushes `main` directly; it lands changes only through passing PRs.
+- Skada-WoTLK defines the supported damage/healing event sets and effective-healing primitive.
+- Headline outgoing damage and damage taken use raw combat-log amounts; useful/effective damage is separate.
+- Absorbs stay separate from effective healing, with an explicitly labeled healing-plus-absorbs comparison view.
+- Encounter windows end on boss-destination activity, with boss death as the kill endpoint.
+- Difficulty, pet ownership, and absorb ownership remain unknown/unattributed when evidence conflicts or is missing.
+- Gunship, Lich King scripted phases, Warmane GUIDs, back-to-back pulls, and pet ownership are regression tested.
 
-Workflow:
+## Public Routes
 
-1. Work on `codex-dev`.
-2. Merge latest `origin/main` into `codex-dev`.
-3. Run validation.
-4. Commit and push `origin/codex-dev`.
-5. Open a PR from `codex-dev` to `main`.
-6. After every required CI check passes, Codex merges the PR without waiting for manual review; Railway deploys `main`.
+| Route | Purpose |
+| --- | --- |
+| `/` | Upload and project summary |
+| `/raids` | Public raid history |
+| `/raids/[report]/sessions/[date]` | Canonical dated raid session |
+| `/encounters/[id]` | Boss-pull breakdown |
+| `/leaderboards` | Aggregate DPS/HPS records |
+| `/players` and `/players/[name]` | Player directory and profiles |
+| `/guild-roster` | Cached PizzaWarriors roster |
+| `/weekly` | Weekly kills and performance |
+| `/bosses` and `/bosses/[slug]` | Boss-specific history and rankings |
+| `/admin` | Authenticated diagnostics and maintenance |
 
-Railway startup for the web service runs `start.sh`, which resolves the Prisma CLI entry point, marks historical migrations as applied when needed, runs `prisma migrate deploy`, then starts `node server.js`.
+Legacy numeric/CUID upload links redirect to canonical public raid URLs where a public report exists. The retired userscript update URLs remain inert only to safely disable old installations.
 
-Successful production deployment events and a weekly schedule run `npm run smoke:production`. Admin diagnostics show the Railway commit, branch, deployment ID, environment, service, and app version so the deployed build is identifiable without shell access.
+## Documentation
 
-Production requirements:
+- [Documentation index](docs/README.md)
+- [Architecture](docs/architecture/overview.md)
+- [Upload protocol](docs/archive-upload-protocol.md)
+- [Parser contract](docs/parser-contract.md)
+- [UwU analytical parity](docs/uwu-analytics-parity.md)
+- [Security policy](SECURITY.md) and [threat model](docs/security/threat-model.md)
+- [Railway runbook](docs/operations/railway.md)
+- [Contribution workflow](CONTRIBUTING.md)
+- [Changelog](CHANGELOG.md)
+- [Privacy](PRIVACY.md)
 
-- `DATABASE_URL` configured by Railway/Postgres.
-- `PARSER_SERVICE_URL` points to the internal `parser-py` service.
-- `ADMIN_SECRET` is set.
-- `ADMIN_COOKIE_SECURE=false` is not set in Railway.
+## Contributing
 
-## Repository Map
+Use a short-lived branch from current `origin/main`, keep changes scoped, run the relevant gates, and open a pull request. Do not push directly to `main`. Parser, schema, upload, admin, security, and deployment changes need especially clear evidence.
 
-```text
-app/                 Next.js pages and API routes
-components/          UI, upload, meters, player gear, roster widgets
-lib/                 Prisma client, schemas, parser contracts, Warmane/item helpers
-parser/              FastAPI parser service, parser modules, and pytest suite
-parser/tests/fixtures/
-                     Combat-log fixture inputs and expected outputs
-prisma/              Schema, migrations, and seed script
-scripts/             Item import and local Windows test-server helpers
-docs/                Repo-level workflow, parser, and review docs
-DESIGN.md            Frontend hierarchy, spacing, surface, and accessibility contract
-Pizza Logs HQ/       Committed project knowledge base
-```
+See [CONTRIBUTING.md](CONTRIBUTING.md) and [AGENTS.md](AGENTS.md).
 
-## Contribution Workflow
+## Privacy, Security, and License
 
-See `CONTRIBUTING.md`, `AGENTS.md`, `DESIGN.md`, `docs/git-workflow.md`, and `.github/pull_request_template.md`.
+Raid reports contain public in-game character names and performance data. Pizza Logs has no end-user account system, advertising SDK, or payment flow. Read [PRIVACY.md](PRIVACY.md) for collection and retention details.
 
-Short version: keep parser correctness first, avoid direct `main` pushes, keep secrets out of Git, update docs with behavior changes, and use `codex-dev -> PR -> main`.
+Please report vulnerabilities through a [private GitHub security advisory](https://github.com/CRSD-Lau/Pizza-Logs/security/advisories/new), not a public issue. Security controls and known residual risks are documented in [SECURITY.md](SECURITY.md).
 
-## Known Limitations
-
-- Fully absorbed missed events without a numeric absorbed amount cannot be measured; multi-shield damage is conservatively attributed to the newest active supported shield and marked ambiguous.
-- Boss-specific UwU "useful damage" formulas and global spell-search pages are not copied; generic boss/target damage remains available and the parity boundary is documented.
-- Warmane server-side roster/gear fetches can be temporarily unavailable; first-party requests use durable cached snapshots as fallback.
-- Hodir Hard Mode and Sartharion drake modes remain unsupported and return `UNKNOWN`.
-- Upload concurrency is bounded in-process; distributed rate limiting across multiple Railway replicas is not implemented.
+The project is released under the [MIT License](LICENSE). World of Warcraft and related marks are property of Blizzard Entertainment; Warmane and other referenced services are independent third parties. See [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).

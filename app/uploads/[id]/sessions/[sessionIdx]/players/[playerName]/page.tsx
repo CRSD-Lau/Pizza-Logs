@@ -16,6 +16,7 @@ import {
 } from "@/lib/raid-session-slug";
 import { resolveRaidSession } from "@/lib/raid-session-routing.server";
 import { PIZZA_LOGS_ORIGIN } from "@/lib/site";
+import { buildPageMetadata } from "@/lib/page-metadata";
 import { getRevealClassName, getRevealStyle, orderBossDisplayEntries } from "@/lib/ui-animation";
 import { buildSessionPlayerMetricChart } from "@/lib/session-player-chart";
 import { cn, formatDps, formatDuration } from "@/lib/utils";
@@ -36,23 +37,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const canonicalPath = `${getRaidSessionPath(resolution.publicSlug, resolution.route)}/players/${encodeURIComponent(name)}`;
   const canonical = `${PIZZA_LOGS_ORIGIN}${canonicalPath}`;
 
-  return {
-    title,
-    description,
-    alternates: { canonical },
-    openGraph: {
-      title: `${title} | Pizza Logs`,
-      description,
-      url: canonical,
-      type: "article",
-      siteName: "Pizza Logs",
-    },
-    twitter: {
-      card: "summary",
-      title: `${title} | Pizza Logs`,
-      description,
-    },
-  };
+  return buildPageMetadata({ title, description, path: canonical, type: "article" });
 }
 
 export default async function SessionPlayerPage({ params }: Props) {

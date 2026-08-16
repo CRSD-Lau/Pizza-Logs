@@ -1,6 +1,5 @@
 const config = {
   content: [
-    "./pages/**/*.{js,ts,jsx,tsx,mdx}",
     "./components/**/*.{js,ts,jsx,tsx,mdx}",
     "./app/**/*.{js,ts,jsx,tsx,mdx}",
   ],
@@ -49,23 +48,14 @@ const config = {
         rajdhani: ["var(--font-rajdhani)", "sans-serif"],
         sans: ["var(--font-rajdhani)", "var(--font-inter)", "sans-serif"],
       },
-      backgroundImage: {
-        "radial-gold": "radial-gradient(ellipse 80% 50% at 50% -10%, rgba(180,140,60,0.08) 0%, transparent 60%)",
-        "radial-purple": "radial-gradient(ellipse 50% 80% at -10% 50%, rgba(80,40,120,0.05) 0%, transparent 60%)",
-      },
       animation: {
         "fade-in-up": "fadeInUp 0.35s ease both",
-        "pulse-gold": "pulseGold 2s ease-in-out infinite",
         spin: "spin 0.8s linear infinite",
       },
       keyframes: {
         fadeInUp: {
           from: { opacity: "0", transform: "translateY(12px)" },
           to: { opacity: "1", transform: "translateY(0)" },
-        },
-        pulseGold: {
-          "0%, 100%": { opacity: "1" },
-          "50%": { opacity: "0.5" },
         },
       },
       boxShadow: {

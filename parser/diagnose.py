@@ -18,7 +18,6 @@ Run locally against the raw WoWCombatLog.txt before uploading to Railway.
 from __future__ import annotations
 
 import sys
-import os
 import csv
 import json
 import argparse
@@ -29,10 +28,9 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent))
 
 from parser_core import (
-    CombatLogParser, ParsedEncounter,
-    csv_split, parse_ts, _is_player, _safe_float, _safe_int,
-    DMG_EVENTS, HEAL_EVENTS, UNIT_DIED_EVENT, ENCOUNTER_START, ENCOUNTER_END,
+    CombatLogParser, _is_player, DMG_EVENTS,
 )
+from combat_metrics import encounter_damage_amount, extract_damage_fields
 
 
 # ── Diagnostic parser subclass ────────────────────────────────────────────────
@@ -78,21 +76,21 @@ class DiagnosticParser(CombatLogParser):
                 continue
             if sg in ("0x0000000000000000", "0XNIL", "NIL", ""):
                 continue
-            amt = _safe_float(parts[7] if ev == "SWING_DAMAGE" else parts[10])
-            ovk = _safe_float(parts[8] if ev == "SWING_DAMAGE" else (parts[11] if len(parts) > 11 else "0"))
-            eff = max(0.0, amt - ovk)
-            if eff <= 0:
+            fields = extract_damage_fields(parts)
+            if not fields:
+                continue
+            damage = encounter_damage_amount(fields)
+            if damage <= 0:
                 continue
             spn = "Auto Attack" if ev == "SWING_DAMAGE" else (parts[8].strip('"') if len(parts) > 8 else "?")
             if sg not in orphan_damage:
                 orphan_damage[sg] = {"name": sn, "damage": 0.0, "spells": defaultdict(float)}
-            orphan_damage[sg]["damage"] += eff
-            orphan_damage[sg]["spells"][spn] += eff
+            orphan_damage[sg]["damage"] += damage
+            orphan_damage[sg]["spells"][spn] += damage
 
         self._orphan_damage = orphan_damage
 
         # ── Pass 4: segment + aggregate (using real parser) ──────
-        import io
         # Re-open by seeking back if fh supports it
         fh.seek(0)
         segments, pet_owner2 = self._segment_encounters(self._iter_lines(fh, total_lines))
@@ -137,7 +135,7 @@ def main():
         sys.exit(1)
 
     print(f"\n{'='*70}")
-    print(f"  PizzaLogs Diagnostic Parser")
+    print("  PizzaLogs Diagnostic Parser")
     print(f"  File : {path.name}  ({path.stat().st_size / 1_048_576:.1f} MB)")
     print(f"{'='*70}\n")
 

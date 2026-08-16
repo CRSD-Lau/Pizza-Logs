@@ -15,6 +15,7 @@ import {
 } from "@/lib/raid-session-slug";
 import { getRaidSessionRoutes, resolveRaidSession } from "@/lib/raid-session-routing.server";
 import { PIZZA_LOGS_ORIGIN } from "@/lib/site";
+import { buildPageMetadata } from "@/lib/page-metadata";
 import { getRevealClassName, getRevealStyle, orderBossDisplayEntries } from "@/lib/ui-animation";
 import { cn, formatDuration, formatDurationPrecise, formatNumber } from "@/lib/utils";
 
@@ -64,7 +65,6 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   ]);
 
   const title = formatRaidSessionTitle(route);
-  const socialTitle = `${title} | Pizza Logs`;
   const dateLabel = formatRaidDateLabel(route.startedAt);
   const raidNames = [...new Set(encounters.map(encounter => encounter.boss.raid))];
   const raidLabel = raidNames.length > 0 ? raidNames.join(" + ") : "Raid";
@@ -74,23 +74,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const description = `${raidLabel} raid report${guildLabel} on ${dateLabel}. ${kills} kills, ${wipes} wipes, ${encounters.length} pulls.`;
   const canonical = `${PIZZA_LOGS_ORIGIN}${getRaidSessionPath(publicSlug, route)}`;
 
-  return {
-    title,
-    description,
-    alternates: { canonical },
-    openGraph: {
-      title: socialTitle,
-      description,
-      url: canonical,
-      type: "article",
-      siteName: "Pizza Logs",
-    },
-    twitter: {
-      card: "summary",
-      title: socialTitle,
-      description,
-    },
-  };
+  return buildPageMetadata({ title, description, path: canonical, type: "article" });
 }
 
 export default async function SessionDetailPage({ params }: Props) {
