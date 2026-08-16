@@ -12,7 +12,7 @@ assert.equal(fs.existsSync(legacyMiddlewarePath), false, "Next 16 must use proxy
 assert.match(proxySource, /export function proxy\(request: NextRequest\)/);
 assert.match(proxySource, /matcher:\s*["']\/admin\/:path\*["']/);
 assert.match(proxySource, /pathname === ["']\/admin\/login["']/);
-assert.match(proxySource, /verifyAdminSecretValue\(cookie\)/);
+assert.match(proxySource, /verifyAdminSessionToken\(cookie\)/);
 assert.match(proxySource, /verifyAdminSecretValue\(header\)/);
 assert.match(proxySource, /NextResponse\.redirect\(new URL\(["']\/admin\/login["']/);
 

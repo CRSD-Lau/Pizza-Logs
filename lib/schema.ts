@@ -150,6 +150,7 @@ export const ParseResultSchema = z.object({
   sessionDamage: z.record(z.string(), z.number()).optional().default({}),
   sessionAnalytics: z.record(z.string(), SessionAnalyticsSchema).optional().default({}),
   uploadId:      z.string().uuid().optional(),
+  receivedBytes: z.number().int().nonnegative().optional(),
   uploadTimings: z.record(z.string(), z.number()).optional(),
 });
 export type ParseResult = z.infer<typeof ParseResultSchema>;

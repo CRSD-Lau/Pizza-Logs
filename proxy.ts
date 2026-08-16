@@ -1,13 +1,17 @@
 import { NextRequest, NextResponse } from "next/server";
-import { verifyAdminSecretValue } from "@/lib/admin-auth";
+import {
+  ADMIN_SESSION_COOKIE,
+  verifyAdminSecretValue,
+  verifyAdminSessionToken,
+} from "@/lib/admin-auth";
 
 export function proxy(request: NextRequest) {
   if (request.nextUrl.pathname === "/admin/login") return NextResponse.next();
 
-  const cookie = request.cookies.get("x-admin-secret")?.value;
+  const cookie = request.cookies.get(ADMIN_SESSION_COOKIE)?.value;
   const header = request.headers.get("x-admin-secret");
 
-  if (verifyAdminSecretValue(cookie) || verifyAdminSecretValue(header)) {
+  if (verifyAdminSessionToken(cookie) || verifyAdminSecretValue(header)) {
     return NextResponse.next();
   }
 

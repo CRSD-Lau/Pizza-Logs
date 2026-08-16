@@ -1,0 +1,80 @@
+# Pizza Logs Direct Dependency License Inventory
+
+Generated from the resolved npm and Python package metadata on 2026-08-15. Scope: direct runtime and development dependencies only. The lockfiles remain authoritative for the full transitive graph.
+
+## Summary
+
+| License | Direct packages | Risk classification |
+| --- | ---: | --- |
+| MIT | 23 | Low |
+| Apache-2.0 | 9 | Low |
+| OFL-1.1 | 2 | Font-specific; notice retained |
+| BSD-2-Clause | 1 | Low |
+| BSD-3-Clause | 2 | Low |
+| ISC | 1 | Low |
+
+Result: all direct dependency licenses are compatible with distribution of this MIT-licensed project. No direct dependency has an unknown, GPL, AGPL, SSPL, or non-commercial license.
+
+## npm Runtime
+
+| Package | Resolved version | License |
+| --- | ---: | --- |
+| `@fontsource/cinzel` | 5.3.0 | OFL-1.1 |
+| `@fontsource/rajdhani` | 5.3.0 | OFL-1.1 |
+| `@prisma/adapter-pg` | 7.9.1 | Apache-2.0 |
+| `@prisma/client` | 7.9.1 | Apache-2.0 |
+| `class-variance-authority` | 0.7.1 | Apache-2.0 |
+| `clsx` | 2.1.1 | MIT |
+| `dotenv` | 17.4.2 | BSD-2-Clause |
+| `lucide-react` | 1.31.0 | ISC |
+| `next` | 16.3.1 | MIT |
+| `pg` | 8.23.0 | MIT |
+| `prisma` | 7.9.1 | Apache-2.0 |
+| `react` | 19.2.8 | MIT |
+| `react-dom` | 19.2.8 | MIT |
+| `react-dropzone` | 20.1.0 | MIT |
+| `recharts` | 3.10.1 | MIT |
+| `tailwind-merge` | 3.6.0 | MIT |
+| `zod` | 4.4.3 | MIT |
+
+## npm Development
+
+| Package | Resolved version | License |
+| --- | ---: | --- |
+| `@tailwindcss/postcss` | 4.3.3 | MIT |
+| `@types/node` | 24.13.3 | MIT |
+| `@types/pg` | 8.21.0 | MIT |
+| `@types/react` | 19.2.18 | MIT |
+| `@types/react-dom` | 19.2.4 | MIT |
+| `@typescript/native` | 7.0.2 | Apache-2.0 |
+| `eslint` | 9.39.5 | MIT |
+| `eslint-config-next` | 16.3.1 | MIT |
+| `postcss` | 8.5.26 | MIT |
+| `tailwindcss` | 4.3.3 | MIT |
+| `tsx` | 4.23.12 | MIT |
+| `typescript` | 6.0.3 | Apache-2.0 |
+
+## Python Runtime
+
+| Package | Locked version | License |
+| --- | ---: | --- |
+| `fastapi` | 0.141.1 | MIT |
+| `uvicorn` | 0.52.3 | BSD-3-Clause |
+| `python-multipart` | 0.0.32 | Apache-2.0 |
+| `pydantic` | 2.13.4 | MIT |
+
+## Python Development
+
+| Package | Locked version | License |
+| --- | ---: | --- |
+| `pytest` | 9.1.1 | MIT |
+| `ruff` | 0.16.3 | MIT |
+| `bandit` | 1.9.4 | Apache-2.0 |
+| `pip-audit` | 2.10.1 | Apache-2.0 |
+| `pip-tools` | 7.6.0 | BSD-3-Clause |
+
+## Transitive Review
+
+The npm lock contains permissive licenses plus weak-copyleft runtime packages used by Sharp/libvips and Prisma tooling. Upstream package license files are retained in the production dependency tree. The only missing npm SPDX metadata was `seq-queue@0.0.5`; its installed `LICENSE` file is the MIT License. No dependency was modified or statically incorporated into Pizza Logs source.
+
+Re-run this inventory whenever a direct dependency manifest changes. Dependency metadata is evidence, not legal advice.

@@ -364,7 +364,7 @@ function findRank(values: string[], level?: number): string | undefined {
   });
 }
 
-function extractRosterCharacter(rowHtml: string, guildName: string, realm: string): string | null {
+function extractRosterCharacter(rowHtml: string, realm: string): string | null {
   const characterLink = rowHtml.match(/href=["'](?:https?:\/\/armory\.warmane\.com)?\/character\/([^\/"']+)\/([^\/"']+)\/summary["']/i);
   if (characterLink && decodeURIComponent(characterLink[2]) === realm) {
     return sanitizeCharacterName(decodeURIComponent(characterLink[1]));
@@ -395,7 +395,7 @@ export function parseWarmaneGuildRosterHtml(
   const rows = Array.from(html.matchAll(/<tr\b[^>]*>([\s\S]*?)<\/tr>/gi));
 
   for (const [, rowHtml] of rows) {
-    const characterName = extractRosterCharacter(rowHtml, guildName, realm);
+    const characterName = extractRosterCharacter(rowHtml, realm);
     if (!characterName) continue;
 
     const cellValues = extractCellValues(rowHtml).filter((value) => value !== characterName);

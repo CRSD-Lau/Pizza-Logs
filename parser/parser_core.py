@@ -11,7 +11,6 @@ Supports:
 from __future__ import annotations
 
 import hashlib
-import csv as _csv
 import re
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
@@ -288,22 +287,6 @@ class ActorStats:
 
 
 @dataclass
-class RawEncounterEvent:
-    ts:        float   # seconds since midnight
-    event:     str
-    src_name:  str
-    src_guid:  str
-    dst_name:  str
-    dst_guid:  str
-    spell_name:str
-    school:    int
-    amount:    float
-    overkill:  float
-    is_crit:   bool
-    is_heal:   bool
-
-
-@dataclass
 class DebugInfo:
     """Optional debug metadata produced by parsing one encounter segment."""
     boss_name: str
@@ -368,14 +351,6 @@ class SessionAccumulator:
     active_absorb_auras: dict[str, dict[str, tuple[float, str, str]]] = field(default_factory=dict)
     recently_removed_absorb_auras: dict[str, dict[str, tuple[float, str, str]]] = field(default_factory=dict)
     discipline_guids: set[str] = field(default_factory=set)
-
-
-# ── CSV line splitter ──────────────────────────────────────────────
-
-def csv_split(s: str) -> list[str]:
-    """Split a WoW log CSV line, honouring quoted strings.
-    Uses Python's C-implemented csv module — ~20x faster than a Python loop."""
-    return next(_csv.reader((s,)))
 
 
 # ── Timestamp parser ───────────────────────────────────────────────
@@ -803,8 +778,6 @@ class CombatLogParser:
         last_boss_ts: float = 0.0
         lich_king_roleplay_ts: Optional[float] = None
         heuristic_segment: list[tuple[str, list[str], float]] = []
-        all_buffer: list[tuple[str, list[str], float]] = []  # rolling buffer of recent events
-
         # ── Full-session Custom Slice accumulator ────────────────
         # Counts every event from the first line to the last line in a raid
         # session. This is the data grain used by UwU's default report.
@@ -932,7 +905,7 @@ class CombatLogParser:
         """Quick check: does this event involve a known boss?"""
         if len(parts) < 6:
             return False
-        # csv_split already strips quotes, but strip() is a no-op if already clean
+        # parse_combat_log_line already strips CSV quotes; strip() is defensive.
         dst = parts[5].strip('"').strip()
         src = parts[2].strip('"').strip()
         bn = self._boss_name_set
@@ -1244,7 +1217,6 @@ class CombatLogParser:
                 src_guid, src_name = parts[1], parts[2].strip('"').strip()
                 dst_guid, dst_name = parts[4], parts[5].strip('"').strip()
                 amount = fields.amount
-                overkill = fields.overkill
                 absorbed = fields.absorbed
                 school = fields.school
                 is_crit = fields.is_crit
@@ -1270,7 +1242,6 @@ class CombatLogParser:
                 spell_name = fields.spell_name
                 school = fields.school
                 amount = fields.effective
-                overkill = 0.0
                 absorbed = 0.0
                 is_crit = fields.is_crit
                 if spell_name == "Penance":
@@ -1297,7 +1268,6 @@ class CombatLogParser:
                 spell_name = fields.spell_name
                 school = fields.school
                 amount = fields.amount
-                overkill = fields.overkill
                 absorbed = fields.absorbed
                 is_crit = fields.is_crit
 
@@ -1384,10 +1354,9 @@ class CombatLogParser:
             if is_heal and not _is_player(dst_guid):
                 continue
 
-            # Effective damage = amount - overkill - absorbed.
-            # Overkill: damage past the target's remaining HP (wasted).
-            # Absorbed: damage eaten by a boss shield (Lady DW mana barrier,
-            # Saurfang blood barrier) — never reaches HP. UWU excludes both.
+            # Encounter and UwU Custom Slice damage use the raw reported amount.
+            # Overkill and absorbed damage remain available in parsed primitives
+            # but are not subtracted from this headline total.
             # For heals, `amount` is already the effective value (gross - overheal),
             # computed above from parts[10] - parts[11].
             eff_amount = (

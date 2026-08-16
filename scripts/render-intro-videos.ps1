@@ -32,9 +32,6 @@ if (-not $Ffprobe) { throw "ffprobe was not found. Install FFmpeg or set FFPROBE
 if (-not (Test-Path $SourcePath)) { throw "Intro source video was not found at $SourcePath" }
 
 $OutputDirs = @(
-  "animations/desktop",
-  "animations/mobile",
-  "animations/posters",
   "public/animations/desktop",
   "public/animations/mobile",
   "public/animations/posters"
@@ -45,20 +42,6 @@ foreach ($dir in $OutputDirs) {
 }
 
 $GeneratedFiles = @(
-  "animations/desktop/intro-1080p.webm",
-  "animations/desktop/intro-1440p.webm",
-  "animations/desktop/intro-4k.webm",
-  "animations/desktop/intro-1080p.mp4",
-  "animations/desktop/intro-1440p.mp4",
-  "animations/desktop/intro-4k.mp4",
-  "animations/mobile/intro-mobile-720x1280.webm",
-  "animations/mobile/intro-mobile-1080x1920.webm",
-  "animations/mobile/intro-mobile-1440x2560.webm",
-  "animations/mobile/intro-mobile-720x1280.mp4",
-  "animations/mobile/intro-mobile-1080x1920.mp4",
-  "animations/mobile/intro-mobile-1440x2560.mp4",
-  "animations/posters/desktop-poster.jpg",
-  "animations/posters/mobile-poster.jpg",
   "public/animations/desktop/intro-1080p.webm",
   "public/animations/desktop/intro-1440p.webm",
   "public/animations/desktop/intro-4k.webm",
@@ -167,14 +150,14 @@ $Mobile = @(
 
 foreach ($variant in $Desktop) {
   $filter = "$DesktopCrop,scale=$($variant.Size):flags=lanczos"
-  Render-WebM -Filter $filter -Output "animations/desktop/$($variant.Name).webm" -Crf $variant.WebmCrf
-  Render-Mp4 -Filter $filter -Output "animations/desktop/$($variant.Name).mp4" -Crf $variant.Mp4Crf
+  Render-WebM -Filter $filter -Output "public/animations/desktop/$($variant.Name).webm" -Crf $variant.WebmCrf
+  Render-Mp4 -Filter $filter -Output "public/animations/desktop/$($variant.Name).mp4" -Crf $variant.Mp4Crf
 }
 
 foreach ($variant in $Mobile) {
   $filter = "$MobileCrop,scale=$($variant.Size):flags=lanczos"
-  Render-WebM -Filter $filter -Output "animations/mobile/$($variant.Name).webm" -Crf $variant.WebmCrf
-  Render-Mp4 -Filter $filter -Output "animations/mobile/$($variant.Name).mp4" -Crf $variant.Mp4Crf
+  Render-WebM -Filter $filter -Output "public/animations/mobile/$($variant.Name).webm" -Crf $variant.WebmCrf
+  Render-Mp4 -Filter $filter -Output "public/animations/mobile/$($variant.Name).mp4" -Crf $variant.Mp4Crf
 }
 
 Invoke-FFmpeg -Arguments @(
@@ -182,7 +165,7 @@ Invoke-FFmpeg -Arguments @(
   "-vf", "$DesktopCrop,scale=1920:1080:flags=lanczos",
   "-frames:v", "1",
   "-q:v", "3",
-  (Join-Path $Root "animations/posters/desktop-poster.jpg")
+  (Join-Path $Root "public/animations/posters/desktop-poster.jpg")
 )
 
 Invoke-FFmpeg -Arguments @(
@@ -190,12 +173,8 @@ Invoke-FFmpeg -Arguments @(
   "-vf", "$MobileCrop,scale=720:1280:flags=lanczos",
   "-frames:v", "1",
   "-q:v", "3",
-  (Join-Path $Root "animations/posters/mobile-poster.jpg")
+  (Join-Path $Root "public/animations/posters/mobile-poster.jpg")
 )
 
-Copy-Item -Path (Join-Path $Root "animations/desktop/*") -Destination (Join-Path $Root "public/animations/desktop") -Force
-Copy-Item -Path (Join-Path $Root "animations/mobile/*") -Destination (Join-Path $Root "public/animations/mobile") -Force
-Copy-Item -Path (Join-Path $Root "animations/posters/*") -Destination (Join-Path $Root "public/animations/posters") -Force
-
-& $Ffprobe -v error -show_entries format=duration,size -of compact=p=0:nk=1 (Join-Path $Root "animations/desktop/intro-1080p.webm")
-Write-Host "Rendered intro videos into animations/ and public/animations/."
+& $Ffprobe -v error -show_entries format=duration,size -of compact=p=0:nk=1 (Join-Path $Root "public/animations/desktop/intro-1080p.webm")
+Write-Host "Rendered intro videos into public/animations/."

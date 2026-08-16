@@ -51,10 +51,6 @@
   @apply overflow-hidden border-y border-gold-dim bg-bg-panel -mx-4 sm:mx-0 sm:rounded-sm sm:border;
 }
 
-@utility touch-target {
-  @apply min-h-11 min-w-11;
-}
-
 @utility border-gold-dim {
   /* ── Gold border utility ── */
   border-color: rgba(180, 140, 60, 0.2);
@@ -62,10 +58,6 @@
 
 @utility border-gold-mid {
   border-color: rgba(180, 140, 60, 0.4);
-}
-
-@utility border-gold-full {
-  border-color: rgba(180, 140, 60, 0.7);
 }
 
 @utility panel {
@@ -388,18 +380,6 @@
 
 @utility boss-reveal-item {
   animation-name: bossRevealItem;
-}
-
-@utility animate-delay-100 {
-  animation-delay: 0.1s;
-}
-
-@utility animate-delay-200 {
-  animation-delay: 0.2s;
-}
-
-@utility animate-delay-300 {
-  animation-delay: 0.3s;
 }
 
 @layer base {

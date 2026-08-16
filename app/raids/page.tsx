@@ -1,4 +1,3 @@
-import type { Metadata } from "next";
 import Link from "next/link";
 import { db } from "@/lib/db";
 import { DatabaseUnavailable } from "@/components/ui/DatabaseUnavailable";
@@ -8,7 +7,13 @@ import { buildRaidSessionRoutesWithAnalytics } from "@/lib/raid-session-slug";
 import { getRevealClassName, getRevealStyle } from "@/lib/ui-animation";
 import { PageHeader } from "@/components/ui/PageLayout";
 
-export const metadata: Metadata = { title: "Raids" };
+import { buildPageMetadata } from "@/lib/page-metadata";
+
+export const metadata = buildPageMetadata({
+  title: "Raids",
+  description: "Browse public PizzaWarriors raid reports by date, instance, and result.",
+  path: "/raids",
+});
 export const dynamic = "force-dynamic";
 
 async function getRaidUploads() {

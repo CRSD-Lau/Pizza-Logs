@@ -160,31 +160,6 @@ export function buildItemDetailsFromTemplate(item: {
   return lines;
 }
 
-export async function lookupItemById(itemId: string): Promise<{
-  name: string;
-  quality: string | null;
-  itemLevel: number | null;
-  equipLoc: string | null;
-  iconName: string | null;
-  details: string[];
-} | null> {
-  const row = await db.wowItem.findUnique({ where: { itemId } });
-  if (!row) return null;
-  return {
-    name:      row.name,
-    quality:   row.quality,
-    itemLevel: row.itemLevel,
-    equipLoc:  row.equipLoc,
-    iconName:  row.iconName,
-    details:   buildItemDetailsFromTemplate({
-      armor: row.armor, dmgMin: row.dmgMin, dmgMax: row.dmgMax,
-      delay: row.delay, stats: row.stats as Record<string, number> | null,
-      description: row.description, bonding: row.bonding,
-      requiredLevel: row.requiredLevel,
-    }),
-  };
-}
-
 export async function enrichGearWithLocalTemplate(
   items: ArmoryGearItem[]
 ): Promise<ArmoryGearItem[]> {

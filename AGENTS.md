@@ -1,201 +1,115 @@
-# Pizza Logs - Codex Instructions
+# Pizza Logs Agent Guide
 
-## Mandatory Session Start
+## Mission
 
-At the start of every session, before answering questions or changing files, read these vault files in order:
+Pizza Logs parses Warmane/WotLK combat logs and publishes raid analytics. Parser correctness, upload safety, admin isolation, and production reliability take priority over speculative cleanup or style churn.
 
-1. `Pizza Logs HQ/00 Inbox/START HERE.md`
-2. `Pizza Logs HQ/02 Build Log/Latest Handoff.md`
-3. `Pizza Logs HQ/03 Current Focus/Now.md`
+## Start Here
 
-Then run `git status --short --branch` with `C:\Program Files\Git\cmd\git.exe` if `git` is not on PATH. Do not work from memory.
+At the beginning of a task:
 
-## Mandatory Session End
+1. Run `git status --short --branch` and preserve unrelated work.
+2. Fetch `origin` and start a short-lived `codex/<task>` branch from current `origin/main` unless the user explicitly chooses another branch.
+3. Read [`docs/README.md`](docs/README.md) and only the documentation relevant to the change.
+4. For Next.js changes, read the applicable guide under `node_modules/next/dist/docs/` before editing.
 
-After every change session, update:
+There is no mandatory handoff file or Obsidian-vault workflow. GitHub issues and pull requests hold active work, ADRs hold durable decisions, and `CHANGELOG.md` records shipped behavior.
 
-1. `Pizza Logs HQ/02 Build Log/Latest Handoff.md`
-2. `Pizza Logs HQ/03 Current Focus/Now.md`
-3. `Pizza Logs HQ/09 Bugs and Blockers/Known Issues.md` if bugs were fixed or found
+## Delivery Workflow
 
-Include vault updates in the same commit as code/docs changes.
-
-The user does not test local-only changes. Codex must work from the long-lived `codex-dev` branch, commit scoped changes there, push `origin/codex-dev`, and prepare PRs into `main`. After every required CI check passes and no merge conflict or explicit blocker remains, Codex merges the PR through GitHub without waiting for manual user review. Codex must never commit or push directly to `main`, and must never bypass required checks. Railway production deploys from `main` after the PR merges.
-
-## Project Overview
-
-Pizza Logs is a Warmane / WotLK 3.3.5a combat-log parser and leaderboard app for PizzaWarriors. Users upload `WoWCombatLog.txt`; the app parses boss encounters, writes reports to PostgreSQL, and shows DPS/HPS rankings, boss history, player profiles, gear, and admin diagnostics.
-
-- Live app: https://pizza-logs-production.up.railway.app
-- Canonical remote: `origin` -> `https://github.com/CRSD-Lau/Pizza-Logs.git`
-- Production deploy: Railway auto-deploys from `origin/main`
-- Stack: Next.js 16, React 19, TypeScript, Tailwind, Prisma, PostgreSQL, Python FastAPI parser
-- Parser target: preserve Skada-WoTLK combat math while matching adopted UwU analytical report definitions
-
-## Repo Structure
-
-- `app/` - Next.js App Router pages and API routes
-- `components/` - UI, upload, charts, meters, player gear
-- `lib/` - Prisma client, schemas, boss/class constants, milestones, Warmane/item helpers
-- `parser/` - FastAPI service and Skada-aligned parser
-- `parser/tests/fixtures/` - parser fixture inputs and expected outputs
-- `prisma/` - schema, migrations, seed
-- `docs/` - repo-level parser/review docs
-- `Pizza Logs HQ/` - committed project knowledge base, handoffs, architecture, runbooks
-
-## Critical Parser Behavior
-
-Do not break combat log parsing. Parser correctness is the product.
-
-- Warmane logs usually have no useful `ENCOUNTER_START/END`; heuristic detection is required.
-- Skada-WoTLK is the source of truth for damage/healing totals.
-- `SPELL_HEAL`: `parts[10]` gross, `parts[11]` overheal, `parts[12]` absorbed, `parts[13]` crit.
-- Effective healing is `max(0, parts[10] - parts[11])`.
-- Skada has no `ignored_spells.heal`; all `SPELL_HEAL` and `SPELL_PERIODIC_HEAL` events count.
-- Damage events must match Skada `Damage.lua`: `SPELL_DAMAGE`, `SWING_DAMAGE`, `RANGE_DAMAGE`, `SPELL_PERIODIC_DAMAGE`, `DAMAGE_SHIELD`, `DAMAGE_SPLIT`, `SPELL_BUILDING_DAMAGE`.
-- `SWING_DAMAGE` has shifted indexes: amount at `parts[7]`, overkill at `parts[8]`, absorbed at `parts[12]`, crit at `parts[13]`.
-- KILL duration uses boss death timestamp, not the last post-kill event.
-- Player GUIDs include Warmane `0x06` and retail `Player-`.
-- Gunship and heroic difficulty are Warmane edge cases. Do not change their handling without fixture validation and Skada/Warmane evidence.
-- Absorbs stay separate from effective healing in stored primitives. The UwU-compatible session `Heal` column is explicitly effective healing plus attributed absorbs.
-- Damage taken and headline outgoing Total Damage use the raw reported amount; useful/effective damage remains a separate analytical formula.
-- Encounter windows end at the last boss-destination event, not a boss outgoing attack, stale marker, or unrelated post-fight trash.
-- Pet ownership requires summon or owner-exclusive spell evidence; generic player-to-pet healing must never steal ownership.
-
-## Setup Commands
-
-- Install web dependencies: `npm ci --legacy-peer-deps`
-- Generate Prisma client: `npm run db:generate`
-- Seed bosses: `npm run db:seed`
-- Import WotLK item metadata: `npm run db:import-items`
-- Python parser setup:
-  - `cd parser`
-  - `python -m venv .venv`
-  - `.venv\Scripts\activate` on Windows
-  - `pip install -r requirements.txt`
-
-## Dev Commands
-
-- Web dev: `npm run dev`
-- Web production start after build: `npm run start`
-- Parser dev: `cd parser && python main.py`
-- Local compose: `docker compose up --build`
-
-## Test And Build Commands
-
-- TypeScript: `npm run type-check`
-- Web build: `npm run build`
-- Parser tests: `cd parser && pytest tests/ -v`
-- Parser fixtures only: `cd parser && pytest tests/test_fixtures.py -v`
-- Focused TypeScript tests use `ts-node --project tsconfig.seed.json tests/<file>.test.ts` unless a test file requires JSX-aware compiler options.
-
-`npm run lint` uses ESLint flat config in `eslint.config.mjs`.
-
-## Parser Validation Expectations
-
-Any parser change must include one of:
-
-- New or updated parser fixture under `parser/tests/fixtures/`
-- Focused pytest coverage in `parser/tests/test_parser_core.py`
-- A written reason the change is non-behavioral, plus a full parser test run
-
-Never delete parser fixtures unless they are proven obsolete and replacement coverage exists.
-
-## Web App Validation Expectations
-
-Changes touching upload/report/admin/analytics pages need at least:
-
-- `npm run type-check`
-- Relevant `ts-node` tests in `tests/`
-- `npm run build` before deploy
-
-Admin-only routes must stay protected. Public routes must not expose raw secrets, reset controls, or destructive actions.
-
-## Railway Deployment Expectations
-
-- Work from `codex-dev` unless the user explicitly asks for a different branch.
-- Do not push `main` from Codex.
-- Merge PRs into `main` from Codex after all required CI checks pass and no merge conflict or explicit blocker remains; manual user review is not required.
-- Never bypass, dismiss, or override a required check to merge.
-- Production deploy happens after the passing PR from `codex-dev` merges into `main`.
-- Do not change Railway production environment variables from Codex.
-- Do not commit `.env` files or production secrets.
-- `start.sh` runs `prisma migrate deploy`, then `node server.js`.
-- If Prisma migrations change, inspect them and document production risk before pushing.
-- Railway has two services: Web Service and `parser-py`.
-
-## Documentation Standards
-
-Update docs when behavior, commands, deployment, parser rules, or workflows change. Keep README, `docs/`, `AGENTS.md`, and vault files consistent. Do not leave retired-agent workflow references in active docs.
-
-## Git Hygiene
-
-- Default Codex branch for this project: `codex-dev`.
-- `main` is production-only. Codex must not commit or push directly to `main`; merge only through a passing PR.
-- Before starting Codex work, run `git checkout codex-dev`, `git fetch origin`, and `git merge origin/main`.
-- After a PR merges, update `codex-dev` from `main` before starting new work.
+- Never commit or push directly to `main`.
+- Use one short-lived branch per coherent change and open a pull request into `main`.
 - Review every modified, deleted, and untracked file before staging.
-- Stage source, tests, docs, config, fixtures, and lockfiles that belong to the change.
-- Do not stage `.env*`, logs, build outputs, caches, local screenshots, `node_modules`, `uploads`, combat logs, or personal machine state.
-- Expected local-only noise may include `.env.local`, `.env.sync-agent`, `.next/`, `.pytest_cache/`, `.sync-agent-logs/`, `WoWCombatLog/`, `tmp-mobile-check/`, `tmp-intro-preview/`, and `tools/`.
+- Merge only after required checks pass, the final diff is reviewed, and no explicit blocker remains. Do not bypass required checks.
+- Prefer squash merges and delete the merged branch.
+- Railway deploys production from `main`; verify the production smoke test after deployment-sensitive work.
+- Do not change Railway production environment variables from an agent session.
 
-## Secret Handling
+## Architecture
 
-- `ADMIN_SECRET`, `DATABASE_URL`, Railway tokens, API keys, private keys, and reset secrets must never be committed.
-- `.env.example` may contain placeholders only.
-- Production admin must fail closed if `ADMIN_SECRET` is missing.
-- Do not reintroduce browser userscripts, bookmarklets, or browser-stored admin secrets for Warmane gear or roster refreshes. Use the first-party server paths and durable cache fallback.
+- `app/` — Next.js App Router pages and API routes
+- `components/` — UI, upload, reports, charts, and player gear
+- `lib/` — database, schemas, raid metadata, analytics helpers, and upstream clients
+- `parser/` — FastAPI service and Skada-aligned parser
+- `parser/tests/fixtures/` — canonical combat-log fixtures and expected output
+- `prisma/` — schema, migrations, and seed data
+- `docs/` — maintained architecture, operations, security, guides, and ADRs
 
-## Safe Refactoring Rules
+Stack: Next.js 16, React 19, TypeScript, Tailwind CSS, Prisma/PostgreSQL, Python 3.12/FastAPI, and Railway.
 
-- Prefer the repo's existing patterns.
-- Do not rewrite parser architecture speculatively.
-- Preserve public routes and API response shapes unless all call sites and tests are updated.
-- Avoid style-only churn.
-- If a simplification touches combat-log math, segmentation, boss detection, upload persistence, admin gates, or milestones, add tests first or preserve the code.
+## Parser Contract
 
-## Stale-Code Deletion Rules
+Do not break combat-log parsing. Read [`docs/parser-contract.md`](docs/parser-contract.md) before changing parser behavior.
 
-Classify stale candidates:
+Non-negotiable rules:
 
-- Safe to delete: no imports, scripts, docs, runtime references, or deployment usage remain.
-- Safe to consolidate: duplicate behavior with a clear surviving implementation.
-- Suspicious but keep: parser/admin/upload/analytics paths where reachability is unclear.
-- Cannot determine: leave untouched and document.
+- Warmane logs often lack reliable `ENCOUNTER_START`/`ENCOUNTER_END`; heuristic detection is required.
+- Skada-WoTLK is the authority for damage and effective-healing primitives.
+- Damage events: `SPELL_DAMAGE`, `SWING_DAMAGE`, `RANGE_DAMAGE`, `SPELL_PERIODIC_DAMAGE`, `DAMAGE_SHIELD`, `DAMAGE_SPLIT`, and `SPELL_BUILDING_DAMAGE`.
+- `SPELL_HEAL`/`SPELL_PERIODIC_HEAL`: gross is `parts[10]`, overheal `parts[11]`, absorbed metadata `parts[12]`, crit `parts[13]`; effective healing is `max(0, gross - overheal)`.
+- `SWING_DAMAGE` is shifted: amount `parts[7]`, overkill `parts[8]`, absorbed `parts[12]`, crit `parts[13]`.
+- Headline outgoing damage and damage taken use the raw reported amount. Useful/effective damage is a separate analytical metric.
+- Absorbs remain separate stored primitives. The UwU-compatible `Heal` view is explicitly effective healing plus attributed absorbs.
+- Encounter windows end at the last boss-destination event. A kill ends at boss death, not a post-kill event.
+- Warmane Gunship, heroic detection, Lich King scripted phases, and pet ownership are fixture-protected edge cases.
+- Pet ownership requires summon or owner-exclusive spell evidence; generic healing cannot claim ownership.
+- Missing or conflicting evidence remains `UNKNOWN` or unattributed.
 
-Prove deletions with search and validation. Parser code needs fixture validation before removal.
+Never delete parser fixtures or migrations unless replacement coverage and migration safety are proven.
 
-## Codex Workflow
+## Validation
 
-- Use Codex as the canonical agent workflow.
-- Use `codex-dev` as the canonical Codex working branch.
-- Open PRs from `codex-dev` into `main`; do not deploy production by direct `main` pushes.
-- Use available Codex skills/plugins when they directly fit the task, especially repository audits, debugging, verification, GitHub publishing, browser checks, and security review.
-- Prefer true subagents for independent read-only audits or disjoint implementation scopes.
-- Do not install risky plugins or plugins that require secrets unless the repo already has safe configuration.
+Run the strongest gate relevant to the change:
 
-## Codex Review Checklist
+```bash
+npm run check:pr
+```
 
-When requesting review, include `@codex review` on GitHub if configured and ask it to focus on:
+This runs lint, both TypeScript checks, the TypeScript test suite, documentation checks, and a production build.
 
-- Parser correctness and Skada alignment
-- Fixture validation and combat-log edge cases
-- Boss segmentation, wipe/kill detection, DPS/HPS math
-- Upload flow regressions and saved report behavior
-- Admin-only access control
-- Analytics/report query regressions
-- Railway deployment and Prisma migration risk
-- Accidental secret exposure
-- Stale-code deletions without proof
-- Generated/private files accidentally staged
-- Documentation drift and stale commands
-- Dependency or lockfile changes
+Parser changes also require:
 
-Before opening or merging a PR into `main`, verify tests pass, parser validation passes when applicable, build passes, secret scan or staged-secret review passes, no `.env` or production secret is staged, Railway config changes are intentional, database changes are understood, and the final diff has been reviewed. Once required GitHub CI is green, merge without waiting for manual user approval.
+```bash
+python -m pip install --require-hashes -r parser/requirements-dev.lock
+cd parser
+pytest tests/ -v
+```
 
-## Hard Stop
+Add or update a fixture or focused pytest for behavior changes. A non-behavioral parser refactor still requires the full parser suite and a written explanation in the PR.
 
-Do not break combat log parsing.
+Useful focused commands:
+
+```bash
+npx tsx --test tests/<file>.test.ts
+npm run db:generate
+npx prisma validate
+docker compose config
+```
+
+## Security
+
+- Never commit `.env*`, database URLs, Railway tokens, admin secrets, API keys, private keys, combat logs, uploads, caches, build output, or personal machine state.
+- Production admin access must fail closed when `ADMIN_SECRET` is absent.
+- Public routes must not expose raw uploads, internal parser errors, secrets, reset controls, or destructive actions.
+- The public upload path must retain size, archive, concurrency, timeout, filename, content, and parser-payload validation.
+- Do not reintroduce browser-stored admin secrets, userscript data paths, or arbitrary parser filesystem access.
+- Inspect Prisma migrations and document production risk before shipping them.
+- See [`SECURITY.md`](SECURITY.md) and [`docs/security/threat-model.md`](docs/security/threat-model.md).
+
+## Cleanup Rules
+
+Classify removal candidates before deleting:
+
+- **Safe to delete:** no imports, scripts, docs, runtime, deployment, or compatibility references.
+- **Safe to consolidate:** duplicate behavior with an identified surviving implementation.
+- **Suspicious but keep:** parser, upload, admin, analytics, migration, or compatibility code with unclear reachability.
+- **Cannot determine:** document it and leave it intact.
+
+Prove deletions with repository search and the relevant validation suite. Preserve public route and API response compatibility unless all consumers and tests are updated.
+
+## Documentation
+
+Update README, maintained docs, ADRs, environment examples, and the changelog when behavior, commands, architecture, security, or deployment changes. Prefer one authoritative document over duplicated status notes. Do not add session transcripts or machine-specific handoffs to the repository.
 
 <!-- BEGIN:nextjs-agent-rules -->
 

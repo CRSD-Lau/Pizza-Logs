@@ -1,0 +1,50 @@
+# Pizza Logs Documentation
+
+This directory contains maintained, versioned project documentation. GitHub issues and pull requests are the source of truth for active work; `CHANGELOG.md` records shipped changes; ADRs record durable decisions.
+
+## Start Here
+
+- [Project README](../README.md) — product overview and quick start
+- [Development setup](development/setup.md) — local environment and database
+- [Testing](development/testing.md) — validation gates
+- [Architecture overview](architecture/overview.md) — services, data flow, and boundaries
+- [Contribution workflow](../CONTRIBUTING.md) — branches and pull requests
+
+## Parser and Analytics
+
+- [Parser contract](parser-contract.md) — authoritative combat-log behavior
+- [Difficulty detector](difficulty-detector.md) — evidence model and Ulduar rules
+- [Streamed upload protocol](archive-upload-protocol.md) — request, state, limits, and cleanup
+- [UwU analytical parity](uwu-analytics-parity.md) — adopted comparison definitions and exclusions
+- [Fixture guide](../parser/tests/fixtures/README.md) — canonical test data
+
+## Product Guides
+
+- [Uploading a log](guides/uploading.md)
+- [Reading a report](guides/reading-reports.md)
+- [Player gear quick look](player-gear-quick-look.md)
+- [Retired browser automation](userscript-retirement.md)
+- [Intro animation pipeline](intro-animation.md)
+- [Frontend design contract](../DESIGN.md)
+
+## Operations and Security
+
+- [Railway runbook](operations/railway.md)
+- [Security policy](../SECURITY.md)
+- [Threat model](security/threat-model.md)
+- [Privacy notice](../PRIVACY.md)
+- [Dependency license inventory](../LICENSE.LIST)
+
+## Decisions
+
+- [ADR 0001: Parser metric authority](adr/0001-parser-metric-authority.md)
+- [ADR 0002: Branch and documentation workflow](adr/0002-branch-and-documentation-workflow.md)
+- [ADR 0003: Canonical public report URLs](adr/0003-canonical-public-report-urls.md)
+
+## Documentation Rules
+
+- Update an authoritative document in the same pull request as the behavior it describes.
+- Prefer links over copied status text.
+- Use an ADR for durable choices that future maintainers may otherwise revisit without context.
+- Do not commit chat transcripts, session handoffs, personal paths, or rolling “now” documents.
+- Validate local Markdown links with `npm run docs:check`.

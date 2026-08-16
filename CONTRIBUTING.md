@@ -1,12 +1,13 @@
-# Contributing To Pizza Logs
+# Contributing to Pizza Logs
 
-Pizza Logs is maintained as a small, production-backed project. Keep changes scoped, verifiable, and honest about parser/deployment risk.
+Thanks for improving Pizza Logs. This is a small production-backed project, so a good contribution is focused, tested, and explicit about parser, data, security, and deployment risk.
 
 ## Before You Start
 
-1. Search existing issues and docs for the same bug or feature.
-2. Discuss significant parser, schema, admin, security, or deployment changes before implementation.
-3. Start from `codex-dev`, not `main`.
+1. Search existing issues and pull requests.
+2. Read the [documentation index](docs/README.md) and the relevant contract.
+3. Discuss material parser, schema, public API, admin, privacy, or deployment changes in an issue before investing in a large implementation.
+4. Never include real combat logs, `.env` files, secrets, database exports, or personal machine paths.
 
 ## Local Setup
 
@@ -18,76 +19,77 @@ cp .env.example .env.local
 npm run db:generate
 npm run db:push
 npm run db:seed
+python -m venv parser/.venv
 ```
 
-Run the parser separately when testing uploads:
+Install and run the parser with the virtual environment's interpreter. On Windows:
+
+```powershell
+.\parser\.venv\Scripts\python.exe -m pip install --require-hashes -r .\parser\requirements-dev.lock
+.\parser\.venv\Scripts\python.exe .\parser\main.py
+```
+
+On macOS/Linux:
 
 ```bash
-cd parser
-python -m venv .venv
-.venv\Scripts\activate
-pip install -r requirements.txt
-python main.py
+parser/.venv/bin/python -m pip install --require-hashes -r parser/requirements-dev.lock
+parser/.venv/bin/python parser/main.py
 ```
 
-Run the app:
+Run the app in a separate terminal:
 
 ```bash
 npm run dev
 ```
 
-## Branch Workflow
+Platform-specific details are in [docs/development/setup.md](docs/development/setup.md).
 
-Pizza Logs uses a Codex-first branch flow:
+## Branch and Pull Request Workflow
 
-1. Work on `codex-dev`.
-2. Merge the latest `origin/main` into `codex-dev` before editing.
-3. Commit scoped changes on `codex-dev`.
-4. Push `origin/codex-dev`.
-5. Open a pull request into `main`.
-6. Neil merges the PR when ready.
+1. Fetch `origin` and branch from current `origin/main`.
+2. Use a descriptive short-lived branch such as `codex/upload-timeout` or `fix/gunship-detection`.
+3. Keep commits and the pull request to one coherent change.
+4. Rebase or merge current `origin/main` before final validation when needed.
+5. Push the branch and open a pull request into `main`.
+6. Merge only after required checks pass and the final diff has been reviewed.
+7. Prefer a squash merge and delete the merged branch.
 
-Do not commit, push, or merge directly to `main`. Railway production deploys from `main` only after the PR is merged.
+Direct pushes to `main` are not allowed. Merging `main` triggers the Railway production deployment.
 
 ## Validation
 
-Run the strongest relevant checks before opening a PR:
-
-```bash
-npm run lint
-npm run type-check
-npm run build
-```
-
-If available, use the aggregate PR gate:
+Run the full web gate before opening a pull request:
 
 ```bash
 npm run check:pr
 ```
 
-Parser changes require parser validation:
+Parser changes also require:
 
 ```bash
 cd parser
 pytest tests/ -v
 ```
 
-Focused TypeScript tests live in `tests/` and usually run with:
+Add a focused test or canonical fixture for changes to combat math, segmentation, difficulty, boss aliases, kill/wipe detection, duration, GUIDs, pet ownership, absorbs, or session analytics.
 
-```bash
-npx tsx tests/<file>.test.ts
-```
+Database changes require `npx prisma validate`, an inspected migration, and a clear production-risk note. Deployment changes should also pass `docker compose config` and the relevant image build when Docker is available.
 
-## Parser Changes
+## Code and Documentation Expectations
 
-Parser correctness is the product. Do not change combat-log math, segmentation, boss aliases, kill/wipe detection, duration, pet attribution, or GUID handling without targeted pytest or fixture coverage.
-
-## Documentation
-
-Update docs when behavior, setup, environment variables, deployment, parser rules, or workflows change. Prefer fewer accurate docs over duplicated stale notes.
+- Preserve public routes and response shapes unless every consumer and test is updated.
+- Prefer existing architecture and small changes over speculative rewrites.
+- Treat missing/conflicting parser evidence as unknown, not an invitation to guess.
+- Update the authoritative docs and `CHANGELOG.md` when behavior changes.
+- Add an ADR under `docs/adr/` for a durable architectural or workflow decision.
+- Do not add session transcripts, generated handoff notes, or machine-specific status documents.
 
 ## Security
 
-Never commit `.env*`, Railway tokens, database URLs, admin secrets, combat logs, upload artifacts, caches, local screenshots, or generated build outputs.
+Public routes must not expose raw upload rows, secrets, parser filesystem paths, internal exception text, or destructive controls. Production admin access must continue to fail closed. Review [SECURITY.md](SECURITY.md) and [docs/security/threat-model.md](docs/security/threat-model.md) for sensitive changes.
 
-Admin pages and first-party refresh actions require `ADMIN_SECRET` in production. Do not add browser userscripts, bookmarklets, or client-side storage of the admin secret.
+Report vulnerabilities privately through [GitHub Security Advisories](https://github.com/CRSD-Lau/Pizza-Logs/security/advisories/new).
+
+## Code of Conduct
+
+Participation is governed by [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md).

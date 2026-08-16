@@ -171,25 +171,6 @@ export function sortBossesByICCOrder<T extends { name: string }>(bosses: readonl
   return sortByICCOrder(bosses, boss => boss.name);
 }
 
-// Lookup maps for fast parser access
-export const BOSS_BY_NAME = new Map(
-  WOTLK_BOSSES.map(b => [b.name.toLowerCase(), b])
-);
-
-export const BOSS_BY_ID = new Map(
-  WOTLK_BOSSES.filter(b => b.wowBossId).map(b => [b.wowBossId!, b])
-);
-
-export const BOSS_BY_SLUG = new Map(
-  WOTLK_BOSSES.map(b => [b.slug, b])
-);
-
-// All known boss/alias names flattened for quick set lookup
-export const ALL_BOSS_NAMES: Set<string> = new Set([
-  ...WOTLK_BOSSES.map(b => b.name.toLowerCase()),
-  ...WOTLK_BOSSES.flatMap(b => (b.aliases ?? []).map(a => a.toLowerCase())),
-]);
-
 export const RAIDS = [
   ...new Map(WOTLK_BOSSES.map(b => [b.raidSlug, { name: b.raid, slug: b.raidSlug }])).values(),
 ];

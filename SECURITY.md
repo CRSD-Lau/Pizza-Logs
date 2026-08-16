@@ -1,39 +1,92 @@
 # Security Policy
 
-## Scope
+## Supported Version
 
-Pizza Logs is a combat-log analytics tool for a WoW raiding guild. It stores in-game character names, uploaded combat-log metadata, parsed raid statistics, cached guild roster rows, and cached Warmane gear snapshots.
+Pizza Logs ships continuously. Only the current `main` branch and latest Railway production deployment receive security fixes; historical tags are snapshots, not separate support lines.
 
-Pizza Logs does not handle user account passwords, payment information, health data, financial data, or government identifiers.
+## Report a Vulnerability
 
-## Admin Access
+Do not open a public issue for a suspected vulnerability. Use a [private GitHub security advisory](https://github.com/CRSD-Lau/Pizza-Logs/security/advisories/new) and include:
 
-The `/admin` page, admin upload history, cleanup actions, and import APIs are protected by a server-side secret configured with `ADMIN_SECRET`.
+- the affected route, component, or configuration;
+- reproduction steps or a minimal proof of concept;
+- expected and observed behavior;
+- likely impact and any data accessed;
+- suggested mitigation, if known.
 
-- Production fails closed if `ADMIN_SECRET` is missing.
-- The admin login sets an `HttpOnly` `x-admin-secret` cookie.
-- `ADMIN_COOKIE_SECURE=false` is only for local HTTP compose and must not be set in Railway production.
-- Warmane gear and roster refreshes stay within authenticated Pizza Logs server paths; the admin secret is not copied to Warmane pages or browser local storage.
+Please avoid accessing data that is not yours, disrupting production, sending high-volume traffic, or publishing details before a fix is available. The maintainer will coordinate disclosure through the advisory.
 
-## Current Risks
+## Security Scope
 
-- `/api/upload` does not yet enforce a hard server-side byte limit while streaming to the parser.
-- Upload rate limiting is not implemented in app code.
-- Warmane can still return Cloudflare/403 responses. Gear quick looks and the public roster use the last healthy database snapshot when a first-party refresh is unavailable.
+Pizza Logs stores and displays:
 
-## Reporting A Vulnerability
+- uploaded filename, size, SHA-256 hash, optional uploader label, and parse status;
+- public in-game character names, raid events, and derived performance statistics;
+- cached PizzaWarriors roster and Warmane gear/profile data;
+- protected operational diagnostics and upload administration data.
 
-Report security issues privately instead of opening a public issue.
+It does not provide end-user accounts and is not designed to hold passwords, payment data, health information, financial records, or government identifiers. Railway and upstream service logs may contain ordinary request metadata such as IP address and user agent.
 
-Contact: open a private security advisory at https://github.com/CRSD-Lau/Pizza-Logs/security/advisories/new
+## Implemented Controls
 
-Include:
+### Upload and parser boundary
 
-- what is vulnerable;
-- steps to reproduce;
-- likely impact;
-- affected routes, files, or configuration if known.
+- Public uploads accept only `.txt`, `.log`, and `.zip` names and require an application-generated UUIDv4.
+- The web and parser paths enforce a 100 MiB compressed upload ceiling.
+- ZIP validation rejects unsafe paths, symlinks, encryption, nested archives, excess members, excessive expansion, and suspicious compression ratios.
+- Archive members stream directly from the ZIP; they are never extracted as a directory tree.
+- Parser request, receive, and processing times are bounded, and full parsing uses bounded worker/semaphore capacity.
+- Parser responses are schema-validated before database persistence.
+- Raw parser exceptions and internal paths are logged server-side and replaced with fixed public messages.
+- Arbitrary filesystem parsing has been removed. Legacy multipart/debug/stream routes are disabled unless `ENABLE_LEGACY_PARSER_ROUTES` is explicitly enabled.
 
-## Supported Versions
+### Admin boundary
 
-Only the latest Railway production deployment is actively maintained. Pizza Logs does not publish versioned releases with separate support windows.
+- Every environment fails closed when `ADMIN_SECRET` is absent.
+- Login uses timing-safe verification and stores a derived, eight-hour session token—not the reusable secret—in an `HttpOnly`, `SameSite=Strict`, secure-in-production cookie.
+- Admin routes and mutation paths re-verify the configured server-side secret.
+- The reusable secret is not accepted in public query strings or stored in browser local storage.
+- Gear and roster refreshes use authenticated first-party server paths.
+
+### Application and delivery
+
+- Security headers include a Content Security Policy, HSTS, frame denial, MIME sniffing protection, a restrictive referrer policy, and a restrictive permissions policy.
+- Next.js removes the framework-identifying `X-Powered-By` header.
+- GitHub Actions use least-privilege permissions and immutable commit pins.
+- CI performs tests/builds, dependency review, and CodeQL analysis. Dependabot monitors npm, Python, and Actions dependencies.
+- Python runtime and development installs use reviewed, hash-locked requirements.
+- Both production containers run as unprivileged users.
+- Repository ownership and branch rules require pull requests and passing checks for `main`.
+
+The maintained threat model is in [docs/security/threat-model.md](docs/security/threat-model.md).
+
+## Secrets and Production Configuration
+
+- Never commit `.env*`, `ADMIN_SECRET`, `DATABASE_URL`, Railway credentials, webhook URLs, API keys, or private keys.
+- Use a long randomly generated production `ADMIN_SECRET` and rotate it after suspected exposure.
+- Do not set `ADMIN_COOKIE_SECURE=false` in Railway.
+- Keep `PARSER_SERVICE_URL` on Railway's internal service path where available.
+- Do not enable legacy parser routes in production.
+- Treat database backups and exports as sensitive even though report pages are public.
+
+## Known Residual Risks
+
+- Public upload capacity is bounded per process, but there is no distributed rate limiter across multiple replicas.
+- Public raid reports intentionally expose in-game character names and performance data.
+- Warmane and CDN availability/behavior are outside this project's control; cached snapshots provide availability fallback.
+- The sandboxed desktop character model loads Warmane CDN code in an isolated `srcdoc` frame. It has no same-origin permission, referrer, parent DOM access, or Pizza Logs credentials.
+- Repository license inventory covers direct dependencies and reviews notable transitive licenses, but it is not legal advice.
+
+## Security Verification
+
+Maintainers should run the following before a security-sensitive release:
+
+```bash
+npm run check:pr
+npm audit --audit-level=moderate
+python -m pip install --require-hashes -r parser/requirements-dev.lock
+python -m pip_audit -r parser/requirements.lock
+cd parser && pytest tests/ -v
+```
+
+Also review the final staged diff for secrets, inspect any Prisma migration, and verify no `.env`, raw log, upload, cache, or generated machine-state file is staged.

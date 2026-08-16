@@ -5,13 +5,6 @@ export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
 }
 
-export function slugify(str: string): string {
-  return str
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-|-$/g, "");
-}
-
 export function getWeekBounds(date: Date = new Date()): { start: Date; end: Date } {
   const d = new Date(date);
   // WoW resets on Wednesday
@@ -66,26 +59,4 @@ export function formatDps(n: number): string {
   if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(3)}M`;
   if (n >= 1_000) return `${(n / 1_000).toFixed(2)}K`;
   return n.toFixed(0);
-}
-
-export function rankSuffix(n: number): string {
-  if (n === 1) return "st";
-  if (n === 2) return "nd";
-  if (n === 3) return "rd";
-  return "th";
-}
-
-export function difficultyLabel(diff: string): string {
-  return diff; // "10N", "10H", "25N", "25H"
-}
-
-export function difficultyColor(diff: string): string {
-  if (diff.endsWith("H")) return "#e06030";
-  return "#9a8f78";
-}
-
-export function outcomeColor(outcome: string): string {
-  if (outcome === "KILL") return "#50a050";
-  if (outcome === "WIPE") return "#c84040";
-  return "#5a5548";
 }
