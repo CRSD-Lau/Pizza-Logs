@@ -28,6 +28,7 @@ This project follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) an
 - Removed arbitrary parser filesystem access and disabled legacy multipart/debug/stream routes by default.
 - Sanitized untrusted Slack pull-request text and public upload/parser errors.
 - Added compressed-size enforcement to every upload path and removed the public fallback that bypassed modern archive controls.
+- Isolated streamed-upload temp files behind server-generated names and made external HTML entity decoding single-pass.
 
 ### Removed
 

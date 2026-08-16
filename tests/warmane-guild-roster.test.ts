@@ -97,7 +97,7 @@ const htmlResult = parseWarmaneGuildRosterHtml(`
       <td><img alt="Night Elf"></td>
       <td><img title="Druid"></td>
       <td>80</td>
-      <td>Core 1</td>
+      <td>Core &amp;lt;One&amp;gt;</td>
       <td>1230</td>
       <td><img alt="Engineering"><img title="Jewelcrafting"></td>
     </tr>
@@ -120,7 +120,7 @@ if (htmlResult.ok) {
   assert.equal(htmlResult.members[0].characterName, "Striq");
   assert.equal(htmlResult.members[0].raceName, "Night Elf");
   assert.equal(htmlResult.members[0].className, "Druid");
-  assert.equal(htmlResult.members[0].rankName, "Core 1");
+  assert.equal(htmlResult.members[0].rankName, "Core &lt;One&gt;");
   assert.equal(htmlResult.members[0].rankOrder, 0);
   assert.deepEqual(htmlResult.members[0].professions, [
     { name: "Engineering" },

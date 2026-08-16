@@ -193,6 +193,24 @@ async def test_upload_rejects_non_uuid_and_oversize_content_length():
     assert getattr(too_large.value, "status_code", None) == 413
 
 
+@pytest.mark.anyio
+async def test_upload_rejects_duplicate_client_id(tmp_path: Path, monkeypatch: pytest.MonkeyPatch):
+    upload_id = str(uuid.uuid4())
+    monkeypatch.setattr(main, "UPLOAD_TEMP_DIR", tmp_path)
+    assert main._reserve_upload_state(upload_id, "first.zip") is True
+
+    with pytest.raises(Exception) as duplicate:
+        await main.upload_archive_stream(
+            upload_id,
+            _StreamingRequest(b"not-used"),  # type: ignore[arg-type]
+            "second.zip",
+            2026,
+        )
+
+    assert getattr(duplicate.value, "status_code", None) == 409
+    assert main._upload_states[upload_id]["filename"] == "first.zip"
+
+
 def test_abandoned_partial_upload_cleanup(tmp_path: Path, monkeypatch: pytest.MonkeyPatch):
     stale = tmp_path / f"{uuid.uuid4()}.part"
     stale.write_bytes(b"partial")

@@ -293,12 +293,16 @@ export function normalizeWarmaneGuildRosterPayload(
 }
 
 function decodeHtmlEntities(value: string): string {
+  const entities: Readonly<Record<string, string>> = {
+    "&amp;": "&",
+    "&lt;": "<",
+    "&gt;": ">",
+    "&quot;": "\"",
+    "&#39;": "'",
+  };
+
   return value
-    .replace(/&amp;/g, "&")
-    .replace(/&lt;/g, "<")
-    .replace(/&gt;/g, ">")
-    .replace(/&quot;/g, "\"")
-    .replace(/&#39;/g, "'")
+    .replace(/&(?:amp|lt|gt|quot|#39);/g, (entity) => entities[entity] ?? entity)
     .replace(/\s+/g, " ")
     .trim();
 }
