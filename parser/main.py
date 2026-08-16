@@ -430,6 +430,23 @@ def _set_upload_state(upload_id: str, state: str, **extra: object) -> dict[str, 
         return dict(current)
 
 
+def _reserve_upload_state(upload_id: str, filename: str) -> bool:
+    """Atomically reserve a client upload ID before receiving its body."""
+    now = datetime.now(timezone.utc).isoformat()
+    with _upload_states_lock:
+        if upload_id in _upload_states:
+            return False
+        _upload_states[upload_id] = {
+            "uploadId": upload_id,
+            "createdAt": now,
+            "updatedAt": now,
+            "state": "uploading",
+            "filename": filename,
+            "receivedBytes": 0,
+        }
+        return True
+
+
 def _cleanup_abandoned_uploads() -> None:
     cutoff = time.time() - UPLOAD_ABANDONED_SECONDS
     for candidate in UPLOAD_TEMP_DIR.glob("*"):
@@ -527,17 +544,20 @@ async def upload_archive_stream(
         _upload_slots.release()
         raise
 
-    part_path = UPLOAD_TEMP_DIR / f"{upload_id}.part"
-    final_path = UPLOAD_TEMP_DIR / f"{upload_id}.upload"
-    if part_path.exists() or final_path.exists():
+    if not _reserve_upload_state(upload_id, Path(x_filename).name):
         _upload_slots.release()
         raise HTTPException(409, "This upload ID is already in use.")
+
+    # Never derive filesystem paths from request data. The client ID remains the
+    # public progress key; an independent server-generated token names temp files.
+    upload_file_token = uuid.uuid4().hex
+    part_path = UPLOAD_TEMP_DIR / f"{upload_file_token}.part"
+    final_path = UPLOAD_TEMP_DIR / f"{upload_file_token}.upload"
 
     receive_started = time.perf_counter()
     final_byte_at = receive_started
     sha256 = hashlib.sha256()
     received_bytes = 0
-    _set_upload_state(upload_id, "uploading", filename=Path(x_filename).name, receivedBytes=0)
     try:
         async with asyncio.timeout(UPLOAD_RECEIVE_TIMEOUT_SECONDS):
             with part_path.open("xb") as tmp:
@@ -561,7 +581,7 @@ async def upload_archive_stream(
         raise HTTPException(408, "Upload receive timeout.") from exc
     except Exception:
         part_path.unlink(missing_ok=True)
-        logger.exception("Streamed upload receive failed", extra={"upload_id": upload_id})
+        logger.exception("Streamed upload receive failed", extra={"upload_file_token": upload_file_token})
         _set_upload_state(upload_id, "error", errorCode="UPLOAD_RECEIVE_ERROR", error="Upload receive failed.")
         _upload_slots.release()
         raise
@@ -691,7 +711,7 @@ async def upload_archive_stream(
             _set_upload_state(upload_id, "error", errorCode="PROCESSING_TIMEOUT", error="Upload processing timed out.")
             yield _sse({"type": "error", "uploadId": upload_id, "code": "PROCESSING_TIMEOUT", "msg": "Upload processing timed out."})
         except Exception:
-            logger.exception("Streamed upload processing failed", extra={"upload_id": upload_id})
+            logger.exception("Streamed upload processing failed", extra={"upload_file_token": upload_file_token})
             _set_upload_state(upload_id, "error", errorCode="PROCESSING_ERROR", error="Upload processing failed.")
             yield _sse({"type": "error", "uploadId": upload_id, "code": "PROCESSING_ERROR", "msg": "Upload processing failed."})
         finally:

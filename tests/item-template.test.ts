@@ -74,7 +74,8 @@ globalThis.fetch = async (input: RequestInfo | URL, init?: RequestInit): Promise
   const url = typeof input === "string" ? input
     : input instanceof URL ? input.href
     : (input as Request).url;
-  if (url.includes("wowhead.com")) {
+  const hostname = new URL(url).hostname.toLowerCase();
+  if (hostname === "wowhead.com" || hostname.endsWith(".wowhead.com")) {
     wowheadCallDetected = true;
     throw new Error(`BLOCKED: Wowhead fetch detected: ${url}`);
   }
