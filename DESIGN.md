@@ -7,6 +7,7 @@ Pizza Logs uses a dark raid-log workspace with a restrained gold accent. The int
 - `text-primary` is for outcomes, values, and main reading text.
 - `text-secondary` is for meaningful supporting copy.
 - `text-dim` is reserved for non-critical metadata and meets AA contrast on the standard dark surfaces.
+- Use `text-secondary` on colored leaderboard fills; standard-surface contrast does not transfer to those backgrounds. Destructive-action text uses `danger-light` while borders retain `danger`.
 - Meaningful interface text has a 12px absolute minimum; normal metadata should be 14px.
 
 ## Page rhythm
@@ -31,4 +32,4 @@ Pizza Logs uses a dark raid-log workspace with a restrained gold accent. The int
 
 ## Tokens
 
-Use the colors and fonts in `tailwind.config.mjs`. Do not add literal interface colors inside components when a semantic, class, school, status, or surface token exists.
+Use the semantic colors in the `@theme` block of `app/globals.css` and the fonts/configuration in `tailwind.config.mjs`. Do not add literal interface colors inside components when a semantic, class, school, status, or surface token exists.

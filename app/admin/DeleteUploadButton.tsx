@@ -24,7 +24,7 @@ export function DeleteUploadButton({ uploadId }: { uploadId: string }) {
     <button
       onClick={handleClick}
       disabled={pending}
-      className="text-xs text-danger/60 hover:text-danger transition-colors disabled:opacity-40"
+      className="min-h-11 px-2 text-xs text-danger-light hover:underline transition-colors disabled:opacity-40"
       title="Delete this upload and re-upload to re-parse"
     >
       {pending ? "Deleting…" : "Delete"}

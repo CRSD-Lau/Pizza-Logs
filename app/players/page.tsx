@@ -278,10 +278,10 @@ export default async function PlayersPage({ searchParams }: Props) {
               href={`/players?class=${encodeURIComponent(cls)}`}
               className={cn(
                 "inline-flex min-h-11 items-center rounded-sm border px-3 py-2 text-xs font-semibold uppercase tracking-wide transition-colors",
-                active ? "opacity-100" : "opacity-60 hover:opacity-90"
+                "hover:bg-bg-panel"
               )}
               style={{
-                color,
+                color: active ? "var(--color-text-primary)" : "var(--color-text-secondary)",
                 borderColor: active ? color : `${color}44`,
                 background:  active ? `${color}18` : "transparent",
               }}
