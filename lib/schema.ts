@@ -1,5 +1,24 @@
 import { z } from "zod";
 
+const label = z.string().min(1).max(256);
+const amount = z.number().nonnegative().max(Number.MAX_SAFE_INTEGER);
+const combatAmount = amount.int();
+const count = z.number().int().nonnegative().max(2_147_483_647);
+const percentage = z.number().min(0).max(100);
+const timestamp = z.iso.datetime({ offset: true });
+const difficulty = z.enum(["10N", "10H", "25N", "25H", "UNKNOWN"]);
+const sha256 = z.string().regex(/^[0-9a-f]{64}$/);
+const sessionKey = z.string().regex(/^\d{1,10}$/);
+const versionToken = z.string().min(1).max(64).regex(/^[A-Za-z0-9][A-Za-z0-9._-]*$/);
+
+export const ParserProvenanceSchema = z.object({
+  parserVersion: versionToken,
+  metricSchemaVersion: versionToken,
+  compatibilityProfile: versionToken,
+  referenceSha: z.string().regex(/^[0-9a-f]{40}$/).nullable(),
+  parsedAt: timestamp,
+});
+
 export const UploadRequestSchema = z.object({
   uploaderName: z.string().min(1).max(32),
   guildName:    z.string().min(1).max(64).optional(),
@@ -12,77 +31,77 @@ export type UploadRequest = z.infer<typeof UploadRequestSchema>;
 // ── Shapes returned by the Python parser ──────────────────────
 
 export const SpellBreakdownSchema = z.record(
-  z.string(),
+  label,
   z.object({
-    damage:  z.number(),
-    healing: z.number(),
-    hits:    z.number(),
-    crits:   z.number(),
-    school:  z.number(),
+    damage:  combatAmount,
+    healing: combatAmount,
+    hits:    count,
+    crits:   count,
+    school:  count,
   })
 );
 
 export const TargetBreakdownSchema = z.record(
-  z.string(),
+  label,
   z.object({
-    damage: z.number(),
-    hits:   z.number(),
-    crits:  z.number(),
+    damage: combatAmount,
+    hits:   count,
+    crits:  count,
   })
 );
 export type TargetBreakdown = z.infer<typeof TargetBreakdownSchema>;
 
 export const AbsorbBreakdownSchema = z.record(
-  z.string(),
+  label,
   z.object({
-    amount: z.number(),
-    hits: z.number(),
-    ambiguousHits: z.number(),
+    amount: combatAmount,
+    hits: count,
+    ambiguousHits: count,
   }),
 );
 
 export const AuraBreakdownSchema = z.record(
-  z.string(),
+  label,
   z.object({
-    uptimeSeconds: z.number(),
-    uptimePct: z.number(),
-    applications: z.number(),
+    uptimeSeconds: amount,
+    uptimePct: percentage,
+    applications: count,
   }),
 );
 
 export const PowerBreakdownSchema = z.record(
-  z.string(),
+  label,
   z.object({
-    amount: z.number(),
-    events: z.number(),
-    powerType: z.number(),
+    amount,
+    events: count,
+    powerType: z.number().int().min(-1).max(255),
   }),
 );
 
 export const ParticipantResultSchema = z.object({
-  name:            z.string(),
-  class:           z.string().nullable().optional(),
-  spec:            z.string().nullable().optional(),
+  name:            label,
+  class:           label.nullable().optional(),
+  spec:            label.nullable().optional(),
   role:            z.enum(["DPS", "HEALER", "TANK", "UNKNOWN"]).optional(),
-  totalDamage:     z.number(),
-  totalHealing:    z.number(),
-  totalAbsorbs:    z.number().default(0),
-  damageTaken:     z.number(),
-  dps:             z.number(),
-  hps:             z.number(),
-  aps:             z.number().default(0),
-  deaths:          z.number(),
+  totalDamage:     combatAmount,
+  totalHealing:    combatAmount,
+  totalAbsorbs:    combatAmount.default(0),
+  damageTaken:     combatAmount,
+  dps:             amount,
+  hps:             amount,
+  aps:             amount.default(0),
+  deaths:          count,
   deathEvents:     z.array(z.object({
-    offsetSeconds: z.number(),
+    offsetSeconds: amount,
     recentDamage: z.array(z.object({
-      offsetSeconds: z.number(),
-      secondsBeforeDeath: z.number(),
-      source: z.string(),
-      spell: z.string(),
-      amount: z.number(),
-    })).default([]),
-  })).default([]),
-  critPct:         z.number(),
+      offsetSeconds: amount,
+      secondsBeforeDeath: amount,
+      source: label,
+      spell: label,
+      amount: combatAmount,
+    })).max(10_000).default([]),
+  })).max(10_000).default([]),
+  critPct:         percentage,
   spellBreakdown:  SpellBreakdownSchema.optional(),
   targetBreakdown: TargetBreakdownSchema.optional(),
   absorbBreakdown: AbsorbBreakdownSchema.optional(),
@@ -93,65 +112,72 @@ export const ParticipantResultSchema = z.object({
 export type ParticipantResult = z.infer<typeof ParticipantResultSchema>;
 
 export const EncounterResultSchema = z.object({
-  bossName:        z.string(),
-  bossId:          z.number().nullable().optional(),
-  difficulty:      z.string(),
-  groupSize:       z.number(),
+  bossName:        label,
+  bossId:          count.nullable().optional(),
+  difficulty,
+  groupSize:       z.number().int().min(1).max(40),
   outcome:         z.enum(["KILL", "WIPE", "UNKNOWN"]),
-  durationSeconds: z.number(),
-  durationMs:      z.number().int().default(0),
-  startedAt:       z.string(), // ISO timestamp
-  endedAt:         z.string(),
-  totalDamage:     z.number(),
-  totalHealing:    z.number(),
-  totalAbsorbs:    z.number().default(0),
-  unattributedAbsorbs: z.number().default(0),
-  totalDamageTaken:z.number(),
-  fingerprint:     z.string(),
-  participants:    z.array(ParticipantResultSchema),
-  sessionIndex:    z.number().int().default(0),
+  durationSeconds: z.number().nonnegative().max(2_147_483.647),
+  durationMs:      count.default(0),
+  startedAt:       timestamp,
+  endedAt:         timestamp,
+  totalDamage:     combatAmount,
+  totalHealing:    combatAmount,
+  totalAbsorbs:    combatAmount.default(0),
+  unattributedAbsorbs: combatAmount.default(0),
+  totalDamageTaken:combatAmount,
+  fingerprint:     sha256,
+  participants:    z.array(ParticipantResultSchema).max(1_000).refine(
+    rows => new Set(rows.map(row => row.name)).size === rows.length,
+    "Participant names must be unique within an encounter",
+  ),
+  sessionIndex:    count.default(0),
   difficultyDetection: z.object({
-    mode:            z.enum(["10N", "10H", "25N", "25H", "UNKNOWN"]),
-    confidence:      z.string(),
-    evidence:        z.array(z.string()),
-    reason:          z.string(),
-    detectorVersion: z.string(),
+    mode:            difficulty,
+    confidence:      label,
+    evidence:        z.array(z.string().max(2_048)).max(1_000),
+    reason:          z.string().max(2_048),
+    detectorVersion: versionToken,
   }).optional(),
 });
 export type EncounterResult = z.infer<typeof EncounterResultSchema>;
 
 export const SessionPlayerAnalyticsSchema = z.object({
-  totalDamage: z.number().default(0),
-  totalHealing: z.number().default(0),
-  totalAbsorbs: z.number().default(0),
-  heal: z.number().default(0),
-  damageTaken: z.number().default(0),
+  totalDamage: combatAmount.default(0),
+  totalHealing: combatAmount.default(0),
+  totalAbsorbs: combatAmount.default(0),
+  heal: combatAmount.default(0),
+  damageTaken: combatAmount.default(0),
 });
 
 export const SessionAnalyticsSchema = z.object({
-  startedAt: z.string(),
-  endedAt: z.string(),
-  durationMs: z.number().int().nonnegative(),
-  totalDamage: z.number().default(0),
-  totalHealing: z.number().default(0),
-  totalAbsorbs: z.number().default(0),
-  heal: z.number().default(0),
-  totalDamageTaken: z.number().default(0),
-  unattributedAbsorbs: z.number().default(0),
-  players: z.record(z.string(), SessionPlayerAnalyticsSchema).default({}),
+  startedAt: timestamp,
+  endedAt: timestamp,
+  durationMs: amount.int(),
+  totalDamage: combatAmount.default(0),
+  totalHealing: combatAmount.default(0),
+  totalAbsorbs: combatAmount.default(0),
+  heal: combatAmount.default(0),
+  totalDamageTaken: combatAmount.default(0),
+  unattributedAbsorbs: combatAmount.default(0),
+  players: z.record(label, SessionPlayerAnalyticsSchema).default({}),
 });
 
 export const ParseResultSchema = z.object({
-  filename:      z.string(),
-  fileHash:      z.string(),
-  rawLineCount:  z.number(),
-  encounters:    z.array(EncounterResultSchema),
-  warnings:      z.array(z.string()).optional(),
-  sessionDamage: z.record(z.string(), z.number()).optional().default({}),
-  sessionAnalytics: z.record(z.string(), SessionAnalyticsSchema).optional().default({}),
+  filename:      label,
+  fileHash:      sha256,
+  rawLineCount:  count,
+  encounters:    z.array(EncounterResultSchema).max(10_000).refine(
+    rows => new Set(rows.map(row => row.fingerprint)).size === rows.length,
+    "Encounter fingerprints must be unique within a parser response",
+  ),
+  warnings:      z.array(z.string().max(2_048)).max(1_000).optional(),
+  sessionDamage: z.record(sessionKey, combatAmount).optional().default({}),
+  sessionAnalytics: z.record(sessionKey, SessionAnalyticsSchema).optional().default({}),
   uploadId:      z.string().uuid().optional(),
-  receivedBytes: z.number().int().nonnegative().optional(),
-  uploadTimings: z.record(z.string(), z.number()).optional(),
+  receivedBytes: count.max(100 * 1024 * 1024).optional(),
+  uploadTimings: z.record(label, amount).optional(),
+  provenance: ParserProvenanceSchema.optional(),
 });
 export type ParseResult = z.infer<typeof ParseResultSchema>;
 

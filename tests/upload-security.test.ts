@@ -31,5 +31,8 @@ assert.equal(parserHttpErrorMessage(413), "File exceeds the 100 MiB compressed u
 assert.equal(parserHttpErrorMessage(500), "The parser could not process this upload. Please try again.");
 assert.equal(parserEventErrorMessage("INVALID_ARCHIVE"), "The ZIP archive is damaged or unreadable.");
 assert.equal(parserEventErrorMessage("INTERNAL_DATABASE_PATH"), "Upload processing failed. Please try again.");
+assert.equal(parserEventErrorMessage("toString"), "Upload processing failed. Please try again.");
+assert.equal(parserEventErrorMessage("constructor"), "Upload processing failed. Please try again.");
+assert.equal(parserEventErrorMessage("__proto__"), "Upload processing failed. Please try again.");
 
 console.log("upload security tests passed");
