@@ -7,7 +7,9 @@ This directory contains maintained, versioned project documentation. GitHub issu
 - [Project README](../README.md) — product overview and quick start
 - [Development setup](development/setup.md) — local environment and database
 - [Testing](development/testing.md) — validation gates
+- [Acquisition review](acquisition-review.md) — evidence, findings and release conditions
 - [Architecture overview](architecture/overview.md) — services, data flow, and boundaries
+- [Surface inventory](architecture/surface-inventory.md) — pages, APIs, actions, jobs and data lifecycle
 - [Contribution workflow](../CONTRIBUTING.md) — branches and pull requests
 
 ## Parser and Analytics
@@ -30,6 +32,7 @@ This directory contains maintained, versioned project documentation. GitHub issu
 ## Operations and Security
 
 - [Railway runbook](operations/railway.md)
+- [Service objectives and recovery](operations/service-objectives.md)
 - [Security policy](../SECURITY.md)
 - [Threat model](security/threat-model.md)
 - [Privacy notice](../PRIVACY.md)
@@ -40,6 +43,7 @@ This directory contains maintained, versioned project documentation. GitHub issu
 - [ADR 0001: Parser metric authority](adr/0001-parser-metric-authority.md)
 - [ADR 0002: Branch and documentation workflow](adr/0002-branch-and-documentation-workflow.md)
 - [ADR 0003: Canonical public report URLs](adr/0003-canonical-public-report-urls.md)
+- [ADR 0004: Durable upload boundary](adr/0004-durable-upload-boundary.md)
 
 ## Documentation Rules
 

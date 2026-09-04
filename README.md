@@ -15,7 +15,7 @@ Pizza Logs turns Wrath of the Lich King combat logs into readable raid sessions,
 
 - Streams `.txt`, `.log`, or `.zip` uploads with live progress and bounded server-side validation.
 - Detects boss encounters even when Warmane omits useful encounter markers.
-- Preserves Skada-WoTLK damage/healing primitives and explicit UwU-compatible analytical views.
+- Preserves Skada-WoTLK damage/healing primitives. UwU reference comparisons and known differences are tracked in the [parity contract](docs/uwu-analytics-parity.md); broad equivalence is not claimed.
 - Reports raid sessions, boss attempts, target damage, healing, absorbs, deaths, auras, consumables, power gains, specs, roles, and pets.
 - Tracks all-time records, weekly results, boss history, and player performance.
 - Adds first-party Warmane roster and gear lookups with durable cached fallback.

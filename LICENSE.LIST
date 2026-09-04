@@ -1,19 +1,24 @@
 # Pizza Logs Direct Dependency License Inventory
 
-Generated from the resolved npm and Python package metadata on 2026-08-15. Scope: direct runtime and development dependencies only. The lockfiles remain authoritative for the full transitive graph.
+Author: Neil Mitchell
+Last Modified By: Neil Mitchell
+Verified: 2026-09-04
+
+Scope: the 40 direct runtime and development dependencies declared in `package.json`, `parser/requirements.txt`, and `parser/requirements-dev.txt`. Versions and license identifiers were read from installed npm packages and the Python 3.14 environment installed from the hash-locked development requirements, then checked against the lockfiles. This is a dependency metadata inventory, not a complete software bill of materials or clearance of project assets.
 
 ## Summary
 
-| License | Direct packages | Risk classification |
-| --- | ---: | --- |
-| MIT | 23 | Low |
-| Apache-2.0 | 9 | Low |
-| OFL-1.1 | 2 | Font-specific; notice retained |
-| BSD-2-Clause | 1 | Low |
-| BSD-3-Clause | 2 | Low |
-| ISC | 1 | Low |
+| License | Direct packages |
+| --- | ---: |
+| MIT | 23 |
+| Apache-2.0 | 10 |
+| OFL-1.1 | 2 |
+| BSD-2-Clause | 1 |
+| BSD-3-Clause | 2 |
+| ISC | 1 |
+| MPL-2.0 | 1 |
 
-Result: all direct dependency licenses are compatible with distribution of this MIT-licensed project. No direct dependency has an unknown, GPL, AGPL, SSPL, or non-commercial license.
+`axe-core` is a development dependency with MPL-2.0 metadata. Do not describe this inventory as entirely permissive or infer redistribution compliance from the identifiers alone. Retain each dependency's applicable license and notices when packaging it.
 
 ## npm Runtime
 
@@ -21,18 +26,18 @@ Result: all direct dependency licenses are compatible with distribution of this 
 | --- | ---: | --- |
 | `@fontsource/cinzel` | 5.3.0 | OFL-1.1 |
 | `@fontsource/rajdhani` | 5.3.0 | OFL-1.1 |
-| `@prisma/adapter-pg` | 7.9.1 | Apache-2.0 |
-| `@prisma/client` | 7.9.1 | Apache-2.0 |
+| `@prisma/adapter-pg` | 7.10.0 | Apache-2.0 |
+| `@prisma/client` | 7.10.0 | Apache-2.0 |
 | `class-variance-authority` | 0.7.1 | Apache-2.0 |
 | `clsx` | 2.1.1 | MIT |
 | `dotenv` | 17.4.2 | BSD-2-Clause |
-| `lucide-react` | 1.31.0 | ISC |
-| `next` | 16.3.1 | MIT |
+| `lucide-react` | 1.35.0 | ISC |
+| `next` | 16.3.3 | MIT |
 | `pg` | 8.23.0 | MIT |
-| `prisma` | 7.9.1 | Apache-2.0 |
+| `prisma` | 7.10.0 | Apache-2.0 |
 | `react` | 19.2.8 | MIT |
 | `react-dom` | 19.2.8 | MIT |
-| `react-dropzone` | 20.1.0 | MIT |
+| `react-dropzone` | 20.1.1 | MIT |
 | `recharts` | 3.10.1 | MIT |
 | `tailwind-merge` | 3.6.0 | MIT |
 | `zod` | 4.4.3 | MIT |
@@ -43,23 +48,27 @@ Result: all direct dependency licenses are compatible with distribution of this 
 | --- | ---: | --- |
 | `@tailwindcss/postcss` | 4.3.3 | MIT |
 | `@types/node` | 24.13.3 | MIT |
-| `@types/pg` | 8.21.0 | MIT |
+| `@types/pg` | 8.23.1 | MIT |
 | `@types/react` | 19.2.18 | MIT |
-| `@types/react-dom` | 19.2.4 | MIT |
+| `@types/react-dom` | 19.2.5 | MIT |
 | `@typescript/native` | 7.0.2 | Apache-2.0 |
+| `axe-core` | 4.13.0 | MPL-2.0 |
 | `eslint` | 9.39.5 | MIT |
-| `eslint-config-next` | 16.3.1 | MIT |
+| `eslint-config-next` | 16.3.3 | MIT |
+| `playwright` | 1.62.1 | Apache-2.0 |
 | `postcss` | 8.5.26 | MIT |
 | `tailwindcss` | 4.3.3 | MIT |
 | `tsx` | 4.23.12 | MIT |
 | `typescript` | 6.0.3 | Apache-2.0 |
+
+`@typescript/native` is the manifest's npm alias for the resolved `typescript@7.0.2` package.
 
 ## Python Runtime
 
 | Package | Locked version | License |
 | --- | ---: | --- |
 | `fastapi` | 0.141.1 | MIT |
-| `uvicorn` | 0.52.3 | BSD-3-Clause |
+| `uvicorn[standard]` | 0.52.4 | BSD-3-Clause |
 | `python-multipart` | 0.0.32 | Apache-2.0 |
 | `pydantic` | 2.13.4 | MIT |
 
@@ -68,13 +77,33 @@ Result: all direct dependency licenses are compatible with distribution of this 
 | Package | Locked version | License |
 | --- | ---: | --- |
 | `pytest` | 9.1.1 | MIT |
-| `ruff` | 0.16.3 | MIT |
+| `ruff` | 0.16.5 | MIT |
 | `bandit` | 1.9.4 | Apache-2.0 |
 | `pip-audit` | 2.10.1 | Apache-2.0 |
 | `pip-tools` | 7.6.1 | BSD-3-Clause |
 
-## Transitive Review
+`pip-audit` has no precise license metadata field in the installed distribution; its packaged `licenses/LICENSE` identifies Apache License 2.0. `pip-tools` reports `BSD`; its packaged `licenses/LICENSE` identifies BSD 3-Clause. Extra dependencies selected by `uvicorn[standard]` belong to the transitive graph, not additional direct rows.
 
-The npm lock contains permissive licenses plus weak-copyleft runtime packages used by Sharp/libvips and Prisma tooling. Upstream package license files are retained in the production dependency tree. The only missing npm SPDX metadata was `seq-queue@0.0.5`; its installed `LICENSE` file is the MIT License. No dependency was modified or statically incorporated into Pizza Logs source.
+## Font Notices
 
-Re-run this inventory whenever a direct dependency manifest changes. Dependency metadata is evidence, not legal advice.
+The installed `@fontsource/cinzel/LICENSE` and `@fontsource/rajdhani/LICENSE` contain SIL Open Font License 1.1 and the following copyright notices. Preserve those license files and notices with redistributed font software.
+
+Cinzel:
+
+> Copyright 2020 The Cinzel Project Authors (https://github.com/NDISCOVER/Cinzel)
+
+Rajdhani:
+
+> Copyright (c) 2014 Indian Type Foundry (info@indiantypefoundry.com) Rajdhani-Regular.ttf: Copyright (c) 2014 Indian Type Foundry (info@indiantypefoundry.com) Rajdhani-Medium.ttf: Copyright (c) 2014 Indian Type Foundry (info@indiantypefoundry.com) Rajdhani-SemiBold.ttf: Copyright (c) 2014 Indian Type Foundry (info@indiantypefoundry.com) Rajdhani-Bold.ttf: Copyright (c) 2014 Indian Type Foundry (info@indiantypefoundry.com)
+
+The production Docker image copies the installed production dependency tree, including these package license files. This observation does not replace checking notices in other distribution formats.
+
+## Scope and Unresolved Rights
+
+The lockfiles describe the transitive dependency graph. This update does not establish a complete transitive license review or verify every notice in built browser bundles and container layers.
+
+Warcraft names, artwork, icons, models, video, audio, and other media are outside the dependency inventory. Their ownership and rights for redistribution or acquisition remain unverified; an MIT license on Pizza Logs source does not establish those rights.
+
+The UwU reference inspected at `4c046d266b85ad833ab4d70addb0b6f1a16647e3` has no detected general redistribution license. Its README permits self-hosting, which does not establish permission to copy or redistribute its implementation in Pizza Logs. Reference comparison and provenance are documented separately in `docs/uwu-analytics-parity.md`.
+
+Refresh this inventory after dependency manifest or lockfile changes. License identifiers and retained notices are evidence for review, not a legal clearance conclusion.

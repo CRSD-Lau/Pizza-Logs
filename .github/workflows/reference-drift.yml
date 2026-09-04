@@ -1,0 +1,31 @@
+name: Reference Drift
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "43 9 1 * *"
+
+permissions:
+  contents: read
+
+jobs:
+  inspect-reference:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7
+        with:
+          python-version: "3.14"
+      - run: pip install --require-hashes -r parser/requirements.lock
+      - name: Check pinned revision without changing baselines
+        working-directory: parser
+        run: python -m parity check-reference --cache ../.test-artifacts/reference.json
+      - name: Retain drift evidence
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: reference-drift
+          path: .test-artifacts/
+          include-hidden-files: true
+          retention-days: 30
