@@ -30,12 +30,16 @@ function buildWarmaneModelViewerDocument(appearance: ArmoryCharacterAppearance):
       const send = (status) => parent.postMessage({ type: "${VIEWER_MESSAGE}", status }, "*");
 
       try {
+        const container = document.getElementById("model");
+        const bounds = container.getBoundingClientRect();
         const viewer = new ModelViewer({
           type: ModelViewer.WOW,
           contentPath: "https://cdn.warmane.com/wmmv/",
           container: $("#model"),
           hd: true,
-          aspect: 0.55,
+          // The viewer sets its own canvas height from this ratio. A fixed
+          // ratio leaves unused space below the canvas in the taller portrait.
+          aspect: bounds.width / bounds.height,
           sk: appearance.skin,
           ha: appearance.hairStyle,
           hc: appearance.hairColor,
@@ -52,6 +56,14 @@ function buildWarmaneModelViewerDocument(appearance: ArmoryCharacterAppearance):
             id: appearance.modelId
           }
         });
+
+        const renderer = viewer.renderer;
+        if (renderer?.zoom && renderer.projMatrix?.length === 16) {
+          // Leave room for helmets above the body bounds, then lower the view
+          // by 5% of its height without moving or stretching the iframe.
+          renderer.zoom.current = renderer.zoom.target = -1;
+          renderer.projMatrix[9] = 0.1;
+        }
 
         let attempts = 0;
         const verify = () => {

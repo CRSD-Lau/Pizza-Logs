@@ -13,11 +13,12 @@ from datetime import datetime, timezone
 from html import escape
 from pathlib import Path
 
+from version import ANALYTICS_PROFILE, METRIC_SCHEMA_VERSION, PARSER_VERSION
+
 from parity.compare import assess_case, difference_fingerprint
 from parity.fixtures import fixture_bytes
 from parity.pizza_adapter import parse_pizza
 from parity.reference import check_reference
-from version import ANALYTICS_PROFILE, METRIC_SCHEMA_VERSION, PARSER_VERSION
 
 PACKAGE = Path(__file__).resolve().parent
 
@@ -31,9 +32,10 @@ def run_suite(claimed_only: bool = False) -> dict:
         source = fixture_bytes(case['id'])
         oracle_path = PACKAGE / 'goldens' / f"{case['id']}.json"
         oracle = json.loads(oracle_path.read_text(encoding='utf-8')) if oracle_path.is_file() else None
-        rows.append(assess_case(case['id'], parse_pizza(source), oracle,
+        rows.append(assess_case(case['id'], parse_pizza(source, damage_breakdown=case.get('damageBreakdown', False)), oracle,
                                 hashlib.sha256(source).hexdigest(), manifest['reference']['inspectedSha'])
-                    | {'claim': case['claim'], 'scope': case.get('scope', case.get('reason'))})
+                    | {'claim': case['claim'], 'scope': case.get('scope', case.get('reason')),
+                       'disposition': case.get('disposition'), 'nextEvidence': case.get('nextEvidence')})
     blocked = [] if claimed_only else manifest['blockedSurfaces']
     return {
         'schemaVersion': manifest['schemaVersion'], 'author': 'Neil Mitchell', 'modifier': 'Neil Mitchell',
@@ -101,15 +103,16 @@ def write_reports(result: dict, output: Path) -> None:
     lines = ['# UwU differential parity', '', 'Author: Neil Mitchell', 'Modifier: Neil Mitchell', '',
              f"Reference: `{result['referenceSha']}`. Parser: `{result['parserVersion']}`.", '',
              result['confidence'], '',
-             f"Mode: **{result['mode']}**. Exact cases: **{summary['exactCases']}**; "
-             f"mismatching cases: **{summary['mismatchingCases']}**; tolerated cases: **0**.", '',
-             '| Case | Result | Evidence scope |', '|---|---|---|']
+             (f"Mode: **{result['mode']}**. Exact cases: **{summary['exactCases']}**; "
+              f"mismatching cases: **{summary['mismatchingCases']}**; tolerated cases: **0**."), '',
+             '| Case | Result | Disposition | Evidence scope |', '|---|---|---|---|']
     for row in result['cases']:
-        lines.append(f"| {row['id']} | {row['status']} | {row['scope']} |")
+        lines.append(f"| {row['id']} | {row['status']} | {row['disposition'] or 'observed-exact'} | {row['scope']} |")
     for row in result['cases']:
         if row['status'] == 'mismatch':
             lines.extend(['', f"## Differences: {row['id']}", '', '```json',
                           json.dumps(row['differences'], indent=2), '```'])
+            lines.extend(['', f"Disposition: **{row['disposition']}**. {row['nextEvidence']}"])
     lines.extend(['', '## Blocked scope', ''])
     lines.extend(f"- **{item['surface']}**: {item['reason']}" for item in result['blockedSurfaces'])
     (output / 'parity.md').write_text('\n'.join(lines) + '\n', encoding='utf-8')

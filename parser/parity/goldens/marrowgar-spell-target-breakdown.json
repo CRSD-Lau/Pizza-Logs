@@ -1,0 +1,408 @@
+{
+  "author": "Neil Mitchell",
+  "modifier": "Neil Mitchell",
+  "evidence": {
+    "kind": "local-reference",
+    "sourceSha256": "19d8ac0a5e2867c80dc60d636a44fe8c8e1bc09337855e501d48506383089331",
+    "referenceSha": "4c046d266b85ad833ab4d70addb0b6f1a16647e3",
+    "observedAt": "2026-09-04T22:04:04.933600+00:00",
+    "pythonVersion": "3.11.9",
+    "configuration": {
+      "fileYear": 2026,
+      "archiveTimestamp": "2026-09-04T00:00:00Z",
+      "realm": "Lordaeron"
+    },
+    "method": "Unmodified LogsSeparator, logs_fix.normalize, and THE_LOGS report methods. Archive extraction and publication eligibility are not covered. Damage detail uses get_numbers_breakdown_wrap, including target filters; values are not recomputed from reference logs."
+  },
+  "normalized": {
+    "sessions": [
+      {
+        "durationMs": 181000,
+        "totalDamage": 196289,
+        "heal": 0,
+        "damageTaken": 1001,
+        "players": {
+          "Syntheticmage": {
+            "totalDamage": 196289,
+            "heal": 0,
+            "damageTaken": 1001
+          }
+        }
+      }
+    ],
+    "encounters": [
+      {
+        "name": "Lord Marrowgar",
+        "difficulty": "10N",
+        "outcome": "KILL",
+        "durationMs": 181000,
+        "totalDamage": 196289,
+        "heal": 0,
+        "damageTaken": 1001,
+        "damageBreakdown": {
+          "Syntheticmage": {
+            "spells": {
+              "Frostbolt": 99190,
+              "Fireball": 97099
+            },
+            "targets": {
+              "Bone Spike": 32790,
+              "Lord Marrowgar": 163499
+            }
+          }
+        }
+      }
+    ]
+  },
+  "referenceDisplay": {
+    "sessions": [
+      {
+        "duration": "0:03:01.000",
+        "columns": {
+          "useful": {},
+          "damage": {
+            "Total": {
+              "value": "196 289",
+              "per_second": "1 084.4",
+              "percent": 0
+            },
+            "Syntheticmage": {
+              "value": "196 289",
+              "per_second": "1 084.4",
+              "percent": 100
+            }
+          },
+          "heal": {},
+          "heal_total": {},
+          "taken": {
+            "Total": {
+              "value": "1 001",
+              "per_second": "5.5",
+              "percent": 0
+            },
+            "Syntheticmage": {
+              "value": "1 001",
+              "per_second": "5.5",
+              "percent": 100
+            }
+          }
+        }
+      }
+    ],
+    "encounterBreakdowns": [
+      {
+        "Syntheticmage": {
+          "allTargets": {
+            "ACTUAL": {
+              "42842": "99 190",
+              "42833": "97 099",
+              "Total": "196 289"
+            },
+            "HITS": {
+              "42842": {
+                "HIT": {
+                  "total": "91",
+                  "hits": "91",
+                  "crits": "",
+                  "percent": "",
+                  "hit_avg": "1 090",
+                  "hits_avg": [
+                    "1 180",
+                    "1 172",
+                    "1 136",
+                    "1 044",
+                    "1 008",
+                    "1 000"
+                  ],
+                  "crit_avg": "",
+                  "crits_avg": []
+                },
+                "DOT": {
+                  "total": "",
+                  "hits": "",
+                  "crits": "",
+                  "percent": "",
+                  "hit_avg": "",
+                  "hits_avg": [],
+                  "crit_avg": "",
+                  "crits_avg": []
+                }
+              },
+              "42833": {
+                "HIT": {
+                  "total": "89",
+                  "hits": "89",
+                  "crits": "",
+                  "percent": "",
+                  "hit_avg": "1 091",
+                  "hits_avg": [
+                    "1 179",
+                    "1 172",
+                    "1 136",
+                    "1 046",
+                    "1 010",
+                    "1 003"
+                  ],
+                  "crit_avg": "",
+                  "crits_avg": []
+                },
+                "DOT": {
+                  "total": "",
+                  "hits": "",
+                  "crits": "",
+                  "percent": "",
+                  "hit_avg": "",
+                  "hits_avg": [],
+                  "crit_avg": "",
+                  "crits_avg": []
+                }
+              }
+            },
+            "OTHER": {},
+            "MISSES": {
+              "Total": ""
+            },
+            "CASTS": {},
+            "PETS": {},
+            "TARGETS": {
+              "NPCS": {
+                "008F06": "Bone Spike",
+                "008F04": "Lord Marrowgar"
+              },
+              "Players": {},
+              "Pets": {}
+            },
+            "HITS_DATA": {
+              "42842": "",
+              "42833": ""
+            },
+            "SPELLS_DATA": {
+              "42842": {
+                "id": "42842",
+                "name": "Frostbolt",
+                "color": "frost",
+                "icon": "spell_frost_frostbolt02"
+              },
+              "42833": {
+                "id": "42833",
+                "name": "Fireball",
+                "color": "frost",
+                "icon": "spell_fire_flamebolt"
+              }
+            },
+            "ACTUAL_PERCENT": {
+              "42842": "50.5%",
+              "42833": "49.5%",
+              "Total": "100.0%"
+            },
+            "REDUCED": {
+              "Total": ""
+            },
+            "REDUCED_PERCENT": {
+              "Total": "0.0%"
+            },
+            "REDUCED_DETAILED": {},
+            "MISS_DETAILED": {},
+            "SOURCE_NAME": "Syntheticmage",
+            "IS_PLAYER": true,
+            "SOURCE": "Syntheticmage"
+          },
+          "filteredTargets": {
+            "008F06": {
+              "ACTUAL": {
+                "42842": "32 790",
+                "Total": "32 790"
+              },
+              "HITS": {
+                "42842": {
+                  "HIT": {
+                    "total": "30",
+                    "hits": "30",
+                    "crits": "",
+                    "percent": "",
+                    "hit_avg": "1 093",
+                    "hits_avg": [
+                      "1 180",
+                      "1 174",
+                      "1 138",
+                      "1 048",
+                      "1 012",
+                      "1 006"
+                    ],
+                    "crit_avg": "",
+                    "crits_avg": []
+                  },
+                  "DOT": {
+                    "total": "",
+                    "hits": "",
+                    "crits": "",
+                    "percent": "",
+                    "hit_avg": "",
+                    "hits_avg": [],
+                    "crit_avg": "",
+                    "crits_avg": []
+                  }
+                }
+              },
+              "OTHER": {},
+              "MISSES": {
+                "Total": ""
+              },
+              "CASTS": {},
+              "PETS": {},
+              "TARGETS": {
+                "NPCS": {
+                  "008F06": "Bone Spike",
+                  "008F04": "Lord Marrowgar"
+                },
+                "Players": {},
+                "Pets": {}
+              },
+              "HITS_DATA": {
+                "42842": ""
+              },
+              "SPELLS_DATA": {
+                "42842": {
+                  "id": "42842",
+                  "name": "Frostbolt",
+                  "color": "frost",
+                  "icon": "spell_frost_frostbolt02"
+                }
+              },
+              "ACTUAL_PERCENT": {
+                "42842": "100.0%",
+                "Total": "100.0%"
+              },
+              "REDUCED": {
+                "Total": ""
+              },
+              "REDUCED_PERCENT": {
+                "Total": "0.0%"
+              },
+              "REDUCED_DETAILED": {},
+              "MISS_DETAILED": {},
+              "SOURCE_NAME": "Syntheticmage",
+              "IS_PLAYER": true,
+              "SOURCE": "Syntheticmage"
+            },
+            "008F04": {
+              "ACTUAL": {
+                "42842": "66 400",
+                "42833": "97 099",
+                "Total": "163 499"
+              },
+              "HITS": {
+                "42842": {
+                  "HIT": {
+                    "total": "61",
+                    "hits": "61",
+                    "crits": "",
+                    "percent": "",
+                    "hit_avg": "1 088",
+                    "hits_avg": [
+                      "1 178",
+                      "1 171",
+                      "1 135",
+                      "1 042",
+                      "1 006",
+                      "1 000"
+                    ],
+                    "crit_avg": "",
+                    "crits_avg": []
+                  },
+                  "DOT": {
+                    "total": "",
+                    "hits": "",
+                    "crits": "",
+                    "percent": "",
+                    "hit_avg": "",
+                    "hits_avg": [],
+                    "crit_avg": "",
+                    "crits_avg": []
+                  }
+                },
+                "42833": {
+                  "HIT": {
+                    "total": "89",
+                    "hits": "89",
+                    "crits": "",
+                    "percent": "",
+                    "hit_avg": "1 091",
+                    "hits_avg": [
+                      "1 179",
+                      "1 172",
+                      "1 136",
+                      "1 046",
+                      "1 010",
+                      "1 003"
+                    ],
+                    "crit_avg": "",
+                    "crits_avg": []
+                  },
+                  "DOT": {
+                    "total": "",
+                    "hits": "",
+                    "crits": "",
+                    "percent": "",
+                    "hit_avg": "",
+                    "hits_avg": [],
+                    "crit_avg": "",
+                    "crits_avg": []
+                  }
+                }
+              },
+              "OTHER": {},
+              "MISSES": {
+                "Total": ""
+              },
+              "CASTS": {},
+              "PETS": {},
+              "TARGETS": {
+                "NPCS": {
+                  "008F06": "Bone Spike",
+                  "008F04": "Lord Marrowgar"
+                },
+                "Players": {},
+                "Pets": {}
+              },
+              "HITS_DATA": {
+                "42842": "",
+                "42833": ""
+              },
+              "SPELLS_DATA": {
+                "42833": {
+                  "id": "42833",
+                  "name": "Fireball",
+                  "color": "frost",
+                  "icon": "spell_fire_flamebolt"
+                },
+                "42842": {
+                  "id": "42842",
+                  "name": "Frostbolt",
+                  "color": "frost",
+                  "icon": "spell_frost_frostbolt02"
+                }
+              },
+              "ACTUAL_PERCENT": {
+                "42842": "40.6%",
+                "42833": "59.4%",
+                "Total": "100.0%"
+              },
+              "REDUCED": {
+                "Total": ""
+              },
+              "REDUCED_PERCENT": {
+                "Total": "0.0%"
+              },
+              "REDUCED_DETAILED": {},
+              "MISS_DETAILED": {},
+              "SOURCE_NAME": "Syntheticmage",
+              "IS_PLAYER": true,
+              "SOURCE": "Syntheticmage"
+            }
+          }
+        }
+      }
+    ]
+  }
+}

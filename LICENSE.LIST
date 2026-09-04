@@ -104,6 +104,8 @@ The lockfiles describe the transitive dependency graph. This update does not est
 
 Warcraft names, artwork, icons, models, video, audio, and other media are outside the dependency inventory. Their ownership and rights for redistribution or acquisition remain unverified; an MIT license on Pizza Logs source does not establish those rights.
 
+The current-file hashes, local generation chain, remote icon/model consumers, missing grants, and measurable A16 closure criteria are recorded in [Asset provenance and rights evidence](docs/security/asset-provenance.md). The register identifies evidence gaps; it does not certify media rights.
+
 The UwU reference inspected at `4c046d266b85ad833ab4d70addb0b6f1a16647e3` has no detected general redistribution license. Its README permits self-hosting, which does not establish permission to copy or redistribute its implementation in Pizza Logs. Reference comparison and provenance are documented separately in `docs/uwu-analytics-parity.md`.
 
 Refresh this inventory after dependency manifest or lockfile changes. License identifiers and retained notices are evidence for review, not a legal clearance conclusion.

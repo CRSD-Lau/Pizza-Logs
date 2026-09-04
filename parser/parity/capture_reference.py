@@ -91,6 +91,8 @@ def main() -> None:
     sessions = []
     displays = []
     encounters = []
+    breakdown_displays = []
+    include_breakdown = args.case_id == 'marrowgar-spell-target-breakdown'
     separator = LogsSeparator(server='Lordaeron', timestamp=datetime(2026, 9, 4, tzinfo=timezone.utc).timestamp())
     for index, raw_slice in enumerate(separator.generate_segments(source.splitlines(keepends=True))):
         report_id = f'{raw_slice.id[:2]}-09-04--12-00--Synthetic{digest[:12]}x{index}--Lordaeron'
@@ -106,8 +108,37 @@ def main() -> None:
         segments = sorted((s for group in report.SEGMENTS.values() for s in group),
                           key=lambda s: s.start)
         for segment in segments:
-            data, _ = metrics(report, [[segment.start, segment.end]])
-            data.pop('players')
+            selected = [[segment.start, segment.end]]
+            data, _ = metrics(report, selected)
+            players = data.pop('players')
+            if include_breakdown:
+                data['damageBreakdown'] = {}
+                raw_breakdown = {}
+                for name, player in players.items():
+                    if player['totalDamage'] <= 0:
+                        continue
+                    detail = report.get_numbers_breakdown_wrap(selected, name)
+                    targets = {}
+                    filtered = {}
+                    for category in detail['TARGETS'].values():
+                        for guid, target_name in category.items():
+                            target = report.get_numbers_breakdown_wrap(selected, name, filter_guid=guid)
+                            filtered[guid] = target
+                            amount = numeric(target['ACTUAL']['Total'])
+                            if amount:
+                                if target_name in targets:
+                                    raise ValueError('Synthetic target names must be unique for name-keyed comparison.')
+                                targets[target_name] = amount
+                    spell_amounts = {detail['SPELLS_DATA'][spell]['name']: numeric(amount)
+                                     for spell, amount in detail['ACTUAL'].items() if spell != 'Total'}
+                    if len(spell_amounts) != len(detail['ACTUAL']) - 1:
+                        raise ValueError('Synthetic spell names must be unique for name-keyed comparison.')
+                    data['damageBreakdown'][name] = {
+                        'spells': spell_amounts,
+                        'targets': targets,
+                    }
+                    raw_breakdown[name] = {'allTargets': detail, 'filteredTargets': filtered}
+                breakdown_displays.append(raw_breakdown)
             encounters.append({'name': segment.encounter_name, 'difficulty': segment.difficulty,
                                'outcome': {'kill': 'KILL', 'wipe': 'WIPE'}.get(segment.attempt_type, 'UNKNOWN'), **data})
     result = {
@@ -121,6 +152,9 @@ def main() -> None:
         'normalized': {'sessions': sessions, 'encounters': encounters},
         'referenceDisplay': {'sessions': displays},
     }
+    if include_breakdown:
+        result['referenceDisplay']['encounterBreakdowns'] = breakdown_displays
+        result['evidence']['method'] += ' Damage detail uses get_numbers_breakdown_wrap, including target filters; values are not recomputed from reference logs.'
     args.output.parent.mkdir(parents=True, exist_ok=True)
     args.output.write_text(json.dumps(result, indent=2, ensure_ascii=False) + '\n', encoding='utf-8')
 

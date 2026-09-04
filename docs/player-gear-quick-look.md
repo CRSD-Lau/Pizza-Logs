@@ -1,8 +1,14 @@
 # Player Gear Quick Look
 
+Author: Neil Mitchell
+
+Last modified by: Neil Mitchell
+
 Pizza Logs exposes current Warmane equipment from the class avatar shown beside a player. The avatar is a 44px button with a small shield badge. Hover it with a mouse, focus it with the keyboard, or tap it to load the quick look.
 
 On desktop, the quick look mirrors the Wrath character equipment pane: eight armor slots flank Warmane's dressed 3D character model and the weapon slots sit along the bottom. Empty slots remain visible, so the layout does not shift between characters. Narrow screens use a compact two-column equipment list so every item remains readable and do not load the heavier model viewer.
+
+The model canvas uses the portrait's measured aspect ratio to fill its height. Camera framing leaves room for tall helmets and places the character lower in the portrait, while the equipment rails, identity overlay and GearScore stay in their existing positions.
 
 The tooltip shows:
 

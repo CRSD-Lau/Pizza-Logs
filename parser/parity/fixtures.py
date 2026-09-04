@@ -24,7 +24,7 @@ def spell(second: int, amount: int, *, source=PLAYER, target=BOSS,
 
 
 def synthetic_cases() -> dict[str, list[str]]:
-    return {
+    cases = {
         'marrowgar-dense-wipe': [spell(second, 1000 + second) for second in range(121)],
         'marrowgar-dense-kill': [spell(second, 1000 + second) for second in range(121)]
         + [event(121, 'UNIT_DIED', BOSS, BOSS)],
@@ -101,6 +101,34 @@ def synthetic_cases() -> dict[str, list[str]]:
             spell(30, 1000).replace('9/4 12:00:30', '1/1 00:00:20'),
         ],
     }
+    # These are separately captured paired cases, not inferred successes from
+    # the detector's internal mode table.
+    for mode, rank in (('10h', '70824'), ('25n', '70823'), ('25h', '70825')):
+        cases[f'marrowgar-dense-{mode}'] = [
+            line.replace('69146,"Coldflame"', f'{rank},"Coldflame"')
+            for line in cases['marrowgar-dense-10n']
+        ]
+    cases['marrowgar-dense-10n-wipe'] = cases['marrowgar-dense-10n'][:-1]
+    alternate_target = ('0xF130008F06000002', 'Bone Spike', '0xa48')
+    # Retain the initially observed segmentation mismatch as evidence rather
+    # than dropping the sparse input after obtaining a matching dense case.
+    cases['marrowgar-sparse-targets'] = [
+        event(second, 'SPELL_DAMAGE', BOSS, PLAYER,
+              '69146,"Coldflame",0x10,1001,0,16,0,0,0,nil,nil,nil')
+        if second == 1 else spell(
+            second, 1000 + second, target=alternate_target if second % 3 == 0 else BOSS,
+        ).replace('42842,"Frostbolt"', '42833,"Fireball"' if second % 2 else '42842,"Frostbolt"')
+        for second in range(121)
+    ] + [event(121, 'UNIT_DIED', BOSS, BOSS)]
+    cases['marrowgar-spell-target-breakdown'] = [
+        event(second, 'SPELL_DAMAGE', BOSS, PLAYER,
+              '69146,"Coldflame",0x10,1001,0,16,0,0,0,nil,nil,nil')
+        if second == 1 else spell(
+            second, 1000 + second, target=alternate_target if second > 0 and second % 6 == 0 else BOSS,
+        ).replace('42842,"Frostbolt"', '42833,"Fireball"' if second % 2 else '42842,"Frostbolt"')
+        for second in range(181)
+    ] + [event(181, 'UNIT_DIED', BOSS, BOSS)]
+    return cases
 
 
 def fixture_bytes(case_id: str) -> bytes:

@@ -117,67 +117,123 @@
       "id": "marrowgar-dense-wipe",
       "claim": "difference",
       "reason": "Insufficient difficulty evidence is TBD in UwU and UNKNOWN in Pizza.",
-      "reviewedDifferenceSha256": "f74187672a6d3348f72bfad4ad5746f3770011919698c444a17ade135089f231"
+      "reviewedDifferenceSha256": "f74187672a6d3348f72bfad4ad5746f3770011919698c444a17ade135089f231",
+      "disposition": "canonical-intentional",
+      "nextEvidence": "Keep UNKNOWN when mode evidence is absent; separately paired mode-identified kills and wipes test actual segmentation and outcome."
     },
     {
       "id": "marrowgar-dense-kill",
       "claim": "difference",
       "reason": "Insufficient mode evidence changes unknown labels and kill presentation.",
-      "reviewedDifferenceSha256": "02e0e2be1a8792f0fceee36fb95600b21ce9b50def82ca415f5efe7d9bd8ea66"
+      "reviewedDifferenceSha256": "02e0e2be1a8792f0fceee36fb95600b21ce9b50def82ca415f5efe7d9bd8ea66",
+      "disposition": "canonical-intentional",
+      "nextEvidence": "Keep UNKNOWN when mode evidence is absent; separately paired mode-identified kills and wipes test actual segmentation and outcome."
     },
     {
       "id": "back-to-back-pulls",
       "claim": "difference",
       "reason": "Observed boundaries and totals agree; missing mode evidence changes unknown labels and kill presentation.",
-      "reviewedDifferenceSha256": "02e0e2be1a8792f0fceee36fb95600b21ce9b50def82ca415f5efe7d9bd8ea66"
+      "reviewedDifferenceSha256": "02e0e2be1a8792f0fceee36fb95600b21ce9b50def82ca415f5efe7d9bd8ea66",
+      "disposition": "canonical-intentional",
+      "nextEvidence": "Keep UNKNOWN when mode evidence is absent; separately paired mode-identified kills and wipes test actual segmentation and outcome."
     },
     {
       "id": "multiple-sessions",
       "claim": "difference",
       "reason": "After the calendar fix both sessions and encounters separate correctly; unknown difficulty is still TBD versus UNKNOWN.",
-      "reviewedDifferenceSha256": "4109f4c3af370b2b76dd938a6c5e45a42126f169a6ba6f90c4d48f546a9c4eca"
+      "reviewedDifferenceSha256": "4109f4c3af370b2b76dd938a6c5e45a42126f169a6ba6f90c4d48f546a9c4eca",
+      "disposition": "canonical-intentional",
+      "nextEvidence": "Keep UNKNOWN when mode evidence is absent; separately paired mode-identified kills and wipes test actual segmentation and outcome."
     },
     {
       "id": "friendly-fire",
       "claim": "difference",
       "reason": "Reference recipient roster inference differs when a player only appears as a damage target; canonical Pizza excludes that friendly damage from outgoing totals.",
-      "reviewedDifferenceSha256": "81145faa3caeaf18b56542c4b6fea14c6af5d571727b962f82444852876dd45b"
+      "reviewedDifferenceSha256": "81145faa3caeaf18b56542c4b6fea14c6af5d571727b962f82444852876dd45b",
+      "disposition": "canonical-intentional",
+      "nextEvidence": "Keep friendly damage out of outgoing enemy damage and retain recipient incoming damage; real mechanic-specific friendly-fire views require additional paired evidence."
     },
     {
       "id": "absorbed-damage",
       "claim": "difference",
       "reason": "The minimal shield case attributes 200 healing-plus-absorbs in Pizza and zero in the reference.",
-      "reviewedDifferenceSha256": "e1d38f36f442b3b2b8cb93fd5a3862ad8eef0a5a2b2d5c07a1fa3d6f73884254"
+      "reviewedDifferenceSha256": "e1d38f36f442b3b2b8cb93fd5a3862ad8eef0a5a2b2d5c07a1fa3d6f73884254",
+      "disposition": "insufficient-evidence",
+      "nextEvidence": "Capture richer shield ownership/removal/overlap cases and permitted real shield data before attributing the reference omission to a general defect."
     },
     {
       "id": "damage-event-coverage",
       "claim": "difference",
       "reason": "UwU session damage omits DAMAGE_SHIELD and DAMAGE_SPLIT; canonical Pizza includes them.",
-      "reviewedDifferenceSha256": "f45af11ffe959e4ed9f3fe7159db770b7b8b3858ad35dd63031b9121e70deb38"
+      "reviewedDifferenceSha256": "f45af11ffe959e4ed9f3fe7159db770b7b8b3858ad35dd63031b9121e70deb38",
+      "disposition": "canonical-intentional",
+      "nextEvidence": "Preserve the Skada damage event contract; a future explicitly named compatibility view must retain canonical amounts separately."
     },
     {
       "id": "year-rollover",
       "claim": "difference",
       "reason": "The reference text splitter and report method produce a negative year-rollover duration. Canonical Pizza retains the positive elapsed time and correct UTC year.",
-      "reviewedDifferenceSha256": "92f3dab365054f51d258f6ef023c86bddf1107729358f63c3af06ea8183725f9"
+      "reviewedDifferenceSha256": "92f3dab365054f51d258f6ef023c86bddf1107729358f63c3af06ea8183725f9",
+      "disposition": "reference-defect",
+      "nextEvidence": "The identical December/January bytes produce a negative reference duration; retain positive elapsed time and recheck after an explicit reference revision update."
     },
     {
       "id": "icc-25n-synthetic",
       "claim": "difference",
       "reason": "Existing Pizza fixture uses modern encounter markers and placeholder creature IDs; reference segmentation and duration differ.",
-      "reviewedDifferenceSha256": "dd8d450435c25230e39519a8eb6d383f1707728cbfe6ae080977bd46e0de2389"
+      "reviewedDifferenceSha256": "dd8d450435c25230e39519a8eb6d383f1707728cbfe6ae080977bd46e0de2389",
+      "disposition": "insufficient-evidence",
+      "nextEvidence": "Obtain a representative original Warmane log with authentic creature IDs and mode evidence; marker-based placeholder fixtures cannot establish reference encounter support."
     },
     {
       "id": "icc-25h-synthetic",
       "claim": "difference",
       "reason": "Existing Pizza fixture uses modern encounter markers and placeholder creature IDs; reference segmentation and duration differ.",
-      "reviewedDifferenceSha256": "eb5c8f76ad455f8caa27ae23fc2f7949729576d25aeeda27ac355d02c4f78640"
+      "reviewedDifferenceSha256": "eb5c8f76ad455f8caa27ae23fc2f7949729576d25aeeda27ac355d02c4f78640",
+      "disposition": "insufficient-evidence",
+      "nextEvidence": "Obtain a representative original Warmane log with authentic creature IDs and mode evidence; marker-based placeholder fixtures cannot establish reference encounter support."
     },
     {
       "id": "gunship-kill-synthetic",
       "claim": "difference",
       "reason": "Existing Pizza fixture uses modern encounter markers and placeholder creature IDs; reference segmentation and duration differ.",
-      "reviewedDifferenceSha256": "2a55f4fac35df64c0a6106cf35563ac314d1a2121e41cb0336a3a09decbe97ef"
+      "reviewedDifferenceSha256": "2a55f4fac35df64c0a6106cf35563ac314d1a2121e41cb0336a3a09decbe97ef",
+      "disposition": "insufficient-evidence",
+      "nextEvidence": "Obtain a representative original Warmane log with authentic creature IDs and mode evidence; marker-based placeholder fixtures cannot establish reference encounter support."
+    },
+    {
+      "id": "marrowgar-dense-10h",
+      "claim": "exact",
+      "scope": "one synthetic 10H kill: observed mode, outcome, duration, headlines and roster"
+    },
+    {
+      "id": "marrowgar-dense-25n",
+      "claim": "exact",
+      "scope": "one synthetic 25N kill: observed mode, outcome, duration, headlines and roster"
+    },
+    {
+      "id": "marrowgar-dense-25h",
+      "claim": "exact",
+      "scope": "one synthetic 25H kill: observed mode, outcome, duration, headlines and roster"
+    },
+    {
+      "id": "marrowgar-dense-10n-wipe",
+      "claim": "exact",
+      "scope": "one synthetic mode-identified 10N wipe: observed boundaries, mode, outcome and headlines"
+    },
+    {
+      "id": "marrowgar-spell-target-breakdown",
+      "claim": "exact",
+      "scope": "one synthetic 10N kill: two damage spells and two targets; exact encounter amount maps from actual reference detail routes; no displayed ordering/rate or universal spell claim",
+      "damageBreakdown": true
+    },
+    {
+      "id": "marrowgar-sparse-targets",
+      "claim": "difference",
+      "reason": "Sparse boss-target activity yields no reference encounter while Pizza retains the attempt; the separately paired dense two-target fixture does segment in both.",
+      "disposition": "insufficient-evidence",
+      "nextEvidence": "Retain this synthetic segmentation difference and test authentic sparse-activity pulls before treating either threshold as generally correct.",
+      "reviewedDifferenceSha256": "1f884a09a9751de6863caad717af3c18ebe04e11a169a4ff5df77f44103813b0"
     }
   ],
   "blockedSurfaces": [
@@ -191,7 +247,7 @@
     },
     {
       "surface": "all raid modes and special mechanics",
-      "reason": "A representative synthetic Marrowgar kill is not the required multi-raid, multi-mode corpus."
+      "reason": "Four paired Marrowgar mode kills and one mode-identified wipe do not cover other bosses, raids, mode conflicts or special mechanics."
     },
     {
       "surface": "display rounding and row order",
@@ -199,7 +255,7 @@
     },
     {
       "surface": "per-spell and per-target breakdown, auras, powers, consumables, deaths, friendly fire",
-      "reason": "Implemented Pizza features lack paired normalized external observations in this first corpus."
+      "reason": "One two-spell/two-target damage detail case is paired. Healing/recipient details, aura/power/consumable/death surfaces and broader spell/target mechanics remain unproven."
     },
     {
       "surface": "character/spec, leaderboards, PvE statistics, filtering and comparisons",
@@ -209,5 +265,11 @@
       "surface": "historical five-pull acceptance report",
       "reason": "Reference outputs exist, but the original safe source fixture is unavailable; saved constants cannot establish a differential pass."
     }
-  ]
+  ],
+  "differenceClassification": {
+    "canonical-intentional": "Preserved canonical policy differs from the reference; this remains a parity failure.",
+    "reference-defect": "Identical synthetic input demonstrates invalid reference output in this named case only.",
+    "insufficient-evidence": "A mismatch exists, but the available case cannot establish a general Pizza or reference defect.",
+    "pizza-defect": "Independently demonstrated incorrect Pizza behavior requiring a canonical fix and a regression test."
+  }
 }

@@ -8,9 +8,10 @@ Pizza Logs preserves independently computed canonical combat primitives. UwU
 compatibility requires a named input, configuration, reference revision, and
 comparison surface. Matching a written formula is insufficient.
 
-The corpus demonstrates **9 exact cases, 11 mismatching cases, zero tolerated
+The corpus demonstrates **14 exact cases, 12 mismatching cases, zero tolerated
 cases, and seven unproven surface categories**. Most exact cases cover small
-session primitives; one covers a Marrowgar 10N kill. Complete Tier-1 or live
+session primitives; six now cover named Marrowgar encounters, including all four
+modes, a 10N wipe and one spell/target breakdown. Complete Tier-1 or live
 UwU parity is **not demonstrated**.
 
 ## Reference and provenance
@@ -61,12 +62,12 @@ where live reports were inaccessible. It never means a live pass.
 |---|---|
 | Session damage, effective healing, Heal, incoming damage | Exact in named simple fixtures; environmental omission corrected. Absorb/friendly-fire/event-set cases differ. |
 | Session boundaries | Successive dates now separate correctly; a 24-hour gap is paired. Universal raid grouping is unproven. |
-| Encounter order, mode, result, duration, totals | One dense Marrowgar 10N kill matches. Missing-mode behavior and three old synthetic fixtures differ. |
+| Encounter order, mode, result, duration, totals | Dense Marrowgar 10N/10H/25N/25H kills and a 10N wipe match. Missing-mode, sparse-target segmentation and three old synthetic fixtures differ. |
 | Roster and pet rollup | One summon matches; ambiguous ownership and recipient-only roster inference remain unproven. |
 | Duration precision | Exact milliseconds in named cases. Reference negative year-rollover duration is not copied into canonical data. |
 | Display, rounding, sorting | Reference strings recorded. Pizza locale/rounding differs; no displayed parity claim. |
 | Damage/heal/taken/healed player detail | Routes/features inspected; per-recipient/per-spell normalization incomplete. |
-| Per-spell, per-target, boss/useful damage | These are separate from headlines. Full breakdown and boss-specific useful rules remain unproven. |
+| Per-spell, per-target, boss/useful damage | Two damage spells and two distinct targets match in one named 10N encounter. Crossed spell-by-target matrices, same-name entities, full breakdown and boss-specific useful rules remain unproven. |
 | Casts/actions and spell search | Source routes observed; no universal timeline or cross-report search claim. |
 | Consumables, all/player auras, powers | Pizza implementations exist; paired coverage missing. |
 | Deaths and prior damage | Environmental death context has a regression; full death-page parity unproven. |
@@ -91,14 +92,15 @@ python -m parity run --output-dir /tmp/pizza-parity-full
 ```
 
 `verify` checks exact claims and fingerprints of reviewed mismatches. The full
-assertion, `run`, exits **1**, preserving 11 failures and seven skipped/unproven
+assertion, `run`, exits **1**, preserving 12 failures and seven skipped/unproven
 categories in `parity.junit.xml`. Both produce `parity.json` and `parity.md`.
 There is no numeric tolerance or implicit golden update.
 
-The corpus includes 17 original scenarios plus all three existing synthetic
+The corpus includes 23 original scenarios plus all three existing synthetic
 fixture files: damage, healing recipients, overheal, misses, environmental
 damage, pets, absorbs, event kinds, overkill, friendly fire, UTF-8, unknown mode,
-back-to-back pulls, separate dates, and year rollover. It does not replace a
+back-to-back pulls, separate dates, year rollover, all four Marrowgar modes, a
+mode-identified wipe, and dense/sparse two-target cases. It does not replace a
 representative real multi-raid corpus.
 
 ## Canonical corrections and retained differences
@@ -113,6 +115,39 @@ representative real multi-raid corpus.
   behavior remain recorded differences. Canonical primitives are preserved.
 - No general UwU-compatible projection is exposed: the evidence is too narrow
   to apply reference quirks safely across historical data.
+
+
+## Closeout evidence expansion and classifications
+
+The additional captures used the same unmodified pinned reference, Python 3.11.9,
+synthetic byte identity checks and denied network/process egress. Four mode/outcome
+cases and one damage-detail case add five exact comparisons. The dense damage-detail
+case records **Frostbolt 99,190; Fireball 97,099; Lord Marrowgar 163,499; Bone Spike
+32,790**, agreeing exactly with Pizza. Reference amounts come from its actual report
+detail methods, including separate target-filter calls. Untouched responses remain
+in the golden, separate from the name-keyed numerical comparison.
+
+The first shorter two-target experiment produced no reference encounter while
+Pizza retained one. That input remains a twelfth explicit mismatch; increasing
+activity to obtain the paired detail case did not remove the inconvenient observation.
+Neither case proves which segmentation threshold is preferable for authentic sparse
+Warmane fights.
+
+| Mismatch case(s) | Disposition | Required next evidence/action |
+|---|---|---|
+| `marrowgar-dense-wipe`, `marrowgar-dense-kill`, `back-to-back-pulls`, `multiple-sessions` | Canonical intentional | Preserve UNKNOWN mode/outcome rules; use the separately captured mode-identified cases for valid encounter claims. |
+| `friendly-fire` | Canonical intentional | Preserve outgoing enemy damage and recipient incoming damage; pair specific real friendly-fire mechanics separately. |
+| `damage-event-coverage` | Canonical intentional | Preserve Skada DAMAGE_SHIELD/DAMAGE_SPLIT amounts; do not silently omit them to match the reference. |
+| `year-rollover` | Reference defect in this input | Keep valid positive 30-second elapsed time; re-observe after an explicit reference upgrade. |
+| `absorbed-damage` | Insufficient evidence | Pair richer ownership/removal/overlap cases and representative permitted shield logs before assigning a general defect. |
+| Three existing ICC/Gunship placeholder fixtures | Insufficient evidence | Obtain authentic creature/mode evidence; modern markers and placeholder IDs do not establish reference behavior. |
+| `marrowgar-sparse-targets` | Insufficient evidence | Pair authentic sparse boss activity before changing either segmentation policy. |
+
+No existing mismatch currently demonstrates an unfixed canonical Pizza defect.
+This classification does not resolve full compatibility: all twelve remain failures
+of the strict comparison, with six canonical differences, one demonstrated reference
+negative-duration defect and five insufficient-evidence cases. The seven broader
+unproven categories remain open. No production compatibility projection is added.
 
 ## Historical acceptance data
 

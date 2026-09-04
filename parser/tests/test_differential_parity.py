@@ -3,11 +3,11 @@
 import hashlib
 import json
 from io import BytesIO
+from typing import ClassVar
 from urllib.error import HTTPError
 from xml.etree.ElementTree import parse
 
 import pytest
-
 from parity.__main__ import PACKAGE, run_suite, verify_regressions, write_reports
 from parity.compare import assess_case, compare, difference_fingerprint
 from parity.fixtures import case_ids, fixture_bytes
@@ -21,7 +21,8 @@ MANIFEST = json.loads((PACKAGE / 'manifest.json').read_text(encoding='utf-8'))
 def test_exact_claim_or_reviewed_difference_is_reproducible(case):
     source = fixture_bytes(case['id'])
     oracle = json.loads((PACKAGE / 'goldens' / f"{case['id']}.json").read_text(encoding='utf-8'))
-    row = assess_case(case['id'], parse_pizza(source), oracle, hashlib.sha256(source).hexdigest(),
+    row = assess_case(case['id'], parse_pizza(source, damage_breakdown=case.get('damageBreakdown', False)),
+                      oracle, hashlib.sha256(source).hexdigest(),
                       MANIFEST['reference']['inspectedSha'])
     if case['claim'] == 'exact':
         assert row['status'] == 'exact', row
@@ -66,12 +67,12 @@ def test_missing_or_stale_reference_is_blocked_instead_of_counted_as_exact():
 
 def test_reports_keep_mismatches_and_unproven_scope_visible(tmp_path):
     report = run_suite()
-    assert report['summary'] == {'exactCases': 9, 'toleratedCases': 0, 'mismatchingCases': 11,
+    assert report['summary'] == {'exactCases': 14, 'toleratedCases': 0, 'mismatchingCases': 12,
                                  'blockedCases': 0, 'blockedSurfaces': 7}
     assert verify_regressions(report) == []
     write_reports(report, tmp_path)
     junit = parse(tmp_path / 'parity.junit.xml').getroot()
-    assert junit.attrib['failures'] == '11'
+    assert junit.attrib['failures'] == '12'
     assert junit.attrib['skipped'] == '7'
     assert 'Complete or live UwU parity is not claimed' in (tmp_path / 'parity.md').read_text()
     assert json.loads((tmp_path / 'parity.json').read_text())['mode'] == 'full-assessment'
@@ -94,11 +95,39 @@ def test_offline_suite_does_not_open_network(monkeypatch):
         raise AssertionError('Offline CI attempted network access')
 
     monkeypatch.setattr(socket, 'create_connection', deny)
-    assert len(run_suite()['cases']) == 20
+    assert len(run_suite()['cases']) == 26
+
+
+def test_reviewed_mismatches_have_explicit_disposition_and_remaining_evidence():
+    rows = [case for case in MANIFEST['cases'] if case['claim'] == 'difference']
+    counts = {}
+    for case in rows:
+        assert case['disposition'] in MANIFEST['differenceClassification']
+        assert case['nextEvidence']
+        counts[case['disposition']] = counts.get(case['disposition'], 0) + 1
+    assert counts == {'canonical-intentional': 6, 'reference-defect': 1, 'insufficient-evidence': 5}
+
+
+def test_damage_detail_compares_spell_and_target_amounts_not_only_equal_headlines():
+    case_id = 'marrowgar-spell-target-breakdown'
+    source = fixture_bytes(case_id)
+    oracle = json.loads((PACKAGE / 'goldens' / f'{case_id}.json').read_text())
+    actual = parse_pizza(source, damage_breakdown=True)
+    actor = actual['encounters'][0]['damageBreakdown']['Syntheticmage']
+    # Reallocation preserves the headline and spell total but must fail parity.
+    actor['spells']['Frostbolt'] -= 1
+    actor['spells']['Fireball'] += 1
+    actor['targets']['Lord Marrowgar'] -= 1
+    actor['targets']['Bone Spike'] += 1
+    result = assess_case(case_id, actual, oracle, hashlib.sha256(source).hexdigest(),
+                         MANIFEST['reference']['inspectedSha'])
+    assert result['status'] == 'mismatch'
+    assert len(result['differences']) == 4
+    assert all('.damageBreakdown.' in row['path'] for row in result['differences'])
 
 
 class Response(BytesIO):
-    headers = {'ETag': '"fixture-etag"'}
+    headers: ClassVar[dict[str, str]] = {'ETag': '"fixture-etag"'}
 
 
 def test_reference_check_uses_etag_and_detects_new_revision(tmp_path):
