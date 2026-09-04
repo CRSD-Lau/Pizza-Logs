@@ -94,7 +94,7 @@ PET_OWNER_FORWARD_SPELL_IDS: frozenset[int] = frozenset({
     48989, 48990, 33976,
     # Warlock: Health Funnel ranks and pet-only owner effects
     755, 3698, 3699, 3700, 11693, 11694, 11695, 16569, 27259, 47856,
-    60829, 63560, 48743,
+    60829, 63560, 48743, 54181,
 })
 PET_OWNER_REVERSE_SPELL_IDS: frozenset[int] = frozenset({
     34650,  # Shadowfiend Mana Leech: pet -> owning priest
@@ -417,6 +417,8 @@ def _owner_evidence_from_event(parts: list[str]) -> Optional[tuple[str, str, str
 
     if (
         spell_id in PET_OWNER_FORWARD_SPELL_IDS
+        # Fel Synergy (54181) is evidenced only as the owner's direct pet heal.
+        and (spell_id != 54181 or parts[0] == "SPELL_HEAL")
         and _is_player(src_guid)
         and _is_permanent_pet_guid(dst_guid)
         and _pet_flags(parts[6])
@@ -1401,12 +1403,9 @@ class CombatLogParser:
             if not is_heal and _is_player(dst_guid):
                 continue
 
-            # Skip heals landing on non-player targets (pets, totems, etc.)
-            # Skada uses flags_src (source filter only), but player-to-pet heals
-            # are a negligible fraction of total and keeping the dst filter avoids
-            # inflating totals with totem/pet heals most raiders don't expect to see.
-            if is_heal and not _is_player(dst_guid):
-                continue
+            # Healing eligibility follows the source, already qualified above.
+            # Skada records effective healing to any recipient, including
+            # Valithria, friendly NPCs, and pets; destination type must not drop it.
 
             # Encounter and UwU Custom Slice damage use the raw reported amount.
             # Overkill and absorbed damage remain available in parsed primitives

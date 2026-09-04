@@ -1849,18 +1849,15 @@ def test_heal_no_overheal_unchanged():
 NON_PLAYER_GUID = "0xF130000000000999"   # pet/totem — not a player GUID
 
 
-def test_heal_to_non_player_not_counted():
-    """Heals landing on pets/totems must not appear in healer's total_healing.
-
-    UWU only counts heals where dst_guid is a player.
-    """
+def test_heal_to_non_player_counts_for_eligible_source():
+    """Skada filters healing sources, so pet recipients also count."""
     ts_start = 46800.0
 
     segment = [
         ("4/19 13:00:00.000", [ENCOUNTER_START, "1234", '"Lord Marrowgar"', "6", "25"], ts_start),
         # Healer heals a player (should count)
         ("4/19 13:00:05.000", _heal_parts(PLAYER_GUID, "Healer", PLAYER_GUID, "Healer", 50_000), ts_start + 5.0),
-        # Healer heals a non-player (pet) — must NOT count
+        # Healer heals a non-player (pet) — the source is still eligible.
         ("4/19 13:00:06.000", _heal_parts(PLAYER_GUID, "Healer", NON_PLAYER_GUID, "HunterPet", 200_000), ts_start + 6.0),
         # Boss dies
         ("4/19 13:01:00.000", _unit_died_parts("Lord Marrowgar"), ts_start + 60.0),
@@ -1872,8 +1869,8 @@ def test_heal_to_non_player_not_counted():
     assert enc is not None
     healer = next((p for p in enc.participants if p["name"] == "Healer"), None)
     assert healer is not None
-    assert healer["totalHealing"] == pytest.approx(50_000, abs=1), (
-        f"Only player-destined heal should count. Got {healer['totalHealing']:,.0f}, expected 50,000"
+    assert healer["totalHealing"] == pytest.approx(250_000, abs=1), (
+        f"Player and pet recipients both count. Got {healer['totalHealing']:,.0f}, expected 250,000"
     )
 
 

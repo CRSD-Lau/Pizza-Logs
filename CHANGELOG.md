@@ -23,6 +23,8 @@ This project follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) an
 
 ### Changed
 
+- Parser 1.1.1 counts effective player and owned-pet healing to NPCs, pets and totems in encounter totals and HPS, correcting omitted Valithria healing. Existing stored reports are not automatically recalculated.
+- Recognize Fel Synergy healing as owner-exclusive evidence for a controlled permanent pet, recovering supported pet damage attribution without treating generic healing as ownership.
 - Fit the hover character viewer to the full portrait height and lower its camera framing so tall headgear and feet remain visible.
 - Move the parser to a digest-pinned supported Alpine/Python runtime, removing the observed Debian package findings while retaining hash locks and non-root execution. Matched local parsing is 7–16% slower with lower peak memory; see the runtime runbook.
 - Persist complete uploads atomically with bounded conflict retries and completed-file deduplication; incomplete historical uploads require maintainer recovery.
