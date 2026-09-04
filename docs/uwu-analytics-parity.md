@@ -2,6 +2,8 @@
 
 Author: Neil Mitchell
 
+Last modified by: Neil Mitchell
+
 Pizza Logs preserves independently computed canonical combat primitives. UwU
 compatibility requires a named input, configuration, reference revision, and
 comparison surface. Matching a written formula is insufficient.

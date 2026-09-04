@@ -2,6 +2,8 @@
 
 Author: Neil Mitchell
 
+Last modified by: Neil Mitchell
+
 Static route inventory reviewed during the acquisition audit. Dynamic parameters are shown in brackets. Admin page access is checked by proxy.ts and action authorization; public reports are intentionally readable. Retired userscript endpoints return inert retirement scripts, not credentials.
 
 | Route | Kind / methods | Source |

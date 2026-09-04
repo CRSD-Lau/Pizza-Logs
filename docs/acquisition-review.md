@@ -1,7 +1,9 @@
 # Acquisition review and release conditions
 
-Author: Neil Mitchell  
-Last modified by: Neil Mitchell  
+Author: Neil Mitchell
+
+Last modified by: Neil Mitchell
+
 Observed: 2026-09-04
 
 ## Decision

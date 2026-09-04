@@ -484,7 +484,7 @@ export async function fetchWarmaneGuildRoster(
       const result = parseWarmaneGuildRosterHtml(await response.text(), context);
       if (result.ok) return { ...result, sourceUrl: url };
     } catch (error) {
-      console.error("Warmane guild roster HTML fetch error", { guildName: context.guildName, realm: context.realm, url, error });
+      console.error("Warmane guild roster HTML fetch error", { code: error instanceof Error && error.name === "AbortError" ? "UPSTREAM_TIMEOUT" : "UPSTREAM_FAILURE" });
     }
   }
 
@@ -496,7 +496,7 @@ export async function fetchWarmaneGuildRoster(
       const result = normalizeWarmaneGuildRosterPayload(await response.json(), context);
       if (result.ok) return { ...result, sourceUrl: url };
     } catch (error) {
-      console.error("Warmane guild roster JSON fetch error", { guildName: context.guildName, realm: context.realm, url, error });
+      console.error("Warmane guild roster JSON fetch error", { code: error instanceof Error && error.name === "AbortError" ? "UPSTREAM_TIMEOUT" : "UPSTREAM_FAILURE" });
     }
   }
 

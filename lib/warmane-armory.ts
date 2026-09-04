@@ -571,9 +571,7 @@ export async function fetchWarmaneGearLive(
     };
   } catch (error) {
     console.error("Warmane Armory fetch error", {
-      characterName: sanitizedName,
-      realm: sanitizedRealm,
-      error,
+      code: error instanceof Error && error.name === "AbortError" ? "UPSTREAM_TIMEOUT" : "UPSTREAM_FAILURE",
     });
 
     return {

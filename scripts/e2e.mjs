@@ -118,8 +118,9 @@ try {
   const invalidChooser = page.waitForEvent("filechooser");
   await page.getByRole("button", { name: "Choose File", exact: true }).click();
   await (await invalidChooser).setFiles({ name: "invalid.txt", mimeType: "text/plain", buffer: Buffer.from("This is deliberately not a combat log.") });
-  await page.getByRole("alert").filter({ hasText: "Upload Failed" }).waitFor();
-  assert.doesNotMatch(await page.getByRole("alert").innerText(), /Traceback|postgresql:|node_modules/);
+  const uploadError = page.getByRole("alert").filter({ hasText: "Upload Failed" });
+  await uploadError.waitFor();
+  assert.doesNotMatch(await uploadError.innerText(), /Traceback|postgresql:|node_modules/);
   await page.getByRole("button", { name: "Try Again", exact: true }).click();
   await page.getByRole("button", { name: "Choose File", exact: true }).waitFor();
   observations.push({ check: "invalid log error announcement and retry", status: "pass" });
