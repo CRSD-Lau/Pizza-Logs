@@ -29,6 +29,19 @@ class HealFields:
 
 def extract_damage_fields(parts: list[str]) -> Optional[DamageFields]:
     event = parts[0] if parts else ""
+    if event == "ENVIRONMENTAL_DAMAGE":
+        # WotLK environmental events have an environmental type instead of the
+        # three spell fields. Keep incoming damage/absorbs at their own offsets.
+        if len(parts) < 15:
+            return None
+        return DamageFields(
+            amount=_safe_float(parts[8]),
+            overkill=_safe_float(parts[9]),
+            absorbed=_safe_float(parts[13]),
+            school=_safe_int(parts[10]) or 1,
+            is_crit=parts[14] == "1",
+            spell_name=parts[7].strip('"').strip(),
+        )
     if event == "SWING_DAMAGE":
         if len(parts) < 14:
             return None

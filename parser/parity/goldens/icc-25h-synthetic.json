@@ -1,0 +1,290 @@
+{
+  "author": "Neil Mitchell",
+  "modifier": "Neil Mitchell",
+  "evidence": {
+    "kind": "local-reference",
+    "sourceSha256": "0db203b08e1d8800ede5e221f3c42e83cb1af47445cc5f35910b95f15b744b49",
+    "referenceSha": "4c046d266b85ad833ab4d70addb0b6f1a16647e3",
+    "observedAt": "2026-09-04T20:44:44.106253+00:00",
+    "pythonVersion": "3.11.9",
+    "configuration": {
+      "fileYear": 2026,
+      "archiveTimestamp": "2026-09-04T00:00:00Z",
+      "realm": "Lordaeron"
+    },
+    "method": "Unmodified LogsSeparator, logs_fix.normalize, and THE_LOGS report methods. Archive extraction and publication eligibility are not covered."
+  },
+  "normalized": {
+    "sessions": [
+      {
+        "durationMs": 28000,
+        "totalDamage": 165600,
+        "heal": 0,
+        "damageTaken": 0,
+        "players": {
+          "Arindel": {
+            "totalDamage": 18000,
+            "heal": 0,
+            "damageTaken": 0
+          },
+          "Blizzero": {
+            "totalDamage": 12000,
+            "heal": 0,
+            "damageTaken": 0
+          },
+          "Deeeps": {
+            "totalDamage": 9000,
+            "heal": 0,
+            "damageTaken": 0
+          },
+          "Dotmaster": {
+            "totalDamage": 4000,
+            "heal": 0,
+            "damageTaken": 0
+          },
+          "Healdude": {
+            "totalDamage": 5000,
+            "heal": 0,
+            "damageTaken": 0
+          },
+          "Hunter1": {
+            "totalDamage": 400,
+            "heal": 0,
+            "damageTaken": 0
+          },
+          "Hunter2": {
+            "totalDamage": 300,
+            "heal": 0,
+            "damageTaken": 0
+          },
+          "Hunter3": {
+            "totalDamage": 200,
+            "heal": 0,
+            "damageTaken": 0
+          },
+          "Lausudo": {
+            "totalDamage": 25000,
+            "heal": 0,
+            "damageTaken": 0
+          },
+          "Moonkin": {
+            "totalDamage": 3000,
+            "heal": 0,
+            "damageTaken": 0
+          },
+          "Phyre": {
+            "totalDamage": 30000,
+            "heal": 0,
+            "damageTaken": 0
+          },
+          "Rogue1": {
+            "totalDamage": 2500,
+            "heal": 0,
+            "damageTaken": 0
+          },
+          "Rogue10": {
+            "totalDamage": 500,
+            "heal": 0,
+            "damageTaken": 0
+          },
+          "Rogue2": {
+            "totalDamage": 2000,
+            "heal": 0,
+            "damageTaken": 0
+          },
+          "Rogue3": {
+            "totalDamage": 1500,
+            "heal": 0,
+            "damageTaken": 0
+          },
+          "Rogue4": {
+            "totalDamage": 1200,
+            "heal": 0,
+            "damageTaken": 0
+          },
+          "Rogue5": {
+            "totalDamage": 1000,
+            "heal": 0,
+            "damageTaken": 0
+          },
+          "Rogue6": {
+            "totalDamage": 900,
+            "heal": 0,
+            "damageTaken": 0
+          },
+          "Rogue7": {
+            "totalDamage": 800,
+            "heal": 0,
+            "damageTaken": 0
+          },
+          "Rogue8": {
+            "totalDamage": 700,
+            "heal": 0,
+            "damageTaken": 0
+          },
+          "Rogue9": {
+            "totalDamage": 600,
+            "heal": 0,
+            "damageTaken": 0
+          },
+          "Synnah": {
+            "totalDamage": 15000,
+            "heal": 0,
+            "damageTaken": 0
+          },
+          "Tankster": {
+            "totalDamage": 10000,
+            "heal": 0,
+            "damageTaken": 0
+          },
+          "Writman": {
+            "totalDamage": 22000,
+            "heal": 0,
+            "damageTaken": 0
+          }
+        }
+      }
+    ],
+    "encounters": []
+  },
+  "referenceDisplay": {
+    "sessions": [
+      {
+        "duration": "0:00:28.000",
+        "columns": {
+          "useful": {},
+          "damage": {
+            "Total": {
+              "value": "165 600",
+              "per_second": "5 914.2",
+              "percent": 0
+            },
+            "Phyre": {
+              "value": "30 000",
+              "per_second": "1 071.4",
+              "percent": 100
+            },
+            "Lausudo": {
+              "value": "25 000",
+              "per_second": "892.8",
+              "percent": 83
+            },
+            "Writman": {
+              "value": "22 000",
+              "per_second": "785.7",
+              "percent": 73
+            },
+            "Arindel": {
+              "value": "18 000",
+              "per_second": "642.8",
+              "percent": 60
+            },
+            "Synnah": {
+              "value": "15 000",
+              "per_second": "535.7",
+              "percent": 50
+            },
+            "Blizzero": {
+              "value": "12 000",
+              "per_second": "428.5",
+              "percent": 40
+            },
+            "Tankster": {
+              "value": "10 000",
+              "per_second": "357.1",
+              "percent": 33
+            },
+            "Deeeps": {
+              "value": "9 000",
+              "per_second": "321.4",
+              "percent": 30
+            },
+            "Healdude": {
+              "value": "5 000",
+              "per_second": "178.5",
+              "percent": 16
+            },
+            "Dotmaster": {
+              "value": "4 000",
+              "per_second": "142.8",
+              "percent": 13
+            },
+            "Moonkin": {
+              "value": "3 000",
+              "per_second": "107.1",
+              "percent": 10
+            },
+            "Rogue1": {
+              "value": "2 500",
+              "per_second": "89.2",
+              "percent": 8
+            },
+            "Rogue2": {
+              "value": "2 000",
+              "per_second": "71.4",
+              "percent": 6
+            },
+            "Rogue3": {
+              "value": "1 500",
+              "per_second": "53.5",
+              "percent": 5
+            },
+            "Rogue4": {
+              "value": "1 200",
+              "per_second": "42.8",
+              "percent": 4
+            },
+            "Rogue5": {
+              "value": "1 000",
+              "per_second": "35.7",
+              "percent": 3
+            },
+            "Rogue6": {
+              "value": "900",
+              "per_second": "32.1",
+              "percent": 3
+            },
+            "Rogue7": {
+              "value": "800",
+              "per_second": "28.5",
+              "percent": 2
+            },
+            "Rogue8": {
+              "value": "700",
+              "per_second": "25.0",
+              "percent": 2
+            },
+            "Rogue9": {
+              "value": "600",
+              "per_second": "21.4",
+              "percent": 2
+            },
+            "Rogue10": {
+              "value": "500",
+              "per_second": "17.8",
+              "percent": 1
+            },
+            "Hunter1": {
+              "value": "400",
+              "per_second": "14.2",
+              "percent": 1
+            },
+            "Hunter2": {
+              "value": "300",
+              "per_second": "10.7",
+              "percent": 1
+            },
+            "Hunter3": {
+              "value": "200",
+              "per_second": "7.1",
+              "percent": 0
+            }
+          },
+          "heal": {},
+          "heal_total": {},
+          "taken": {}
+        }
+      }
+    ]
+  }
+}

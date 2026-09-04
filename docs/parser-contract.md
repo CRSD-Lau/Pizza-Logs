@@ -13,6 +13,13 @@ This document is the authoritative behavioral contract for Pizza Logs parsing. T
 
 Combat lines are parsed as bounded CSV-like records. Malformed lines are counted/skipped and surfaced as aggregate warnings rather than crashing the upload.
 
+Calendar month/day and clock ranges are validated. Explicit dates determine
+elapsed time and session boundaries, so equal clock times on successive dates
+cannot merge separate raids. December-to-January advances the configured file
+year; other backwards dates or timestamps are counted as out-of-order input
+instead of inventing a day or year. Encounter and session ISO timestamps retain
+the inferred UTC year across that rollover.
+
 Player GUIDs include:
 
 - Warmane values beginning `0x06`;
@@ -61,6 +68,13 @@ Damage includes every matched encounter destination, including adds/mechanics. B
 
 Missed and environmental events do not add outgoing damage because they are outside the adopted Skada damage-done set or have no numeric damage amount.
 
+`ENVIRONMENTAL_DAMAGE` does contribute incoming damage and death context for
+player targets. Its shifted fields are environmental type at `parts[7]`, raw
+amount at `parts[8]`, overkill at `parts[9]`, school at `parts[10]`, absorbed
+metadata at `parts[13]`, and critical evidence at `parts[14]`. Raw incoming
+amounts include overkill; numeric absorbs remain separate and use the existing
+shield-evidence rules. Environmental events never add outgoing player damage.
+
 ## Healing
 
 Tracked events match Skada `Healing.lua`:
@@ -98,7 +112,7 @@ Absorbs remain separate from effective healing. Numeric absorbed amounts come fr
 - Missing/non-player evidence remains in `unattributedAbsorbs`.
 - Fully absorbed missed events without a numeric amount cannot be measured.
 
-Participant output keeps `totalHealing`, `totalAbsorbs`, HPS, and APS separate. The explicitly labeled UwU-compatible `Heal`/`H+A PS` view equals effective healing plus attributed absorbs.
+Participant output keeps `totalHealing`, `totalAbsorbs`, HPS, and APS separate. The `Heal`/`H+A PS` view equals effective healing plus attributed absorbs. This definition alone does not prove UwU attribution or display parity; see the [measured parity contract](uwu-analytics-parity.md).
 
 ## Duration and Rates
 
@@ -167,6 +181,6 @@ Legacy `/parse`, `/parse-debug`, and `/parse-stream` routes are disabled by defa
 - `parser/tests/test_archive_upload.py` — archive/resource safety
 - `parser/tests/test_parser_service.py` — HTTP/default-off legacy boundary
 - `parser/tests/baselines/` — frozen analytical output
-- `parser/tests/test_uwu_parity_baseline.py` — external acceptance baseline
+- `parser/tests/test_uwu_parity_baseline.py` — historical external-oracle integrity check (no paired source input)
 
 Any behavior change needs focused evidence or a fixture plus the full parser suite. Historic database rows are not reparsed automatically.

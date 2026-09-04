@@ -24,6 +24,8 @@ class CombatLogLine:
     ts_str: str
     parts: list[str]
     ts: float
+    month: int
+    day: int
 
 
 @dataclass(frozen=True)
@@ -55,6 +57,12 @@ def parse_combat_log_line(raw_line: str) -> ParsedLineResult:
         return ParsedLineResult(None, "missing_timestamp_separator")
 
     ts_str = line[:space_idx].strip()
+    timestamp = TS_RE.fullmatch(ts_str)
+    if timestamp is None:
+        return ParsedLineResult(None, "invalid_timestamp")
+    month, day, hour, minute, second, millisecond = map(int, timestamp.groups())
+    if not (1 <= month <= 12 and 1 <= day <= 31 and hour <= 23 and minute <= 59 and second <= 59):
+        return ParsedLineResult(None, "invalid_timestamp")
     rest = line[space_idx + 2:]
     try:
         parts = csv_split(rest)
@@ -64,4 +72,5 @@ def parse_combat_log_line(raw_line: str) -> ParsedLineResult:
     if len(parts) < 2:
         return ParsedLineResult(None, "too_few_fields")
 
-    return ParsedLineResult(CombatLogLine(ts_str=ts_str, parts=parts, ts=parse_ts(ts_str)))
+    seconds = hour * 3600 + minute * 60 + second + millisecond / 1000
+    return ParsedLineResult(CombatLogLine(ts_str=ts_str, parts=parts, ts=seconds, month=month, day=day))

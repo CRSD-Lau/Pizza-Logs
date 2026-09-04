@@ -1,0 +1,70 @@
+{
+  "author": "Neil Mitchell",
+  "modifier": "Neil Mitchell",
+  "evidence": {
+    "kind": "local-reference",
+    "sourceSha256": "ca3b476b4b9dbeb0129b22b25d605d41b59513c115013d43b25dd38f6ddba84c",
+    "referenceSha": "4c046d266b85ad833ab4d70addb0b6f1a16647e3",
+    "observedAt": "2026-09-04T20:44:44.328452+00:00",
+    "pythonVersion": "3.11.9",
+    "configuration": {
+      "fileYear": 2026,
+      "archiveTimestamp": "2026-09-04T00:00:00Z",
+      "realm": "Lordaeron"
+    },
+    "method": "Unmodified LogsSeparator, logs_fix.normalize, and THE_LOGS report methods. Archive extraction and publication eligibility are not covered."
+  },
+  "normalized": {
+    "sessions": [
+      {
+        "durationMs": 25000,
+        "totalDamage": 54000,
+        "heal": 0,
+        "damageTaken": 0,
+        "players": {
+          "Lausudo": {
+            "totalDamage": 24000,
+            "heal": 0,
+            "damageTaken": 0
+          },
+          "Phyre": {
+            "totalDamage": 30000,
+            "heal": 0,
+            "damageTaken": 0
+          }
+        }
+      }
+    ],
+    "encounters": []
+  },
+  "referenceDisplay": {
+    "sessions": [
+      {
+        "duration": "0:00:25.000",
+        "columns": {
+          "useful": {},
+          "damage": {
+            "Total": {
+              "value": "54 000",
+              "per_second": "2 160.0",
+              "percent": 0
+            },
+            "Phyre": {
+              "value": "30 000",
+              "per_second": "1 200.0",
+              "percent": 100
+            },
+            "Lausudo": {
+              "value": "24 000",
+              "per_second": "960.0",
+              "percent": 80
+            }
+          },
+          "heal": {},
+          "heal_total": {},
+          "taken": {}
+        }
+      }
+    ]
+  }
+}
