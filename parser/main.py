@@ -11,6 +11,7 @@ import hashlib
 import json
 import logging
 import os
+import shutil
 import tempfile
 import threading
 import time
@@ -22,6 +23,7 @@ from typing import AsyncGenerator, Optional
 import uvicorn
 from fastapi import FastAPI, File, Form, Header, HTTPException, Request, UploadFile
 from fastapi.responses import StreamingResponse
+from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field
 
 from archive_upload import (
@@ -33,6 +35,8 @@ from archive_upload import (
 )
 from parser_core import CombatLogParser, ParsedEncounter
 from quick_classifier import quick_classify
+from upload_lifecycle import UploadLease, UploadStreamingResponse, active_upload_paths
+from version import PARSER_VERSION, make_parser_provenance
 
 # ── App setup ─────────────────────────────────────────────────────
 
@@ -41,13 +45,18 @@ PARSER_DOCS_ENABLED = os.getenv("ENABLE_PARSER_DOCS", "").lower() in {"1", "true
 app = FastAPI(
     title="Pizza Logs Parser",
     description="WoW combat log parsing service",
-    version="0.1.0",
+    version=PARSER_VERSION,
     docs_url="/docs" if PARSER_DOCS_ENABLED else None,
     redoc_url=None,
     openapi_url="/openapi.json" if PARSER_DOCS_ENABLED else None,
 )
 
 logger = logging.getLogger("pizza_logs.parser")
+logger.setLevel(logging.INFO)
+if not logger.handlers:
+    log_handler = logging.StreamHandler()
+    log_handler.setFormatter(logging.Formatter("%(message)s"))
+    logger.addHandler(log_handler)
 
 UPLOAD_TEMP_DIR = Path(os.getenv(
     "UPLOAD_TEMP_DIR",
@@ -58,6 +67,7 @@ UPLOAD_ABANDONED_SECONDS = int(os.getenv("UPLOAD_ABANDONED_SECONDS", "3600"))
 UPLOAD_PROCESSING_TIMEOUT_SECONDS = int(os.getenv("UPLOAD_PROCESSING_TIMEOUT_SECONDS", "240"))
 UPLOAD_RECEIVE_TIMEOUT_SECONDS = int(os.getenv("UPLOAD_RECEIVE_TIMEOUT_SECONDS", "300"))
 UPLOAD_CONCURRENCY = max(1, int(os.getenv("UPLOAD_CONCURRENCY", "4")))
+UPLOAD_STATE_LIMIT = max(UPLOAD_CONCURRENCY, int(os.getenv("UPLOAD_STATE_LIMIT", "256")))
 FULL_PROCESSING_WORKERS = max(1, int(os.getenv("FULL_PROCESSING_WORKERS", "2")))
 QUICK_CLASSIFICATION_WORKERS = max(1, int(os.getenv("QUICK_CLASSIFICATION_WORKERS", "2")))
 LEGACY_PARSER_ROUTES_ENABLED = os.getenv("ENABLE_LEGACY_PARSER_ROUTES", "").lower() in {"1", "true", "yes"}
@@ -105,6 +115,7 @@ class ParseResponse(BaseModel):
     sessionDamage: dict[str, float] = Field(default_factory=dict)
     sessionAnalytics: dict[str, dict] = Field(default_factory=dict)
     receivedBytes: int
+    provenance: dict[str, str | None] = Field(default_factory=make_parser_provenance)
 
 
 def session_analytics_payload(parser: CombatLogParser) -> dict[str, dict]:
@@ -121,6 +132,22 @@ def _require_legacy_parser_routes() -> None:
 @app.get("/health")
 async def health() -> dict:
     return {"status": "ok", "service": "pizza-logs-parser"}
+
+
+@app.get("/ready")
+async def ready() -> JSONResponse:
+    """Storage readiness; busy upload admission remains a separate 429 signal."""
+    try:
+        usable = (UPLOAD_TEMP_DIR.is_dir()
+                  and os.access(UPLOAD_TEMP_DIR, os.W_OK | os.X_OK)
+                  and shutil.disk_usage(UPLOAD_TEMP_DIR).free >= MAX_COMPRESSED_BYTES)
+    except OSError:
+        usable = False
+    return JSONResponse(
+        {"status": "ready" if usable else "unavailable", "service": "pizza-logs-parser",
+         "storage": "ok" if usable else "unavailable"},
+        status_code=200 if usable else 503,
+    )
 
 
 @app.post("/parse", response_model=ParseResponse)
@@ -254,6 +281,7 @@ class DebugParseResponse(BaseModel):
     sessionAnalytics: dict[str, dict]
     debugInfo: list[DebugInfoOut]
     receivedBytes: int
+    provenance: dict[str, str | None] = Field(default_factory=make_parser_provenance)
 
 
 @app.post("/parse-debug", response_model=DebugParseResponse)
@@ -389,7 +417,14 @@ async def parse_debug(
 # ── SSE streaming parse endpoint ─────────────────────────────────
 
 def _sse(data: dict) -> str:
-    return f"data: {json.dumps(data)}\n\n"
+    return f"data: {json.dumps(data, allow_nan=False)}\n\n"
+
+
+def _log_upload_event(event: str, upload_id: str, *, level: int = logging.INFO,
+                      **fields: object) -> None:
+    # Only explicit operational fields belong here: never filenames, raw log
+    # lines, player names, exception messages or local paths.
+    logger.log(level, json.dumps({"event": event, "uploadId": upload_id, **fields}, allow_nan=False))
 
 def _parse_msg(pct: int) -> str:
     if pct < 38: return "Parser reading combat events…"
@@ -436,6 +471,12 @@ def _reserve_upload_state(upload_id: str, filename: str) -> bool:
     with _upload_states_lock:
         if upload_id in _upload_states:
             return False
+        while len(_upload_states) >= UPLOAD_STATE_LIMIT:
+            terminal = next((key for key, value in _upload_states.items()
+                             if value.get("state") in {"complete", "error"}), None)
+            if terminal is None:
+                raise HTTPException(429, "Upload progress capacity is busy; retry shortly.")
+            _upload_states.pop(terminal)
         _upload_states[upload_id] = {
             "uploadId": upload_id,
             "createdAt": now,
@@ -447,10 +488,20 @@ def _reserve_upload_state(upload_id: str, filename: str) -> bool:
         return True
 
 
+def _mark_interrupted_upload(upload_id: str) -> None:
+    with _upload_states_lock:
+        state = _upload_states.get(upload_id)
+        if state is not None and state.get("state") not in {"complete", "error"}:
+            state.update({"state": "error", "errorCode": "UPLOAD_CANCELLED",
+                          "error": "Upload was cancelled.",
+                          "updatedAt": datetime.now(timezone.utc).isoformat()})
+
+
 def _cleanup_abandoned_uploads() -> None:
     cutoff = time.time() - UPLOAD_ABANDONED_SECONDS
+    active_paths = active_upload_paths()
     for candidate in UPLOAD_TEMP_DIR.glob("*"):
-        if candidate.suffix not in {".part", ".upload"}:
+        if candidate.suffix not in {".part", ".upload"} or candidate in active_paths:
             continue
         try:
             if candidate.stat().st_mtime < cutoff:
@@ -476,16 +527,17 @@ def _valid_upload_id(upload_id: str) -> bool:
         parsed = uuid.UUID(upload_id)
     except ValueError:
         return False
-    return parsed.version == 4 and str(parsed) == upload_id.lower()
+    return parsed.version == 4 and str(parsed) == upload_id
 
 
 def _quick_classify_path(
     path: Path,
     selection: ArchiveSelection,
+    file_year: int,
     cancel_event: threading.Event,
 ) -> list[dict[str, object]]:
-    with open_combat_log(path, selection) as fh:
-        return quick_classify(fh, cancel_event)
+    with open_combat_log(path, selection, cancel_event) as fh:
+        return quick_classify(fh, cancel_event, file_year=file_year)
 
 
 def _full_parse_path(
@@ -495,7 +547,7 @@ def _full_parse_path(
     cancel_event: threading.Event,
 ) -> tuple[CombatLogParser, list[ParsedEncounter]]:
     parser = CombatLogParser(file_year=file_year)
-    with open_combat_log(path, selection) as fh:
+    with open_combat_log(path, selection, cancel_event) as fh:
         encounters = parser.parse_file(fh, cancel_event=cancel_event)
     return parser, encounters
 
@@ -531,28 +583,31 @@ async def upload_archive_stream(
     except TimeoutError as exc:
         raise HTTPException(429, "Upload capacity is busy; retry shortly.") from exc
 
-    _cleanup_abandoned_uploads()
-    content_length = request.headers.get("content-length")
     try:
+        _cleanup_abandoned_uploads()
+        content_length = request.headers.get("content-length")
         if content_length:
             try:
-                if int(content_length) > MAX_COMPRESSED_BYTES:
+                declared_bytes = int(content_length)
+                if declared_bytes < 0:
+                    raise ValueError("negative length")
+                if declared_bytes > MAX_COMPRESSED_BYTES:
                     raise HTTPException(413, "Upload exceeds the compressed-size limit.")
             except ValueError:
                 raise HTTPException(400, "Invalid Content-Length header.")
+        if not _reserve_upload_state(upload_id, Path(x_filename).name):
+            raise HTTPException(409, "This upload ID is already in use.")
     except Exception:
         _upload_slots.release()
         raise
-
-    if not _reserve_upload_state(upload_id, Path(x_filename).name):
-        _upload_slots.release()
-        raise HTTPException(409, "This upload ID is already in use.")
 
     # Never derive filesystem paths from request data. The client ID remains the
     # public progress key; an independent server-generated token names temp files.
     upload_file_token = uuid.uuid4().hex
     part_path = UPLOAD_TEMP_DIR / f"{upload_file_token}.part"
     final_path = UPLOAD_TEMP_DIR / f"{upload_file_token}.upload"
+    lease = UploadLease(_upload_slots, part_path, final_path,
+                        on_finish=lambda: _mark_interrupted_upload(upload_id))
 
     receive_started = time.perf_counter()
     final_byte_at = receive_started
@@ -575,15 +630,18 @@ async def upload_archive_stream(
         final_byte_at = time.perf_counter()
         os.replace(part_path, final_path)
     except TimeoutError as exc:
-        part_path.unlink(missing_ok=True)
         _set_upload_state(upload_id, "error", errorCode="UPLOAD_TIMEOUT", error="Upload receive timeout.")
-        _upload_slots.release()
+        lease.finish()
         raise HTTPException(408, "Upload receive timeout.") from exc
-    except Exception:
-        part_path.unlink(missing_ok=True)
-        logger.exception("Streamed upload receive failed", extra={"upload_file_token": upload_file_token})
+    except asyncio.CancelledError:
+        _set_upload_state(upload_id, "error", errorCode="UPLOAD_CANCELLED", error="Upload was cancelled.")
+        lease.finish()
+        raise
+    except Exception as exc:
+        _log_upload_event("upload_receive_error", upload_id, level=logging.ERROR,
+                          exceptionType=type(exc).__name__)
         _set_upload_state(upload_id, "error", errorCode="UPLOAD_RECEIVE_ERROR", error="Upload receive failed.")
-        _upload_slots.release()
+        lease.finish()
         raise
 
     upload_ms = round((final_byte_at - receive_started) * 1000, 2)
@@ -600,12 +658,16 @@ async def upload_archive_stream(
         validation_ms = 0.0
         quick_ms = 0.0
         full_ms = 0.0
-        quick_cancel = threading.Event()
-        full_cancel = threading.Event()
+        file_year = x_year_hint if x_year_hint > 2000 else datetime.now(timezone.utc).year
+        quick_cancel = lease.cancel_event
+        full_cancel = lease.cancel_event
         try:
             yield _sse({"type": "state", "uploadId": upload_id, "state": "validating", "pct": 28, "msg": "Validating archive…"})
             validation_started = time.perf_counter()
-            selection = await asyncio.to_thread(validate_upload, final_path, x_filename)
+            selection = await lease.run(
+                _quick_executor, validate_upload, final_path, x_filename,
+                lease.cancel_event, timeout=min(UPLOAD_PROCESSING_TIMEOUT_SECONDS, 60),
+            )
             validation_ms = round((time.perf_counter() - validation_started) * 1000, 2)
 
             _set_upload_state(
@@ -616,17 +678,10 @@ async def upload_archive_stream(
             )
             yield _sse({"type": "state", "uploadId": upload_id, "state": "classifying", "pct": 36, "msg": "Classifying boss attempts…"})
 
-            loop = asyncio.get_running_loop()
             quick_started = time.perf_counter()
             try:
-                quick_result = await asyncio.wait_for(
-                    loop.run_in_executor(
-                        _quick_executor,
-                        _quick_classify_path,
-                        final_path,
-                        selection,
-                        quick_cancel,
-                    ),
+                quick_result = await lease.run(
+                    _quick_executor, _quick_classify_path, final_path, selection, file_year, quick_cancel,
                     timeout=min(UPLOAD_PROCESSING_TIMEOUT_SECONDS, 60),
                 )
             except asyncio.TimeoutError:
@@ -661,15 +716,10 @@ async def upload_archive_stream(
             yield _sse({"type": "state", "uploadId": upload_id, "state": "full-processing", "pct": 52, "msg": "Building full reports…"})
             full_started = time.perf_counter()
             try:
-                parser, encounters_raw = await asyncio.wait_for(
-                    loop.run_in_executor(
-                        _full_executor,
-                        _full_parse_path,
-                        final_path,
-                        selection,
-                        x_year_hint if x_year_hint > 2000 else datetime.now(timezone.utc).year,
-                        full_cancel,
-                    ),
+                parser, encounters_raw = await lease.run(
+                    _full_executor, _full_parse_path, final_path, selection,
+                    file_year,
+                    full_cancel,
                     timeout=UPLOAD_PROCESSING_TIMEOUT_SECONDS,
                 )
             except asyncio.TimeoutError:
@@ -689,6 +739,8 @@ async def upload_archive_stream(
                 timings=timings,
                 encounterCount=len(encounters_out),
             )
+            _log_upload_event("upload_complete", upload_id, receivedBytes=received_bytes,
+                              encounterCount=len(encounters_out), timings=timings)
             yield _sse({
                 "type": "done",
                 "data": {
@@ -702,32 +754,33 @@ async def upload_archive_stream(
                     "uploadId": upload_id,
                     "receivedBytes": received_bytes,
                     "uploadTimings": timings,
+                    "provenance": make_parser_provenance(),
                 },
             })
         except ArchiveValidationError as exc:
+            _log_upload_event("upload_rejected", upload_id, code=exc.code)
             _set_upload_state(upload_id, "error", errorCode=exc.code, error=exc.message)
             yield _sse({"type": "error", "uploadId": upload_id, "code": exc.code, "msg": exc.message})
         except asyncio.TimeoutError:
+            _log_upload_event("upload_timeout", upload_id)
             _set_upload_state(upload_id, "error", errorCode="PROCESSING_TIMEOUT", error="Upload processing timed out.")
             yield _sse({"type": "error", "uploadId": upload_id, "code": "PROCESSING_TIMEOUT", "msg": "Upload processing timed out."})
-        except Exception:
-            logger.exception("Streamed upload processing failed", extra={"upload_file_token": upload_file_token})
+        except (asyncio.CancelledError, GeneratorExit):
+            # The web consumer closes its reader once it receives done. That
+            # acknowledgement must not downgrade a completed parser result.
+            _mark_interrupted_upload(upload_id)
+            raise
+        except Exception as exc:
+            _log_upload_event("upload_processing_error", upload_id, level=logging.ERROR,
+                              exceptionType=type(exc).__name__)
             _set_upload_state(upload_id, "error", errorCode="PROCESSING_ERROR", error="Upload processing failed.")
             yield _sse({"type": "error", "uploadId": upload_id, "code": "PROCESSING_ERROR", "msg": "Upload processing failed."})
         finally:
-            quick_cancel.set()
-            full_cancel.set()
-            try:
-                final_path.unlink(missing_ok=True)
-            except OSError:
-                # A timed-out Windows worker may still hold the file briefly;
-                # the verified upload directory cleanup removes it later.
-                pass
-            finally:
-                _upload_slots.release()
+            lease.finish()
 
-    return StreamingResponse(
+    return UploadStreamingResponse(
         archive_events(),
+        lease=lease,
         media_type="text/event-stream",
         headers={
             "Cache-Control": "no-cache, no-transform",
@@ -862,6 +915,7 @@ async def parse_log_stream(
                 "warnings":      warnings,
                 "sessionDamage": {str(k): v for k, v in parser.session_damage.items()},
                 "sessionAnalytics": session_analytics_payload(parser),
+                "provenance": make_parser_provenance(),
                 "receivedBytes": received_bytes,
             },
         })

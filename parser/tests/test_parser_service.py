@@ -3,6 +3,8 @@
 import io
 import os
 import sys
+from pathlib import Path
+from collections import namedtuple
 
 import pytest
 from fastapi import HTTPException, UploadFile
@@ -55,3 +57,24 @@ async def test_legacy_parse_stream_enforces_byte_limit(monkeypatch: pytest.Monke
         await main.parse_log_stream(file=upload, year_hint=0)
 
     assert exc_info.value.status_code == 413
+
+
+@pytest.mark.anyio
+async def test_readiness_reports_storage_failure_without_internal_paths(tmp_path: Path, monkeypatch: pytest.MonkeyPatch):
+    monkeypatch.setattr(main, "UPLOAD_TEMP_DIR", tmp_path)
+    usage = namedtuple("usage", "total used free")
+    monkeypatch.setattr(main.shutil, "disk_usage", lambda _path: usage(100, 99, 1))
+    response = await main.ready()
+    assert response.status_code == 503
+    assert str(tmp_path).encode() not in response.body
+    assert b'"storage":"unavailable"' in response.body
+    assert (await main.health())["status"] == "ok"
+
+
+@pytest.mark.anyio
+async def test_readiness_reports_available_storage(tmp_path: Path, monkeypatch: pytest.MonkeyPatch):
+    monkeypatch.setattr(main, "UPLOAD_TEMP_DIR", tmp_path)
+    usage = namedtuple("usage", "total used free")
+    monkeypatch.setattr(main.shutil, "disk_usage", lambda _path: usage(10**10, 0, 10**10))
+    monkeypatch.setattr(main.os, "access", lambda *_args: True)
+    assert (await main.ready()).status_code == 200
