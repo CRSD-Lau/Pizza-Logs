@@ -26,7 +26,9 @@
     "db:seed-items": "tsx scripts/seed-wow-items.ts",
     "db:import-items": "tsx scripts/import-item-template.ts",
     "gear-sync:uninstall-task": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/gear-sync/uninstall-windows-task.ps1",
-    "guild-roster-sync:uninstall-task": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/guild-roster-sync/uninstall-windows-task.ps1"
+    "guild-roster-sync:uninstall-task": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/guild-roster-sync/uninstall-windows-task.ps1",
+    "test:e2e": "node scripts/e2e.mjs",
+    "test:integration": "tsx --test tests/*.integration.test.ts"
   },
   "dependencies": {
     "@fontsource/cinzel": "5.3.0",
@@ -54,8 +56,10 @@
     "@types/react": "19.2.18",
     "@types/react-dom": "19.2.5",
     "@typescript/native": "npm:typescript@^7.0.2",
+    "axe-core": "4.13.0",
     "eslint": "^9.39.5",
     "eslint-config-next": "16.3.3",
+    "playwright": "1.62.1",
     "postcss": "^8.5.26",
     "tailwindcss": "^4.3.3",
     "tsx": "^4.23.12",
@@ -64,6 +68,9 @@
   "overrides": {
     "deepmerge-ts": "8.0.2",
     "@types/react": "19.2.18",
-    "@types/react-dom": "19.2.5"
+    "@types/react-dom": "19.2.5",
+    "prisma": {
+      "mysql2": "3.24.3"
+    }
   }
 }

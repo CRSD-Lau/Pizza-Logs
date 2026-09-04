@@ -73,6 +73,11 @@ model Upload {
   uploaderName   String?      // character name of the person who uploaded
   errorMessage   String?
   parsedAt       DateTime?
+  parserVersion  String?
+  metricSchemaVersion String?
+  compatibilityProfile String?
+  referenceSha   String?
+  parserParsedAt DateTime?
   rawLineCount   Int?
   sessionDamage  Json?        // { "0": 407718447.0, "1": 200402269.0, … } full-log dmg per session
   sessionAnalytics Json?      // UwU-compatible full-slice totals, duration, and per-player metrics by session
@@ -186,7 +191,7 @@ model GuildRosterMember {
   createdAt               DateTime @default(now()) @map("created_at")
   updatedAt               DateTime @updatedAt @map("updated_at")
 
-  @@unique([normalizedCharacterName, guildName, realm])
+  @@unique([normalizedCharacterName, guildName, realm], map: "guild_roster_members_normalized_character_name_guild_name_realm")
   @@index([guildName, realm])
   @@index([guildName, realm, rankOrder])
   @@index([lastSyncedAt])
