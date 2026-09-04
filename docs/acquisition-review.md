@@ -16,9 +16,46 @@ ownership conditions below. A green regression build is not evidence of full par
 continuous availability, a successful restore, or security certification.
 
 The starting Pizza revision was `8a90aee2651663613b8aaf2dbd148ea493eae2a3`.
-The delivery PR records its final revision and hosted checks. Production was inspected
-only through ordinary public HTTP/smoke requests. No production uploads, database writes,
-environment changes or deployment occurred during this review.
+The initial delivery PR records its final revision and hosted checks. That initial
+review used ordinary public HTTP/smoke requests; authenticated follow-up reads and
+isolated restoration are recorded below. No production uploads, database writes,
+environment changes or agent-triggered deployment occurred during either review.
+
+### Follow-up after PR 72
+
+PR 72 was merged as `b1e5520536e2c8dd65a8ea0924533f952bc34edd` on 2026-09-04.
+Railway reported successful web and parser deployments from that revision. The
+[post-deployment smoke run](https://github.com/CRSD-Lau/Pizza-Logs/actions/runs/33922902058)
+passed all 12 public checks, dependency readiness returned 200, and GitHub reported
+zero open Dependabot alerts. These observations replace the earlier delivery's
+pending-deployment status; they do not close unrelated acquisition conditions.
+
+The subsequent remediation adds complete hover-model framing, a reviewed Alpine
+parser runtime, full-image security gates, six additional paired reference cases,
+database recovery evidence tooling and an exact asset provenance register. Its PR
+records the final revision and hosted checks; these changes require their own
+deployment verification after merge.
+
+Authenticated production reads confirmed all 12 migration names successfully
+applied, with one older rolled-back ledger record preserved. All three historical
+uploads were DONE; none needed incomplete-upload reconciliation. Their provenance
+is null because they predate the new parser fields. No historical report was
+rewritten, no synthetic report was published to production, and no production
+environment variable was changed.
+
+A snapshot-consistent logical export was encrypted with AES-256-GCM and a
+Windows-user-protected key, then restored to a separate local PostgreSQL 18 database.
+All 13 table contents, enums, columns, indexes, constraints, migration records and
+report totals matched; Prisma reported no schema drift. Data restoration took 0.61
+seconds and content/schema verification 0.49 seconds after the local destination
+was prepared. These are component timings, not an incident RTO or a provider
+snapshot/PITR restoration. Private data and recovery files remain outside Git.
+
+The final local web/parser images passed 66 responsive synthetic browser renders,
+upload/duplicate/retry and admin acceptance, and complete zero-finding container
+scans. Additional upload/duplicate/retry tests on the isolated restored copy verified
+new parser provenance and preserved every original row across all 13 tables.
+The code gate passed 87 TypeScript tests and 388 parser tests on the runtime OS.
 
 ## Scope and evidence
 
@@ -65,8 +102,8 @@ Public descriptions deliberately omit payloads and detailed exploitation procedu
 
 | ID / severity | Evidence / failure and business impact | Likelihood | Remediation and status | Residual / validation |
 |---|---|---|---|---|
-| A01 P1 High | `start.sh`, migration history: an empty database could not start; blind legacy adoption could hide missing schema work. | Certain on clean baseline DB | **Fixed:** initial core migration, verified adoption, preserve failed records, fail startup. | Fresh DB and custom-schema adoption tests; production schema/backup inspection still required. |
-| A02 P1 High | Old upload route wrote related rows separately; interrupted/conflicting writes could expose incomplete reports. | Plausible during failure or concurrent uploads | **Fixed:** serializable complete-report transaction, bounded conflict retries, completed-duplicate requirement. | Real PostgreSQL rollback/concurrent-duplicate tests. Historical incomplete rows require owner reconciliation. |
+| A01 P1 High | `start.sh`, migration history: an empty database could not start; blind legacy adoption could hide missing schema work. | Certain on clean baseline DB | **Fixed:** initial core migration, verified adoption, preserve failed records, fail startup. | Fresh DB/custom-schema tests and restored production schema/ledger verification passed. Native provider recovery remains A13. |
+| A02 P1 High | Old upload route wrote related rows separately; interrupted/conflicting writes could expose incomplete reports. | Plausible during failure or concurrent uploads | **Fixed:** serializable complete-report transaction, bounded conflict retries, completed-duplicate requirement. | Real PostgreSQL rollback/concurrent-duplicate tests and restored-copy acceptance passed. All three historical uploads were DONE; no incomplete rows were found. |
 | A03 P1 High | Worker cancellation could release admission/files before computation stopped; archive metadata/decompression paths had incomplete resource bounds. | Plausible with cancellation or invalid input | **Fixed:** explicit worker/file ownership, metadata/line/member limits, stored/deflate-only ZIP. | Local failure/cancellation/ZIP tests; hard CPU termination and fleet-wide throttling remain infrastructure work. |
 | A04 P1 High | Dependency scanners found vulnerable transitive packages and unnecessary runtime installer tools. | Depends on affected package path | **Fixed in application dependency scope:** fast-uri/mysql2 updates and removal of unused runtime npm/pip tooling. | npm/pip audits and web scan clean at observation. Parser OS findings remain A14. |
 | A05 P2 Medium | Timestamp handling merged separate calendar dates at equal clock times; environmental incoming damage was omitted. | Valid affected logs | **Fixed:** calendar validation/year rollover and correct incoming fields; canonical outgoing totals preserved. | Full parser suite and minimal paired/regression fixtures. Historical rows are not rewritten. |
@@ -76,14 +113,20 @@ Public descriptions deliberately omit payloads and detailed exploitation procedu
 | A09 P2 Medium | Upstream body consumption and non-success responses could outlive intended timeout/resource limits. | Slow/malformed Warmane responses | **Fixed:** decoded body bounds, redirect rejection, complete-body deadlines and cancellation. | Mock stream/fallback tests; last healthy gear survives outages. |
 | A10 P2 Medium | Runtime database adapter ignored custom schema configuration, including raw aggregate queries. | Custom schema deployment | **Fixed:** adapter schema and safely encoded per-connection search path. | Real pooled queries and writes verified isolated; empty, null, quoted or >63-byte schema names fail early. |
 | A11 P2 Medium | Missing field associations, a stopped file-picker click and low-contrast metadata/admin controls impaired use. | Affected widths/surfaces | **Fixed:** explicit picker action, native labels, progress/error semantics, readable tokens and larger controls. | Headless file chooser/upload/retry, axe and responsive checks; automated testing is not screen-reader certification. |
-| A12 P1 High, open | [Parity matrix](uwu-analytics-parity.md): broad historical claims exceeded independently observed evidence. | Certain for a full replacement claim | **Claims corrected; full parity incomplete.** Nine exact cases, eleven explicit mismatches, seven unproven categories. | Owner must provide the safe historical archive and permitted live report/version evidence, then extend clean-room projections and paired corpus. |
-| A13 P1 High, open | No verified provider backup/PITR configuration, restore drill or availability history was available. | Unknown | **Repository runbook complete; infrastructure blocked.** | Infrastructure owner must verify backups and timed isolated restore before accepting enterprise RPO/RTO. |
-| A14 Critical/High scanner findings, open | Final Debian parser base: 3 Critical and 51 High package/advisory instances. | Runtime reachability varies; not fully established | **No blanket suppression.** Removed fixable language tooling; current stable Debian base still reports affected/deferred packages. | Owner must approve package reachability evidence or a patched supported base, then rebuild, rescan and rerun parser/container gates before production release. |
+| A12 P1 High, open | [Parity matrix](uwu-analytics-parity.md): broad historical claims exceeded independently observed evidence. | Certain for a full replacement claim | **Coverage expanded; full parity incomplete.** Fourteen exact cases, twelve explicit mismatches, seven unproven categories. | Six intentional canonical differences, one demonstrated reference defect and five insufficient-evidence cases remain visible. Neil must provide permitted historical source/reference evidence for broader claims. |
+| A13 P1 High, open | Provider inspection found no scheduled backups; newest listed snapshot was 2026-08-23. | Recovery exposure is confirmed; native restoration remains untested | **Logical restore verified; provider recovery remains open.** | Neil must approve/configure current scheduled backups and verify an isolated provider-supported snapshot/PITR restore before accepting enterprise RPO/RTO. |
+| A14 Critical/High scanner findings, remediated in code | Previous Debian parser image reproduced 3 Critical and 51 High package/advisory instances. | Previous runtime package exposure remains until rollout | **Reviewed replacement scans clean.** Digest-pinned supported Alpine runtime, actual-OS tests, unchanged hash locks and no severity suppression. | [Runtime evidence and tradeoffs](operations/parser-runtime.md): 388 tests, real HTTP cancellation/upload checks, zero detected OS/Python findings. Verify deployment of the new image; future Critical/High findings block CI. |
 | A15 P2 Medium, open | Shared-secret admin model, process-local progress/admission, single-region dependencies and single CODEOWNER. | Operational growth or outage | **Bounded locally; architecture decision deferred.** | Add identity/MFA, distributed admission and durable job storage only with owner/provider design, privacy and cost approval. |
-| A16 P2 Medium, open | Warcraft-related media and external source rights are not established by npm license metadata. | Commercial acquisition/distribution | **Inventory updated; rights not certified.** No UwU code/assets copied. | Commercial owner must obtain rights/attribution review; public source visibility does not grant reuse permission. |
+| A16 P2 Medium, open | Warcraft-related media and external source rights are not established by npm license metadata. | Commercial acquisition/distribution | **[Exact asset register](security/asset-provenance.md) complete; rights not certified.** No UwU code/assets copied. | Neil and the relevant rights holders must supply the listed creation/permission records and disposition for each local and remote asset group. |
 
 Four High implementation finding groups and seven Medium groups were corrected.
 The open rows are release/acquisition conditions, not silently accepted exceptions.
+The follow-up work is assigned to the maintainer in GitHub:
+[A12 representative parity](https://github.com/CRSD-Lau/Pizza-Logs/issues/73),
+[A13 provider recovery](https://github.com/CRSD-Lau/Pizza-Logs/issues/74),
+[A15 identity and durable uploads](https://github.com/CRSD-Lau/Pizza-Logs/issues/75),
+and [A16 asset rights](https://github.com/CRSD-Lau/Pizza-Logs/issues/76).
+Each issue records the evidence or decision needed for closure.
 No exposed secret was detected in the scanned history/delivery diff; no rotation was
 triggered by a discovered value. This does not attest to provider-side secret handling.
 
@@ -105,8 +148,9 @@ large. A separately approved retention/asset and history-migration plan is requi
 The unrelated local notes directory was preserved and excluded from the delivery.
 
 SBOMs/scanner output, benchmark samples and screenshots are evidence artifacts, not
-application source. CI retains synthetic acceptance artifacts for 14 days. The PR links
-the exact run; an acquirer should archive the approved evidence under controlled retention.
+application source. Follow-up CI retains synthetic acceptance and complete container
+scan/SBOM artifacts for 90 days (PR 72 used 14 days). The PR links the exact run; an
+acquirer should archive approved evidence under controlled retention before expiry.
 
 ## Performance and capacity
 

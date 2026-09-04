@@ -33,10 +33,12 @@ This directory contains maintained, versioned project documentation. GitHub issu
 
 - [Railway runbook](operations/railway.md)
 - [Service objectives and recovery](operations/service-objectives.md)
+- [Parser runtime maintenance](operations/parser-runtime.md)
 - [Security policy](../SECURITY.md)
 - [Threat model](security/threat-model.md)
 - [Privacy notice](../PRIVACY.md)
 - [Dependency license inventory](../LICENSE.LIST)
+- [Asset provenance and rights](security/asset-provenance.md)
 
 ## Decisions
 

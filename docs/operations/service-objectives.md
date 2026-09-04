@@ -53,9 +53,13 @@ provider retention and access control explicitly before describing these as audi
 
 ## Backup, restore, RPO and RTO
 
-No provider backup, PITR window, encryption setting or restore drill was verified in this
-repository audit. **RPO and RTO are unverified.** Initial planning targets are RPO <=24 hours
-and RTO <=4 hours, conditional on successful backups and a timed restoration exercise.
+The original repository audit did not verify provider backups or restore behavior.
+On 2026-09-04, an authenticated read-only Railway inspection found **no backup
+schedules**. The newest listed snapshot was created on 2026-08-23; an older listed
+snapshot had already passed its expiry timestamp. A listed snapshot is not proof
+that it can be restored. **Provider RPO and RTO remain unverified.** Initial planning
+targets are RPO <=24 hours and RTO <=4 hours, conditional on current successful
+backups and a timed restoration exercise.
 
 Before adopting these targets, the infrastructure owner must:
 
@@ -69,6 +73,35 @@ Before adopting these targets, the infrastructure owner must:
 
 Raw combat logs are not retained for recovery. Database backup protects stored reports;
 reparsing requires the uploader's original file and explicit reupload.
+
+### Repeatable database evidence
+
+Use `node scripts/database-evidence.mjs capture <private-output.json>` with
+`DATABASE_URL` supplied through the operator's secret manager. The command takes a
+repeatable-read, read-only snapshot with bounded queries. It records table counts,
+row-content hashes, schema/constraint/index definitions, migration status, provenance
+coverage and report totals; it does not export row contents, character names, cached
+upstream errors or connection details. Existing output files are never overwritten.
+Keep evidence outside the repository with restricted access.
+
+After an isolated restoration, capture the restored database and run:
+
+```bash
+node scripts/database-evidence.mjs compare source.json restored.json
+```
+
+The comparison must pass for schema, indexes, constraints, every table's content,
+migration ledger and report totals. Capture the source from the **same exported
+PostgreSQL snapshot used by pg_dump** when production writes can continue; separately
+timed snapshots can legitimately differ. Do not compare only table counts. The
+integration test proves that changing an analytics value without changing row counts
+fails verification. A logical export/restore exercise does not prove provider snapshot
+recovery, PITR, scheduled retention or a production failover time.
+
+Railway's ordinary snapshot restore stages a replacement volume on the source service;
+it is not an isolated drill by default. Never apply it to production for testing.
+Confirm an isolated provider-supported workflow before restoring a native snapshot.
+See [Railway backup behavior](https://docs.railway.com/volumes/backups).
 
 ## Incidents and deployment failures
 

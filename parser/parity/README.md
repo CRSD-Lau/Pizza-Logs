@@ -7,9 +7,10 @@ This lab compares identical synthetic bytes against Pizza's actual parser and
 goldens captured from an independently installed, unmodified UwU revision. It
 does not run reference code or access the network during ordinary CI.
 
-Current result: **9 exact cases, 11 mismatching cases, zero tolerated cases, and
+Current result: **14 exact cases, 12 mismatching cases, zero tolerated cases, and
 seven unproven surface categories**. Most exact cases test session primitives;
-only one covers a mode-identified encounter. Complete or live parity is not proven.
+the corpus now includes four Marrowgar mode kills, a mode-identified wipe, and one
+paired spell/target amount breakdown. Complete or live parity is not proven.
 
 ## Offline commands
 
@@ -43,14 +44,20 @@ exact claims, known differences, and unsupported surfaces. Each golden contains:
 - ordered sessions with raw millisecond duration, damage, Heal, damage taken,
   and a name-keyed participant map;
 - ordered encounters with name, mode, result, duration, and headline amounts;
-- untouched reference display strings, retained separately for future UI work.
+- untouched reference display strings, retained separately for future UI work;
+- optional named encounter damage spell/target amount maps, captured through the
+  actual reference damage-detail method and its target filter, with raw responses retained.
+
+The spell/target case compares two spells and two distinct target names in one
+Marrowgar encounter. It does not establish per-target-per-spell matrices, same-name
+entity grouping, rank collisions, displayed order/rates, or arbitrary mechanics.
 
 All numeric comparisons are exact, with no floating-point tolerance. JSON
 `1000` and `1000.0` may represent the same mathematical value. Strings, missing
 fields, array length, and encounter order compare exactly. Participant maps
 compare identity, not displayed row order. Missing observations cannot pass.
 
-`fixtures.py` generates 17 original synthetic scenarios. Three existing
+`fixtures.py` generates 23 original synthetic scenarios. Three existing
 synthetic parser fixtures are also compared. No private combat log is used.
 The old five-pull acceptance JSON has no paired source and is not counted.
 
@@ -177,3 +184,23 @@ This explicit command makes one bounded HTTPS request to GitHub, reusing an
 ETag when available. Exit **0** means the repository pin is current, **2** means
 stale, and **3** means unavailable. A current repository pin does not prove live
 deployment parity. Never make normal PR tests or report rendering depend on it.
+
+## Reviewed difference dispositions
+
+The manifest now distinguishes `canonical-intentional`, `reference-defect`,
+`insufficient-evidence`, and `pizza-defect`. These labels never change the parity
+result or its exact difference fingerprint. Every mismatch has a next-evidence
+statement, reproduced in both report formats.
+
+The original eleven mismatches comprise six canonical policy differences, one
+observed invalid negative reference duration, and four cases lacking sufficient
+evidence to assign a general defect. A newly retained sparse-target fixture adds
+one more segmentation mismatch. None currently establishes an unfixed Pizza
+canonical defect. Missing evidence is not a pass.
+
+The sparse-target case was the initial damage-detail experiment. It produces no
+reference encounter; its mismatch is retained instead of being replaced by the
+longer dense case that both parsers recognize. The latter invokes actual reference
+spell detail and target-filtered report methods and compares their amounts with
+Pizza's stored participant breakdowns. This is an evidence expansion; no production
+compatibility projection or canonical parser change is introduced.

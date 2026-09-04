@@ -8,6 +8,9 @@ This project follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) an
 
 ### Added
 
+- Additional independently captured UwU mode, outcome, spell and target comparisons, with explicit mismatch classifications; current evidence is 14 exact cases and 12 visible differences, not full parity.
+- Read-only database evidence capture and restoration comparison covering row content, enums, schema, migration history and report totals.
+- Full runtime-image vulnerability/SBOM gates, parser tests on the production OS, 90-day CI evidence retention and an exact media provenance register.
 - A pinned, offline UwU differential lab, explicit compatibility manifest and monthly reference-drift check. Current evidence does not establish complete UwU parity.
 - Nullable parser/metric provenance on new uploads, database integration tests, dependency readiness endpoints and headless responsive/accessibility acceptance in CI.
 - Maintained acquisition risk assessment, surface inventory, service objectives and durable-upload ADR.
@@ -20,6 +23,8 @@ This project follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) an
 
 ### Changed
 
+- Fit the hover character viewer to the full portrait height and lower its camera framing so tall headgear and feet remain visible.
+- Move the parser to a digest-pinned supported Alpine/Python runtime, removing the observed Debian package findings while retaining hash locks and non-root execution. Matched local parsing is 7–16% slower with lower peak memory; see the runtime runbook.
 - Persist complete uploads atomically with bounded conflict retries and completed-file deduplication; incomplete historical uploads require maintainer recovery.
 - Correct environmental incoming damage and explicit calendar-day session boundaries in both quick previews and final reports without rewriting historical reports.
 - Aggregate boss/weekly statistics in PostgreSQL; fix weekly cutoff, milestone rank eligibility and player aggregate statistics.
@@ -34,7 +39,7 @@ This project follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) an
 ### Security
 
 - Bound parser transport, archive metadata and physical lines; retain worker capacity and temporary files until cancelled work actually exits. ZIP members support stored/deflate compression only.
-- Remove unused installer tools from runtime images and update vulnerable transitive npm dependencies. Debian parser-base advisories remain explicitly documented release conditions.
+- Remove unused installer tools from runtime images and update vulnerable transitive npm dependencies. The follow-up parser image replaces the affected Debian base; the original findings and rollout implications remain documented.
 - Removed the unauthenticated upload-row listing and query-string admin import endpoint.
 - Removed arbitrary parser filesystem access and disabled legacy multipart/debug/stream routes by default.
 - Sanitized untrusted Slack pull-request text and public upload/parser errors.

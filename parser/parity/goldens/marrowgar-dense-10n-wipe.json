@@ -1,0 +1,81 @@
+{
+  "author": "Neil Mitchell",
+  "modifier": "Neil Mitchell",
+  "evidence": {
+    "kind": "local-reference",
+    "sourceSha256": "34743b3892792b646a541a983dedf9754a8aa71b7a0cb09c4d37c0073e4d1a21",
+    "referenceSha": "4c046d266b85ad833ab4d70addb0b6f1a16647e3",
+    "observedAt": "2026-09-04T22:03:22.370930+00:00",
+    "pythonVersion": "3.11.9",
+    "configuration": {
+      "fileYear": 2026,
+      "archiveTimestamp": "2026-09-04T00:00:00Z",
+      "realm": "Lordaeron"
+    },
+    "method": "Unmodified LogsSeparator, logs_fix.normalize, and THE_LOGS report methods. Archive extraction and publication eligibility are not covered."
+  },
+  "normalized": {
+    "sessions": [
+      {
+        "durationMs": 120000,
+        "totalDamage": 127259,
+        "heal": 0,
+        "damageTaken": 1001,
+        "players": {
+          "Syntheticmage": {
+            "totalDamage": 127259,
+            "heal": 0,
+            "damageTaken": 1001
+          }
+        }
+      }
+    ],
+    "encounters": [
+      {
+        "name": "Lord Marrowgar",
+        "difficulty": "10N",
+        "outcome": "WIPE",
+        "durationMs": 120000,
+        "totalDamage": 127259,
+        "heal": 0,
+        "damageTaken": 1001
+      }
+    ]
+  },
+  "referenceDisplay": {
+    "sessions": [
+      {
+        "duration": "0:02:00.000",
+        "columns": {
+          "useful": {},
+          "damage": {
+            "Total": {
+              "value": "127 259",
+              "per_second": "1 060.4",
+              "percent": 0
+            },
+            "Syntheticmage": {
+              "value": "127 259",
+              "per_second": "1 060.4",
+              "percent": 100
+            }
+          },
+          "heal": {},
+          "heal_total": {},
+          "taken": {
+            "Total": {
+              "value": "1 001",
+              "per_second": "8.3",
+              "percent": 0
+            },
+            "Syntheticmage": {
+              "value": "1 001",
+              "per_second": "8.3",
+              "percent": 100
+            }
+          }
+        }
+      }
+    ]
+  }
+}

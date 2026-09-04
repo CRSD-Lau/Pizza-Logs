@@ -113,6 +113,29 @@ jobs:
           docker build -f parser/Dockerfile -t pizza-logs-parser:ci .
           docker run --rm --network none -e DATABASE_URL pizza-logs-web:ci node node_modules/prisma/build/index.js --version
 
+      - name: Test parser on its production operating system
+        run: |
+          docker build --target test -f parser/Dockerfile -t pizza-logs-parser:test .
+          docker run --rm --network none --cpus 2 --memory 512m pizza-logs-parser:test
+
+      - name: Scan complete runtime images and retain SBOMs
+        run: |
+          mkdir -p .test-artifacts/container-security
+          for service in web parser; do
+            docker image inspect --format '{{.Id}}' "pizza-logs-$service:ci" > ".test-artifacts/container-security/$service.image-id"
+            docker run --rm -v /var/run/docker.sock:/var/run/docker.sock:ro \
+              -v "$PWD/.test-artifacts/container-security:/out" \
+              -v pizza-trivy-cache:/root/.cache/trivy \
+              ghcr.io/aquasecurity/trivy@sha256:62b1e65e8869bc4b4c6aa4fa2b21595256c7c2f6018a9d9ad61caf87187c1969 \
+              image --scanners vuln --list-all-pkgs --format json --output "/out/$service.json" "pizza-logs-$service:ci"
+            docker run --rm -v /var/run/docker.sock:/var/run/docker.sock:ro \
+              -v "$PWD/.test-artifacts/container-security:/out" \
+              -v pizza-trivy-cache:/root/.cache/trivy \
+              ghcr.io/aquasecurity/trivy@sha256:62b1e65e8869bc4b4c6aa4fa2b21595256c7c2f6018a9d9ad61caf87187c1969 \
+              image --format cyclonedx --output "/out/$service.cdx.json" "pizza-logs-$service:ci"
+          done
+          node scripts/check-container-scans.mjs .test-artifacts/container-security
+
       - name: Integrated containers and headless acceptance
         run: |
           npx playwright install --with-deps chromium
@@ -131,7 +154,7 @@ jobs:
           name: synthetic-acceptance
           path: .test-artifacts/
           include-hidden-files: true
-          retention-days: 14
+          retention-days: 90
 
   dependency-review:
     if: github.event_name == 'pull_request'
