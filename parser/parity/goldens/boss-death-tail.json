@@ -1,0 +1,87 @@
+{
+  "author": "Neil Mitchell",
+  "modifier": "Neil Mitchell",
+  "evidence": {
+    "kind": "local-reference",
+    "sourceSha256": "f689ccc4fa2bb36f787f05668b8d4cd6750fdd37962593e3fdfe7e6c0085d9c1",
+    "referenceSha": "4c046d266b85ad833ab4d70addb0b6f1a16647e3",
+    "observedAt": "2026-09-04T20:44:42.537241+00:00",
+    "pythonVersion": "3.11.9",
+    "configuration": {
+      "fileYear": 2026,
+      "archiveTimestamp": "2026-09-04T00:00:00Z",
+      "realm": "Lordaeron"
+    },
+    "method": "Unmodified LogsSeparator, logs_fix.normalize, and THE_LOGS report methods. Archive extraction and publication eligibility are not covered."
+  },
+  "normalized": {
+    "sessions": [
+      {
+        "durationMs": 35000,
+        "totalDamage": 3000,
+        "heal": 1000,
+        "damageTaken": 0,
+        "players": {
+          "Synthetichealer": {
+            "totalDamage": 0,
+            "heal": 1000,
+            "damageTaken": 0
+          },
+          "Syntheticmage": {
+            "totalDamage": 3000,
+            "heal": 0,
+            "damageTaken": 0
+          }
+        }
+      }
+    ],
+    "encounters": []
+  },
+  "referenceDisplay": {
+    "sessions": [
+      {
+        "duration": "0:00:35.000",
+        "columns": {
+          "useful": {},
+          "damage": {
+            "Total": {
+              "value": "3 000",
+              "per_second": "85.7",
+              "percent": 0
+            },
+            "Syntheticmage": {
+              "value": "3 000",
+              "per_second": "85.7",
+              "percent": 100
+            }
+          },
+          "heal": {
+            "Total": {
+              "value": "1 000",
+              "per_second": "28.5",
+              "percent": 0
+            },
+            "Synthetichealer": {
+              "value": "1 000",
+              "per_second": "28.5",
+              "percent": 100
+            }
+          },
+          "heal_total": {
+            "Total": {
+              "value": "1 000",
+              "per_second": "28.5",
+              "percent": 0
+            },
+            "Synthetichealer": {
+              "value": "1 000",
+              "per_second": "28.5",
+              "percent": 100
+            }
+          },
+          "taken": {}
+        }
+      }
+    ]
+  }
+}

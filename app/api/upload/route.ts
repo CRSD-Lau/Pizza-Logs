@@ -1,46 +1,28 @@
 import { NextRequest } from "next/server";
-import { Prisma } from "@/generated/prisma/client";
 import { db } from "@/lib/db";
-import { createPublicReportSlug } from "@/lib/public-report-slug";
-import { buildRaidSessionRoutesWithAnalytics } from "@/lib/raid-session-slug";
-import { ParseResultSchema, UploadRequestSchema } from "@/lib/schema";
+import { UploadRequestSchema } from "@/lib/schema";
 import { computeMilestones } from "@/lib/actions/milestones";
+import { ParserResponseError, readParserResult } from "@/lib/parser-transport";
+import { IncompleteStoredUploadError, persistParsedUpload } from "@/lib/upload-persistence";
 import {
-  UploadRequestError,
-  isUploadId,
-  parseUploadSize,
-  parserEventErrorMessage,
-  parserHttpErrorMessage,
-  sanitizeUploadFilename,
+  UploadRequestError, isUploadId, parseUploadSize,
+  parserHttpErrorMessage, sanitizeUploadFilename,
 } from "@/lib/upload-security";
 
 export const maxDuration = 300;
-
-const enc = new TextEncoder();
-const sse = (data: object) => enc.encode(`data: ${JSON.stringify(data)}\n\n`);
+const encoder = new TextEncoder();
+const sse = (data: object) => encoder.encode(`data: ${JSON.stringify(data)}\n\n`);
 
 function uploadErrorResponse(message: string, status: number): Response {
   return new Response(sse({ type: "error", msg: message }), {
-    status,
-    headers: { "Content-Type": "text/event-stream" },
+    status, headers: { "Content-Type": "text/event-stream" },
   });
 }
 
-function isPublicReportSlugCollision(error: unknown): boolean {
-  if (!(error instanceof Prisma.PrismaClientKnownRequestError) || error.code !== "P2002") {
-    return false;
-  }
-
-  return JSON.stringify(error.meta?.target ?? "").includes("publicSlug");
-}
-
 export async function POST(req: NextRequest) {
-  // ── Parse metadata from query params ─────────────────────────
   const { searchParams } = new URL(req.url);
   const filename = sanitizeUploadFilename(searchParams.get("filename"));
-  if (!filename) {
-    return uploadErrorResponse("Only .txt, .log, and .zip uploads are supported.", 400);
-  }
+  if (!filename) return uploadErrorResponse("Only .txt, .log, and .zip uploads are supported.", 400);
 
   let declaredFileSize: number;
   try {
@@ -48,377 +30,86 @@ export async function POST(req: NextRequest) {
     const contentLength = req.headers.get("content-length");
     if (contentLength !== null) parseUploadSize(contentLength, "Content-Length");
   } catch (error) {
-    if (error instanceof UploadRequestError) {
-      return uploadErrorResponse(error.message, error.status);
-    }
-    return uploadErrorResponse("Invalid upload size.", 400);
+    return error instanceof UploadRequestError
+      ? uploadErrorResponse(error.message, error.status)
+      : uploadErrorResponse("Invalid upload size.", 400);
   }
-
-  const meta = UploadRequestSchema.safeParse({
+  const metadata = UploadRequestSchema.safeParse({
     uploaderName: searchParams.get("uploaderName") ?? undefined,
-    guildName:    searchParams.get("guildName") ?? undefined,
-    realmName:    searchParams.get("realmName") ?? "Lordaeron",
-    realmHost:    searchParams.get("realmHost") ?? "warmane",
-    expansion:    searchParams.get("expansion") ?? "wotlk",
+    guildName: searchParams.get("guildName") ?? undefined,
+    realmName: searchParams.get("realmName") ?? "Lordaeron",
+    realmHost: searchParams.get("realmHost") ?? "warmane",
+    expansion: searchParams.get("expansion") ?? "wotlk",
   });
-  if (!meta.success) {
-    return uploadErrorResponse(meta.error.message, 400);
-  }
-  const { uploaderName, guildName, realmName, realmHost, expansion } = meta.data;
-  const parserUrl = process.env.PARSER_SERVICE_URL ?? "http://localhost:8000";
-  const contentType = req.headers.get("content-type") ?? "";
+  if (!metadata.success) return uploadErrorResponse("Invalid upload metadata.", 400);
   const clientUploadId = req.headers.get("x-upload-id");
-  if (!isUploadId(clientUploadId) || !contentType.startsWith("application/octet-stream") || !req.body) {
+  const contentType = req.headers.get("content-type")?.split(";")[0].trim().toLowerCase();
+  if (!isUploadId(clientUploadId) || contentType !== "application/octet-stream" || !req.body) {
     return uploadErrorResponse("Invalid streamed upload request.", 400);
   }
 
+  const parserUrl = process.env.PARSER_SERVICE_URL ?? "http://localhost:8000";
+  const cancellation = new AbortController();
+  const signal = AbortSignal.any([req.signal, cancellation.signal, AbortSignal.timeout(270_000)]);
   const stream = new ReadableStream({
     async start(controller) {
-      // Safe send/close — swallow ERR_INVALID_STATE if client disconnected
       const send = (data: object) => {
-        try { controller.enqueue(sse(data)); } catch { /* client gone */ }
+        try { controller.enqueue(sse(data)); } catch { /* disconnected client */ }
       };
-      const close = () => {
-        try { controller.close(); } catch { /* already closed */ }
-      };
-
       try {
-        // ── Forward to parser SSE endpoint ──────────────────────
-        let parserRes: Response;
+        let parserResponse: Response;
         try {
-          const parserEndpoint = `${parserUrl}/uploads/${encodeURIComponent(clientUploadId)}/stream`;
-          parserRes = await fetch(parserEndpoint, {
-            method:  "POST",
-            headers: {
-              "content-type": "application/octet-stream",
-              "x-filename": filename,
-            },
-            body:    req.body,
-            duplex:  "half",
-            signal:  AbortSignal.timeout(270_000),
+          parserResponse = await fetch(`${parserUrl}/uploads/${encodeURIComponent(clientUploadId)}/stream`, {
+            method: "POST",
+            headers: { "content-type": "application/octet-stream", "x-filename": filename },
+            body: req.body,
+            duplex: "half", signal,
           } as RequestInit & { duplex: string });
-        } catch (err) {
-          console.error("[upload] parser request failed", err);
+        } catch {
+          console.error("[upload] parser request failed", { uploadId: clientUploadId });
           send({ type: "error", msg: "Parser service is unavailable. Please try again shortly." });
           return;
         }
-
-        if (!parserRes.ok || !parserRes.body) {
-          const details = await parserRes.text().catch(() => "");
-          console.error("[upload] parser rejected request", { status: parserRes.status, details });
-          send({ type: "error", msg: parserHttpErrorMessage(parserRes.status) });
+        if (!parserResponse.ok || !parserResponse.body) {
+          await parserResponse.body?.cancel().catch(() => undefined);
+          send({ type: "error", msg: parserHttpErrorMessage(parserResponse.status) });
           return;
         }
-
-        // ── Stream SSE from parser, intercept "done" event ──────
-        const reader  = parserRes.body.getReader();
-        const decoder = new TextDecoder();
-        let buffer    = "";
-        let parseResult: ReturnType<typeof ParseResultSchema.parse> | null = null;
-
-        outer: while (true) {
-          const { done, value } = await reader.read();
-          if (done) break;
-
-          buffer += decoder.decode(value, { stream: true });
-          const chunks = buffer.split("\n\n");
-          buffer = chunks.pop() ?? "";
-
-          for (const chunk of chunks) {
-            for (const line of chunk.split("\n")) {
-              if (!line.startsWith("data: ")) continue;
-              let event: { type: string; pct?: number; msg?: string; code?: string; data?: unknown; };
-              try { event = JSON.parse(line.slice(6)); }
-              catch { continue; }
-
-              if (event.type === "done") {
-                // Validate parser payload
-                const validated = ParseResultSchema.safeParse(event.data);
-                if (!validated.success) {
-                  send({ type: "error", msg: "Invalid parser response" });
-                  break outer;
-                }
-                parseResult = validated.data;
-                send({ type: "progress", pct: 91, msg: "Saving to database…" });
-              } else if (event.type === "error") {
-                send({ type: "error", msg: parserEventErrorMessage(event.code) });
-                break outer;
-              } else {
-                // Forward progress straight through
-                send(event);
-              }
-            }
-          }
-        }
-
-        if (!parseResult) {
-          return;
-        }
-
-        const firstSessionSlug = buildRaidSessionRoutesWithAnalytics(
-          parseResult.encounters.map(encounter => ({
-            sessionIndex: encounter.sessionIndex,
-            startedAt: encounter.startedAt,
-          })),
-          parseResult.sessionAnalytics,
-        )[0]?.slug;
-
-        // ── Dedup check ─────────────────────────────────────────
-        const existingUpload = await db.upload.findUnique({
-          where:  { fileHash: parseResult.fileHash },
-          select: { id: true, publicSlug: true },
-        });
-        if (existingUpload) {
-          send({
-            type: "complete",
-            result: {
-              uploadId:            existingUpload.id,
-              publicReportSlug:    existingUpload.publicSlug,
-              firstSessionSlug,
-              status:              "DUPLICATE",
-              encountersFound:     parseResult.encounters.length,
-              encountersInserted:  0,
-              encountersDuplicate: parseResult.encounters.length,
-              warnings:            ["This exact file has already been uploaded."],
-            },
-          });
-          return;
-        }
-
-        // ── Ensure realm / guild ─────────────────────────────────
-        const realm = await db.realm.upsert({
-          where:  { name_host: { name: realmName, host: realmHost } },
-          update: {},
-          create: { name: realmName, host: realmHost, expansion },
-        });
-
-        let guildId: string | undefined;
-        if (guildName) {
-          const guild = await db.guild.upsert({
-            where:  { name_realmId: { name: guildName, realmId: realm.id } },
-            update: {},
-            create: { name: guildName, realmId: realm.id },
-          });
-          guildId = guild.id;
-        }
-
-        // ── Upload record ────────────────────────────────────────
-        let upload: { id: string; publicSlug: string } | null = null;
-        for (let attempt = 0; attempt < 5 && !upload; attempt += 1) {
-          try {
-            upload = await db.upload.create({
-              data: {
-                publicSlug:    createPublicReportSlug(guildName ?? realmName),
-                filename:      filename,
-                fileHash:      parseResult.fileHash,
-                fileSize:      parseResult.receivedBytes ?? declaredFileSize,
-                status:        "PARSING",
-                realmId:       realm.id,
-                guildId:       guildId ?? null,
-                uploaderName:  uploaderName,
-                rawLineCount:  parseResult.rawLineCount,
-              },
-              select: { id: true, publicSlug: true },
-            });
-          } catch (error) {
-            if (!isPublicReportSlugCollision(error)) throw error;
-          }
-        }
-        if (!upload) throw new Error("Could not allocate a unique public report slug");
-
+        const parseResult = await readParserResult(parserResponse.body, clientUploadId, send);
         send({ type: "progress", pct: 92, msg: "Saving to database…" });
-
-        // ── Batch pre-fetch ──────────────────────────────────────
-        const bossNames    = [...new Set(parseResult.encounters.map(e => e.bossName))];
-        const fingerprints = parseResult.encounters.map(e => e.fingerprint);
-
-        const [dbBosses, existingEncounters] = await Promise.all([
-          db.boss.findMany({ where: { name: { in: bossNames } } }),
-          db.encounter.findMany({
-            where:  { fingerprint: { in: fingerprints } },
-            select: { fingerprint: true },
-          }),
-        ]);
-
-        const bossMap      = new Map(dbBosses.map(b => [b.name, b]));
-        const existingFps  = new Set(existingEncounters.map(e => e.fingerprint));
-        const newEncounters = parseResult.encounters.filter(
-          enc => bossMap.has(enc.bossName) && !existingFps.has(enc.fingerprint)
-        );
-
-        send({ type: "progress", pct: 94, msg: "Saving players…" });
-
-        // ── Batch player upserts ─────────────────────────────────
-        const playerClassMap = new Map(
-          newEncounters.flatMap(enc =>
-            enc.participants
-              .filter(p => p.class)
-              .map(p => [p.name, p.class!] as [string, string])
-          )
-        );
-        const sessionPlayerNames = Object.values(parseResult.sessionAnalytics ?? {})
-          .flatMap(session => Object.keys(session.players));
-        const allPlayerNames = [...new Set([
-          ...newEncounters.flatMap(e => e.participants.map(p => p.name)),
-          ...sessionPlayerNames,
-        ])];
-
-        const BATCH = 20;
-        for (let i = 0; i < allPlayerNames.length; i += BATCH) {
-          await Promise.all(
-            allPlayerNames.slice(i, i + BATCH).map(name =>
-              db.player.upsert({
-                where:  { name_realmId: { name, realmId: realm.id } },
-                update: { class: playerClassMap.get(name) ?? undefined },
-                create: { name, class: playerClassMap.get(name) ?? null, realmId: realm.id },
-              })
-            )
-          );
+        const { result, milestoneChecks } = await persistParsedUpload(db, {
+          parsed: parseResult, metadata: metadata.data, filename,
+          fileSize: parseResult.receivedBytes ?? declaredFileSize,
+        });
+        if (milestoneChecks.length) {
+          send({ type: "progress", pct: 98, msg: "Computing milestones…" });
+          try {
+            result.milestones = await computeMilestones(milestoneChecks);
+          } catch {
+            console.error("[upload] milestone computation failed", { uploadId: result.uploadId });
+            result.warnings = [...(result.warnings ?? []), "Report saved; milestones are temporarily unavailable."];
+          }
         }
-
-        send({ type: "progress", pct: 96, msg: "Saving encounters…" });
-
-        const dbPlayers = await db.player.findMany({
-          where:  { name: { in: allPlayerNames }, realmId: realm.id },
-          select: { id: true, name: true },
+        send({ type: "complete", result });
+      } catch (error) {
+        console.error("[upload] processing failed", {
+          uploadId: clientUploadId, category: error instanceof Error ? error.name : "UnknownError",
         });
-        const playerMap = new Map(dbPlayers.map(p => [p.name, p.id]));
-
-        // ── Create encounters + participants in parallel ──────────
-        let encountersInserted = 0;
-        const milestoneChecks: Parameters<typeof computeMilestones>[0] = [];
-
-        await Promise.all(
-          newEncounters.map(async enc => {
-            const boss = bossMap.get(enc.bossName);
-            if (!boss) return;
-
-            const encounter = await db.encounter.create({
-              data: {
-                uploadId:         upload.id,
-                bossId:           boss.id,
-                fingerprint:      enc.fingerprint,
-                outcome:          enc.outcome as "KILL" | "WIPE" | "UNKNOWN",
-                difficulty:       enc.difficulty,
-                groupSize:        enc.groupSize,
-                sessionIndex:     enc.sessionIndex ?? 0,
-                durationSeconds:  enc.durationSeconds,
-                durationMs:       Math.round((enc.durationMs ?? 0) > 0 ? enc.durationMs : enc.durationSeconds * 1000),
-                startedAt:        new Date(enc.startedAt),
-                endedAt:          new Date(enc.endedAt),
-                totalDamage:      enc.totalDamage,
-                totalHealing:     enc.totalHealing,
-                totalAbsorbs:     enc.totalAbsorbs,
-                unattributedAbsorbs: enc.unattributedAbsorbs,
-                totalDamageTaken: enc.totalDamageTaken,
-              },
-            });
-
-            await db.participant.createMany({
-              data: enc.participants.flatMap(p => {
-                const playerId = playerMap.get(p.name);
-                if (!playerId) return [];
-                return [{
-                  encounterId:    encounter.id,
-                  playerId,
-                  role:           inferRole(p),
-                  spec:           p.spec ?? null,
-                  totalDamage:    p.totalDamage,
-                  totalHealing:   p.totalHealing,
-                  totalAbsorbs:   p.totalAbsorbs,
-                  damageTaken:    p.damageTaken,
-                  dps:            p.dps,
-                  hps:            p.hps,
-                  aps:            p.aps,
-                  deaths:         p.deaths,
-                  critPct:        p.critPct,
-                  spellBreakdown:  (p.spellBreakdown  ?? {}) as object,
-                  targetBreakdown: (p.targetBreakdown ?? {}) as object,
-                  absorbBreakdown: (p.absorbBreakdown ?? {}) as object,
-                  auraBreakdown:   (p.auraBreakdown ?? {}) as object,
-                  powerBreakdown:  (p.powerBreakdown ?? {}) as object,
-                  consumableBreakdown: (p.consumableBreakdown ?? {}) as object,
-                  deathEvents:     p.deathEvents as object[],
-                }];
-              }),
-              skipDuplicates: true,
-            });
-
-            for (const p of enc.participants) {
-              const playerId = playerMap.get(p.name);
-              if (!playerId) continue;
-              const role = inferRole(p);
-              if (enc.outcome === "KILL" && enc.difficulty !== "UNKNOWN" && p.dps > 0) {
-                milestoneChecks.push({ playerId, playerName: p.name, encounterId: encounter.id, bossId: boss.id, bossName: boss.name, difficulty: enc.difficulty, metric: "DPS", value: p.dps });
-              }
-              if (enc.outcome === "KILL" && enc.difficulty !== "UNKNOWN" && role === "HEALER" && p.hps > 100) {
-                milestoneChecks.push({ playerId, playerName: p.name, encounterId: encounter.id, bossId: boss.id, bossName: boss.name, difficulty: enc.difficulty, metric: "HPS", value: p.hps });
-              }
-            }
-
-            encountersInserted++;
-          })
-        );
-
-        // Mark DONE now — encounters are saved. Milestones are best-effort;
-        // if they fail or the stream drops, the upload still shows correctly.
-        await db.upload.update({
-          where: { id: upload.id },
-          data:  {
-            status:        "DONE",
-            parsedAt:      new Date(),
-            sessionDamage: parseResult.sessionDamage ?? {},
-            sessionAnalytics: parseResult.sessionAnalytics ?? {},
-          },
-        });
-
-        send({ type: "progress", pct: 98, msg: "Computing milestones…" });
-
-        const milestones = await computeMilestones(milestoneChecks);
-
         send({
-          type: "complete",
-          result: {
-            uploadId:            upload.id,
-            publicReportSlug:    upload.publicSlug,
-            firstSessionSlug,
-            status:              "DONE",
-            encountersFound:     parseResult.encounters.length,
-            encountersInserted,
-            encountersDuplicate: parseResult.encounters.length - newEncounters.length,
-            milestones,
-            warnings:            parseResult.warnings ?? [],
-          },
+          type: "error",
+          msg: error instanceof ParserResponseError || error instanceof IncompleteStoredUploadError
+            ? error.message : "Upload processing failed. Please try again.",
         });
-      } catch (err) {
-        console.error("[upload] unhandled error:", err);
-        send({ type: "error", msg: "Upload processing failed. Please try again." });
       } finally {
-        close();
+        try { controller.close(); } catch { /* disconnected client */ }
       }
     },
+    cancel() { cancellation.abort(); },
   });
-
   return new Response(stream, {
     headers: {
-      "Content-Type":     "text/event-stream",
-      "Cache-Control":    "no-cache, no-transform",
-      "X-Accel-Buffering":"no",
-      ...(clientUploadId ? { "X-Upload-ID": clientUploadId } : {}),
+      "Content-Type": "text/event-stream", "Cache-Control": "no-cache, no-transform",
+      "X-Accel-Buffering": "no", "X-Upload-ID": clientUploadId,
     },
   });
-}
-
-function inferRole(p: {
-  role?: "DPS" | "HEALER" | "TANK" | "UNKNOWN";
-  totalDamage: number;
-  totalHealing: number;
-  damageTaken: number;
-}): "DPS" | "HEALER" | "TANK" | "UNKNOWN" {
-  if (p.role) return p.role;
-  const ratio = p.totalHealing / Math.max(1, p.totalDamage + p.totalHealing);
-  if (ratio > 0.6) return "HEALER";
-  if (ratio > 0.3) return "UNKNOWN";
-  if (p.damageTaken > Math.max(1, p.totalDamage * 0.25)) return "TANK";
-  return "DPS";
 }

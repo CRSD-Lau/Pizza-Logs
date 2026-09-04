@@ -14,6 +14,9 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     return NextResponse.json({ ok: false, error: "Invalid JSON payload." }, { status: 400 });
   }
 
+  if (body === null || typeof body !== "object" || Array.isArray(body)) {
+    return NextResponse.json({ ok: false, error: "Invalid JSON payload." }, { status: 400 });
+  }
   const payload = body as Record<string, unknown>;
   if (!verifyAdmin(payload.secret)) {
     return NextResponse.json({ ok: false, error: "Unauthorized." }, { status: 401 });

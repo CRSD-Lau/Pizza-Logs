@@ -17,6 +17,11 @@ const SAFE_PARSER_ERRORS: Readonly<Record<string, string>> = {
   COMPRESSION_RATIO_LIMIT: "The archive exceeds the compression-ratio limit.",
   UNCOMPRESSED_SIZE_LIMIT: "The archive expands beyond the allowed size.",
   PROCESSING_TIMEOUT: "Upload processing timed out. Please try again.",
+  LINE_LENGTH_LIMIT: "A combat-log line exceeds the supported length.",
+  ARCHIVE_METADATA_LIMIT: "The ZIP directory metadata exceeds the supported limit.",
+  DUPLICATE_MEMBER: "The archive contains duplicate file names.",
+  UNSUPPORTED_COMPRESSION: "ZIP members must use stored or deflate compression.",
+  UPLOAD_CANCELLED: "The upload was cancelled. Please try again.",
 };
 
 export class UploadRequestError extends Error {
@@ -63,5 +68,11 @@ export function parserHttpErrorMessage(status: number): string {
 }
 
 export function parserEventErrorMessage(code: string | undefined): string {
-  return code ? (SAFE_PARSER_ERRORS[code] ?? "Upload processing failed. Please try again.") : "Upload processing failed. Please try again.";
+  return code && Object.hasOwn(SAFE_PARSER_ERRORS, code)
+    ? SAFE_PARSER_ERRORS[code]
+    : "Upload processing failed. Please try again.";
+}
+
+export function publicParserErrorCode(code: string | undefined): string {
+  return code && Object.hasOwn(SAFE_PARSER_ERRORS, code) ? code : "PROCESSING_ERROR";
 }

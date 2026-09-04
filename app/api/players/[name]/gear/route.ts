@@ -10,7 +10,7 @@ export async function GET(
   { params }: { params: Promise<{ name: string }> },
 ): Promise<Response> {
   const { name } = await params;
-  const characterName = decodeURIComponent(name).trim();
+  const characterName = name.trim();
   const requestedRealm = new URL(request.url).searchParams.get("realm")?.trim() || null;
 
   if (!/^[A-Za-z]{2,12}$/.test(characterName) || (requestedRealm && !/^[A-Za-z]{2,24}$/.test(requestedRealm))) {

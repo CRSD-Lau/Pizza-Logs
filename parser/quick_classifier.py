@@ -3,7 +3,9 @@
 from __future__ import annotations
 
 import re
-from typing import Iterator, TextIO
+from collections.abc import Iterator
+from datetime import date
+from typing import TextIO
 
 from bosses import ALL_BOSS_NAMES, lookup_boss, lookup_boss_by_id
 from combat_log_events import parse_combat_log_line
@@ -16,7 +18,6 @@ from difficulty_detector import (
     YOGG_KEEPER_BUFFS,
     detect_difficulty,
 )
-
 
 ENCOUNTER_START = "ENCOUNTER_START"
 ENCOUNTER_END = "ENCOUNTER_END"
@@ -71,13 +72,20 @@ def _infer_boss(segment: list[tuple[str, list[str], float]]) -> str | None:
     return max(counts, key=counts.get) if counts else None
 
 
-def iter_encounter_segments(fh: TextIO, cancel_event=None) -> Iterator[list[tuple[str, list[str], float]]]:
+def iter_encounter_segments(
+    fh: TextIO, cancel_event=None, *, file_year: int = 2024,
+) -> Iterator[list[tuple[str, list[str], float]]]:
     """Yield one bounded encounter at a time from a combat-log text stream."""
     current: list[tuple[str, list[str], float]] = []
     has_markers = False
     in_marker_encounter = False
     heuristic_active = False
     last_boss_ts = 0.0
+    calendar_key: tuple[int, int] | None = None
+    calendar_year = file_year
+    calendar_ordinal = 0
+    first_ordinal: int | None = None
+    last_timestamp: tuple[int, float] | None = None
 
     for line_number, raw_line in enumerate(fh, start=1):
         if cancel_event is not None and line_number % 4096 == 0 and cancel_event.is_set():
@@ -85,6 +93,26 @@ def iter_encounter_segments(fh: TextIO, cancel_event=None) -> Iterator[list[tupl
         parsed = parse_combat_log_line(raw_line)
         if parsed.line is None:
             continue
+        key = (parsed.line.month, parsed.line.day)
+        candidate_year = calendar_year
+        candidate_ordinal = calendar_ordinal
+        if key != calendar_key:
+            # Match full parsing: only December -> January infers a new year.
+            # Invalid dates and backwards input cannot invent preview attempts.
+            if calendar_key and calendar_key[0] == 12 and key[0] == 1:
+                candidate_year += 1
+            try:
+                candidate_ordinal = date(candidate_year, *key).toordinal()
+            except ValueError:
+                continue
+        absolute = (candidate_ordinal, parsed.line.ts)
+        if last_timestamp is not None and absolute < last_timestamp:
+            continue
+        calendar_key, calendar_year, calendar_ordinal = key, candidate_year, candidate_ordinal
+        last_timestamp = absolute
+        if first_ordinal is None:
+            first_ordinal = calendar_ordinal
+        absolute_seconds = (calendar_ordinal - first_ordinal) * 86400.0 + parsed.line.ts
         item = (parsed.line.ts_str, parsed.line.parts, parsed.line.ts)
         parts = parsed.line.parts
         event = parts[0]
@@ -112,23 +140,23 @@ def iter_encounter_segments(fh: TextIO, cancel_event=None) -> Iterator[list[tupl
 
         boss_event = _is_boss_event(parts)
         if heuristic_active:
-            if parsed.line.ts - last_boss_ts > ENCOUNTER_GAP_SECONDS:
+            if absolute_seconds - last_boss_ts > ENCOUNTER_GAP_SECONDS:
                 if current:
                     yield current
                 current = []
                 heuristic_active = False
                 if event in ACTIVE_EVENTS and boss_event:
                     heuristic_active = True
-                    last_boss_ts = parsed.line.ts
+                    last_boss_ts = absolute_seconds
                     current = [item]
             elif boss_event:
-                last_boss_ts = parsed.line.ts
+                last_boss_ts = absolute_seconds
                 current.append(item)
             else:
                 current.append(item)
         elif event in ACTIVE_EVENTS and boss_event:
             heuristic_active = True
-            last_boss_ts = parsed.line.ts
+            last_boss_ts = absolute_seconds
             current = [item]
 
     if current:
@@ -169,7 +197,7 @@ def _classify_segment(segment: list[tuple[str, list[str], float]]) -> dict[str, 
     }
 
 
-def quick_classify(fh: TextIO, cancel_event=None) -> list[dict[str, object]]:
+def quick_classify(fh: TextIO, cancel_event=None, *, file_year: int = 2024) -> list[dict[str, object]]:
     # Marker logs have explicit encounter boundaries and group size. Scan their
     # bulk damage lines as raw text and CSV-parse only boundaries or candidate
     # difficulty spells. This is materially faster for large archived logs.
@@ -221,6 +249,8 @@ def quick_classify(fh: TextIO, cancel_event=None) -> list[dict[str, object]]:
                     results.append(result)
             return results
         fh.seek(start_position)
+    except TimeoutError:
+        raise
     except (AttributeError, OSError):
         # All production readers are seekable. Retain a safe fallback for custom
         # file-like callers that are not.
@@ -230,7 +260,7 @@ def quick_classify(fh: TextIO, cancel_event=None) -> list[dict[str, object]]:
             fh = io.StringIO("".join(prefix) + fh.read())
 
     results: list[dict[str, object]] = []
-    for segment in iter_encounter_segments(fh, cancel_event):
+    for segment in iter_encounter_segments(fh, cancel_event, file_year=file_year):
         result = _classify_segment(segment)
         if result:
             results.append(result)

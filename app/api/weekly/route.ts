@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { getWeekBounds } from "@/lib/utils";
-import { buildWeeklyBossKills } from "@/lib/weekly-stats";
+import { sortByICCOrder } from "@/lib/constants/bosses";
+import { weeklyAggregateQuery, type WeeklyAggregate } from "@/lib/report-aggregates";
 
 export async function GET(req: NextRequest): Promise<NextResponse> {
   const { searchParams } = new URL(req.url);
@@ -9,22 +10,8 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
 
   const { start, end } = getWeekBounds();
 
-  const [encounters, uploads] = await Promise.all([
-    db.encounter.findMany({
-      where: {
-        startedAt: { gte: start, lt: end },
-        ...(realmId ? { upload: { realmId } } : {}),
-      },
-      include: {
-        boss: { select: { name: true, slug: true, raid: true } },
-        participants: {
-          orderBy: { dps: "desc" },
-          take: 1,
-          include: { player: { select: { name: true, class: true } } },
-        },
-      },
-      orderBy: { startedAt: "desc" },
-    }),
+  const [aggregates, uploads] = await Promise.all([
+    db.$queryRaw<WeeklyAggregate[]>(weeklyAggregateQuery(start, end, realmId)),
     db.upload.count({
       where: {
         createdAt: { gte: start, lt: end },
@@ -33,8 +20,8 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
     }),
   ]);
 
-  const kills = encounters.filter(e => e.outcome === "KILL");
-  const wipes = encounters.filter(e => e.outcome === "WIPE");
+  const kills = aggregates.filter(e => e.outcome === "KILL");
+  const wipes = aggregates.filter(e => e.outcome === "WIPE");
 
   // Top DPS this week
   const allParticipants = await db.participant.findMany({
@@ -45,9 +32,10 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
       },
       dps: { gt: 0 },
     },
-    orderBy: { dps: "desc" },
+    orderBy: [{ dps: "desc" }, { id: "asc" }],
     take: 10,
-    include: {
+    select: {
+      dps: true,
       player: { select: { name: true, class: true } },
       encounter: {
         select: {
@@ -66,9 +54,10 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
       },
       hps: { gt: 100 },
     },
-    orderBy: { hps: "desc" },
+    orderBy: [{ hps: "desc" }, { id: "asc" }],
     take: 10,
-    include: {
+    select: {
+      hps: true,
       player: { select: { name: true, class: true } },
       encounter: {
         select: {
@@ -79,13 +68,16 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
     },
   });
 
-  const bossKills = buildWeeklyBossKills(kills);
+  const bossKills = sortByICCOrder(
+    kills.map(({ name, slug, raid, count }) => ({ name, slug, raid, kills: count })),
+    boss => boss.name,
+  );
 
   return NextResponse.json({
     weekStart:    start.toISOString(),
     weekEnd:      end.toISOString(),
-    totalKills:   kills.length,
-    totalWipes:   wipes.length,
+    totalKills:   kills.reduce((total, row) => total + row.count, 0),
+    totalWipes:   wipes.reduce((total, row) => total + row.count, 0),
     totalUploads: uploads,
     topDps:       allParticipants.map(p => ({
       playerName: p.player.name,

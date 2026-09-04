@@ -1,6 +1,6 @@
 # Threat Model
 
-Last reviewed: 2026-08-15
+Last reviewed: 2026-09-04
 
 ## Scope and Assets
 
@@ -23,10 +23,11 @@ flowchart LR
 | Threat | Control | Remaining risk |
 | --- | --- | --- |
 | Oversized upload or slow body | Web metadata/content-length checks, parser streaming byte counter, receive timeout | Distributed rate limiting is not implemented |
-| ZIP bomb/path traversal | Size, ratio, member, path, encryption, symlink, and nested-archive rejection; no extraction | Parser work still consumes bounded CPU/time |
-| Upload ID collision/state theft | Strict random UUIDv4; 409 on reuse; ephemeral state | Anyone who learns a live UUID can read its non-secret progress state |
+| ZIP bomb/path traversal | Size, ratio, entry/metadata, path, encryption, symlink, duplicate-name and nested-archive rejection; no extraction; bounded physical-line reader | Input size and admission are bounded; thread execution has cooperative cancellation rather than a hard CPU deadline |
+| Cancellation or timed-out work exhausts admission/storage | Receive cancellation finalizes ownership; pending tasks are cancelled; admission/files remain owned until actual workers stop; active files excluded from abandoned cleanup | Stuck aggregation retains capacity until worker/process termination; hard isolation needs worker processes |
+| Upload ID collision/state theft | Strict lowercase UUIDv4; 409 on retained-ID reuse; bounded ephemeral state with terminal eviction | Anyone who learns a live UUID can read its non-secret progress state; restarts/eviction lose progress |
 | Parser filesystem access | Arbitrary path route removed; only verified upload directory files are opened | Deployment filesystem permissions remain defense in depth |
-| Internal error disclosure | Fixed public error codes/messages; detailed exceptions logged server-side | Operational logs remain sensitive |
+| Internal error disclosure | Fixed public error codes/messages; modern parser logs include validated correlation IDs and exception types without raw exception text | Operational logs remain sensitive; local opt-in legacy routes retain diagnostic traces |
 | Raw upload/database enumeration | No public upload-row listing; canonical report routes expose only intended reports | Public reports expose game identities by design |
 | Admin bypass | Production fail-closed secret, HttpOnly strict cookie, route/action checks | Shared-secret model has no per-user audit identity or MFA |
 | Secret leakage in URL/client | Admin query-string import removed; no browser storage; server-only variables | Maintainer handling and screenshots remain human risks |
@@ -52,9 +53,9 @@ Expected public use includes uploading valid combat logs and browsing reports. T
 ## Security Invariants
 
 1. Production admin access fails closed.
-2. Raw upload bytes never become a public download and are removed from parser temp storage.
+2. Raw upload bytes never become a public download and are removed after their last worker releases the file, with deferred stale-file cleanup after storage failures.
 3. Parser paths are server-generated inside the upload directory.
-4. Every upload path enforces byte and processing limits.
+4. The production streaming upload enforces byte/line/archive limits, bounded admission and worker response deadlines. Local opt-in legacy paths are not production equivalents and must remain disabled.
 5. Public error payloads do not contain stack traces, filesystem paths, database text, or upstream secrets.
 6. `main` changes flow through required checks; Actions are commit-pinned.
 7. Missing parser evidence is unknown/unattributed rather than guessed.

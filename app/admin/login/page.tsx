@@ -74,7 +74,7 @@ export default function AdminLoginPage() {
 
         {/* Back link */}
         <p className="text-center text-sm text-text-dim">
-          <Link href="/" className="text-gold-dim hover:text-gold transition-colors">
+          <Link href="/" className="text-gold hover:text-gold-light transition-colors">
             ← Back to Pizza Logs
           </Link>
         </p>

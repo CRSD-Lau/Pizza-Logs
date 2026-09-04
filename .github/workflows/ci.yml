@@ -19,10 +19,24 @@ jobs:
   test-build:
     runs-on: ubuntu-latest
     timeout-minutes: 35
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: pizzalogs
+          POSTGRES_PASSWORD: pizzalogs
+          POSTGRES_DB: pizzalogs
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U pizzalogs"
+          --health-interval 5s --health-timeout 3s --health-retries 10
     env:
       DATABASE_URL: postgresql://pizzalogs:pizzalogs@localhost:5432/pizzalogs?schema=public
       PARSER_SERVICE_URL: http://localhost:8000
       ADMIN_SECRET: ci-placeholder-not-production
+      TEST_DATABASE_URL: postgresql://pizzalogs:pizzalogs@localhost:5432/pizzalogs
+      PARSER_CONTRACT_PYTHON: python
 
     steps:
       - name: Checkout
@@ -42,11 +56,21 @@ jobs:
       - name: Install dependencies
         run: npm ci --legacy-peer-deps
 
+      - name: Install hash-locked parser dependencies
+        run: pip install --require-hashes -r parser/requirements-dev.lock
+
       - name: Audit npm dependencies
         run: npm audit --audit-level=moderate
 
       - name: Generate Prisma client
         run: npm run db:generate
+
+      - name: Fresh database migration and seed
+        run: |
+          node scripts/adopt-legacy-migrations.mjs node_modules/prisma/build/index.js
+          npx prisma migrate deploy
+          npx prisma migrate diff --from-config-datasource --to-schema prisma/schema.prisma --exit-code
+          npm run db:seed
 
       - name: Lint
         run: npm run lint --if-present
@@ -67,7 +91,6 @@ jobs:
 
       - name: Parser tests
         run: |
-          pip install --require-hashes -r parser/requirements-dev.lock
           cd parser
           pytest tests/ -v
 
@@ -77,6 +100,10 @@ jobs:
           python -m bandit -q -r parser -x parser/tests,parser/benchmarks,parser/.venv
           python -m pip_audit -r parser/requirements.lock --disable-pip
 
+      - name: Offline differential reference regression
+        working-directory: parser
+        run: python -m parity verify --output-dir ../.test-artifacts/parity
+
       - name: Build
         run: npm run build
 
@@ -84,6 +111,27 @@ jobs:
         run: |
           docker build -t pizza-logs-web:ci .
           docker build -f parser/Dockerfile -t pizza-logs-parser:ci .
+          docker run --rm --network none -e DATABASE_URL pizza-logs-web:ci node node_modules/prisma/build/index.js --version
+
+      - name: Integrated containers and headless acceptance
+        run: |
+          npx playwright install --with-deps chromium
+          docker run -d --name pizza-parser-ci --network host pizza-logs-parser:ci
+          docker run -d --name pizza-web-ci --network host -e DATABASE_URL -e PARSER_SERVICE_URL -e ADMIN_SECRET -e ADMIN_COOKIE_SECURE=false pizza-logs-web:ci
+          for attempt in $(seq 1 30); do
+            if curl --fail --silent http://127.0.0.1:3000/api/health/ready; then break; fi
+            sleep 2
+          done
+          npm run test:e2e
+
+      - name: Retain synthetic acceptance evidence
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: synthetic-acceptance
+          path: .test-artifacts/
+          include-hidden-files: true
+          retention-days: 14
 
   dependency-review:
     if: github.event_name == 'pull_request'

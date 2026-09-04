@@ -1,0 +1,213 @@
+{
+  "author": "Neil Mitchell",
+  "modifier": "Neil Mitchell",
+  "schemaVersion": 1,
+  "compatibilityVersion": "uwu-reference-4c046d2-v1",
+  "analyticsProfile": "canonical-v1",
+  "reference": {
+    "repository": "https://github.com/CRSD-Lau/uwu-logs",
+    "inspectedSha": "4c046d266b85ad833ab4d70addb0b6f1a16647e3",
+    "previouslyDocumentedSha": "f32f00e917ad6baba9012704dc9e41afe578426d",
+    "observedAt": "2026-09-04T20:25:34Z",
+    "interveningCommits": 35,
+    "liveVersion": null,
+    "liveMatchesRepository": "unverified",
+    "localExecutionPermission": "Pinned README explicitly documents self hosting. No license for source redistribution was identified.",
+    "sourceInventory": "reference-source.json",
+    "liveHttpStatus": {
+      "/": 403,
+      "/upload": 200,
+      "/top": 200,
+      "/character": 200,
+      "/pve_stats": 200,
+      "/ladder": 403,
+      "/reports/26-07-31--23-03--Lausudo--Lordaeron/": 403
+    },
+    "runtime": {
+      "python": "3.11.9",
+      "packages": {
+        "annotated-doc": "0.0.5",
+        "annotated-types": "0.8.0",
+        "anyio": "4.15.0",
+        "beautifulsoup4": "4.15.0",
+        "blinker": "1.9.0",
+        "certifi": "2026.7.22",
+        "charset-normalizer": "3.5.1",
+        "click": "8.5.0",
+        "fastapi": "0.141.1",
+        "Flask": "2.3.3",
+        "idna": "3.19",
+        "itsdangerous": "2.2.0",
+        "Jinja2": "3.1.6",
+        "MarkupSafe": "3.0.3",
+        "numpy": "1.26.4",
+        "pandas": "2.3.3",
+        "psutil": "5.9.8",
+        "pydantic": "2.13.5",
+        "pydantic_core": "2.46.5",
+        "python-dateutil": "2.9.0.post0",
+        "pytz": "2023.3",
+        "requests": "2.34.2",
+        "six": "1.17.0",
+        "soupsieve": "2.9.2",
+        "starlette": "1.6.0",
+        "typing-inspection": "0.4.4",
+        "typing_extensions": "4.16.0",
+        "tzdata": "2026.3",
+        "urllib3": "2.7.0",
+        "Werkzeug": "2.3.8",
+        "zstd": "1.5.5.1"
+      }
+    }
+  },
+  "exactness": {
+    "numericAbsoluteTolerance": 0,
+    "numericRelativeTolerance": 0,
+    "encounterOrder": "exact",
+    "rosterComparison": "name-keyed; normalized sorting is not evidence of displayed sort parity",
+    "display": "Reference strings captured separately. Pizza displayed rounding, locale, and sorting are not claimed compatible."
+  },
+  "cases": [
+    {
+      "id": "marrowgar-dense-10n",
+      "claim": "exact",
+      "scope": "one synthetic 10N kill: session and encounter duration, mode, outcome, raw damage, healing, incoming damage, session roster"
+    },
+    {
+      "id": "direct-damage",
+      "claim": "exact",
+      "scope": "session metrics only; too few events for an encounter"
+    },
+    {
+      "id": "healing-overheal",
+      "claim": "exact",
+      "scope": "session effective healing and incoming damage; no encounter"
+    },
+    {
+      "id": "healing-recipients",
+      "claim": "exact",
+      "scope": "session healing across two recipients and periodic healing; no per-recipient breakdown claim"
+    },
+    {
+      "id": "missed-environmental",
+      "claim": "exact",
+      "scope": "missed damage contributes zero and falling contributes raw incoming damage"
+    },
+    {
+      "id": "utf8-names",
+      "claim": "exact",
+      "scope": "UTF-8 character-name preservation in session metrics"
+    },
+    {
+      "id": "overkill",
+      "claim": "exact",
+      "scope": "raw session damage keeps overkill metadata separate"
+    },
+    {
+      "id": "pet-summon",
+      "claim": "exact",
+      "scope": "one explicit summon and session owner rollup; no encounter"
+    },
+    {
+      "id": "boss-death-tail",
+      "claim": "exact",
+      "scope": "session includes post-death healing; too few events for an encounter"
+    },
+    {
+      "id": "marrowgar-dense-wipe",
+      "claim": "difference",
+      "reason": "Insufficient difficulty evidence is TBD in UwU and UNKNOWN in Pizza.",
+      "reviewedDifferenceSha256": "f74187672a6d3348f72bfad4ad5746f3770011919698c444a17ade135089f231"
+    },
+    {
+      "id": "marrowgar-dense-kill",
+      "claim": "difference",
+      "reason": "Insufficient mode evidence changes unknown labels and kill presentation.",
+      "reviewedDifferenceSha256": "02e0e2be1a8792f0fceee36fb95600b21ce9b50def82ca415f5efe7d9bd8ea66"
+    },
+    {
+      "id": "back-to-back-pulls",
+      "claim": "difference",
+      "reason": "Observed boundaries and totals agree; missing mode evidence changes unknown labels and kill presentation.",
+      "reviewedDifferenceSha256": "02e0e2be1a8792f0fceee36fb95600b21ce9b50def82ca415f5efe7d9bd8ea66"
+    },
+    {
+      "id": "multiple-sessions",
+      "claim": "difference",
+      "reason": "After the calendar fix both sessions and encounters separate correctly; unknown difficulty is still TBD versus UNKNOWN.",
+      "reviewedDifferenceSha256": "4109f4c3af370b2b76dd938a6c5e45a42126f169a6ba6f90c4d48f546a9c4eca"
+    },
+    {
+      "id": "friendly-fire",
+      "claim": "difference",
+      "reason": "Reference recipient roster inference differs when a player only appears as a damage target; canonical Pizza excludes that friendly damage from outgoing totals.",
+      "reviewedDifferenceSha256": "81145faa3caeaf18b56542c4b6fea14c6af5d571727b962f82444852876dd45b"
+    },
+    {
+      "id": "absorbed-damage",
+      "claim": "difference",
+      "reason": "The minimal shield case attributes 200 healing-plus-absorbs in Pizza and zero in the reference.",
+      "reviewedDifferenceSha256": "e1d38f36f442b3b2b8cb93fd5a3862ad8eef0a5a2b2d5c07a1fa3d6f73884254"
+    },
+    {
+      "id": "damage-event-coverage",
+      "claim": "difference",
+      "reason": "UwU session damage omits DAMAGE_SHIELD and DAMAGE_SPLIT; canonical Pizza includes them.",
+      "reviewedDifferenceSha256": "f45af11ffe959e4ed9f3fe7159db770b7b8b3858ad35dd63031b9121e70deb38"
+    },
+    {
+      "id": "year-rollover",
+      "claim": "difference",
+      "reason": "The reference text splitter and report method produce a negative year-rollover duration. Canonical Pizza retains the positive elapsed time and correct UTC year.",
+      "reviewedDifferenceSha256": "92f3dab365054f51d258f6ef023c86bddf1107729358f63c3af06ea8183725f9"
+    },
+    {
+      "id": "icc-25n-synthetic",
+      "claim": "difference",
+      "reason": "Existing Pizza fixture uses modern encounter markers and placeholder creature IDs; reference segmentation and duration differ.",
+      "reviewedDifferenceSha256": "dd8d450435c25230e39519a8eb6d383f1707728cbfe6ae080977bd46e0de2389"
+    },
+    {
+      "id": "icc-25h-synthetic",
+      "claim": "difference",
+      "reason": "Existing Pizza fixture uses modern encounter markers and placeholder creature IDs; reference segmentation and duration differ.",
+      "reviewedDifferenceSha256": "eb5c8f76ad455f8caa27ae23fc2f7949729576d25aeeda27ac355d02c4f78640"
+    },
+    {
+      "id": "gunship-kill-synthetic",
+      "claim": "difference",
+      "reason": "Existing Pizza fixture uses modern encounter markers and placeholder creature IDs; reference segmentation and duration differ.",
+      "reviewedDifferenceSha256": "2a55f4fac35df64c0a6106cf35563ac314d1a2121e41cb0336a3a09decbe97ef"
+    }
+  ],
+  "blockedSurfaces": [
+    {
+      "surface": "live-deployment parity",
+      "reason": "Report paths returned HTTP 403 and live deployment commit could not be established."
+    },
+    {
+      "surface": "archive lifecycle and publication eligibility",
+      "reason": "Raw-text session splitting is exercised; archive extraction, duplicate publication checks, and upload acceptance are not executed."
+    },
+    {
+      "surface": "all raid modes and special mechanics",
+      "reason": "A representative synthetic Marrowgar kill is not the required multi-raid, multi-mode corpus."
+    },
+    {
+      "surface": "display rounding and row order",
+      "reason": "Reference display is recorded, but the parser comparator does not render Pizza's UI. Existing locale/rounding rules differ."
+    },
+    {
+      "surface": "per-spell and per-target breakdown, auras, powers, consumables, deaths, friendly fire",
+      "reason": "Implemented Pizza features lack paired normalized external observations in this first corpus."
+    },
+    {
+      "surface": "character/spec, leaderboards, PvE statistics, filtering and comparisons",
+      "reason": "Requires paired report and aggregate reference datasets."
+    },
+    {
+      "surface": "historical five-pull acceptance report",
+      "reason": "Reference outputs exist, but the original safe source fixture is unavailable; saved constants cannot establish a differential pass."
+    }
+  ]
+}

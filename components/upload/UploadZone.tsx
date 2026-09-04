@@ -197,7 +197,7 @@ export function UploadZone({ onComplete }: UploadZoneProps) {
 
   const isLocked = !characterName.trim();
 
-  const { getRootProps, getInputProps, isDragActive } = useDropzone({
+  const { getRootProps, getInputProps, isDragActive, open } = useDropzone({
     onDrop: (files) => {
       if (files[0]) processFile(files[0]);
     },
@@ -225,10 +225,11 @@ export function UploadZone({ onComplete }: UploadZoneProps) {
       {state.stage === "idle" && (
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-[1.2fr_0.8fr_0.8fr_1.2fr]">
           <div className="grid gap-1.5">
-            <label className="text-xs text-text-secondary uppercase tracking-wide">
+            <label htmlFor="upload-character" className="text-xs text-text-secondary uppercase tracking-wide">
               Character <span className="text-danger">*</span>
             </label>
             <input
+              id="upload-character"
               value={characterName}
               onChange={(event) => setCharacterName(event.target.value)}
               placeholder="Your character name"
@@ -237,8 +238,9 @@ export function UploadZone({ onComplete }: UploadZoneProps) {
           </div>
 
           <div className="grid gap-1.5">
-            <label className="text-xs text-text-secondary uppercase tracking-wide">Realm</label>
+            <label htmlFor="upload-realm" className="text-xs text-text-secondary uppercase tracking-wide">Realm</label>
             <select
+              id="upload-realm"
               value={realmName}
               onChange={(event) => setRealmName(event.target.value)}
               className="w-full rounded-sm border border-gold-dim bg-bg-card px-3 py-2 text-sm text-text-primary outline-hidden transition-colors focus:border-gold"
@@ -251,8 +253,9 @@ export function UploadZone({ onComplete }: UploadZoneProps) {
           </div>
 
           <div className="grid gap-1.5">
-            <label className="text-xs text-text-secondary uppercase tracking-wide">Server</label>
+            <label htmlFor="upload-server" className="text-xs text-text-secondary uppercase tracking-wide">Server</label>
             <select
+              id="upload-server"
               value={realmHost}
               onChange={(event) => setRealmHost(event.target.value)}
               className="w-full rounded-sm border border-gold-dim bg-bg-card px-3 py-2 text-sm text-text-primary outline-hidden transition-colors focus:border-gold"
@@ -262,8 +265,9 @@ export function UploadZone({ onComplete }: UploadZoneProps) {
           </div>
 
           <div className="grid gap-1.5">
-            <label className="text-xs text-text-secondary uppercase tracking-wide">Guild</label>
+            <label htmlFor="upload-guild" className="text-xs text-text-secondary uppercase tracking-wide">Guild</label>
             <input
+              id="upload-guild"
               value={guildName}
               onChange={(event) => setGuildName(event.target.value)}
               placeholder="PizzaWarriors (optional)"
@@ -297,7 +301,7 @@ export function UploadZone({ onComplete }: UploadZoneProps) {
             <p className="text-sm text-text-secondary mb-6">
               WotLK - Naxxramas through Ruby Sanctum - All processing server-side
             </p>
-            <Button variant="gold" size="md" onClick={(event) => event.stopPropagation()} disabled={!characterName.trim()}>
+            <Button variant="gold" size="md" onClick={(event) => { event.stopPropagation(); open(); }} disabled={!characterName.trim()}>
               Choose File
             </Button>
             <p className="text-xs text-text-dim mt-3">TXT, LOG, or ZIP up to 100 MiB compressed</p>
@@ -306,10 +310,10 @@ export function UploadZone({ onComplete }: UploadZoneProps) {
       )}
 
       {state.stage === "uploading" && (
-        <div className="border border-gold/40 rounded-sm bg-bg-panel px-8 py-16 text-center space-y-6">
+        <div className="border border-gold/40 rounded-sm bg-bg-panel px-8 py-16 text-center space-y-6" role="progressbar" aria-label="Combat log upload" aria-valuemin={0} aria-valuemax={100} aria-valuenow={state.progress} aria-valuetext={state.message}>
           <Spinner className="mx-auto" />
           <div>
-            <p className="heading-cinzel text-lg text-gold-light mb-1">{state.message}</p>
+            <p className="heading-cinzel text-lg text-gold-light mb-1" role="status">{state.message}</p>
             {state.stalled ? (
               <p className="text-xs text-warning mt-1">
                 Stream connection lost - your data may have saved successfully.{" "}
@@ -346,8 +350,8 @@ export function UploadZone({ onComplete }: UploadZoneProps) {
       )}
 
       {state.stage === "error" && (
-        <div className="border border-danger/30 rounded-sm bg-danger/5 px-6 py-8 text-center">
-          <p className="heading-cinzel text-base text-danger mb-2">Upload Failed</p>
+        <div className="border border-danger/30 rounded-sm bg-danger/5 px-6 py-8 text-center" role="alert">
+          <p className="heading-cinzel text-base text-danger-light mb-2">Upload Failed</p>
           <p className="text-sm text-text-secondary mb-6">{state.error}</p>
           <Button variant="ghost" size="sm" onClick={reset}>Try Again</Button>
         </div>
@@ -412,6 +416,7 @@ function UploadResult({
             <div key={index} className="milestone-banner flex items-center justify-between text-sm flex-wrap gap-2">
               <span>
                 <span className="text-gold font-bold">#{m.rank}</span>{" "}
+                <span className="text-text-secondary">{m.type === "WEEKLY_BEST" ? "weekly best" : "all-time"}</span>{" "}
                 <span className="text-text-primary font-semibold">{m.playerName}</span>
                 <span className="text-text-secondary"> - {m.bossName} {m.difficulty}</span>
               </span>

@@ -253,7 +253,7 @@ export default async function EncounterPage({ params }: Props) {
             <div key={m.id} className="milestone-banner flex items-center justify-between text-sm flex-wrap gap-2">
               <span>
                 <span className="font-bold text-gold">#{m.rank}</span>
-                {" "}all-time{" "}
+                {" "}{m.type === "WEEKLY_BEST" ? "weekly best" : "all-time"}{" "}
                 <span className="text-text-primary font-semibold">{m.player.name}</span>
                 <span className="text-text-secondary"> - {m.metric}</span>
               </span>

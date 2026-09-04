@@ -1,4 +1,5 @@
 import { db } from "./db";
+import { readUpstreamText } from "./upstream-response";
 import { calculateGearScore } from "./gearscore";
 import type { ArmoryCharacterGear } from "./warmane-armory";
 
@@ -450,13 +451,17 @@ async function fetchWithTimeout(url: string, accept: string): Promise<Response> 
   const timeout = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
 
   try {
-    return await fetch(url, {
+    const response = await fetch(url, {
+      redirect: "error",
       headers: {
         Accept: accept,
         "User-Agent": USER_AGENT,
       },
       signal: controller.signal,
     });
+    // Keep the deadline active through body consumption, including slow bodies.
+    const body = await readUpstreamText(response);
+    return new Response(body, { status: response.status, statusText: response.statusText });
   } finally {
     clearTimeout(timeout);
   }
@@ -479,7 +484,7 @@ export async function fetchWarmaneGuildRoster(
       const result = parseWarmaneGuildRosterHtml(await response.text(), context);
       if (result.ok) return { ...result, sourceUrl: url };
     } catch (error) {
-      console.error("Warmane guild roster HTML fetch error", { guildName: context.guildName, realm: context.realm, url, error });
+      console.error("Warmane guild roster HTML fetch error", { code: error instanceof Error && error.name === "AbortError" ? "UPSTREAM_TIMEOUT" : "UPSTREAM_FAILURE" });
     }
   }
 
@@ -491,7 +496,7 @@ export async function fetchWarmaneGuildRoster(
       const result = normalizeWarmaneGuildRosterPayload(await response.json(), context);
       if (result.ok) return { ...result, sourceUrl: url };
     } catch (error) {
-      console.error("Warmane guild roster JSON fetch error", { guildName: context.guildName, realm: context.realm, url, error });
+      console.error("Warmane guild roster JSON fetch error", { code: error instanceof Error && error.name === "AbortError" ? "UPSTREAM_TIMEOUT" : "UPSTREAM_FAILURE" });
     }
   }
 

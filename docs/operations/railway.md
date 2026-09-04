@@ -27,7 +27,7 @@ Secrets belong in Railway configuration, never Git, a PR body, issue, screenshot
 
 1. Merge a passing PR into `main`.
 2. Railway builds both services from the merge commit.
-3. Web startup runs `start.sh`, resolves the packaged Prisma CLI, reconciles three historical pre-migration records, and runs `prisma migrate deploy`.
+3. Web startup runs `start.sh`, resolves the packaged Prisma CLI and migration engine, adopts only three historical records whose expected schema exists, and runs `prisma migrate deploy`. Empty databases execute the restored initial core migration and every subsequent migration. The engine is installed during image build; startup needs PostgreSQL, not Prisma's download service.
 4. The web server starts only after migration succeeds.
 5. Successful deployment events trigger the Production Smoke workflow; a weekly scheduled run checks ongoing availability.
 
@@ -74,6 +74,16 @@ For application-only regressions, revert the offending PR through a new passing 
 Database rollback is not assumed to be reversible. Use a forward corrective migration unless a reviewed restoration plan exists. Never delete production data or alter Railway variables as an improvised rollback.
 
 For parser regressions, restore the previous code, verify fixtures, redeploy, and re-upload affected source logs when stored rows were produced by incorrect parsing.
+
+### Acquisition modernization rollout
+
+1. Verify a recoverable database backup and inspect `prisma migrate status` on the target. Check a schema diff; unexpected legacy drift must be reconciled before rollout.
+2. Deploy the parser from the reviewed commit and verify `/ready`. The preceding web accepts the additional optional parser provenance fields.
+3. Deploy the web from that same commit. Normal startup applies initial-core adoption, nullable parser-provenance fields and normalization of the known historical roster index name. Existing report values are not updated; provenance stays null for old rows. Core adoption creates no tables when the existing core is present. The index operation only renames an existing unique index; it does not rebuild it or change its columns. Normal DDL locking still requires rollout observation.
+4. Check parser `/ready`, web `/api/health/ready`, all normal smoke routes, one authorized synthetic upload, duplicate retry and stored milliseconds/provenance.
+5. On application failure, roll back through a revert PR. Leave the additive nullable columns in place; do not reverse-drop them or rewrite migration history. New environmental-damage totals apply only to newly parsed uploads.
+
+Read [service objectives and recovery](service-objectives.md) before making availability or backup claims. No backup/PITR configuration or restoration was verified by the repository audit.
 
 ## Incident Triage
 

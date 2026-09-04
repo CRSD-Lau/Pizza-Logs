@@ -37,6 +37,29 @@ async function main() {
     assert.equal(rejectedResult.ok, false);
     if (rejectedResult.ok) throw new Error("Expected the equipment request to reject.");
     assert.equal(rejectedResult.appearance?.modelId, "draeneifemale");
+
+    const cancelled: string[] = [];
+    globalThis.fetch = async input => {
+      const kind = String(input).includes("/api/character/") ? "summary" : "profile";
+      return new Response(new ReadableStream({
+        start(controller) { controller.enqueue(new TextEncoder().encode("error body does not finish")); },
+        cancel() { cancelled.push(kind); },
+      }), { status: 503 });
+    };
+    const unavailable = await fetchWarmaneGearLive("Synthetic", "Lordaeron");
+    assert.equal(unavailable.ok, false);
+    assert.deepEqual(cancelled.sort(), ["profile", "summary"], "Both failure bodies must release their connections");
+
+    cancelled.length = 0;
+    globalThis.fetch = async input => {
+      if (String(input).includes("/api/character/")) return Response.json({ name: "Synthetic", equipment: [] });
+      return new Response(new ReadableStream({
+        cancel() { cancelled.push("profile"); },
+      }), { status: 500 });
+    };
+    const healthySummary = await fetchWarmaneGearLive("Synthetic", "Lordaeron");
+    assert.equal(healthySummary.ok, true, "Profile failure must preserve a healthy equipment response");
+    assert.deepEqual(cancelled, ["profile"]);
   } finally {
     globalThis.fetch = originalFetch;
     console.error = originalConsoleError;

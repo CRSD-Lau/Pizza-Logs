@@ -19,6 +19,8 @@ const sessionPage = readFileSync("app/uploads/[id]/sessions/[sessionIdx]/page.ts
 const meter = readFileSync("components/meter/DamageMeter.tsx", "utf8");
 const filteredAnalytics = readFileSync("components/analytics/FilteredAnalyticsBreakdown.tsx", "utf8");
 const uploadRoute = readFileSync("app/api/upload/route.ts", "utf8");
+const uploadPersistence = readFileSync("lib/upload-persistence.ts", "utf8");
+assert.match(uploadRoute, /persistParsedUpload\(db,/);
 const publicUiSource = [...readUiSources("app"), ...readUiSources("components")].join("\n");
 
 for (const field of [
@@ -32,7 +34,7 @@ for (const field of [
   "sessionAnalytics",
 ]) {
   assert.match(schema, new RegExp(field), `${field} remains in the database contract`);
-  assert.match(uploadRoute, new RegExp(field), `${field} remains in upload persistence`);
+  assert.match(uploadPersistence, new RegExp(field), `${field} remains in upload persistence`);
 }
 
 assert.match(parser, /infer_spec/);

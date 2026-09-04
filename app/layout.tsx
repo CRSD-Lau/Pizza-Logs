@@ -66,7 +66,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           <footer className="relative z-10 mt-12 border-t border-gold-dim py-6 text-center sm:mt-16">
             <p className="text-sm text-text-dim">
               Pizza Logs &mdash; All parsing handled server-side on Railway &nbsp;·&nbsp;
-              <span className="text-gold-dim">PizzaWarriors</span>
+              <span className="text-gold">PizzaWarriors</span>
             </p>
           </footer>
         </div>

@@ -1,0 +1,94 @@
+# Service objectives and recovery
+
+Author: Neil Mitchell
+
+Last modified by: Neil Mitchell
+
+These are proposed operating targets, not measured availability or verified backup guarantees.
+The single-region web/parser/PostgreSQL topology cannot credibly promise nine nines: that
+would allow only about 31.5 milliseconds of downtime annually across every dependency.
+
+## Indicators and provisional targets
+
+| Indicator | Eligible events | Initial 30-day target | Error budget |
+|---|---|---|---|
+| Public report reads | Valid read requests; exclude client cancellations and invalid requests | 99.5% successful, p95 below 2 seconds | 0.5% failed eligible reads; 216 minutes is the time-based analogue |
+| Upload acceptance | Valid uploads within published size and capacity limits | 99% accepted | 1% unexpected rejection; capacity 429s tracked separately, not hidden |
+| Parse completion | Accepted, valid supported logs below resource budgets | 99% complete within upstream deadline | 1% unexpected parser failures |
+| Persistence | Successfully parsed, validated results | 99.9% durably committed or identified as completed duplicates | 0.1% failures; zero accepted partial reports |
+| Correctness | Every frozen canonical and claimed reference case | 100% approved expectations on each release | No correctness error budget |
+| Admin operations | Authenticated valid operations | Record outcome and latency separately | No availability claim until instrumented |
+
+Collect the denominator and classified outcomes at the trusted ingress and in structured
+application logs. A weekly smoke check proves a point in time, not an uptime percentage.
+Use `/api/health` and parser `/health` for liveness, `/api/health/ready` for web dependencies,
+and parser `/ready` for temporary-storage readiness. Readiness responses disclose no
+credentials, paths, database errors, or upstream response bodies. Capacity rejection is 429.
+
+Upload UUIDs correlate browser, web and parser work. Do not log raw uploads, filenames,
+character names, request bodies, database URLs, secrets or arbitrary upstream error bodies.
+Record durations and terminal codes; restrict operational logs to maintainers. Configure
+provider retention and access control explicitly before describing these as audited logs.
+
+## Failure behavior and timeout hierarchy
+
+- The parser request has a 270-second upstream deadline and a declared 300-second route budget.
+  Parser phase limits are independent ceilings, not an additive promise that every phase
+  can consume its maximum. Large/slow uploads can exhaust the web budget earlier.
+  Persistence follows parsing and has up to three 60-second transaction attempts plus
+  acquisition/retry time; milestone queries follow the commit. The 270 seconds is not an
+  end-to-end completion guarantee, and enforcement of Next's declared route duration depends
+  on the hosting runtime. Alert on full request duration as well as individual phases.
+- A disconnected or timed-out job retains its parser slot and temporary file until the
+  underlying worker exits. Cancellation is cooperative; it is not a process-kill guarantee.
+- Progress is process-local and expires. A restart loses progress and requires reupload.
+  Reconnecting to an existing status endpoint does not resume bytes or replay all events.
+- Parser downtime fails the upload with a public generic error. Database persistence is
+  transactional; retrying a completed file returns its existing report. An old incomplete
+  report requires explicit maintainer reconciliation; it is never presented as a successful duplicate.
+- Warmane failures preserve the last successful cache. Network bodies are size-bounded,
+  redirects rejected and deadlines cover body consumption. Reports do not require fresh gear.
+- PostgreSQL connections are capped at 10 per web process. Statements time out at 15 seconds;
+  connection acquisition times out at 5 seconds. Account for every replica when sizing the database.
+
+## Backup, restore, RPO and RTO
+
+No provider backup, PITR window, encryption setting or restore drill was verified in this
+repository audit. **RPO and RTO are unverified.** Initial planning targets are RPO <=24 hours
+and RTO <=4 hours, conditional on successful backups and a timed restoration exercise.
+
+Before adopting these targets, the infrastructure owner must:
+
+1. Enable and inspect encrypted PostgreSQL backups; record schedule, retention, location,
+   access controls and a successful backup identifier. Choose PITR if a 24-hour loss is unacceptable.
+2. Restore a selected backup to a new isolated database without changing production routing.
+3. Validate migration history, schema, row counts, relationships, representative historical
+   reports and numeric totals. Run the application and smoke checks against the restored copy.
+4. Measure recovery duration and newest recovered transaction timestamp; record actual RTO/RPO.
+5. Destroy the isolated restored copy only under a separately approved exact cleanup scope.
+
+Raw combat logs are not retained for recovery. Database backup protects stored reports;
+reparsing requires the uploader's original file and explicit reupload.
+
+## Incidents and deployment failures
+
+Stop the rollout if migrations fail. Preserve the failed migration record and inspect the
+schema before using `prisma migrate resolve`. Never blindly mark a failed migration applied.
+For a parser correctness incident, suspend new acceptance if required, restore the previous
+application through a revert PR, identify affected parser versions and arrange reupload.
+Do not silently recompute or delete historical rows.
+
+For database outages, stop write retries after bounded attempts, keep readiness failing and
+restore connectivity or the reviewed backup. For capacity incidents, inspect CPU, memory,
+temporary disk and active worker count before increasing quotas. Restarted work is not durable.
+
+## Availability investment roadmap
+
+1. Verify backups, run restore drills, configure uptime/error-budget alerts and document service ownership.
+2. Add database HA/PITR and redundant web capacity only after verifying aggregate connection budgets.
+3. For durable uploads, approve encrypted temporary object storage, retention/cleanup, a durable job
+   queue, idempotent workers and authenticated job status. See [ADR 0004](../adr/0004-durable-upload-boundary.md).
+4. Consider multi-region only after a database failover/data-consistency design, replay testing,
+   dependency analysis and explicit cost approval. DNS, Railway and database availability remain floors.
+
+No paid infrastructure or production environment settings are changed by these proposals.

@@ -1,4 +1,5 @@
 import { NextRequest } from "next/server";
+import { MAX_PARSER_STATUS_BYTES, readBoundedJson, sanitizeParserStatus } from "@/lib/parser-transport";
 
 export const dynamic = "force-dynamic";
 
@@ -19,13 +20,19 @@ export async function GET(
       cache: "no-store",
       signal: AbortSignal.timeout(5_000),
     });
-    const payload = await response.json().catch(() => ({ error: "Invalid parser response" }));
-    return Response.json(payload, {
-      status: response.status,
+    if (!response.ok || !response.body) {
+      await response.body?.cancel().catch(() => undefined);
+      return Response.json(
+        { error: response.status === 404 ? "Upload not found." : "Parser status is temporarily unavailable." },
+        { status: response.status === 404 ? 404 : 503, headers: { "Cache-Control": "no-store" } },
+      );
+    }
+    const payload = await readBoundedJson(response.body, MAX_PARSER_STATUS_BYTES);
+    return Response.json(sanitizeParserStatus(payload, uploadId), {
       headers: { "Cache-Control": "no-store" },
     });
-  } catch (error) {
-    console.error("[upload-status] parser request failed", { uploadId, error });
+  } catch {
+    console.error("[upload-status] parser request failed", { uploadId });
     return Response.json(
       { error: "Parser status is temporarily unavailable." },
       { status: 503 },

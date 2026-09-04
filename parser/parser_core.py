@@ -68,6 +68,9 @@ DMG_EVENTS = {
     # for miss-rate stats only; they contribute 0 damage so we skip them.
 }
 
+# Environmental damage is an incoming primitive, never player outgoing damage.
+INCOMING_DAMAGE_EVENTS = DMG_EVENTS | {"ENVIRONMENTAL_DAMAGE"}
+
 # Source: Skada-WoTLK Skada/Modules/Healing.lua — RegisterForCL call.
 # Skada registers exactly SPELL_HEAL and SPELL_PERIODIC_HEAL for healing done.
 # SPELL_HEAL_ABSORBED is NOT registered by Skada — it has a different field
@@ -342,6 +345,8 @@ class SessionAccumulator:
     last_ts_str: str = ""
     first_abs_ts: Optional[float] = None
     last_abs_ts: Optional[float] = None
+    first_year: Optional[int] = None
+    last_year: Optional[int] = None
     names: dict[str, str] = field(default_factory=dict)
     damage: dict[str, float] = field(default_factory=dict)
     healing: dict[str, float] = field(default_factory=dict)
@@ -452,6 +457,7 @@ class CombatLogParser:
         self.session_analytics: dict[int, dict] = {}
         self.skipped_line_count = 0
         self.skipped_line_reasons: dict[str, int] = {}
+        self._date_years: dict[tuple[int, int], int] = {}
         # Cache boss name set once — this is hit millions of times during segmentation
         self._boss_name_set: set[str] = ALL_BOSS_NAMES
 
@@ -532,13 +538,16 @@ class CombatLogParser:
         ts_str: str,
         parts: list[str],
         abs_ts: float,
+        year: Optional[int] = None,
     ) -> None:
         """Accumulate the same whole-slice columns rendered by UwU's root report."""
         if session.first_abs_ts is None:
             session.first_abs_ts = abs_ts
             session.first_ts_str = ts_str
+            session.first_year = year
         session.last_abs_ts = abs_ts
         session.last_ts_str = ts_str
+        session.last_year = year
 
         event = parts[0]
         src_guid = parts[1] if len(parts) > 1 else ""
@@ -595,13 +604,13 @@ class CombatLogParser:
                 )
             return
 
-        if event not in DMG_EVENTS:
+        if event not in INCOMING_DAMAGE_EVENTS:
             return
         fields = extract_damage_fields(parts)
         if fields is None:
             return
 
-        if src_is_player_unit and not dst_is_player_unit:
+        if event in DMG_EVENTS and src_is_player_unit and not dst_is_player_unit:
             _add_metric(session.damage, src_guid, session_damage_amount(fields))
 
         if not dst_is_player_unit:
@@ -691,8 +700,8 @@ class CombatLogParser:
                 for row in sorted(players_by_guid.values(), key=lambda value: value["name"].lower())
             }
             finalized[session_index] = {
-                "startedAt": parse_ts_to_iso(raw.first_ts_str, self.file_year),
-                "endedAt": parse_ts_to_iso(raw.last_ts_str, self.file_year),
+                "startedAt": parse_ts_to_iso(raw.first_ts_str, raw.first_year or self.file_year),
+                "endedAt": parse_ts_to_iso(raw.last_ts_str, raw.last_year or self.file_year),
                 "durationMs": max(0, round((last_abs - first_abs) * 1000)),
                 "totalDamage": sum(row["totalDamage"] for row in players.values()),
                 "totalHealing": sum(row["totalHealing"] for row in players.values()),
@@ -720,6 +729,10 @@ class CombatLogParser:
     ) -> Generator[tuple[str, list[str], float], None, None]:
         """Yield (raw_ts_str, parts, ts_float) for every parseable line."""
         _REPORT_EVERY = 50_000
+        calendar_key: Optional[tuple[int, int]] = None
+        calendar_year = self.file_year
+        calendar_ordinal = 0
+        last_timestamp: Optional[tuple[int, float]] = None
         for raw_line in fh:
             self.raw_count += 1
             if cancel_event is not None and self.raw_count % 4096 == 0 and cancel_event.is_set():
@@ -735,7 +748,38 @@ class CombatLogParser:
                         self.skipped_line_reasons.get(reason, 0) + 1
                     )
                 continue
+            parsed = result.line
+            key = (parsed.month, parsed.day)
+            candidate_year = calendar_year
+            candidate_ordinal = calendar_ordinal
+            if key != calendar_key:
+                # Explicit December -> January is the only inferred year change.
+                # A backwards date elsewhere is ambiguous and must not become
+                # an invented future raid session.
+                if calendar_key and calendar_key[0] == 12 and key[0] == 1:
+                    candidate_year += 1
+                try:
+                    candidate_ordinal = datetime(candidate_year, *key).toordinal()
+                except ValueError:
+                    self.skipped_line_count += 1
+                    reason = "invalid_calendar_date"
+                    self.skipped_line_reasons[reason] = self.skipped_line_reasons.get(reason, 0) + 1
+                    continue
+            absolute = (candidate_ordinal, parsed.ts)
+            if last_timestamp is not None and absolute < last_timestamp:
+                self.skipped_line_count += 1
+                reason = "out_of_order_timestamp"
+                self.skipped_line_reasons[reason] = self.skipped_line_reasons.get(reason, 0) + 1
+                continue
+            calendar_key, calendar_year, calendar_ordinal = key, candidate_year, candidate_ordinal
+            self._date_years[key] = calendar_year
+            last_timestamp = absolute
             yield result.line.ts_str, result.line.parts, result.line.ts
+
+    def _timestamp_year(self, ts_str: str) -> int:
+        match = TS_RE.match(ts_str)
+        key = (int(match.group(1)), int(match.group(2))) if match else (0, 0)
+        return self._date_years.get(key, self.file_year)
 
     # ── Internal: segmentation ───────────────────────────────────
 
@@ -782,31 +826,38 @@ class CombatLogParser:
         # Counts every event from the first line to the last line in a raid
         # session. This is the data grain used by UwU's default report.
         # Session boundaries use the same 3600s gap as _assign_session_indices.
-        # Midnight rollover: when ts jumps backward >12 h we add a day offset so
-        # the absolute timestamp increases monotonically.
+        # Use the validated calendar date, not a backwards clock-time heuristic.
         _session_accumulators: dict[int, SessionAccumulator] = {}
         _full_session_idx: int = 0
-        _last_local_ts: float = 0.0
-        _day_offset: float = 0.0
+        _date_key: str = ""
+        _calendar_day: int = 0
+        _calendar_year: int = self.file_year
+        _first_calendar_day: Optional[int] = None
         _last_abs_ts: float = -1.0
         _SESSION_BREAK = 3600.0
 
         for ts_str, parts, ts in lines:
             event = parts[0]
 
-            # ── Midnight-safe session boundary detection ──────────
-            if ts < _last_local_ts - 43200.0:  # ts jumped back >12 h = new calendar day
-                _day_offset += 86400.0
-            abs_ts = _day_offset + ts
+            # ── Calendar-aware session boundary detection ─────────
+            date_key = ts_str.split(" ", 1)[0]
+            if date_key != _date_key:
+                month, day = map(int, date_key.split("/"))
+                _calendar_year = self._timestamp_year(ts_str)
+                _calendar_day = datetime(_calendar_year, month, day).toordinal()
+                _date_key = date_key
+            if _first_calendar_day is None:
+                _first_calendar_day = _calendar_day
+            abs_ts = (_calendar_day - _first_calendar_day) * 86400.0 + ts
             if _last_abs_ts >= 0 and abs_ts - _last_abs_ts > _SESSION_BREAK:
                 _full_session_idx += 1
-            _last_local_ts = ts
             _last_abs_ts   = abs_ts
-            session_accumulator = _session_accumulators.setdefault(
-                _full_session_idx,
-                SessionAccumulator(),
-            )
-            self._accumulate_session_event(session_accumulator, ts_str, parts, abs_ts)
+            session_accumulator = _session_accumulators.get(_full_session_idx)
+            if session_accumulator is None:
+                session_accumulator = SessionAccumulator()
+                _session_accumulators[_full_session_idx] = session_accumulator
+            self._accumulate_session_event(session_accumulator, ts_str, parts, abs_ts,
+                                           _calendar_year)
 
             # ── SPELL_SUMMON: build pet→owner map (global, outside segments) ──
             if event == "SPELL_SUMMON" and len(parts) >= 5:
@@ -858,12 +909,12 @@ class CombatLogParser:
 
             if heuristic_active:
                 if _is_lich_king_fury_event(parts):
-                    lich_king_roleplay_ts = ts
+                    lich_king_roleplay_ts = abs_ts
                 inside_lich_king_roleplay = (
                     lich_king_roleplay_ts is not None
-                    and ts - lich_king_roleplay_ts <= LICH_KING_ROLEPLAY_GRACE_SECONDS
+                    and abs_ts - lich_king_roleplay_ts <= LICH_KING_ROLEPLAY_GRACE_SECONDS
                 )
-                if ts - last_boss_ts > ENCOUNTER_GAP_SECONDS and not inside_lich_king_roleplay:
+                if abs_ts - last_boss_ts > ENCOUNTER_GAP_SECONDS and not inside_lich_king_roleplay:
                     # A long quiet gap always closes the previous attempt, even
                     # when the first line after the gap also names the boss.
                     if len(heuristic_segment) >= MIN_ENCOUNTER_EVENTS:
@@ -873,11 +924,11 @@ class CombatLogParser:
                     lich_king_roleplay_ts = None
                     if is_boss and (event in DMG_EVENTS or event in HEAL_EVENTS or event == UNIT_DIED_EVENT):
                         heuristic_active = True
-                        last_boss_ts = ts
+                        last_boss_ts = abs_ts
                         heuristic_segment = [(ts_str, parts, ts)]
                 elif is_boss:
                     # Extend active window
-                    last_boss_ts = ts
+                    last_boss_ts = abs_ts
                     heuristic_segment.append((ts_str, parts, ts))
                 else:
                     # Still within window — collect ALL events (heals, player dmg, deaths)
@@ -887,7 +938,7 @@ class CombatLogParser:
                 # all events are retained for boss-specific difficulty evidence.
                 if is_boss and (event in DMG_EVENTS or event in HEAL_EVENTS or event == UNIT_DIED_EVENT):
                     heuristic_active = True
-                    last_boss_ts = ts
+                    last_boss_ts = abs_ts
                     heuristic_segment = [(ts_str, parts, ts)]
 
         # Flush trailing segment
@@ -1253,9 +1304,9 @@ class CombatLogParser:
                         src_name,
                     )
             else:
-                # All remaining events must be in DMG_EVENTS — defence-in-depth
+                # All remaining events must be supported incoming damage — defence-in-depth
                 # guard against any unrecognised events slipping through.
-                if event not in DMG_EVENTS:
+                if event not in INCOMING_DAMAGE_EVENTS:
                     continue
                 # SPELL_DAMAGE / SPELL_PERIODIC_DAMAGE / RANGE_DAMAGE etc.
                 # Fields: event,srcGUID,srcName,srcFlags,dstGUID,dstName,dstFlags,
@@ -1321,6 +1372,9 @@ class CombatLogParser:
                         spell_name=spell_name,
                         amount=actual_damage,
                     ))
+
+            if event == "ENVIRONMENTAL_DAMAGE":
+                continue
 
             # Only count player sources as DPS/HPS
             if not _is_player(src_guid):
@@ -1534,8 +1588,8 @@ class CombatLogParser:
                 return None, None
             return None
 
-        started_at = parse_ts_to_iso(first_ts_str, self.file_year)
-        ended_at   = parse_ts_to_iso(last_ts_str,  self.file_year)
+        started_at = parse_ts_to_iso(first_ts_str, self._timestamp_year(first_ts_str))
+        ended_at   = parse_ts_to_iso(last_ts_str, self._timestamp_year(last_ts_str))
 
         fingerprint = _fingerprint(
             boss_name    = boss_def.name if boss_def else boss_name,

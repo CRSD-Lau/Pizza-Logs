@@ -5,6 +5,7 @@ import path from "node:path";
 const root = process.cwd();
 const uploadZone = fs.readFileSync(path.join(root, "components/upload/UploadZone.tsx"), "utf8");
 const uploadRoute = fs.readFileSync(path.join(root, "app/api/upload/route.ts"), "utf8");
+const uploadPersistence = fs.readFileSync(path.join(root, "lib/upload-persistence.ts"), "utf8");
 const statusRoute = fs.readFileSync(
   path.join(root, "app/api/upload/status/[uploadId]/route.ts"),
   "utf8",
@@ -22,7 +23,7 @@ assert.doesNotMatch(uploadRoute, /\/parse-stream/, "public uploads must not fall
 assert.match(uploadRoute, /parseResult\.receivedBytes \?\? declaredFileSize/, "stored size should use parser-observed bytes");
 assert.match(uploadRoute, /X-Upload-ID/, "upload response must expose the upload ID");
 assert.match(
-  uploadRoute,
+  uploadPersistence,
   /enc\.outcome === "KILL" && enc\.difficulty !== "UNKNOWN"/,
   "UNKNOWN attempts must not create ranking milestones",
 );

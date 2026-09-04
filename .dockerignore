@@ -8,6 +8,11 @@ README.md
 .claude
 .codex
 .pytest_cache
+.ruff_cache
+.test-artifacts
+.obsidian
+**/__pycache__
+**/*.pyc
 parser/.venv
 parser/venv
 .sync-agent-logs

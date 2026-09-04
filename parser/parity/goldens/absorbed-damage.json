@@ -1,0 +1,71 @@
+{
+  "author": "Neil Mitchell",
+  "modifier": "Neil Mitchell",
+  "evidence": {
+    "kind": "local-reference",
+    "sourceSha256": "fb58e73e37f426a722095676f7154a21a8aed47da2af88ee9c7b8da3b0cf4364",
+    "referenceSha": "4c046d266b85ad833ab4d70addb0b6f1a16647e3",
+    "observedAt": "2026-09-04T20:44:42.083987+00:00",
+    "pythonVersion": "3.11.9",
+    "configuration": {
+      "fileYear": 2026,
+      "archiveTimestamp": "2026-09-04T00:00:00Z",
+      "realm": "Lordaeron"
+    },
+    "method": "Unmodified LogsSeparator, logs_fix.normalize, and THE_LOGS report methods. Archive extraction and publication eligibility are not covered."
+  },
+  "normalized": {
+    "sessions": [
+      {
+        "durationMs": 30000,
+        "totalDamage": 2000,
+        "heal": 0,
+        "damageTaken": 300,
+        "players": {
+          "Syntheticmage": {
+            "totalDamage": 2000,
+            "heal": 0,
+            "damageTaken": 300
+          }
+        }
+      }
+    ],
+    "encounters": []
+  },
+  "referenceDisplay": {
+    "sessions": [
+      {
+        "duration": "0:00:30.000",
+        "columns": {
+          "useful": {},
+          "damage": {
+            "Total": {
+              "value": "2 000",
+              "per_second": "66.6",
+              "percent": 0
+            },
+            "Syntheticmage": {
+              "value": "2 000",
+              "per_second": "66.6",
+              "percent": 100
+            }
+          },
+          "heal": {},
+          "heal_total": {},
+          "taken": {
+            "Total": {
+              "value": "300",
+              "per_second": "10.0",
+              "percent": 0
+            },
+            "Syntheticmage": {
+              "value": "300",
+              "per_second": "10.0",
+              "percent": 100
+            }
+          }
+        }
+      }
+    ]
+  }
+}

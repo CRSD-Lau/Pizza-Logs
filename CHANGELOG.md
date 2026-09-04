@@ -8,6 +8,9 @@ This project follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) an
 
 ### Added
 
+- A pinned, offline UwU differential lab, explicit compatibility manifest and monthly reference-drift check. Current evidence does not establish complete UwU parity.
+- Nullable parser/metric provenance on new uploads, database integration tests, dependency readiness endpoints and headless responsive/accessibility acceptance in CI.
+- Maintained acquisition risk assessment, surface inventory, service objectives and durable-upload ADR.
 - Branded social preview plus canonical Open Graph, Twitter, sitemap, robots, and web-app manifest metadata.
 - Content Security Policy and modern browser security headers.
 - CodeQL, dependency review, Dependabot, CODEOWNERS, immutable GitHub Action pins, and production-container CI builds.
@@ -17,6 +20,12 @@ This project follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) an
 
 ### Changed
 
+- Persist complete uploads atomically with bounded conflict retries and completed-file deduplication; incomplete historical uploads require maintainer recovery.
+- Correct environmental incoming damage and explicit calendar-day session boundaries in both quick previews and final reports without rewriting historical reports.
+- Aggregate boss/weekly statistics in PostgreSQL; fix weekly cutoff, milestone rank eligibility and player aggregate statistics.
+- Restore fresh database bootstrap, verify legacy migration adoption, normalize the historical roster index name, package the migration engine for offline startup, honor runtime database schemas and bound database/upstream operations.
+- Associate upload field labels, improve supporting-text and admin-control contrast, and label weekly versus recorded all-time achievements within the existing visual design.
+- Restore the Choose File button's file-picker action and expose upload progress/error announcements to assistive technology.
 - Upgraded Next.js and `eslint-config-next` to 16.3.1, Python to 3.14, Uvicorn to 0.52.3, and `pip-tools` to 7.6.1.
 - Public uploads now use only the bounded UUID streaming protocol and persist parser-observed byte size.
 - Agent/contributor work now uses short-lived task branches, issues/PRs, ADRs, and the changelog instead of a long-lived `codex-dev` plus mandatory Obsidian handoffs.
@@ -24,6 +33,8 @@ This project follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) an
 
 ### Security
 
+- Bound parser transport, archive metadata and physical lines; retain worker capacity and temporary files until cancelled work actually exits. ZIP members support stored/deflate compression only.
+- Remove unused installer tools from runtime images and update vulnerable transitive npm dependencies. Debian parser-base advisories remain explicitly documented release conditions.
 - Removed the unauthenticated upload-row listing and query-string admin import endpoint.
 - Removed arbitrary parser filesystem access and disabled legacy multipart/debug/stream routes by default.
 - Sanitized untrusted Slack pull-request text and public upload/parser errors.

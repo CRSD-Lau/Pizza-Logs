@@ -6,7 +6,7 @@ export async function GET(
   { params }: { params: Promise<{ name: string }> }
 ): Promise<NextResponse> {
   const { name } = await params;
-  const decodedName = decodeURIComponent(name);
+  const decodedName = name;
 
   const player = await db.player.findFirst({
     where: { name: decodedName },
@@ -37,28 +37,26 @@ export async function GET(
     },
   });
 
-  const totalDamage   = participants.reduce((a, p) => a + p.totalDamage, 0);
-  const totalHealing  = participants.reduce((a, p) => a + p.totalHealing, 0);
-  const totalAbsorbs  = participants.reduce((a, p) => a + p.totalAbsorbs, 0);
-  const totalDeaths   = participants.reduce((a, p) => a + p.deaths, 0);
-  const killCount     = participants.filter(p => p.encounter.outcome === "KILL").length;
-  const avgDps        = participants.length > 0
-    ? participants.reduce((a, p) => a + p.dps, 0) / participants.length : 0;
-  const avgAps        = participants.length > 0
-    ? participants.reduce((a, p) => a + p.aps, 0) / participants.length : 0;
+  const [totals, killCount, wipeCount] = await Promise.all([
+    db.participant.aggregate({ where: { playerId: player.id },
+      _count: true, _sum: { totalDamage: true, totalHealing: true, totalAbsorbs: true, deaths: true },
+      _avg: { dps: true, aps: true } }),
+    db.participant.count({ where: { playerId: player.id, encounter: { outcome: "KILL" } } }),
+    db.participant.count({ where: { playerId: player.id, encounter: { outcome: "WIPE" } } }),
+  ]);
 
   return NextResponse.json({
     player,
     stats: {
-      totalEncounters: participants.length,
+      totalEncounters: totals._count,
       killCount,
-      wipeCount:  participants.length - killCount,
-      totalDamage,
-      totalHealing,
-      totalAbsorbs,
-      totalDeaths,
-      avgDps:     Math.round(avgDps),
-      avgAps:     Math.round(avgAps),
+      wipeCount,
+      totalDamage: totals._sum.totalDamage ?? 0,
+      totalHealing: totals._sum.totalHealing ?? 0,
+      totalAbsorbs: totals._sum.totalAbsorbs ?? 0,
+      totalDeaths: totals._sum.deaths ?? 0,
+      avgDps: Math.round(totals._avg.dps ?? 0),
+      avgAps: Math.round(totals._avg.aps ?? 0),
     },
     recentParticipation: participants.slice(0, 20),
     milestones: player.milestones,

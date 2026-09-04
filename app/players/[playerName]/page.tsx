@@ -27,7 +27,7 @@ async function PlayerGear({ name, realm, playerClass }: { name: string; realm?: 
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { playerName } = await params;
-  const name = decodeURIComponent(playerName);
+  const name = playerName;
   return buildPageMetadata({
     title: name,
     description: `${name}'s WotLK raid history, records, performance, and cached Warmane gear.`,
@@ -37,14 +37,14 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 
 export default async function PlayerPage({ params }: Props) {
   const { playerName } = await params;
-  const name = decodeURIComponent(playerName);
+  const name = playerName;
 
   const player = await db.player.findFirst({
     where: { name },
     include: {
       realm: { select: { name: true } },
       milestones: {
-        where:   { supersededAt: null },
+        where:   { supersededAt: null, type: "ALL_TIME_RANK" },
         orderBy: [{ rank: "asc" }, { metric: "asc" }],
         include: {
           encounter: { include: { boss: { select: { name: true, slug: true } } } },
@@ -148,7 +148,7 @@ export default async function PlayerPage({ params }: Props) {
 
       {/* Milestones */}
       {milestones.length > 0 && (
-        <AccordionSection title="All-Time Records" sub="Current rankings, kills only" count={milestones.length} defaultOpen>
+        <AccordionSection title="All-Time Records" sub="Recorded achievements, kills only" count={milestones.length} defaultOpen>
           <div className="grid sm:grid-cols-2 gap-2">
             {milestones.map((m, index) => (
               <div

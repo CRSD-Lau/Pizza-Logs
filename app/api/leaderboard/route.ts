@@ -1,12 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
+import { LeaderboardQuerySchema } from "@/lib/api-query";
 
 export async function GET(req: NextRequest): Promise<NextResponse> {
   const { searchParams } = new URL(req.url);
-  const bossSlug   = searchParams.get("boss")       ?? undefined;
-  const difficulty = searchParams.get("difficulty")  ?? undefined;
-  const metric     = (searchParams.get("metric") ?? "dps") as "dps" | "hps";
-  const take       = Math.min(Number(searchParams.get("take") ?? 25), 100);
+  const query = LeaderboardQuerySchema.safeParse(Object.fromEntries(searchParams));
+  if (!query.success) return NextResponse.json({ error: "Invalid leaderboard filters or pagination." }, { status: 400 });
+  const { boss: bossSlug, difficulty, metric, take } = query.data;
 
   const field = metric === "hps" ? "hps" : "dps";
 
@@ -19,7 +19,7 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
         outcome: "KILL",
       },
     },
-    orderBy: { [field]: "desc" },
+    orderBy: [{ [field]: "desc" }, { playerId: "asc" }, { id: "asc" }],
     take,
     distinct: ["playerId"],
     include: {

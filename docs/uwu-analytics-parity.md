@@ -1,73 +1,130 @@
-# UwU Analytical Parity Contract
+# UwU Analytical Parity Evidence
 
-Pizza Logs uses Skada-WoTLK as the authority for combat totals and the public
-UwU Logs project as a reference for which analytical questions raiders expect a
-report to answer. The inspected UwU revision is
-`f32f00e917ad6baba9012704dc9e41afe578426d` from
-<https://github.com/CRSD-Lau/uwu-logs>.
+Author: Neil Mitchell
 
-The inspected repository has no root license file. Pizza Logs therefore uses
-independently written implementations and does not copy UwU source code.
+Last modified by: Neil Mitchell
 
-## Parity Matrix
+Pizza Logs preserves independently computed canonical combat primitives. UwU
+compatibility requires a named input, configuration, reference revision, and
+comparison surface. Matching a written formula is insufficient.
 
-| Analytical surface | Pizza Logs status | Contract |
+The corpus demonstrates **9 exact cases, 11 mismatching cases, zero tolerated
+cases, and seven unproven surface categories**. Most exact cases cover small
+session primitives; one covers a Marrowgar 10N kill. Complete Tier-1 or live
+UwU parity is **not demonstrated**.
+
+## Reference and provenance
+
+The inspected [UwU revision](https://github.com/CRSD-Lau/uwu-logs/tree/4c046d266b85ad833ab4d70addb0b6f1a16647e3)
+is `4c046d266b85ad833ab4d70addb0b6f1a16647e3` (commit subject `6.41.10`). Previous
+documentation referenced `f32f00e917ad6baba9012704dc9e41afe578426d`, 35 commits
+behind. That commit subject is not a verified version of the live deployment.
+
+Ordinary HTTP observations on 2026-09-04 returned 200 for `/upload`, `/top`,
+`/character`, and `/pve_stats`; `/`, `/ladder`, and the historical report returned
+403. No restriction was bypassed, no private log uploaded, and no live
+adversarial testing performed. The live deployment commit is unknown.
+
+No root license or GitHub-detected redistribution license was found. The pinned
+[README self-hosting instructions](https://github.com/CRSD-Lau/uwu-logs/blob/4c046d266b85ad833ab4d70addb0b6f1a16647e3/README.md)
+affirmatively document local execution. The reference ran privately from an
+unmodified snapshot with separate dependencies/data and an egress guard. No
+reference source, comments, templates, algorithms, or assets are vendored.
+
+The original adapter invokes the reference's own text session splitter,
+normalizer, and report methods. It captures values and display strings; it
+does not recreate formulas as a substitute oracle. Source Git blob hashes are
+verified before execution. Goldens contain only synthetic observations and
+provenance.
+
+## Changes since the old reference
+
+The [35-commit comparison](https://github.com/CRSD-Lau/uwu-logs/compare/f32f00e917ad6baba9012704dc9e41afe578426d...4c046d266b85ad833ab4d70addb0b6f1a16647e3)
+and changed reference surfaces were re-inspected:
+
+| Area | Observed changes | Consequence |
 |---|---|---|
-| Full-session Custom Slice | Matched for new uploads | One first-to-last-event slice includes wipes, trash, and downtime. Total Damage, Heal, Damage Taken, and every per-player rate use the same duration. |
-| Damage, DPS, healing, HPS | Matched by explicit definition | Headline Total Damage uses the raw damage-event amount; effective healing uses gross minus overheal; Heal adds attributed absorbs. |
-| Per-spell breakdown | Matched | Damage/healing, hits, crits, and school are stored per participant. |
-| Damage by target / boss damage | Matched generically | Every target is stored; encounter UI highlights boss-only damage where applicable. |
-| Damage taken | Matched | Headline taken uses the raw reported incoming amount. |
-| Absorbs / APS / H+A | Implemented conservatively | Numeric absorbed damage stays separate from healing; reports also expose explicit healing + absorbs totals/rates. Active and just-removed shield evidence controls attribution and uncertainty is surfaced. |
-| Encounter boundaries | Matched | The pull end follows the last boss-destination event, preventing boss outgoing attacks, stale markers, or post-fight trash from inflating duration and roster. |
-| Pet ownership | Matched conservatively | Summons and owner-exclusive spells establish ownership; permanent pet creature IDs propagate only from that evidence. |
-| Spec and role | Implemented conservatively | WotLK spell signatures plus output/taken evidence; ties and weak evidence are not guessed. |
-| Aura uptime | Implemented | Application count, seconds, and encounter percentage per player/aura. |
-| Consumables | Implemented | Curated consumable auras are separated from the general aura table. |
-| Power gains | Implemented | Energize events grouped by recipient, spell, and power type. |
-| Death analysis | Implemented | Death timestamp plus the prior 15 seconds of observed incoming damage. |
-| Player comparison | Existing | Session player charts compare the subject with same-class players on kills. |
-| Top/PvE statistics | Existing | Boss leaderboards, milestones, weekly summaries, and player per-boss bests. |
-| Boss-specific "useful damage" formulas | Deliberately partial | Generic target/boss damage is stable. UwU's boss-specific opinionated formulas are not treated as Skada totals and require separately evidenced rules/tests. |
-| Global spell search | Not yet a dedicated route | Spell data is available inside encounter/player breakdowns, but there is no cross-report spell-search page. |
-| Special mechanic reports | Not universal | Valkyr grabs, Defile targets, portal stacks, and similar mechanics need boss-specific fixtures before becoming ranking data. |
+| Encounter separation | Multi-boss overkill boundaries, Ulduar minimum durations, upload gap handling | Old encounter claims require paired inputs. |
+| Difficulty/kills | Freya guardian evidence, Yogg lookback, Mimiron components, Valithria spell ranks, Algalon evidence | One ICC example cannot validate every mode. |
+| Normalization/time | NUL handling, timestamp errors, Unicode archive names | Malformed and archive paths require separate fixtures. |
+| Damage/mechanics | Freya useful damage and Mimiron target groups | Canonical and useful damage must stay distinct. |
+| Pets | Nil-target ownership guard | One summon does not prove universal ownership parity. |
+| Auras/characters | Aura definitions and character aura/point output | Character and aggregate ranking remain unpaired. |
+| Upload/storage | Archive decoding, names, cached-file recovery, processing changes | Report-method evidence does not validate upload admission or safety. |
 
-## Non-Negotiable Compatibility Rules
+## Parity matrix
 
-1. New analytical surfaces cannot silently change a metric definition; every adopted definition is frozen by regression coverage.
-2. Missing or conflicting evidence stays unknown/unattributed.
-3. Absorbs remain separate from effective healing; the UwU-style Heal column is explicitly defined as effective healing plus attributed absorbs.
-4. Boss-specific useful metrics are supplemental labels, never replacements for
-   Skada-aligned totals.
-5. Parser changes require focused or fixture tests and the complete parser gate.
+“Observed” includes live navigation/HTTP and pinned route/template inspection
+where live reports were inaccessible. It never means a live pass.
 
-## Regression Gates
+| Surface | Evidence/status |
+|---|---|
+| Session damage, effective healing, Heal, incoming damage | Exact in named simple fixtures; environmental omission corrected. Absorb/friendly-fire/event-set cases differ. |
+| Session boundaries | Successive dates now separate correctly; a 24-hour gap is paired. Universal raid grouping is unproven. |
+| Encounter order, mode, result, duration, totals | One dense Marrowgar 10N kill matches. Missing-mode behavior and three old synthetic fixtures differ. |
+| Roster and pet rollup | One summon matches; ambiguous ownership and recipient-only roster inference remain unproven. |
+| Duration precision | Exact milliseconds in named cases. Reference negative year-rollover duration is not copied into canonical data. |
+| Display, rounding, sorting | Reference strings recorded. Pizza locale/rounding differs; no displayed parity claim. |
+| Damage/heal/taken/healed player detail | Routes/features inspected; per-recipient/per-spell normalization incomplete. |
+| Per-spell, per-target, boss/useful damage | These are separate from headlines. Full breakdown and boss-specific useful rules remain unproven. |
+| Casts/actions and spell search | Source routes observed; no universal timeline or cross-report search claim. |
+| Consumables, all/player auras, powers | Pizza implementations exist; paired coverage missing. |
+| Deaths and prior damage | Environmental death context has a regression; full death-page parity unproven. |
+| Entity/player/pet class, spec, role | Conservative canonical inference remains; reference presentation is not universally matched. |
+| Player comparison | Filters, grouping, rounding, ranking unpaired. |
+| Valk grabs, Lady spirits, UCM, ToC valks | Reference routes identified; complete Pizza mechanics coverage not claimed. |
+| Top/characters/PvE statistics | Live pages accessible; historical aggregate datasets/display unpaired. |
+| Logs list, calendar, ladder, realm/guild | Navigation/source inspected; live ladder/reports inaccessible, aggregate semantics unproven. |
+| Archive extraction, upload acceptance, publication | Outside the analytical adapter; independent Pizza security tests remain mandatory. |
 
-- `parser/tests/baselines/analytics-v1.json` freezes the pre-upgrade analytical
-  output for all canonical fixtures.
-- `parser/tests/test_analytics_baseline.py` verifies exact normalized hashes.
-- `parser/tests/test_parser_core.py` covers the enrichment paths, including
-  absorbs, ambiguity fields, role/spec, aura uptime, consumables, power gains,
-  incoming damage, and death timing.
-- `parser/tests/baselines/uwu-2026-07-31-lausudo.json` captures the five-pull
-  public Lausudo comparison report, including headline totals and the player
-  checks that exposed the Saurfang boundary/ownership failures.
-- `parser/tests/test_uwu_parity_baseline.py` locks that external acceptance
-  baseline independently from synthetic parser fixtures.
+## Reproducible lab
 
-## 2026-07-31 Lausudo Acceptance Baseline
+The [lab instructions](../parser/parity/README.md) describe commands, schema,
+capture, source integrity, and drift behavior. The [manifest](../parser/parity/manifest.json)
+is authoritative for case-specific claims and reviewed differences.
 
-The public UwU report contains five pulls: Marrowgar, Lady Deathwhisper,
-Gunship, and two Saurfang wipes. The frozen baseline records each pull's mode,
-result, millisecond duration, damage, effective healing, and damage taken. It
-also locks the previously divergent Saurfang player checks for Shadowcake,
-Azyia, and Gowron.
+From `parser/`:
 
-The original combat ZIP is not publicly downloadable from UwU. Synthetic
-fixtures therefore prove each repaired behavior independently. After this PR
-deploys, re-uploading Neil's original ZIP is the required real-log acceptance
-test; existing database rows are historical results and are not rewritten.
+```bash
+python -m parity verify --output-dir /tmp/pizza-parity
+python -m parity run --output-dir /tmp/pizza-parity-full
+```
 
-The linked historical Pizza report will continue to show its stored legacy
-values. Re-uploading the source ZIP after deployment creates the new
-`sessionAnalytics` payload and is the only valid like-for-like acceptance run.
+`verify` checks exact claims and fingerprints of reviewed mismatches. The full
+assertion, `run`, exits **1**, preserving 11 failures and seven skipped/unproven
+categories in `parity.junit.xml`. Both produce `parity.json` and `parity.md`.
+There is no numeric tolerance or implicit golden update.
+
+The corpus includes 17 original scenarios plus all three existing synthetic
+fixture files: damage, healing recipients, overheal, misses, environmental
+damage, pets, absorbs, event kinds, overkill, friendly fire, UTF-8, unknown mode,
+back-to-back pulls, separate dates, and year rollover. It does not replace a
+representative real multi-raid corpus.
+
+## Canonical corrections and retained differences
+
+- Environmental damage now uses shifted fields for incoming totals, separate
+  absorbs, and death context. It never contributes outgoing damage.
+- Explicit dates separate raids at equal clock times on successive dates;
+  December/January UTC years remain correct. Invalid/backwards input is counted
+  instead of receiving invented timestamps.
+- UwU's omitted `DAMAGE_SHIELD`/`DAMAGE_SPLIT` session amounts, minimal shield
+  attribution, negative year-rollover duration, and ambiguous roster/mode
+  behavior remain recorded differences. Canonical primitives are preserved.
+- No general UwU-compatible projection is exposed: the evidence is too narrow
+  to apply reference quirks safely across historical data.
+
+## Historical acceptance data
+
+The [five-pull acceptance JSON](../parser/tests/baselines/uwu-2026-07-31-lausudo.json)
+and integrity test remain. Its source ZIP is unavailable in the safe corpus,
+so it cannot count as a differential pass. Old broad “Matched” labels are
+retired. A maintainer-designated safe copy of that exact source and a permitted
+reference observation are required. Historical database rows are not rewritten.
+
+## Drift and claim changes
+
+`python -m parity check-reference --cache <temp-file>` uses ETags and reports
+current, stale, or unavailable repository state. It never runs in normal report
+rendering or silently updates the pin. A new revision requires source/license
+review, full capture, mismatch review, and explicit golden acceptance.

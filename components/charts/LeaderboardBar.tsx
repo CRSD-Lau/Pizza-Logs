@@ -66,11 +66,11 @@ export function LeaderboardBar({ entries, metric, className }: LeaderboardBarPro
                 >
                   {e.playerName}
                 </Link>
-                <div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-text-dim">
+                <div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-text-secondary">
                   <Link href={`/bosses/${e.bossSlug}`} className="hover:text-text-secondary truncate">
                     {e.bossName}
                   </Link>
-                  <span className={cn("diff-badge", e.difficulty.endsWith("H") ? "heroic" : "normal")}>
+                  <span className={cn("diff-badge", e.difficulty.endsWith("H") ? "heroic" : "normal")} style={{ color: "var(--color-text-secondary)" }}>
                     {e.difficulty}
                   </span>
                   <span className="sm:hidden">
@@ -83,10 +83,10 @@ export function LeaderboardBar({ entries, metric, className }: LeaderboardBarPro
                 <span className="text-base font-bold tabular-nums text-text-primary">
                   {formatDps(e.value)}
                 </span>
-                <span className="block text-xs text-text-dim uppercase">{metric}</span>
+                <span className="block text-xs text-text-secondary uppercase">{metric}</span>
               </div>
 
-              <div className="hidden text-right text-xs tabular-nums text-text-dim sm:block">
+              <div className="hidden text-right text-xs tabular-nums text-text-secondary sm:block">
                 {formatShortDateUtc(e.date)}
               </div>
 
@@ -94,7 +94,7 @@ export function LeaderboardBar({ entries, metric, className }: LeaderboardBarPro
                 {e.encounterId ? (
                   <Link
                     href={`/encounters/${e.encounterId}`}
-                    className="text-[11px] text-gold hover:text-gold-light transition-colors"
+                    className="inline-flex min-h-11 items-center text-xs text-gold hover:text-gold-light transition-colors"
                   >
                     View &rarr;
                   </Link>

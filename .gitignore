@@ -48,6 +48,7 @@ parser/venv/
 
 # coverage
 coverage/
+.test-artifacts/
 
 # combat log (large binary, not tracked)
 WoWCombatLog/

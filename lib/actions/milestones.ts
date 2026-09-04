@@ -1,167 +1,134 @@
-"use server";
-
+import { Prisma, type PrismaClient } from "@/generated/prisma/client";
 import { db } from "@/lib/db";
-
-const MILESTONE_RANKS = [1, 2, 3] as const;
+import { getWeekBounds } from "@/lib/utils";
 
 interface MilestoneCheck {
-  playerId:    string;
-  playerName:  string;
+  playerId: string;
+  playerName: string;
   encounterId: string;
-  bossId:      string;
-  bossName:    string;
-  difficulty:  string;
-  metric:      "DPS" | "HPS";
-  value:       number;
+  startedAt: Date;
+  bossId: string;
+  bossName: string;
+  difficulty: string;
+  metric: "DPS" | "HPS";
+  value: number;
 }
 
 export interface AwardedMilestone {
   playerName: string;
-  bossName:   string;
+  bossName: string;
   difficulty: string;
-  metric:     string;
-  value:      number;
-  rank:       number;
-  type:       string;
+  metric: string;
+  value: number;
+  rank: number;
+  type: string;
 }
 
-/**
- * After inserting participants, call this to compute and store milestone records.
- * Returns newly awarded milestones for display in the upload response.
- */
+/** Award independent all-time and current-week achievements after persistence. */
 export async function computeMilestones(
-  checks: MilestoneCheck[]
+  checks: MilestoneCheck[],
+  database: PrismaClient = db,
+  now: Date = new Date(),
 ): Promise<AwardedMilestone[]> {
-  const awarded: AwardedMilestone[] = [];
-
+  const week = getWeekBounds(now);
+  const inWeek = (check: MilestoneCheck) => check.startedAt >= week.start && check.startedAt < week.end;
+  // One best candidate for each independent award scope. Historical personal
+  // bests must not discard a lower value that leads the current week.
+  const candidates = new Map<string, MilestoneCheck>();
   for (const check of checks) {
-    if (check.value <= 0) continue;
-
-    const field = check.metric === "DPS" ? "dps" : "hps";
-
-    // Fetch current all-time top 100 for this boss/difficulty/metric
-    const top100 = await db.participant.findMany({
-      where: {
-        encounter: {
-          bossId:     check.bossId,
-          difficulty: check.difficulty,
-        },
-        [field]: { gt: 0 },
-      },
-      orderBy: { [field]: "desc" },
-      take: 100,
-      select: { id: true, [field]: true, playerId: true, encounterId: true },
-    });
-
-    // Find where this value would rank
-    const rank = top100.findIndex(p => (p as Record<string, unknown>)[field] as number < check.value) + 1 || top100.length + 1;
-
-    if (rank > 100) continue; // Not top 100, skip
-
-    // Determine milestone type bracket
-    const bracket = MILESTONE_RANKS.find(r => rank <= r);
-    if (!bracket) continue;
-
-    // Check if player already has a milestone at the same or better rank
-    const existing = await db.milestone.findFirst({
-      where: {
-        playerId:   check.playerId,
-        bossId:     check.bossId,
-        difficulty: check.difficulty,
-        metric:     check.metric,
-        supersededAt: null,
-      },
-      orderBy: { rank: "asc" },
-    });
-
-    // Supersede if new rank is better
-    if (existing && existing.rank <= rank && existing.value >= check.value) {
-      continue; // No improvement
-    }
-
-    if (existing) {
-      await db.milestone.update({
-        where: { id: existing.id },
-        data:  { supersededAt: new Date() },
-      });
-    }
-
-    await db.milestone.create({
-      data: {
-        type:       "ALL_TIME_RANK",
-        rank,
-        playerId:   check.playerId,
-        encounterId:check.encounterId,
-        bossId:     check.bossId,
-        difficulty: check.difficulty,
-        metric:     check.metric,
-        value:      check.value,
-      },
-    });
-
-    // Weekly milestone
-    const now = new Date();
-    const weekStart = getWeekStart(now);
-    const weeklyBest = await db.participant.findFirst({
-      where: {
-        encounter: {
-          bossId:     check.bossId,
-          difficulty: check.difficulty,
-          startedAt: { gte: weekStart },
-        },
-        [field]: { gt: 0 },
-      },
-      orderBy: { [field]: "desc" },
-      take: 1,
-    });
-
-    if (!weeklyBest || (weeklyBest as Record<string, unknown>)[field] as number <= check.value) {
-      const existingWeekly = await db.milestone.findFirst({
-        where: {
-          playerId:   check.playerId,
-          bossId:     check.bossId,
-          difficulty: check.difficulty,
-          metric:     check.metric,
-          type:       "WEEKLY_BEST",
-          supersededAt: null,
-          achievedAt: { gte: weekStart },
-        },
-      });
-      if (!existingWeekly) {
-        await db.milestone.create({
-          data: {
-            type:       "WEEKLY_BEST",
-            rank:       1,
-            playerId:   check.playerId,
-            encounterId:check.encounterId,
-            bossId:     check.bossId,
-            difficulty: check.difficulty,
-            metric:     check.metric,
-            value:      check.value,
-          },
-        });
+    if (!Number.isFinite(check.value) || check.value <= 0) continue;
+    const key = [check.playerId, check.bossId, check.difficulty, check.metric].join("\0");
+    for (const scope of ["all-time", ...(inWeek(check) ? ["weekly"] : [])]) {
+      const scopedKey = `${key}\0${scope}`;
+      const previous = candidates.get(scopedKey);
+      if (!previous || check.value > previous.value
+          || (check.value === previous.value && check.encounterId < previous.encounterId)) {
+        candidates.set(scopedKey, check);
       }
     }
-
-    awarded.push({
-      playerName: check.playerName,
-      bossName:   check.bossName,
-      difficulty: check.difficulty,
-      metric:     check.metric,
-      value:      check.value,
-      rank,
-      type:       "ALL_TIME_RANK",
-    });
   }
+  const unique = new Map([...candidates.values()].map(check => [
+    [check.encounterId, check.playerId, check.metric].join("\0"), check,
+  ]));
+  const awarded: AwardedMilestone[] = [];
+  for (const check of unique.values()) {
+    for (let attempt = 0; ; attempt++) {
+      try {
+        const result = await database.$transaction(async tx => {
+          const field = check.metric === "DPS" ? "dps" : "hps";
+          const encounter = { bossId: check.bossId, difficulty: check.difficulty, outcome: "KILL" as const };
+          const result: AwardedMilestone[] = [];
+          const betterPersonal = await tx.participant.findFirst({
+            where: { playerId: check.playerId, encounter, [field]: { gt: check.value } },
+            select: { id: true },
+          });
+          if (!betterPersonal) {
+            // At most three distinct stronger players decide podium eligibility.
+            // Equal values share rank; a player's attempts never self-compete.
+            const strongerPlayers = await tx.participant.groupBy({
+              by: ["playerId"],
+              where: { playerId: { not: check.playerId }, encounter, [field]: { gt: check.value } },
+              orderBy: { playerId: "asc" }, take: 3,
+            });
+            const rank = strongerPlayers.length + 1;
+            if (rank <= 3) {
+              const award = await storeAward(tx, check, "ALL_TIME_RANK", rank, now);
+              if (award) result.push(award);
+            }
+          }
 
+          if (inWeek(check)) {
+            const strongerWeekly = await tx.participant.findFirst({
+              where: { encounter: { ...encounter, startedAt: { gte: week.start, lt: week.end } },
+                [field]: { gt: check.value } },
+              select: { id: true },
+            });
+            if (!strongerWeekly) {
+              const award = await storeAward(tx, check, "WEEKLY_BEST", 1, now, week);
+              if (award) result.push(award);
+            }
+          }
+          return result;
+        }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable, timeout: 10_000 });
+        awarded.push(...result);
+        break;
+      } catch (error) {
+        const retryable = error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2034";
+        if (!retryable || attempt >= 2) throw error;
+        await new Promise(resolve => setTimeout(resolve, 25 * (attempt + 1) + Math.random() * 25));
+      }
+    }
+  }
   return awarded;
 }
 
-function getWeekStart(date: Date): Date {
-  const d = new Date(date);
-  const day = d.getUTCDay();
-  const daysToWed = day < 3 ? day + 4 : day - 3;
-  d.setUTCDate(d.getUTCDate() - daysToWed);
-  d.setUTCHours(9, 0, 0, 0);
-  return d;
+async function storeAward(
+  tx: Prisma.TransactionClient,
+  check: MilestoneCheck,
+  type: "ALL_TIME_RANK" | "WEEKLY_BEST",
+  rank: number,
+  now: Date,
+  week?: { start: Date; end: Date },
+): Promise<AwardedMilestone | null> {
+  const existing = await tx.milestone.findFirst({
+    where: {
+      playerId: check.playerId, bossId: check.bossId, difficulty: check.difficulty,
+      metric: check.metric, type, supersededAt: null,
+      ...(week ? { achievedAt: { gte: week.start, lt: week.end } } : {}),
+    },
+    orderBy: [{ value: "desc" }, { rank: "asc" }, { id: "asc" }],
+  });
+  if (existing && existing.value >= check.value && existing.rank <= rank) return null;
+  if (existing) await tx.milestone.update({ where: { id: existing.id }, data: { supersededAt: now } });
+  await tx.milestone.create({
+    data: {
+      type, rank, playerId: check.playerId, encounterId: check.encounterId,
+      bossId: check.bossId, difficulty: check.difficulty, metric: check.metric,
+      value: check.value, achievedAt: now,
+    },
+  });
+  return {
+    playerName: check.playerName, bossName: check.bossName, difficulty: check.difficulty,
+    metric: check.metric, value: check.value, rank, type,
+  };
 }
