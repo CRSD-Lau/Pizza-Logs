@@ -134,6 +134,8 @@ jobs:
               ghcr.io/aquasecurity/trivy@sha256:62b1e65e8869bc4b4c6aa4fa2b21595256c7c2f6018a9d9ad61caf87187c1969 \
               image --format cyclonedx --output "/out/$service.cdx.json" "pizza-logs-$service:ci"
           done
+          # Trivy runs as root; the runner adds attribution after validating IDs.
+          sudo chown "$(id -u):$(id -g)" .test-artifacts/container-security/{web,parser}.cdx.json
           node scripts/check-container-scans.mjs .test-artifacts/container-security
 
       - name: Integrated containers and headless acceptance
