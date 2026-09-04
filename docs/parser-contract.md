@@ -101,6 +101,12 @@ max(0, gross - overheal)
 
 Every tracked heal counts; there is no invented ignored-heal list. `SPELL_HEAL_ABSORBED` is not healing done.
 
+Player and known-owned-pet healing counts regardless of recipient type, including
+Valithria Dreamwalker, other NPCs, pets and totems. The recipient being a non-player
+must not remove effective healing from encounter, actor or spell totals. Source
+eligibility and pet-ownership evidence still apply; accepting an NPC recipient
+does not assign that NPC to the healer as a pet.
+
 ## Absorbs
 
 Absorbs remain separate from effective healing. Numeric absorbed amounts come from incoming damage events and are attributed only when supported shield-aura/source evidence exists.
@@ -142,6 +148,11 @@ An apparent kill with unknown difficulty is retained as an attempt but not ranke
 ## Pet Ownership
 
 `SPELL_SUMMON` and owner-exclusive spell evidence establish ownership. Once proven, stable creature identity may propagate ownership across repeated Warmane GUID instances. Generic player-to-pet healing is insufficient and must never steal ownership. Vehicle sources are excluded.
+
+Fel Synergy (`54181`) is accepted only as `SPELL_HEAL` from a player to a
+controlled permanent pet. Its owner-specific target is supported by the
+[pinned WotLK spell implementation](https://github.com/azerothcore/azerothcore-wotlk/blob/d7189cf87e130ec8590d39376137dd315f0c1c45/src/server/scripts/Spells/spell_warlock.cpp#L1029-L1064).
+An unverified spell ID or ordinary heal does not establish ownership.
 
 ## Analytical Enrichment
 

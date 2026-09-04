@@ -20,6 +20,7 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
 import archive_upload  # noqa: E402
 import main  # noqa: E402
 from archive_upload import ArchiveValidationError, open_combat_log, validate_upload  # noqa: E402
+from version import PARSER_VERSION  # noqa: E402
 from quick_classifier import quick_classify  # noqa: E402
 
 
@@ -176,7 +177,7 @@ async def test_actual_upload_to_quick_classification_and_full_parse_flow(tmp_pat
     done = events[event_types.index("done")]["data"]
     assert done["encounters"][0]["difficulty"] == "10N"
     assert done["receivedBytes"] == len(body)
-    assert done["provenance"]["parserVersion"] == "1.1.0"
+    assert done["provenance"]["parserVersion"] == PARSER_VERSION
     assert done["provenance"]["metricSchemaVersion"] == "1"
     assert done["provenance"]["compatibilityProfile"] == "canonical-v1"
     assert done["provenance"]["referenceSha"] is None

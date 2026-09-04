@@ -143,11 +143,46 @@ Warmane fights.
 | Three existing ICC/Gunship placeholder fixtures | Insufficient evidence | Obtain authentic creature/mode evidence; modern markers and placeholder IDs do not establish reference behavior. |
 | `marrowgar-sparse-targets` | Insufficient evidence | Pair authentic sparse boss activity before changing either segmentation policy. |
 
-No existing mismatch currently demonstrates an unfixed canonical Pizza defect.
+No existing synthetic mismatch currently demonstrates an unfixed canonical Pizza defect.
 This classification does not resolve full compatibility: all twelve remain failures
 of the strict comparison, with six canonical differences, one demonstrated reference
 negative-duration defect and five insufficient-evidence cases. The seven broader
 unproven categories remain open. No production compatibility projection is added.
+
+## Private representative ICC comparison
+
+A maintainer-supplied combat log was copied with before/after byte-identity checks
+and compared privately against the same pinned, unmodified reference. Four
+contiguous samples cover a Saurfang heroic kill and wipe, Valithria heroic healing,
+and a Lich King normal finale. The reference ran with denied network/process egress
+and bounded input, detail calls and output. Private source bytes, identities and
+report outputs are excluded from Git and public CI artifacts.
+
+This comparison exposed two canonical corrections in parser `1.1.1`:
+
+- Encounter healing had excluded non-player recipients, despite source-qualified
+  effective healing already counting in session totals. Player and known-owned-pet
+  healing now includes Valithria, other NPCs, pets and totems. Original synthetic
+  regressions cover actor, spell, encounter and rate totals, overheal and separate
+  absorbs. For example, a 1,000-point heal with 250 overheal contributes 750 even
+  when its recipient is Valithria.
+- Fel Synergy provides independently verified owner-exclusive pet evidence.
+  Only its `SPELL_HEAL` event with an eligible player source and controlled permanent
+  pet recipient qualifies; generic heals and unverified spell IDs remain insufficient.
+
+The private comparison also distinguishes retained behavior from defects. Canonical
+damage includes `DAMAGE_SHIELD` and `DAMAGE_SPLIT`; the Lich King scripted finale
+remains one attempt through actual boss death. Reference detail `ACTUAL` amounts
+subtract overkill while reference headline damage uses raw amounts, so those fields
+cannot serve as interchangeable comparison surfaces. Short samples can omit earlier
+ownership evidence even with two minutes of surrounding context; compare them with
+the complete session before attributing missing pet damage to arithmetic.
+
+These samples do not establish complete parity. Remaining ownership, encounter-window,
+absorb, roster and detail differences require separate evidence. This single ICC
+session does not cover every mode or other raids, and it does not recover the missing
+historical acceptance archive. Public synthetic counts above remain a separate corpus.
+Historical stored reports are not automatically recalculated.
 
 ## Historical acceptance data
 

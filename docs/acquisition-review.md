@@ -30,11 +30,21 @@ passed all 12 public checks, dependency readiness returned 200, and GitHub repor
 zero open Dependabot alerts. These observations replace the earlier delivery's
 pending-deployment status; they do not close unrelated acquisition conditions.
 
-The subsequent remediation adds complete hover-model framing, a reviewed Alpine
-parser runtime, full-image security gates, six additional paired reference cases,
-database recovery evidence tooling and an exact asset provenance register. Its PR
-records the final revision and hosted checks; these changes require their own
-deployment verification after merge.
+PR 77 was merged as `b5636482eea8527d2cafc0824c7f6dca4fa8d8be` on 2026-09-04.
+It adds complete hover-model framing, a reviewed Alpine parser runtime, full-image
+security gates, six additional paired reference cases, database recovery evidence
+tooling and an exact asset provenance register. Railway reported successful web
+and parser deployments from that revision. The
+[post-deployment smoke run](https://github.com/CRSD-Lau/Pizza-Logs/actions/runs/33928110204)
+passed all 12 public checks, and dependency readiness returned 200. These observations
+verify that rollout; the CI image scans do not claim a separate scan of Railway's
+registry images.
+
+A subsequent permitted private ICC comparison exposed omitted healing to non-player
+recipients and missing Fel Synergy pet evidence. Parser `1.1.1` corrects both with
+original synthetic regressions; the [parity evidence](uwu-analytics-parity.md)
+documents remaining differences and corpus limits. These parser corrections require
+their own PR and deployment verification. Private combat data remains outside Git.
 
 Authenticated production reads confirmed all 12 migration names successfully
 applied, with one older rolled-back ledger record preserved. All three historical
@@ -113,9 +123,9 @@ Public descriptions deliberately omit payloads and detailed exploitation procedu
 | A09 P2 Medium | Upstream body consumption and non-success responses could outlive intended timeout/resource limits. | Slow/malformed Warmane responses | **Fixed:** decoded body bounds, redirect rejection, complete-body deadlines and cancellation. | Mock stream/fallback tests; last healthy gear survives outages. |
 | A10 P2 Medium | Runtime database adapter ignored custom schema configuration, including raw aggregate queries. | Custom schema deployment | **Fixed:** adapter schema and safely encoded per-connection search path. | Real pooled queries and writes verified isolated; empty, null, quoted or >63-byte schema names fail early. |
 | A11 P2 Medium | Missing field associations, a stopped file-picker click and low-contrast metadata/admin controls impaired use. | Affected widths/surfaces | **Fixed:** explicit picker action, native labels, progress/error semantics, readable tokens and larger controls. | Headless file chooser/upload/retry, axe and responsive checks; automated testing is not screen-reader certification. |
-| A12 P1 High, open | [Parity matrix](uwu-analytics-parity.md): broad historical claims exceeded independently observed evidence. | Certain for a full replacement claim | **Coverage expanded; full parity incomplete.** Fourteen exact cases, twelve explicit mismatches, seven unproven categories. | Six intentional canonical differences, one demonstrated reference defect and five insufficient-evidence cases remain visible. Neil must provide permitted historical source/reference evidence for broader claims. |
-| A13 P1 High, open | Provider inspection found no scheduled backups; newest listed snapshot was 2026-08-23. | Recovery exposure is confirmed; native restoration remains untested | **Logical restore verified; provider recovery remains open.** | Neil must approve/configure current scheduled backups and verify an isolated provider-supported snapshot/PITR restore before accepting enterprise RPO/RTO. |
-| A14 Critical/High scanner findings, remediated in code | Previous Debian parser image reproduced 3 Critical and 51 High package/advisory instances. | Previous runtime package exposure remains until rollout | **Reviewed replacement scans clean.** Digest-pinned supported Alpine runtime, actual-OS tests, unchanged hash locks and no severity suppression. | [Runtime evidence and tradeoffs](operations/parser-runtime.md): 388 tests, real HTTP cancellation/upload checks, zero detected OS/Python findings. Verify deployment of the new image; future Critical/High findings block CI. |
+| A12 P1 High, open | [Parity matrix](uwu-analytics-parity.md): broad historical claims exceeded independently observed evidence. | Certain for a full replacement claim | **Coverage expanded; full parity incomplete.** Fourteen exact synthetic cases, twelve explicit mismatches, seven unproven categories; four private ICC samples exposed two parser corrections. | Private ICC data is now available. Broader modes/raids, unresolved attribution/detail differences and the missing historical source archive still need evidence; synthetic and private results remain distinct. |
+| A13 P1 High, open | Provider inspection found no scheduled backups; newest listed snapshot was 2026-08-23. | Recovery exposure is confirmed; native restoration remains untested | **Logical restore verified; provider recovery remains open.** Neil chose to keep Railway backup settings unchanged. | Respect that decision. Enterprise RPO/RTO remains unproven until an independently approved provider backup and isolated restore demonstration exists. |
+| A14 Critical/High scanner findings, remediated and deployed | Previous Debian parser image reproduced 3 Critical and 51 High package/advisory instances. | Historical runtime package exposure; future images require scanning | **Reviewed replacement scans clean; PR 77 rollout verified.** Digest-pinned supported Alpine runtime, actual-OS tests, unchanged hash locks and no severity suppression. | [Runtime evidence and tradeoffs](operations/parser-runtime.md): 388 tests, real HTTP cancellation/upload checks, zero detected OS/Python findings. Railway source revision/readiness and production smoke passed; future Critical/High findings block CI. |
 | A15 P2 Medium, open | Shared-secret admin model, process-local progress/admission, single-region dependencies and single CODEOWNER. | Operational growth or outage | **Bounded locally; architecture decision deferred.** | Add identity/MFA, distributed admission and durable job storage only with owner/provider design, privacy and cost approval. |
 | A16 P2 Medium, open | Warcraft-related media and external source rights are not established by npm license metadata. | Commercial acquisition/distribution | **[Exact asset register](security/asset-provenance.md) complete; rights not certified.** No UwU code/assets copied. | Neil and the relevant rights holders must supply the listed creation/permission records and disposition for each local and remote asset group. |
 
