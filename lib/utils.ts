@@ -13,6 +13,7 @@ export function getWeekBounds(date: Date = new Date()): { start: Date; end: Date
   const start = new Date(d);
   start.setUTCDate(d.getUTCDate() - daysToWed);
   start.setUTCHours(9, 0, 0, 0); // reset at 09:00 UTC
+  if (start > date) start.setUTCDate(start.getUTCDate() - 7);
   const end = new Date(start);
   end.setUTCDate(start.getUTCDate() + 7);
   return { start, end };

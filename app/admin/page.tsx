@@ -5,6 +5,7 @@ import { SectionHeader } from "@/components/ui/SectionHeader";
 import { StatCard } from "@/components/ui/StatCard";
 import { formatBytes } from "@/lib/utils";
 import { getDeploymentInfo } from "@/lib/deployment-info";
+import { readUpstreamText } from "@/lib/upstream-response";
 import { ClearDatabaseButton } from "./ClearDatabaseButton";
 import { ClearGearCacheButton } from "./ClearGearCacheButton";
 import { DeleteUploadButton } from "./DeleteUploadButton";
@@ -32,7 +33,20 @@ export default async function AdminPage() {
   const deployment = getDeploymentInfo();
   const parserHealthPromise = fetch(`${process.env.PARSER_SERVICE_URL ?? "http://localhost:8000"}/health`, {
     cache: "no-store",
-  }).then(r => r.json() as Promise<ParserHealth>).catch(() => ({ status: "unreachable" }));
+    signal: AbortSignal.timeout(5_000),
+    redirect: "error",
+  }).then(async response => {
+    if (!response.ok) {
+      await response.body?.cancel().catch(() => undefined);
+      throw new Error("Parser health unavailable");
+    }
+    const payload: unknown = JSON.parse(await readUpstreamText(response, 16 * 1024));
+    if (!payload || typeof payload !== "object" || !("status" in payload)
+        || typeof payload.status !== "string" || payload.status.length > 64) {
+      throw new Error("Invalid parser health");
+    }
+    return { status: payload.status } satisfies ParserHealth;
+  }).catch(() => ({ status: "unreachable" }));
 
   let uploadsTotal = 0;
   let encountersTotal = 0;

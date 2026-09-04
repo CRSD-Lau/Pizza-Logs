@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
+import { bossAggregateQuery, type BossAggregate } from "@/lib/report-aggregates";
 
 export async function GET(req: NextRequest): Promise<NextResponse> {
   const { searchParams } = new URL(req.url);
@@ -7,47 +8,19 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
   const realmId   = searchParams.get("realmId") ?? undefined;
   const difficulty = searchParams.get("difficulty") ?? undefined;
 
-  // Fetch all bosses with encounter counts and best DPS
-  const bosses = await db.boss.findMany({
-    where: raidSlug ? { raidSlug } : undefined,
-    orderBy: { sortOrder: "asc" },
-    include: {
-      encounters: {
-        where: {
-          ...(difficulty ? { difficulty } : {}),
-          ...(realmId    ? { upload: { realmId } } : {}),
-        },
-        select: {
-          id:              true,
-          outcome:         true,
-          difficulty:      true,
-          durationSeconds: true,
-          participants: {
-            orderBy: { dps: "desc" },
-            take: 1,
-            select: { dps: true, player: { select: { name: true } } },
-          },
-        },
-      },
-    },
-  });
+  // Transfer one aggregate per boss, independent of historical encounter count.
+  const [bosses, aggregates] = await Promise.all([
+    db.boss.findMany({
+      where: raidSlug ? { raidSlug } : undefined,
+      orderBy: { sortOrder: "asc" },
+      select: { id: true, name: true, slug: true, raid: true, raidSlug: true },
+    }),
+    db.$queryRaw<BossAggregate[]>(bossAggregateQuery({ raidSlug, realmId, difficulty })),
+  ]);
+  const byBoss = new Map(aggregates.map(row => [row.bossId, row]));
 
   const result = bosses.map(boss => {
-    const kills = boss.encounters.filter(e => e.outcome === "KILL");
-    const wipes = boss.encounters.filter(e => e.outcome === "WIPE");
-    const bestDps = boss.encounters.reduce<{ dps: number; playerName: string } | null>(
-      (best, enc) => {
-        const top = enc.participants[0];
-        if (!top) return best;
-        if (!best || top.dps > best.dps) return { dps: top.dps, playerName: top.player.name };
-        return best;
-      },
-      null
-    );
-    const fastestKill = kills.reduce<number | null>(
-      (min, enc) => min === null ? enc.durationSeconds : Math.min(min, enc.durationSeconds),
-      null
-    );
+    const totals = byBoss.get(boss.id);
 
     return {
       id:          boss.id,
@@ -55,11 +28,13 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
       slug:        boss.slug,
       raid:        boss.raid,
       raidSlug:    boss.raidSlug,
-      killCount:   kills.length,
-      wipeCount:   wipes.length,
-      totalPulls:  boss.encounters.length,
-      bestDps,
-      fastestKill,
+      killCount:   totals?.killCount ?? 0,
+      wipeCount:   totals?.wipeCount ?? 0,
+      totalPulls:  totals?.totalPulls ?? 0,
+      // As before, the best DPS includes kills, wipes and unknown outcomes.
+      bestDps:     totals?.dps != null && totals.playerName != null
+        ? { dps: totals.dps, playerName: totals.playerName } : null,
+      fastestKill: totals?.fastestKill ?? null,
     };
   });
 

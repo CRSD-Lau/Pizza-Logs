@@ -1,23 +1,21 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
+import { EncounterQuerySchema } from "@/lib/api-query";
 
 export async function GET(req: NextRequest): Promise<NextResponse> {
   const { searchParams } = new URL(req.url);
-  const bossSlug   = searchParams.get("boss")       ?? undefined;
-  const difficulty = searchParams.get("difficulty")  ?? undefined;
-  const outcome    = searchParams.get("outcome")     ?? undefined;
-  const playerName = searchParams.get("player")      ?? undefined;
-  const take       = Math.min(Number(searchParams.get("take") ?? 50), 200);
-  const skip       = Number(searchParams.get("skip") ?? 0);
+  const query = EncounterQuerySchema.safeParse(Object.fromEntries(searchParams));
+  if (!query.success) return NextResponse.json({ error: "Invalid encounter filters or pagination." }, { status: 400 });
+  const { boss: bossSlug, difficulty, outcome, player: playerName, take, skip } = query.data;
 
   const encounters = await db.encounter.findMany({
     where: {
       ...(bossSlug   ? { boss: { slug: bossSlug } } : {}),
       ...(difficulty ? { difficulty } : {}),
-      ...(outcome    ? { outcome: outcome as "KILL" | "WIPE" | "UNKNOWN" } : {}),
+      ...(outcome    ? { outcome } : {}),
       ...(playerName ? { participants: { some: { player: { name: playerName } } } } : {}),
     },
-    orderBy: { startedAt: "desc" },
+    orderBy: [{ startedAt: "desc" }, { id: "asc" }],
     take,
     skip,
     include: {

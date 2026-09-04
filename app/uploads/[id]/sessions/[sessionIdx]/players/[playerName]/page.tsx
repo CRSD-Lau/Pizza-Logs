@@ -27,7 +27,7 @@ interface Props {
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { id, playerName, sessionIdx } = await params;
-  const name = decodeURIComponent(playerName);
+  const name = playerName;
   const resolution = await resolveRaidSession(id, sessionIdx);
   if (!resolution) return { title: name };
 
@@ -42,7 +42,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 
 export default async function SessionPlayerPage({ params }: Props) {
   const { id, sessionIdx, playerName } = await params;
-  const name = decodeURIComponent(playerName);
+  const name = playerName;
   const resolution = await resolveRaidSession(id, sessionIdx);
 
   if (!resolution) notFound();

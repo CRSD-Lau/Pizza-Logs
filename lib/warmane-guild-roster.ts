@@ -1,4 +1,5 @@
 import { db } from "./db";
+import { readUpstreamText } from "./upstream-response";
 import { calculateGearScore } from "./gearscore";
 import type { ArmoryCharacterGear } from "./warmane-armory";
 
@@ -450,13 +451,17 @@ async function fetchWithTimeout(url: string, accept: string): Promise<Response> 
   const timeout = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
 
   try {
-    return await fetch(url, {
+    const response = await fetch(url, {
+      redirect: "error",
       headers: {
         Accept: accept,
         "User-Agent": USER_AGENT,
       },
       signal: controller.signal,
     });
+    // Keep the deadline active through body consumption, including slow bodies.
+    const body = await readUpstreamText(response);
+    return new Response(body, { status: response.status, statusText: response.statusText });
   } finally {
     clearTimeout(timeout);
   }

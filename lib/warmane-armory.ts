@@ -1,4 +1,5 @@
 import { db } from "./db";
+import { readUpstreamText } from "./upstream-response";
 import { enrichGearWithLocalTemplate } from "./item-template";
 import type { GearScoreEquipLoc } from "./gearscore";
 
@@ -515,13 +516,19 @@ export async function fetchWarmaneGearLive(
     };
     const [summaryResult, profileResult] = await Promise.allSettled([
       fetch(getApiUrl(sanitizedName, sanitizedRealm), {
+        redirect: "error",
         headers: requestHeaders,
         signal: controller.signal,
       }),
       fetch(sourceUrl, {
+        redirect: "error",
         headers: requestHeaders,
         signal: controller.signal,
-      }).then(async pageResponse => pageResponse.ok ? pageResponse.text() : null),
+      }).then(async pageResponse => {
+        if (pageResponse.ok) return readUpstreamText(pageResponse);
+        await pageResponse.body?.cancel().catch(() => undefined);
+        return null;
+      }),
     ]);
     const armoryHtml = profileResult.status === "fulfilled" ? profileResult.value : null;
     liveAppearance = armoryHtml ? extractWarmaneCharacterAppearance(armoryHtml) : null;
@@ -532,10 +539,11 @@ export async function fetchWarmaneGearLive(
     const response = summaryResult.value;
 
     if (!response.ok) {
+      await response.body?.cancel().catch(() => undefined);
       throw new Error(`Warmane Armory returned ${response.status}`);
     }
 
-    const data = (await response.json()) as WarmaneCharacterSummary;
+    const data = JSON.parse(await readUpstreamText(response)) as WarmaneCharacterSummary;
     if (data.error) {
       throw new Error("Warmane Armory returned an error response");
     }

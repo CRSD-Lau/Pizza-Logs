@@ -9,6 +9,7 @@ const playerPage = readFileSync(
 const raidsPage = readFileSync("app/raids/page.tsx", "utf8");
 const encounterPage = readFileSync("app/encounters/[id]/page.tsx", "utf8");
 const uploadRoute = readFileSync("app/api/upload/route.ts", "utf8");
+const uploadPersistence = readFileSync("lib/upload-persistence.ts", "utf8");
 const uploadZone = readFileSync("components/upload/UploadZone.tsx", "utf8");
 const adminUploadsPage = readFileSync("app/admin/uploads/page.tsx", "utf8");
 const adminUploadPage = readFileSync("app/admin/uploads/[id]/page.tsx", "utf8");
@@ -47,9 +48,10 @@ assert.doesNotMatch(playerPage, /Session \$\{Number\(sessionIdx\)/);
 
 assert.match(raidsPage, /routeSlug/);
 assert.match(encounterPage, /getRaidSessionRouteByIndex/);
-assert.match(uploadRoute, /firstSessionSlug/);
-assert.match(uploadRoute, /publicReportSlug:\s+upload\.publicSlug/);
-assert.match(uploadRoute, /publicReportSlug:\s+existingUpload\.publicSlug/);
+assert.match(uploadRoute, /persistParsedUpload\(db,/);
+assert.match(uploadPersistence, /firstSessionSlug/);
+assert.match(uploadPersistence, /publicReportSlug:\s+upload\.publicSlug/);
+assert.match(uploadPersistence, /publicReportSlug:\s+existing\.publicSlug/);
 assert.match(uploadZone, /result\.firstSessionSlug/);
 assert.match(uploadZone, /result\.publicReportSlug/);
 assert.match(schema, /firstSessionSlug:\s*z\.string\(\)\.optional\(\)/);

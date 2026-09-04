@@ -76,7 +76,11 @@ async function main() {
   } as NodeModule;
 
   const originalFetch = global.fetch;
-  global.fetch = async () => Response.json({ status: "unreachable" });
+  global.fetch = async (_input, options) => {
+    assert.ok(options?.signal instanceof AbortSignal, "Parser diagnostics need a body-lifetime deadline");
+    assert.equal(options.redirect, "error");
+    return Response.json({ status: "unreachable" });
+  };
 
   try {
     const { default: AdminPage } = require("../app/admin/page") as typeof import("../app/admin/page");
@@ -87,6 +91,24 @@ async function main() {
     assert.match(markup, /Database unavailable/);
     assert.match(markup, /localhost:5432/);
     assert.match(markup, /Upload analytics are unavailable/);
+
+    let cancelled = false;
+    global.fetch = async () => new Response(new ReadableStream({
+      start(controller) { controller.enqueue(new Uint8Array(16 * 1024 + 1)); },
+      cancel() { cancelled = true; },
+    }));
+    assert.match(renderToStaticMarkup(await AdminPage()), /Unreachable/);
+    assert.equal(cancelled, true, "Oversized diagnostics must cancel the upstream body");
+
+    global.fetch = async () => Response.json({ status: { invalid: true } });
+    assert.match(renderToStaticMarkup(await AdminPage()), /Unreachable/);
+
+    cancelled = false;
+    global.fetch = async () => new Response(new ReadableStream({
+      cancel() { cancelled = true; },
+    }), { status: 503 });
+    assert.match(renderToStaticMarkup(await AdminPage()), /Unreachable/);
+    assert.equal(cancelled, true, "Failed diagnostics must cancel the upstream body");
   } finally {
     global.fetch = originalFetch;
     moduleLoader._resolveFilename = originalResolve;
