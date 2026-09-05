@@ -42,6 +42,7 @@ export type ArmoryCharacterGear = {
   fetchedAt: string;
   items: ArmoryGearItem[];
   appearance?: ArmoryCharacterAppearance | null;
+  appearanceStale?: boolean;
 };
 
 export type ArmoryGearResult =
@@ -284,6 +285,26 @@ function isArmoryCharacterGear(value: unknown): value is ArmoryCharacterGear {
     typeof gear.fetchedAt === "string" &&
     Array.isArray(gear.items) &&
     gear.items.every(isArmoryGearItem)
+  );
+}
+
+function isArmoryCharacterAppearance(value: unknown): value is ArmoryCharacterAppearance {
+  if (!value || typeof value !== "object") return false;
+  const appearance = value as Record<string, unknown>;
+  const isIntegerInRange = (number: unknown, min: number, max: number) => (
+    typeof number === "number" && Number.isInteger(number) && number >= min && number <= max
+  );
+
+  return (
+    typeof appearance.modelId === "string" && /^[a-z]{3,32}$/.test(appearance.modelId) &&
+    ["skin", "hairStyle", "hairColor", "face", "facialHair", "faceColor", "earPiercing", "hornStyle", "tattoo"]
+      .every(key => isIntegerInRange(appearance[key], 0, 255)) &&
+    isIntegerInRange(appearance.classId, 0, 20) &&
+    Array.isArray(appearance.items) && appearance.items.length <= 24 &&
+    appearance.items.every(item => (
+      Array.isArray(item) && item.length === 2 &&
+      isIntegerInRange(item[0], 1, 32) && isIntegerInRange(item[1], 1, 1_000_000)
+    ))
   );
 }
 
@@ -592,12 +613,26 @@ export function resolveArmoryGearResult({
   cachedGear?: ArmoryCharacterGear | null;
   liveResult: ArmoryGearResult;
 }): ArmoryGearResult {
-  if (liveResult.ok) return liveResult;
+  if (liveResult.ok) {
+    if (isArmoryCharacterAppearance(liveResult.gear.appearance)) {
+      return { ...liveResult, gear: { ...liveResult.gear, appearanceStale: false } };
+    }
+    const sameCharacter = cachedGear &&
+      getCharacterKey(cachedGear.characterName) === getCharacterKey(liveResult.gear.characterName) &&
+      cachedGear.realm.trim().toLowerCase() === liveResult.gear.realm.trim().toLowerCase();
+    if (sameCharacter && isArmoryCharacterAppearance(cachedGear.appearance)) {
+      return {
+        ...liveResult,
+        gear: { ...liveResult.gear, appearance: cachedGear.appearance, appearanceStale: true },
+      };
+    }
+    return liveResult;
+  }
   if (cachedGear) {
     return {
       ok: true,
-      gear: liveResult.appearance
-        ? { ...cachedGear, appearance: liveResult.appearance }
+      gear: isArmoryCharacterAppearance(liveResult.appearance)
+        ? { ...cachedGear, appearance: liveResult.appearance, appearanceStale: false }
         : cachedGear,
       stale: true,
     };
@@ -745,17 +780,19 @@ export async function getWarmaneCharacterGear(
   }
 
   const liveResult = await fetchWarmaneGearLive(sanitizedName, sanitizedRealm);
+  // Resolve both upstream sources before persisting so cache hits retain the same
+  // appearance and its freshness marker as the immediate refresh response.
+  const baseResult = resolveArmoryGearResult({ cachedGear, liveResult });
 
-  if (liveResult.ok) {
-    await writeCachedGear(liveResult.gear);
-  } else {
-    if (cachedGear && liveResult.appearance) {
-      cachedGear = { ...cachedGear, appearance: liveResult.appearance };
-    }
-    await markRefreshFailed(sanitizedName, sanitizedRealm, sourceUrl, liveResult.message, cachedGear);
+  if (liveResult.ok && baseResult.ok) {
+    await writeCachedGear(baseResult.gear);
+  } else if (!liveResult.ok) {
+    await markRefreshFailed(
+      sanitizedName, sanitizedRealm, sourceUrl, liveResult.message,
+      baseResult.ok ? baseResult.gear : cachedGear,
+    );
   }
 
-  const baseResult = resolveArmoryGearResult({ cachedGear, liveResult });
   if (baseResult.ok && baseResult.gear) {
     const freshItems = await enrichGearWithLocalTemplate(baseResult.gear.items);
     return { ...baseResult, gear: { ...baseResult.gear, items: normalizeArmoryGearSlots(freshItems) } };

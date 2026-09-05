@@ -44,7 +44,7 @@ assert.deepEqual(
   }),
   {
     ok: true,
-    gear: { ...cachedGear, appearance: liveAppearance },
+    gear: { ...cachedGear, appearance: liveAppearance, appearanceStale: false },
     stale: true,
   },
   "a healthy profile recipe upgrades cached gear even when the equipment API fails",
@@ -59,6 +59,63 @@ const liveGear: ArmoryCharacterGear = {
 assert.deepEqual(
   resolveArmoryGearResult({ cachedGear, liveResult: { ok: true, gear: liveGear } }),
   { ok: true, gear: liveGear },
+);
+
+const cachedWithAppearance: ArmoryCharacterGear = { ...cachedGear, appearance: liveAppearance };
+assert.deepEqual(
+  resolveArmoryGearResult({ cachedGear: cachedWithAppearance, liveResult: { ok: true, gear: liveGear } }),
+  { ok: true, gear: { ...liveGear, appearance: liveAppearance, appearanceStale: true } },
+  "a profile outage retains a valid model without making fresh equipment stale",
+);
+assert.deepEqual(
+  resolveArmoryGearResult({
+    cachedGear: { ...cachedWithAppearance, characterName: " AALASKA ", realm: " lordaeron " },
+    liveResult: { ok: true, gear: liveGear },
+  }),
+  { ok: true, gear: { ...liveGear, appearance: liveAppearance, appearanceStale: true } },
+  "appearance identity uses normalized character and realm",
+);
+for (const otherIdentity of [{ characterName: "Someone" }, { realm: "Icecrown" }]) {
+  assert.deepEqual(
+    resolveArmoryGearResult({
+      cachedGear: { ...cachedWithAppearance, ...otherIdentity },
+      liveResult: { ok: true, gear: liveGear },
+    }),
+    { ok: true, gear: liveGear },
+    "a model must never cross a character or realm boundary",
+  );
+}
+for (const appearance of [null, undefined, { ...liveAppearance, skin: 256 }, { ...liveAppearance, items: [[0, 100]] }]) {
+  assert.deepEqual(
+    resolveArmoryGearResult({
+      cachedGear: { ...cachedGear, appearance } as ArmoryCharacterGear,
+      liveResult: { ok: true, gear: liveGear },
+    }),
+    { ok: true, gear: liveGear },
+    "missing or invalid cached recipes cannot fill a missing live model",
+  );
+}
+assert.deepEqual(
+  resolveArmoryGearResult({ cachedGear: null, liveResult: { ok: true, gear: liveGear } }),
+  { ok: true, gear: liveGear },
+  "a cold cache does not invent an appearance",
+);
+const replacementAppearance = { ...liveAppearance, hairStyle: 2 };
+assert.deepEqual(
+  resolveArmoryGearResult({
+    cachedGear: { ...cachedWithAppearance, appearanceStale: true },
+    liveResult: { ok: true, gear: { ...liveGear, appearance: replacementAppearance } },
+  }),
+  { ok: true, gear: { ...liveGear, appearance: replacementAppearance, appearanceStale: false } },
+  "fresh profile data replaces the cached recipe and clears its stale marker",
+);
+assert.deepEqual(
+  resolveArmoryGearResult({
+    cachedGear: { ...cachedWithAppearance, appearanceStale: true },
+    liveResult: { ...liveFailure, appearance: replacementAppearance },
+  }),
+  { ok: true, gear: { ...cachedWithAppearance, appearance: replacementAppearance, appearanceStale: false }, stale: true },
+  "fresh appearance also clears its marker when equipment fails independently",
 );
 
 const freshButPartialGear: ArmoryCharacterGear = {
