@@ -14,6 +14,7 @@ import { buildPageMetadata } from "@/lib/page-metadata";
 import { parseIncludeShortPulls } from "@/lib/attempt-policy";
 import { countedAttemptWhere, shortPullWhere } from "@/lib/attempt-policy.server";
 import { buildDirectoryHref, getDirectoryPagination, parseDirectoryFilters, parseDirectoryPage, type DirectoryQueryValue } from "@/lib/directory-pagination";
+import { formatCountLabel, formatInteger } from "@/lib/utils";
 
 export const metadata = buildPageMetadata({
   title: "Players",
@@ -107,7 +108,7 @@ export default async function PlayersPage({ searchParams }: Props) {
             ))}
           </nav>
           <p className="text-sm text-text-secondary">
-            {data.totalCount} {data.totalCount === 1 ? "player" : "players"}{query || classFilter ? " match these filters" : " tracked"} · A–Z
+            {formatCountLabel(data.totalCount, "player")}{query || classFilter ? (data.totalCount === 1 ? " matches these filters" : " match these filters") : " tracked"} · A–Z
           </p>
           <ShortPullNotice shortPulls={data.shortPulls} includeShortPulls={includeShortPulls} basePath={pageHref(data.pagination.currentPage)} />
           {visiblePlayers.length === 0 ? (
@@ -115,11 +116,11 @@ export default async function PlayersPage({ searchParams }: Props) {
               action={<Link href={query || classFilter ? resetHref : "/"} className={actionClass}>{query || classFilter ? "Clear filters" : "Upload a log"}</Link>} />
           ) : (
             <div className="space-y-5">
-              <div className="grid border-y border-gold-dim sm:grid-cols-2 lg:grid-cols-3">
+              <ul aria-label="Players" className="grid list-none border-y border-gold-dim sm:grid-cols-2 lg:grid-cols-3">
                 {visiblePlayers.map((player, index) => {
                   const color = getClassColor(player.class ?? player.name);
                   return (
-                    <article key={player.id} className={getRevealClassName({ className: "flex min-h-20 items-center gap-3 border-b border-gold-dim px-3 py-3 hover:bg-bg-panel/55 sm:border-r" })} style={getRevealStyle(index)}>
+                    <li key={player.id} className={getRevealClassName({ className: "flex min-h-20 items-center gap-3 border-b border-gold-dim px-3 py-3 hover:bg-bg-panel/55 sm:border-r" })} style={getRevealStyle(index)}>
                       <PlayerAvatar name={player.name} realmName={player.realm?.name} characterClass={player.class} color={color} fallbackIconUrl={getClassIconUrl(player.class)} size="sm" />
                       <div className="min-w-0 flex-1">
                         <Link href={`/players/${encodeURIComponent(player.name)}${includeShortPulls ? "?includeShortPulls=1" : ""}`} className="flex min-h-11 items-center text-base font-semibold hover:underline" style={{ color }}>
@@ -128,15 +129,15 @@ export default async function PlayersPage({ searchParams }: Props) {
                         <p className="flex flex-wrap gap-x-2 gap-y-1 text-sm text-text-secondary">
                           {player.class && <span>{player.class}</span>}
                           {player.realm && <span>{player.realm.name}</span>}
-                          <span>{player._count.participants} {player._count.participants === 1 ? "pull" : "pulls"}</span>
+                          <span>{formatCountLabel(player._count.participants, "pull")}</span>
                         </p>
                       </div>
-                    </article>
+                    </li>
                   );
                 })}
-              </div>
+              </ul>
               <nav aria-label="Player directory pages" className="flex flex-wrap items-center justify-between gap-3">
-                <p className="text-sm text-text-secondary">{data.pagination.firstVisible}–{data.pagination.lastVisible} of {data.totalCount} players · Page {data.pagination.currentPage} of {data.pagination.totalPages}</p>
+                <p className="text-sm text-text-secondary">{formatInteger(data.pagination.firstVisible)}–{formatInteger(data.pagination.lastVisible)} of {formatCountLabel(data.totalCount, "player")} · Page {formatInteger(data.pagination.currentPage)} of {formatInteger(data.pagination.totalPages)}</p>
                 <div className="flex gap-2">
                   {data.pagination.currentPage > 1 ? <Link href={pageHref(data.pagination.currentPage - 1)} className={actionClass}><ChevronLeft aria-hidden="true" size={16} />Previous</Link> : <button type="button" disabled className={`${actionClass} opacity-40`}><ChevronLeft aria-hidden="true" size={16} />Previous</button>}
                   {data.pagination.currentPage < data.pagination.totalPages ? <Link href={pageHref(data.pagination.currentPage + 1)} className={actionClass}>Next<ChevronRight aria-hidden="true" size={16} /></Link> : <button type="button" disabled className={`${actionClass} opacity-40`}>Next<ChevronRight aria-hidden="true" size={16} /></button>}
@@ -146,13 +147,13 @@ export default async function PlayersPage({ searchParams }: Props) {
           )}
           {classStats.length > 0 && (
             <details className="border-y border-gold-dim">
-              <summary className="flex min-h-14 cursor-pointer items-center text-sm font-semibold text-gold">Class overview · all {data.allPlayersForStats.length} players</summary>
+              <summary className="flex min-h-14 cursor-pointer items-center text-sm font-semibold text-gold">Class overview · all {formatCountLabel(data.allPlayersForStats.length, "player")}</summary>
               <div className="space-y-3 pb-5">
                 {classStats.map(([className, count]) => (
                   <div key={className} className="flex items-center gap-3 text-sm">
                     <span className="w-28 shrink-0 text-text-secondary">{className}</span>
                     <div className="flex-1 h-3 bg-bg-card rounded-sm overflow-hidden"><div className="h-full" style={{ width: `${count / maxClassCount * 100}%`, background: getClassColor(className) }} /></div>
-                    <span className="w-8 text-right tabular-nums text-text-primary">{count}</span>
+                    <span className="min-w-8 text-right tabular-nums text-text-primary">{formatInteger(count)}</span>
                   </div>
                 ))}
               </div>

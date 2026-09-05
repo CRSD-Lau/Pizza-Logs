@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useId, useLayoutEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import type { ArmoryGearItem } from "@/lib/warmane-armory";
+import { formatInteger } from "@/lib/utils";
 
 const QUALITY_COLORS: Record<string, string> = {
   poor: "#9d9d9d",
@@ -106,7 +107,7 @@ function GearItemTooltip({
         ) : (
           <p>No item details available.</p>
         )}
-        {gearScore !== undefined && <p className="pt-1 text-gold-light">GearScore {gearScore.toLocaleString()}</p>}
+        {gearScore !== undefined && <p className="pt-1 text-gold-light">GearScore {formatInteger(gearScore)}</p>}
         {item.itemId && <p className="pt-1 text-text-dim">Item #{item.itemId}</p>}
       </div>
     </div>
@@ -197,8 +198,8 @@ export function GearItemCard({ item, gearScore }: { item: ArmoryGearItem; gearSc
             </p>
           </div>
           <div className="shrink-0 space-y-0.5 text-right text-xs tabular-nums text-text-secondary">
-            {item.itemLevel && <p>ilvl {item.itemLevel}</p>}
-            {gearScore !== undefined && <p className="text-gold-light">GS {gearScore.toLocaleString()}</p>}
+            {item.itemLevel != null && <p>Item level {formatInteger(item.itemLevel)}</p>}
+            {gearScore !== undefined && <p className="text-gold-light">GearScore {formatInteger(gearScore)}</p>}
           </div>
         </div>
 

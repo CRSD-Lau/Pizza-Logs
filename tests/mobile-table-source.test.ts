@@ -13,10 +13,10 @@ const sessionPlayerTable = readFileSync("components/reports/SessionPlayerTable.t
 
 assert.match(sessionPage, /<SessionPlayerTable rows=\{killBreakdownRows\} label="Boss kill player metrics"/);
 assert.match(sessionPage, /<SessionPlayerTable rows=\{sessionBreakdownRows\} label="Full session player metrics"/);
-assert.match(sessionPlayerTable, /className="data-panel md:hidden"/);
-assert.match(sessionPlayerTable, /className="data-panel hidden md:block"/);
+assert.match(sessionPlayerTable, /className="data-panel xl:hidden"/);
+assert.match(sessionPlayerTable, /className="data-panel hidden xl:block"/);
 assert.doesNotMatch(sessionPlayerTable, /min-w-\[760px\]/);
-for (const label of ["Total Damage", "DPS", "Heal", "H+A PS", "Damage Taken", "DTPS"]) {
+for (const label of ["Total Damage", "DPS", "Healing + absorbs", "Healing + absorbs /s", "Damage Taken", "DTPS"]) {
   assert.ok(sessionPlayerTable.includes(`label: "${label}"`), `${label} remains available in the mobile summary`);
 }
 

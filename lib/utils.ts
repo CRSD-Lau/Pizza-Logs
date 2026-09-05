@@ -19,21 +19,82 @@ export function getWeekBounds(date: Date = new Date()): { start: Date; end: Date
   return { start, end };
 }
 
-export function formatBytes(bytes: number): string {
-  if (bytes < 1024) return `${bytes} B`;
-  if (bytes < 1048576) return `${(bytes / 1024).toFixed(1)} KB`;
-  if (bytes < 1073741824) return `${(bytes / 1048576).toFixed(1)} MB`;
-  return `${(bytes / 1073741824).toFixed(2)} GB`;
+type DisplayNumber = number | null | undefined;
+type DisplayDate = string | Date | null | undefined;
+
+export const UNAVAILABLE_VALUE = "—";
+const integerFormat = new Intl.NumberFormat("en-US", { maximumFractionDigits: 0 });
+const decimalFormat = new Intl.NumberFormat("en-US", { maximumFractionDigits: 1 });
+const compactFormat = new Intl.NumberFormat("en-US", { notation: "compact", maximumFractionDigits: 1 });
+const dateFormat = new Intl.DateTimeFormat("en-US", { year: "numeric", month: "short", day: "numeric", timeZone: "UTC" });
+const timeFormat = new Intl.DateTimeFormat("en-US", { hour: "2-digit", minute: "2-digit", hourCycle: "h23", timeZone: "UTC" });
+const timestampFormat = new Intl.DateTimeFormat("en-US", {
+  year: "numeric", month: "short", day: "numeric", hour: "2-digit", minute: "2-digit", second: "2-digit", hourCycle: "h23", timeZone: "UTC",
+});
+
+export function isDisplayNumber(value: DisplayNumber): value is number {
+  return typeof value === "number" && Number.isFinite(value);
 }
 
-export function formatDuration(seconds: number): string {
+/** Counts and accumulated totals. Never abbreviate comparison values. */
+export function formatInteger(value: DisplayNumber): string {
+  return isDisplayNumber(value) ? integerFormat.format(value === 0 ? 0 : value) : UNAVAILABLE_VALUE;
+}
+
+/** Rates retain one decimal; a small measured contribution must not look like zero. */
+export function formatRate(value: DisplayNumber): string {
+  if (!isDisplayNumber(value)) return UNAVAILABLE_VALUE;
+  if (value > 0 && value < 0.1) return "<0.1";
+  if (value < 0 && value > -0.1) return ">-0.1";
+  return decimalFormat.format(value === 0 ? 0 : value);
+}
+
+/** Input is a percentage (25), not a fraction (0.25). */
+export function formatPercent(value: DisplayNumber): string {
+  return isDisplayNumber(value) ? `${formatRate(value)}%` : UNAVAILABLE_VALUE;
+}
+
+/** Compact notation is reserved for chart axes, with exact values in the tooltip/table. */
+export function formatCompactNumber(value: DisplayNumber): string {
+  return isDisplayNumber(value) ? compactFormat.format(value === 0 ? 0 : value) : UNAVAILABLE_VALUE;
+}
+
+export function formatCountLabel(value: number, singular: string, plural = `${singular}s`): string {
+  return `${formatInteger(value)} ${value === 1 ? singular : plural}`;
+}
+
+export function formatSeconds(value: DisplayNumber): string {
+  return isDisplayNumber(value) && value >= 0 ? `${formatRate(value)} s` : UNAVAILABLE_VALUE;
+}
+
+export function formatBytes(bytes: DisplayNumber): string {
+  if (!isDisplayNumber(bytes) || bytes < 0) return UNAVAILABLE_VALUE;
+  const units = ["B", "KiB", "MiB", "GiB", "TiB", "PiB"];
+  let unit = 0;
+  let amount = bytes;
+  while (amount >= 1024 && unit < units.length - 1) {
+    amount /= 1024;
+    unit++;
+  }
+  // Promote when rounding would otherwise display 1,024 of the smaller unit.
+  if (Math.round(amount * 10) / 10 >= 1024 && unit < units.length - 1) {
+    amount /= 1024;
+    unit++;
+  }
+  return `${unit === 0 ? formatInteger(amount) : decimalFormat.format(amount)} ${units[unit]}`;
+}
+
+export function formatDuration(seconds: DisplayNumber): string {
+  if (!isDisplayNumber(seconds) || seconds < 0) return UNAVAILABLE_VALUE;
   const wholeSeconds = Math.max(0, Math.floor(seconds));
-  const m = Math.floor(wholeSeconds / 60);
+  const hours = Math.floor(wholeSeconds / 3600);
+  const m = Math.floor((wholeSeconds % 3600) / 60);
   const s = wholeSeconds % 60;
-  return `${m}:${String(s).padStart(2, "0")}`;
+  return `${hours > 0 ? `${hours}:${String(m).padStart(2, "0")}` : m}:${String(s).padStart(2, "0")}`;
 }
 
-export function formatDurationPrecise(milliseconds: number): string {
+export function formatDurationPrecise(milliseconds: DisplayNumber): string {
+  if (!isDisplayNumber(milliseconds) || milliseconds < 0) return UNAVAILABLE_VALUE;
   const totalMilliseconds = Math.max(0, Math.round(milliseconds));
   const hours = Math.floor(totalMilliseconds / 3_600_000);
   const minutes = Math.floor((totalMilliseconds % 3_600_000) / 60_000);
@@ -42,22 +103,46 @@ export function formatDurationPrecise(milliseconds: number): string {
   return `${hours}:${String(minutes).padStart(2, "0")}:${String(seconds).padStart(2, "0")}.${String(millis).padStart(3, "0")}`;
 }
 
-export function formatShortDateUtc(value: string | Date): string {
-  return new Date(value).toLocaleDateString("en-US", {
-    month: "short",
-    day: "numeric",
-    timeZone: "UTC",
-  });
+function displayDate(value: DisplayDate): Date | null {
+  if (value === null || value === undefined || value === "") return null;
+  const date = new Date(value);
+  return Number.isFinite(date.getTime()) ? date : null;
 }
 
-export function formatNumber(n: number): string {
-  if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(2)}M`;
-  if (n >= 1_000) return `${(n / 1_000).toFixed(1)}K`;
-  return n.toLocaleString();
+export function formatDateUtc(value: DisplayDate): string {
+  const date = displayDate(value);
+  return date ? dateFormat.format(date) : UNAVAILABLE_VALUE;
 }
 
-export function formatDps(n: number): string {
-  if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(3)}M`;
-  if (n >= 1_000) return `${(n / 1_000).toFixed(2)}K`;
-  return n.toFixed(0);
+export function formatDateTimeUtc(value: DisplayDate): string {
+  const date = displayDate(value);
+  return date ? `${timestampFormat.format(date)} UTC` : UNAVAILABLE_VALUE;
 }
+
+export function formatTimeUtc(value: DisplayDate): string {
+  const date = displayDate(value);
+  return date ? `${timeFormat.format(date)} UTC` : UNAVAILABLE_VALUE;
+}
+
+export function formatDateTimeRangeUtc(start: DisplayDate, end: DisplayDate): string {
+  const first = displayDate(start);
+  const last = displayDate(end);
+  if (!first || !last) return UNAVAILABLE_VALUE;
+  const firstDate = dateFormat.format(first);
+  const lastDate = dateFormat.format(last);
+  return `${firstDate}, ${timeFormat.format(first)} – ${firstDate === lastDate ? "" : `${lastDate}, `}${timeFormat.format(last)} UTC`;
+}
+
+/** Only for newly derived display rates. Stored participant rates are left intact. */
+export function getRecordedDurationSeconds(value: { durationMs?: DisplayNumber; durationSeconds?: DisplayNumber }): number | null {
+  if (value.durationMs != null && value.durationMs !== 0) {
+    return isDisplayNumber(value.durationMs) && value.durationMs > 0 ? value.durationMs / 1000 : null;
+  }
+  if (isDisplayNumber(value.durationSeconds) && value.durationSeconds > 0) return value.durationSeconds;
+  return null;
+}
+
+// Retained names keep existing imports compatible with the shared presentation contract.
+export const formatNumber = formatInteger;
+export const formatDps = formatRate;
+export const formatShortDateUtc = formatDateUtc;

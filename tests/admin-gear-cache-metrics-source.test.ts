@@ -9,7 +9,7 @@ const clearButton = readFileSync(path.join(process.cwd(), "app", "admin", "Clear
 assert.match(source, /label="Cached Snapshots"/);
 assert.match(source, /label="Latest Live Refresh"/);
 assert.match(source, /orderBy:\s*\{\s*lastSuccessAt:\s*"desc"\s*\}/);
-assert.match(source, /timeZone:\s*"UTC"/);
+assert.match(source, /formatDateTimeUtc\(latestGearRefresh\.lastSuccessAt\)/);
 assert.doesNotMatch(source, /Server Refresh Errors|recentGearErrors/);
 assert.match(source, /<ClearGearCacheButton \/>/);
 assert.match(actions, /clearArmoryGearCache/);

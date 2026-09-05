@@ -51,8 +51,8 @@ assert.match(markup, /data-character-race="Night Elf"/);
 assert.match(markup, /classicon_druid/);
 assert.match(markup, /reveal-item/);
 assert.match(markup, /--reveal-index:0/);
-assert.match(markup, /1-20 of 25 members/);
-assert.match(markup, /Page 1 \/ 2/);
+assert.match(markup, /1–20 of 25 members/);
+assert.match(markup, /Page 1 of 2/);
 assert.match(markup, /href="\/guild-roster\?page=2"/);
 assert.match(markup, /Roster20/);
 assert.doesNotMatch(markup, /Roster21/);
@@ -61,10 +61,18 @@ const secondPageMarkup = renderToStaticMarkup(
   React.createElement(GuildRosterTable, { members, currentPage: 2 }),
 );
 
-assert.match(secondPageMarkup, /21-25 of 25 members/);
-assert.match(secondPageMarkup, /Page 2 \/ 2/);
+assert.match(secondPageMarkup, /21–25 of 25 members/);
+assert.match(secondPageMarkup, /Page 2 of 2/);
 assert.match(secondPageMarkup, /href="\/guild-roster"/);
 assert.match(secondPageMarkup, /Roster21/);
 assert.doesNotMatch(secondPageMarkup, /Azyva/);
+
+const zeroScore = renderToStaticMarkup(React.createElement(GuildRosterTable, { members: [{ ...members[0], gearScore: 0 }] }));
+assert.match(zeroScore, /<span class="tabular-nums">0<\/span>/);
+assert.doesNotMatch(zeroScore, /Unavailable/);
+assert.match(zeroScore, /Apr 30, 2026, 12:00:00 UTC/);
+assert.match(zeroScore, /1–1 of 1 member</);
+const missingScore = renderToStaticMarkup(React.createElement(GuildRosterTable, { members: [{ ...members[0], gearScore: null }] }));
+assert.match(missingScore, /aria-hidden="true">—<\/span><span class="sr-only">Unavailable/);
 
 console.log("guild-roster-table-render tests passed");

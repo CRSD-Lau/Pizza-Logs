@@ -3,6 +3,7 @@
 import { useId, useMemo, useState } from "react";
 import { X } from "lucide-react";
 import { Button } from "@/components/ui/Button";
+import { formatInteger } from "@/lib/utils";
 import {
   filterEncounterAnalyticsRows,
   getContextualEncounterAnalyticsFilterOptions,
@@ -16,6 +17,7 @@ interface FilteredAnalyticsBreakdownProps {
   valueLabel: string;
   occurrencesLabel: string;
   entryLabel: string;
+  singularEntryLabel?: string;
   playerHelp: string;
 }
 
@@ -28,6 +30,7 @@ export function FilteredAnalyticsBreakdown({
   valueLabel,
   occurrencesLabel,
   entryLabel,
+  singularEntryLabel = entryLabel,
   playerHelp,
 }: FilteredAnalyticsBreakdownProps) {
   const [playerQuery, setPlayerQuery] = useState("");
@@ -138,8 +141,8 @@ export function FilteredAnalyticsBreakdown({
           <p id={helpId}>{playerHelp} Type part of a name or choose a suggestion.</p>
           <p role="status" aria-live="polite" aria-atomic="true" className="tabular-nums text-text-secondary">
             {hasFilters
-              ? `Showing ${visibleRows.length.toLocaleString()} of ${result.rows.length.toLocaleString()} matches from ${rows.length.toLocaleString()} ${entryLabel}`
-              : `Showing ${visibleRows.length.toLocaleString()} of ${rows.length.toLocaleString()} ${entryLabel}`}
+              ? `Showing ${formatInteger(visibleRows.length)} of ${formatInteger(result.rows.length)} ${result.rows.length === 1 ? "match" : "matches"} from ${formatInteger(rows.length)} ${rows.length === 1 ? singularEntryLabel : entryLabel}`
+              : `Showing ${formatInteger(visibleRows.length)} of ${formatInteger(rows.length)} ${rows.length === 1 ? singularEntryLabel : entryLabel}`}
           </p>
         </div>
       </div>
@@ -162,16 +165,16 @@ export function FilteredAnalyticsBreakdown({
             {visibleRows.map(row => (
               <div
                 key={row.id}
-                className="grid grid-cols-[minmax(0,1fr)_auto] gap-x-3 gap-y-1 px-2 py-3 text-sm sm:grid-cols-[minmax(0,1fr)_minmax(0,2fr)_auto_auto] sm:px-4"
+                className="grid grid-cols-2 gap-x-3 gap-y-2 px-2 py-3 text-sm sm:grid-cols-[minmax(0,1fr)_minmax(0,2fr)_auto_auto] sm:px-4"
               >
-                <span className="truncate font-semibold text-text-primary">{row.player}</span>
-                <span className="row-start-2 truncate text-text-secondary sm:row-start-auto">{row.ability}</span>
-                <span className="col-start-2 row-start-1 text-right tabular-nums text-gold sm:col-start-auto sm:row-start-auto">
-                  <span className="sr-only">{valueLabel}: </span>
+                <span className="min-w-0 break-words font-semibold text-text-primary">{row.player}</span>
+                <span className="min-w-0 break-words text-text-secondary">{row.ability}</span>
+                <span className="text-left tabular-nums text-gold sm:text-right">
+                  <span className="block text-xs text-text-secondary sm:sr-only">{valueLabel}: </span>
                   {row.value}
                 </span>
-                <span className="col-start-2 row-start-2 text-right tabular-nums text-text-dim sm:col-start-auto sm:row-start-auto">
-                  <span className="sr-only">{occurrencesLabel}: </span>
+                <span className="text-right tabular-nums text-text-secondary">
+                  <span className="block text-xs sm:sr-only">{occurrencesLabel}: </span>
                   {row.occurrences}
                 </span>
               </div>
@@ -179,11 +182,11 @@ export function FilteredAnalyticsBreakdown({
           </div>
           {remainingRows > 0 && (
             <div className="flex flex-wrap items-center justify-between gap-2 border-t border-gold-dim px-3 py-2 text-xs text-text-dim sm:px-4">
-              <span>{remainingRows.toLocaleString()} more matching {entryLabel}</span>
+              <span>{formatInteger(remainingRows)} more matching {remainingRows === 1 ? singularEntryLabel : entryLabel}</span>
               <div className="flex flex-wrap items-center gap-2">
                 {visibleLimit > PAGE_SIZE && (
                   <Button type="button" variant="ghost" size="sm" onClick={() => setVisibleLimit(PAGE_SIZE)}>
-                    Show first {PAGE_SIZE}
+                    Show first {formatInteger(PAGE_SIZE)}
                   </Button>
                 )}
                 <Button
@@ -192,7 +195,7 @@ export function FilteredAnalyticsBreakdown({
                   size="sm"
                   onClick={() => setVisibleLimit(limit => limit + PAGE_SIZE)}
                 >
-                  Show {Math.min(PAGE_SIZE, remainingRows)} more
+                  Show {formatInteger(Math.min(PAGE_SIZE, remainingRows))} more
                 </Button>
               </div>
             </div>

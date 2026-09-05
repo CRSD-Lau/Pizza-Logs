@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useId, useRef, useState } from "react";
-import { cn } from "@/lib/utils";
+import { cn, formatInteger } from "@/lib/utils";
 
 interface Props {
   id?: string;
@@ -69,7 +69,7 @@ export function AccordionSection({
               {title}
             </span>
             {count !== undefined && (
-              <span className="text-sm text-text-dim tabular-nums">({count})</span>
+              <span className="text-sm text-text-dim tabular-nums">({typeof count === "number" ? formatInteger(count) : count})</span>
             )}
           </div>
           {sub && (

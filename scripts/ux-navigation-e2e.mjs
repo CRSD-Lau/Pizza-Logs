@@ -59,7 +59,7 @@ async function check(name, run, recordPass = true) {
   }
 }
 const idFromHref = href => new URL(href, base).pathname.split("/").at(-1);
-const shortDate = value => new Date(value).toLocaleDateString("en-US", { month: "short", day: "numeric", timeZone: "UTC" });
+const shortDate = value => new Date(value).toLocaleDateString("en-US", { year: "numeric", month: "short", day: "numeric", timeZone: "UTC" });
 async function encounterLinks(scope = page.locator("main")) {
   return scope.locator('a[href^="/encounters/"]').evaluateAll(links => links.map(link => link.getAttribute("href")));
 }
@@ -231,7 +231,7 @@ try {
     await poll(async () => await dps.getAttribute("aria-expanded") === "true", "DPS hash must reveal rankings");
     await poll(() => dps.evaluate(button => button === document.activeElement), "Hash destination heading must receive focus");
     await page.keyboard.press("Enter");
-    assert.equal(await dps.getAttribute("aria-expanded"), "false");
+    await poll(async () => await dps.getAttribute("aria-expanded") === "false", "Enter on the focused ranking heading must collapse it");
     await nav.getByRole("link", { name: "HPS rankings", exact: true }).focus();
     await page.keyboard.press("Enter");
     await page.waitForURL(url => url.hash === "#boss-hps");
@@ -414,9 +414,9 @@ try {
     await page.waitForURL(url => url.pathname === "/players");
   });
 
-  // Eleven representative public routes; private admin and upload submission
+  // Twelve representative public routes; private admin and upload submission
   // have separate security/journey tests. Axe includes contrast with no exclusions.
-  const routes = ["/", "/raids", "/bosses", bossPath, "/leaderboards", "/players", "/weekly", "/guild-roster", report, `/encounters/${phyre.id}`, "/players/Phyre"];
+  const routes = ["/", "/raids", "/bosses", bossPath, "/leaderboards", "/players", "/weekly", "/guild-roster", report, `/encounters/${phyre.id}`, "/players/Phyre", `${report}/players/Phyre`];
   for (const width of [375, 768, 1024, 1440]) {
     for (const [index, route] of routes.entries()) {
       await check(`render ${width}px ${route}`, () => audit(route, width, `${width}-${index}-${route.replaceAll("/", "_")}.png`), false);

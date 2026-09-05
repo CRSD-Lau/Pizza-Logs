@@ -3,6 +3,7 @@
 import { RefreshCw } from "lucide-react";
 import { useState, useTransition } from "react";
 import { syncGuildRosterFromAdmin } from "./actions";
+import { formatCountLabel } from "@/lib/utils";
 
 type RefreshResult =
   | { tone: "success"; message: string }
@@ -24,7 +25,7 @@ export function GuildRosterRefreshButton() {
 
       setResult({
         tone: "success",
-        message: `${response.count.toLocaleString()} members refreshed`,
+        message: `${formatCountLabel(response.count, "member")} refreshed`,
       });
     });
   }

@@ -4,7 +4,7 @@ import { db } from "@/lib/db";
 import { requireAdmin } from "@/lib/require-admin";
 import { SectionHeader } from "@/components/ui/SectionHeader";
 import { StatCard } from "@/components/ui/StatCard";
-import { formatBytes } from "@/lib/utils";
+import { formatBytes, formatCountLabel, formatDateTimeUtc, formatDateUtc, formatInteger, formatSeconds } from "@/lib/utils";
 import { getDeploymentInfo } from "@/lib/deployment-info";
 import { readUpstreamText } from "@/lib/upstream-response";
 import { ClearDatabaseButton } from "./ClearDatabaseButton";
@@ -174,7 +174,7 @@ export default async function AdminPage() {
           <ServiceCard
             name="Database"
             status={databaseAvailable ? "ok" : "error"}
-            detail={databaseAvailable ? `${bossCount} bosses seeded` : "Unavailable"}
+            detail={databaseAvailable ? `${formatCountLabel(bossCount, "boss", "bosses")} seeded` : "Unavailable"}
           />
         </div>
       </section>
@@ -182,7 +182,7 @@ export default async function AdminPage() {
       {/* 2. Configuration */}
       <section>
         <SectionHeader title="Configuration" />
-        <div className="bg-bg-panel border border-gold-dim rounded-sm p-4 space-y-2 font-mono text-xs text-text-secondary">
+        <div className="break-all bg-bg-panel border border-gold-dim rounded-sm p-4 space-y-2 font-mono text-xs text-text-secondary">
           <div><span className="text-text-dim">APP_VERSION</span>         = {deployment.version}</div>
           <div><span className="text-text-dim">DEPLOY_COMMIT</span>       = {deployment.commitShort ?? "local / unavailable"}</div>
           <div><span className="text-text-dim">DEPLOY_BRANCH</span>       = {deployment.branch ?? "local / unavailable"}</div>
@@ -199,7 +199,8 @@ export default async function AdminPage() {
       <section>
         <SectionHeader title="Guild Roster" sub="First-party Warmane refresh for PizzaWarriors" />
         <GuildRosterSyncPanel
-          rosterCount={rosterCount}
+          rosterCount={databaseAvailable ? rosterCount : null}
+          available={databaseAvailable}
           latestSync={latestRosterSync?.lastSyncedAt ?? null}
         />
       </section>
@@ -208,21 +209,12 @@ export default async function AdminPage() {
       <section>
         <SectionHeader title="Warmane Gear Cache" sub="On-demand equipment snapshots for player quick looks" />
         <div className="bg-bg-panel border border-gold-dim rounded-sm p-4 space-y-4">
-          <div className="grid grid-cols-2 gap-3">
-            <StatCard label="Cached Snapshots" value={gearCacheTotal} />
+          <div className="grid gap-3 sm:grid-cols-2">
+            <StatCard label="Cached Snapshots" value={databaseAvailable ? gearCacheTotal : null} />
             <StatCard
               label="Latest Live Refresh"
-              value={latestGearRefresh?.lastSuccessAt
-                ? latestGearRefresh.lastSuccessAt.toLocaleString("en-US", {
-                    month: "short",
-                    day: "numeric",
-                    year: "numeric",
-                    hour: "numeric",
-                    minute: "2-digit",
-                    timeZone: "UTC",
-                    timeZoneName: "short",
-                  })
-                : "Never"}
+              value={!databaseAvailable ? "Unavailable" : latestGearRefresh?.lastSuccessAt
+                ? formatDateTimeUtc(latestGearRefresh.lastSuccessAt) : "Never"}
             />
           </div>
           <div className="flex flex-wrap items-start justify-between gap-4">
@@ -241,16 +233,15 @@ export default async function AdminPage() {
       <section>
         <SectionHeader title="Item Template (AzerothCore)" sub="Read-only import status for WoW item metadata" />
         <div className="bg-bg-panel border border-gold-dim rounded-sm p-4 space-y-4">
-          <div className="grid grid-cols-2 gap-3">
-            <StatCard label="Items Imported" value={itemImportCount} />
+          <div className="grid gap-3 sm:grid-cols-2">
+            <StatCard label="Items Imported" value={databaseAvailable ? itemImportCount : null} />
             <StatCard
               label="Last Import"
-              value={latestItemImport?.importedAt
-                ? latestItemImport.importedAt.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })
-                : "Never"}
+              value={!databaseAvailable ? "Unavailable" : latestItemImport?.importedAt
+                ? formatDateUtc(latestItemImport.importedAt) : "Never"}
             />
           </div>
-          {itemImportCount === 0 && (
+          {databaseAvailable && itemImportCount === 0 && (
             <p className="text-sm text-text-secondary">
               No items imported yet. Run{" "}
               <code className="font-mono text-xs bg-bg-card border border-gold-dim rounded-sm px-1.5 py-0.5">
@@ -266,56 +257,56 @@ export default async function AdminPage() {
       <section>
         <SectionHeader title="Upload Analytics" sub="Counts reset when upload data is cleared" />
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-          <StatCard label="Uploads"           value={uploadsTotal} />
-          <StatCard label="Encounters"        value={encountersTotal} highlight />
-          <StatCard label="Players"           value={playersTotal} />
-          <StatCard label="Active Milestones" value={milestonesTotal} />
+          <StatCard label="Uploads"           value={databaseAvailable ? uploadsTotal : null} />
+          <StatCard label="Encounters"        value={databaseAvailable ? encountersTotal : null} highlight />
+          <StatCard label="Players"           value={databaseAvailable ? playersTotal : null} />
+          <StatCard label="Active Milestones" value={databaseAvailable ? milestonesTotal : null} />
         </div>
       </section>
 
       {/* 7. Top uploaders */}
       <section>
-        <SectionHeader title="Most Active Uploaders" sub="By logs submitted" />
-        <div className="bg-bg-panel border border-gold-dim rounded-sm divide-y divide-gold-dim">
+        <SectionHeader title="Most Active Uploaders" sub="Top 10 by uploads submitted; unnamed uploads excluded" />
+        <ol role="list" aria-label="Most active uploaders" className="bg-bg-panel border border-gold-dim rounded-sm divide-y divide-gold-dim">
           {topUploaders.map((u, i) => (
-            <div key={u.uploaderName} className="flex items-center justify-between px-4 py-2.5">
-              <div className="flex items-center gap-3">
-                <span className="text-text-dim text-sm w-5">{i + 1}</span>
-                <span className="text-sm font-medium text-text-primary">{u.uploaderName}</span>
+            <li key={u.uploaderName} className="flex items-center justify-between gap-3 px-4 py-2.5">
+              <div className="flex min-w-0 items-center gap-3">
+                <span className="text-text-dim text-sm shrink-0 tabular-nums"><span className="sr-only">Position </span><span aria-hidden="true">#</span>{formatInteger(i + 1)}</span>
+                <span className="break-words text-sm font-medium text-text-primary">{u.uploaderName}</span>
               </div>
               <span className="text-sm tabular-nums text-text-secondary">
-                {u._count.uploaderName} {u._count.uploaderName === 1 ? "upload" : "uploads"}
+                {formatCountLabel(u._count.uploaderName, "upload")}
               </span>
-            </div>
+            </li>
           ))}
-        </div>
+        </ol>
       </section>
 
       {/* 8. Recent upload timings */}
       {recentUploads.length > 0 && (
         <section>
-          <SectionHeader title="Recent Upload Timings" sub="Parse duration per log" />
+          <SectionHeader title="Recent Upload Timings" sub="Latest 10 completed uploads · Time from upload creation to parse completion" />
           <div className="bg-bg-panel border border-gold-dim rounded-sm divide-y divide-gold-dim">
             {recentUploads.map(u => {
               const elapsedMs  = u.parsedAt ? u.parsedAt.getTime() - u.createdAt.getTime() : null;
-              const elapsedSec = elapsedMs ? Math.round(elapsedMs / 1000) : null;
+              const elapsedSec = elapsedMs !== null ? elapsedMs / 1000 : null;
               return (
                 <div key={u.id} className="flex items-center justify-between px-4 py-2.5 gap-4 flex-wrap">
-                  <div>
+                  <div className="min-w-0 break-all">
                     <span className="text-sm text-text-primary font-medium">{u.filename}</span>
                     <span className="text-xs text-text-dim ml-2">{formatBytes(u.fileSize)}</span>
-                    {u.rawLineCount && (
-                      <span className="text-xs text-text-dim ml-2">{u.rawLineCount.toLocaleString()} lines</span>
+                    {u.rawLineCount != null && (
+                      <span className="text-xs text-text-dim ml-2">{formatCountLabel(u.rawLineCount, "line")}</span>
                     )}
                   </div>
-                  <div className="flex items-center gap-4 text-xs tabular-nums text-text-secondary">
+                  <div className="flex flex-wrap items-center gap-4 text-sm tabular-nums text-text-secondary">
                     {elapsedSec !== null && (
                       <span className="text-gold font-semibold">
-                        {elapsedSec < 60 ? `${elapsedSec}s` : `${Math.floor(elapsedSec / 60)}m ${elapsedSec % 60}s`}
+                        {formatSeconds(elapsedSec)}
                       </span>
                     )}
                     <span className="text-text-dim">
-                      {u.createdAt.toLocaleDateString("en-US", { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })}
+                      {formatDateTimeUtc(u.createdAt)}
                     </span>
                     <DeleteUploadButton uploadId={u.id} />
                   </div>
@@ -329,14 +320,14 @@ export default async function AdminPage() {
       {/* 9. Failed uploads */}
       {recentErrors.length > 0 && (
         <section>
-          <SectionHeader title="Recent Failures" />
+          <SectionHeader title="Recent Failures" sub="Latest 5 failed uploads" />
           <div className="bg-bg-panel border border-danger/20 rounded-sm divide-y divide-gold-dim">
             {recentErrors.map(u => (
-              <div key={u.id} className="px-4 py-3">
+              <div key={u.id} className="break-words px-4 py-3">
                 <div className="text-sm text-text-primary font-medium">{u.filename}</div>
                 <div className="text-xs text-danger mt-0.5">{u.errorMessage ?? "Unknown error"}</div>
                 <div className="text-xs text-text-dim mt-0.5">
-                  {new Date(u.createdAt).toLocaleString()}
+                  {formatDateTimeUtc(u.createdAt)}
                 </div>
               </div>
             ))}

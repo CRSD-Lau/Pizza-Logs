@@ -3,6 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { clearArmoryGearCache } from "./actions";
+import { formatCountLabel } from "@/lib/utils";
 
 type Phase = "idle" | "confirm" | "clearing" | "done" | "error";
 
@@ -21,7 +22,7 @@ export function ClearGearCacheButton() {
       return;
     }
 
-    setMessage(`${result.deleted.toLocaleString()} snapshots cleared`);
+    setMessage(`${formatCountLabel(result.deleted, "snapshot")} cleared`);
     setPhase("done");
     router.refresh();
   }

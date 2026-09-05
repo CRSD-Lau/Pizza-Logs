@@ -20,7 +20,8 @@ import { PIZZA_LOGS_ORIGIN } from "@/lib/site";
 import { buildPageMetadata } from "@/lib/page-metadata";
 import { getRevealClassName, getRevealStyle, orderBossDisplayEntries } from "@/lib/ui-animation";
 import { buildSessionPlayerMetricChart } from "@/lib/session-player-chart";
-import { cn, formatDps, formatDuration } from "@/lib/utils";
+import { cn, formatCountLabel, formatDateTimeUtc, formatDuration, getRecordedDurationSeconds } from "@/lib/utils";
+import { NumericValue } from "@/components/ui/NumericValue";
 import { ShortPullNotice } from "@/components/reports/ShortPullNotice";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { countAttempts, isShortPull, parseIncludeShortPulls } from "@/lib/attempt-policy";
@@ -118,7 +119,8 @@ export default async function SessionPlayerPage({ params, searchParams }: Props)
         bossSlug: enc.boss.slug,
         outcome: enc.outcome,
         difficulty: enc.difficulty,
-        duration: enc.durationSeconds,
+        duration: getRecordedDurationSeconds(enc),
+        startedAt: enc.startedAt,
         dps: p.dps,
         hps: p.hps,
         aps: p.aps,
@@ -152,7 +154,7 @@ export default async function SessionPlayerPage({ params, searchParams }: Props)
 
   const avgKillMetric = kills.length > 0
     ? kills.reduce((sum, e) => sum + (metric === "DPS" ? e.dps : e.hps), 0) / kills.length
-    : 0;
+    : null;
   const bestMetric = metric === "DPS" ? bestDps : bestHps;
 
   const classmateNames = new Set<string>();
@@ -224,36 +226,38 @@ export default async function SessionPlayerPage({ params, searchParams }: Props)
 
       <ShortPullNotice shortPulls={counts.shortPulls} includeShortPulls={includeShortPulls} basePath={`${sessionPath}/players/${encodeURIComponent(name)}`} />
 
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+      <p className="text-sm text-text-secondary">Best values use all recorded pulls in this session, including short pulls. The average gives each successful fight equal weight.</p>
+      {kills.length === 0 && <p className="text-sm text-text-secondary">No successful fights were recorded for this player. The average on kills is unavailable.</p>}
+      <div className="grid grid-cols-2 lg:grid-cols-3 gap-3">
         <StatCard label="Pulls" value={counts.totalPulls} />
         <StatCard label="Kills" value={kills.length} highlight />
-        <StatCard label={`Best ${metric}`} value={formatDps(bestMetric)} sub="single pull" />
-        <StatCard label={`Avg ${metric}`} value={formatDps(avgKillMetric)} sub="on kills" />
-        <StatCard label="Best APS" value={formatDps(bestAps)} sub="single pull" />
-        <StatCard label="Best H+A PS" value={formatDps(bestHealAndAbsorbPs)} sub="single pull" />
+        <StatCard label={`Best ${metric}`} value={<NumericValue value={bestMetric} kind="rate" />} sub="single pull" />
+        <StatCard label={`Avg ${metric}`} value={<NumericValue value={avgKillMetric} kind="rate" />} sub="on kills" />
+        <StatCard label="Best APS" value={<NumericValue value={bestAps} kind="rate" />} sub="single pull" />
+        <StatCard label="Best Healing + absorbs /s" value={<NumericValue value={bestHealAndAbsorbPs} kind="rate" />} sub="single pull" />
       </div>
 
       {chartData.length > 1 && (
         <AccordionSection
           id="performance"
-          title={`${metric} by Encounter`}
+          title={`${metric} by Successful Boss Fight`}
           sub={
             classmateNames.size > 0
-              ? `Comparing ${name} vs ${[...classmateNames].join(", ")} (${playerClass})`
-              : `${name} - ${metric} across this session`
+              ? `Winning boss fights, earliest first · Comparing ${name} vs ${[...classmateNames].join(", ")} (${playerClass})`
+              : `Winning boss fights, earliest first · ${name}'s ${metric}`
           }
           defaultOpen
         >
           <div className="bg-bg-panel border border-gold-dim rounded-sm p-4">
             {counts.shortPulls > 0 && (
-              <p className="mb-3 text-xs text-text-dim">Performance includes all recorded encounters, including short pulls.</p>
+              <p className="mb-3 text-xs text-text-dim">This chart includes winning boss fights only, including short successful kills. Wipes are excluded.</p>
             )}
             <SessionLineChart data={chartData} players={chartPlayers} metric={metric} />
           </div>
         </AccordionSection>
       )}
 
-      <AccordionSection id="encounters" title="Encounter Breakdown" count={visibleStats.length} defaultOpen>
+      <AccordionSection id="encounters" title="Encounter Breakdown" sub="Earliest fight first · Times in UTC" count={visibleStats.length} defaultOpen>
         {visibleStats.length === 0 && <EmptyState title="No counted encounters" />}
         <div className="bg-bg-panel border border-gold-dim rounded-sm divide-y divide-gold-dim overflow-hidden">
           {visibleStats.map((e, index) => (
@@ -289,32 +293,13 @@ export default async function SessionPlayerPage({ params, searchParams }: Props)
               </div>
 
               <div className="flex items-center gap-4 text-xs tabular-nums text-text-secondary flex-wrap justify-end">
-                {e.dps > 0 && (
-                  <span>
-                    {formatDps(e.dps)}
-                    <span className="text-text-dim ml-0.5">dps</span>
-                  </span>
-                )}
-                {e.hps > 100 && (
-                  <span>
-                    {formatDps(e.hps)}
-                    <span className="text-text-dim ml-0.5">hps</span>
-                  </span>
-                )}
-                {e.aps > 0 && (
-                  <span>
-                    {formatDps(e.aps)}
-                    <span className="text-text-dim ml-0.5">aps</span>
-                  </span>
-                )}
-                {e.critPct > 0 && (
-                  <span>
-                    {e.critPct.toFixed(1)}%
-                    <span className="text-text-dim ml-0.5">crit</span>
-                  </span>
-                )}
-                {e.deaths > 0 && <span className="text-danger">x{e.deaths}</span>}
-                <span className="text-text-dim">{formatDuration(e.duration)}</span>
+                <span><NumericValue value={e.dps} kind="rate" /> DPS</span>
+                <span><NumericValue value={e.hps} kind="rate" /> HPS</span>
+                <span><NumericValue value={e.aps} kind="rate" /> APS</span>
+                <span><NumericValue value={e.critPct} kind="percent" /> overall crit</span>
+                {e.deaths > 0 && <span className="text-danger">{formatCountLabel(e.deaths, "death")}</span>}
+                <span className="text-text-dim">{formatDuration(e.duration)} duration</span>
+                <span className="text-text-dim">{formatDateTimeUtc(e.startedAt)}</span>
               </div>
             </Link>
           ))}
@@ -323,7 +308,7 @@ export default async function SessionPlayerPage({ params, searchParams }: Props)
 
       {totalDeaths > 0 && (
         <p className="text-xs text-text-dim">
-          Total deaths this session: <span className="text-danger font-bold">x{totalDeaths}</span>
+          Total this session: <span className="text-danger font-bold">{formatCountLabel(totalDeaths, "death")}</span>
         </p>
       )}
 

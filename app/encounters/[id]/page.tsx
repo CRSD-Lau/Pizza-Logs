@@ -14,7 +14,8 @@ import { getClassIconUrl } from "@/lib/class-icons";
 import { getClassColor } from "@/lib/constants/classes";
 import { getRaidSessionRouteByIndex } from "@/lib/raid-session-routing.server";
 import { formatRaidSessionTitle, getRaidSessionPath } from "@/lib/raid-session-slug";
-import { formatDuration, formatNumber } from "@/lib/utils";
+import { formatCountLabel, formatDateTimeUtc, formatDuration, formatInteger, formatNumber, formatPercent, formatRate, formatSeconds, getRecordedDurationSeconds } from "@/lib/utils";
+import { NumericValue } from "@/components/ui/NumericValue";
 import { buildPageMetadata } from "@/lib/page-metadata";
 import { ShortPullNotice } from "@/components/reports/ShortPullNotice";
 import { isShortPull, parseIncludeShortPulls } from "@/lib/attempt-policy";
@@ -94,14 +95,12 @@ export default async function EncounterPage({ params, searchParams }: Props) {
   const healParts = participantsWithBossDmg.filter(p => p.hps > 0);
   const absorbParts = participantsWithBossDmg.filter(p => p.aps > 0);
   const healAndAbsorbParts = participantsWithBossDmg.filter(p => p.hps + p.aps > 0);
-  const durationSec = (encounter.durationMs ?? 0) > 0
-    ? encounter.durationMs / 1000
-    : Math.max(1, encounter.durationSeconds);
-  const totalDps = Math.round(encounter.totalDamage / durationSec);
-  const totalHps = Math.round(encounter.totalHealing / durationSec);
-  const totalAps = Math.round(encounter.totalAbsorbs / durationSec);
+  const durationSec = getRecordedDurationSeconds(encounter);
+  const totalDps = durationSec === null ? null : encounter.totalDamage / durationSec;
+  const totalHps = durationSec === null ? null : encounter.totalHealing / durationSec;
+  const totalAps = durationSec === null ? null : encounter.totalAbsorbs / durationSec;
   const totalHealAndAbsorb = encounter.totalHealing + encounter.totalAbsorbs;
-  const totalHealAndAbsorbPs = Math.round(totalHealAndAbsorb / durationSec);
+  const totalHealAndAbsorbPs = durationSec === null ? null : totalHealAndAbsorb / durationSec;
 
   const auraRows = encounter.participants.flatMap((participant) => {
     const breakdown = (participant.auraBreakdown ?? {}) as Record<string, {
@@ -243,7 +242,7 @@ export default async function EncounterPage({ params, searchParams }: Props) {
           </div>
         </div>
         <div className="text-right text-sm text-text-dim">
-          <div>{new Date(encounter.startedAt).toLocaleString()}</div>
+          <div>{formatDateTimeUtc(encounter.startedAt)}</div>
         </div>
       </div>
 
@@ -257,15 +256,16 @@ export default async function EncounterPage({ params, searchParams }: Props) {
 
       <ShortPullNotice shortPulls={isShortPull(encounter) ? 1 : 0} includeShortPulls={includeShortPulls} basePath={`/encounters/${id}${comparisonQuerySuffix}`} />
 
-      <div className="grid grid-cols-2 items-stretch gap-y-2 rounded-sm bg-bg-panel/40 p-2 sm:grid-cols-4 lg:grid-cols-8">
-        <StatCard label="Duration" value={formatDuration(encounter.durationSeconds)} highlight className="col-span-2" />
+      <div className="grid grid-cols-2 items-stretch gap-y-2 rounded-sm bg-bg-panel/40 p-2 lg:grid-cols-4">
+        <StatCard label="Duration" value={formatDuration(durationSec)} highlight className="col-span-2" />
         <StatCard label="Total Damage" value={formatNumber(encounter.totalDamage)} />
-        <StatCard label="Raid DPS" value={totalDps.toLocaleString()} sub="per second" />
+        <StatCard label="Raid DPS" value={<NumericValue value={totalDps} kind="rate" />} sub="damage per second" />
         <StatCard label="Effective Healing" value={formatNumber(encounter.totalHealing)} />
-        <StatCard label="Effective HPS" value={totalHps.toLocaleString()} sub="per second" />
-        <StatCard label="Absorbs" value={formatNumber(encounter.totalAbsorbs)} sub={`${totalAps.toLocaleString()} per second`} />
-        <StatCard label="Heal + Absorbs" value={formatNumber(totalHealAndAbsorb)} sub={`${totalHealAndAbsorbPs.toLocaleString()} per second`} className="col-span-2" />
+        <StatCard label="Effective HPS" value={<NumericValue value={totalHps} kind="rate" />} sub="effective healing per second" />
+        <StatCard label="Absorbs" value={formatNumber(encounter.totalAbsorbs)} sub={totalAps === null ? "Absorb rate unavailable" : `${formatRate(totalAps)} APS`} />
+        <StatCard label="Healing + absorbs" value={formatNumber(totalHealAndAbsorb)} sub={totalHealAndAbsorbPs === null ? "Combined rate unavailable" : `${formatRate(totalHealAndAbsorbPs)} healing + absorbs /s`} className="col-span-2" />
       </div>
+      {durationSec === null && <p className="text-sm text-text-secondary">Raid rates are unavailable because the recorded fight duration is missing or invalid. Totals and recorded player rates remain available.</p>}
 
       {encounter.milestones.length > 0 && (
         <div className="space-y-2">
@@ -276,13 +276,13 @@ export default async function EncounterPage({ params, searchParams }: Props) {
           {encounter.milestones.map((m) => (
             <div key={m.id} className="milestone-banner flex items-center justify-between text-sm flex-wrap gap-2">
               <span>
-                <span className="font-bold text-gold">#{m.rank}</span>
+                <span className="font-bold text-gold">#{formatInteger(m.rank)}</span>
                 {" "}{m.type === "WEEKLY_BEST" ? "weekly best" : "all-time"}{" "}
                 <span className="text-text-primary font-semibold">{m.player.name}</span>
                 <span className="text-text-secondary"> - {m.metric}</span>
               </span>
               <span className="tabular-nums font-bold text-gold-light">
-                {m.value.toLocaleString(undefined, { maximumFractionDigits: 0 })} {m.metric}
+                <NumericValue value={m.value} kind="rate" /> {m.metric}
               </span>
             </div>
           ))}
@@ -300,7 +300,7 @@ export default async function EncounterPage({ params, searchParams }: Props) {
       {healAndAbsorbParts.length > 0 && (
         <AccordionSection
           id="healing"
-          title="Healing + Absorbs"
+          title="Healing + absorbs"
           sub={encounter.unattributedAbsorbs > 0
             ? `${formatNumber(encounter.unattributedAbsorbs)} absorbs are included in the total but not yet assigned in player ranks`
             : "Effective healing plus attributed shields"}
@@ -345,33 +345,34 @@ export default async function EncounterPage({ params, searchParams }: Props) {
       )}
 
       {auraRows.length > 0 && (
-        <AccordionSection title="Aura Uptime" sub="Buffs and debuffs observed on raid members" count={auraRows.length} defaultOpen={false}>
+        <AccordionSection title="Aura Uptime" sub="Buffs and debuffs observed on raid members · Highest uptime first" count={auraRows.length} defaultOpen={false}>
           <FilteredAnalyticsBreakdown
             rows={auraRows.map(row => ({
               id: `${row.player}-${row.aura}`,
               player: row.player,
               ability: row.aura,
-              value: `${row.uptimePct.toFixed(1)}%`,
-              occurrences: `${row.applications.toLocaleString()} applications`,
+              value: formatPercent(row.uptimePct),
+              occurrences: formatCountLabel(row.applications, "application"),
             }))}
             abilityLabel="Aura"
             abilityPlaceholder="Sacred Shield or Slice and Dice"
             valueLabel="Uptime"
             occurrencesLabel="Applications"
             entryLabel="aura entries"
+            singularEntryLabel="aura entry"
             playerHelp="Player means the raid member the aura was observed on."
           />
         </AccordionSection>
       )}
 
       {consumableRows.length > 0 && (
-        <AccordionSection title="Consumables" sub="Observed flask, elixir, food, and potion auras" count={consumableRows.length} defaultOpen={false}>
+        <AccordionSection title="Consumables" sub="Observed flask, elixir, food, and potion auras · Player and aura names A–Z" count={consumableRows.length} defaultOpen={false}>
           <div className="divide-y divide-gold-dim border-y border-gold-dim">
             {consumableRows.map((row) => (
               <div key={`${row.player}-${row.consumable}`} className="grid grid-cols-[minmax(0,1fr)_auto] gap-x-3 gap-y-1 px-2 py-3 text-sm sm:grid-cols-[minmax(0,1fr)_minmax(0,2fr)_auto] sm:px-4">
                 <span className="font-semibold text-text-primary truncate">{row.player}</span>
                 <span className="row-start-2 truncate text-text-secondary sm:row-start-auto">{row.consumable}</span>
-                <span className="col-start-2 row-span-2 row-start-1 self-center tabular-nums text-gold sm:col-start-auto sm:row-span-1 sm:row-start-auto">{row.uptimePct.toFixed(1)}%</span>
+                <span className="col-start-2 row-span-2 row-start-1 self-center tabular-nums text-gold sm:col-start-auto sm:row-span-1 sm:row-start-auto"><NumericValue value={row.uptimePct} kind="percent" /> uptime</span>
               </div>
             ))}
           </div>
@@ -379,40 +380,41 @@ export default async function EncounterPage({ params, searchParams }: Props) {
       )}
 
       {powerRows.length > 0 && (
-        <AccordionSection title="Power Gains" sub="Resource gains emitted by combat-log energize events" count={powerRows.length} defaultOpen={false}>
+        <AccordionSection title="Power Gains" sub="Recorded resource gains · Highest amount first" count={powerRows.length} defaultOpen={false}>
           <FilteredAnalyticsBreakdown
             rows={powerRows.map(row => ({
               id: `${row.player}-${row.spell}-${row.powerType}`,
               player: row.player,
               ability: row.spell,
               value: formatNumber(row.amount),
-              occurrences: `${row.events.toLocaleString()} events`,
+              occurrences: formatCountLabel(row.events, "event"),
             }))}
             abilityLabel="Power source"
             abilityPlaceholder="Spiritual Attunement or Rapture"
             valueLabel="Power gained"
             occurrencesLabel="Events"
             entryLabel="power entries"
+            singularEntryLabel="power entry"
             playerHelp="Player means the raid member who received the resource."
           />
         </AccordionSection>
       )}
 
       {deathRows.length > 0 && (
-        <AccordionSection id="deaths" title="Death Timeline" count={deathRows.length} defaultOpen={false}>
+        <AccordionSection id="deaths" title="Death Timeline" sub="Earliest death first · Elapsed time from fight start; up to five latest damage events before each death" count={deathRows.length} defaultOpen={false}>
           <div className="divide-y divide-gold-dim border-y border-danger/30">
             {deathRows.map((row, index) => (
               <div key={`${row.player}-${row.offsetSeconds}-${index}`} className="px-4 py-2.5 text-sm">
                 <div className="flex items-center justify-between gap-3">
                   <span className="font-semibold text-danger">{row.player}</span>
-                  <span className="tabular-nums text-text-secondary">{formatDuration(row.offsetSeconds)}</span>
+                  <span className="tabular-nums text-text-secondary">{formatDuration(row.offsetSeconds)} into fight</span>
                 </div>
                 {row.recentDamage.length > 0 && (
                   <div className="mt-2 space-y-1 text-xs text-text-dim">
                     {row.recentDamage.slice(-5).map((damage, damageIndex) => (
                       <div key={`${damage.spell}-${damage.secondsBeforeDeath}-${damageIndex}`} className="flex justify-between gap-3">
-                        <span className="truncate">-{damage.secondsBeforeDeath.toFixed(1)}s {damage.source}: {damage.spell}</span>
-                        <span className="tabular-nums text-text-secondary">{formatNumber(damage.amount)}</span>
+                        <span className="min-w-0 break-words">{formatSeconds(damage.secondsBeforeDeath)} before death · {damage.source}: {damage.spell}</span>
+                        <span className="shrink-0 tabular-nums text-text-secondary">{formatNumber(damage.amount)} damage</span>
                       </div>
                     ))}
                   </div>
@@ -423,7 +425,7 @@ export default async function EncounterPage({ params, searchParams }: Props) {
         </AccordionSection>
       )}
 
-      <AccordionSection id="roster" title="Full Roster" count={encounter.participants.length} defaultOpen={false}>
+      <AccordionSection id="roster" title="Full Roster" sub="Highest recorded DPS first" count={encounter.participants.length} defaultOpen={false}>
         <div className="divide-y divide-gold-dim border-y border-gold-dim">
           {encounter.participants.map((p) => (
             <div key={p.id} className="flex items-center justify-between px-4 py-2.5 hover:bg-bg-hover transition-colors gap-3 flex-wrap">
@@ -449,10 +451,10 @@ export default async function EncounterPage({ params, searchParams }: Props) {
                 </Badge>
               </div>
               <div className="flex items-center gap-4 text-sm tabular-nums text-text-secondary flex-wrap justify-end">
-                {p.dps > 0 && <span>{p.dps.toLocaleString(undefined, { maximumFractionDigits: 0 })} dps</span>}
-                {p.hps > 100 && <span>{p.hps.toLocaleString(undefined, { maximumFractionDigits: 0 })} hps</span>}
-                {p.aps > 0 && <span>{p.aps.toLocaleString(undefined, { maximumFractionDigits: 0 })} aps</span>}
-                {p.deaths > 0 && <span className="text-danger">x {p.deaths}</span>}
+                <span><NumericValue value={p.dps} kind="rate" /> DPS</span>
+                <span><NumericValue value={p.hps} kind="rate" /> HPS</span>
+                <span><NumericValue value={p.aps} kind="rate" /> APS</span>
+                {p.deaths > 0 && <span className="text-danger">{formatCountLabel(p.deaths, "death")}</span>}
               </div>
             </div>
           ))}

@@ -3,7 +3,8 @@ import { db } from "@/lib/db";
 import { SectionHeader } from "@/components/ui/SectionHeader";
 import { DatabaseUnavailable } from "@/components/ui/DatabaseUnavailable";
 import { EmptyState } from "@/components/ui/EmptyState";
-import { formatDps, formatDuration } from "@/lib/utils";
+import { formatDps, formatDuration, formatCountLabel, formatInteger, getRecordedDurationSeconds } from "@/lib/utils";
+import { NumericValue } from "@/components/ui/NumericValue";
 import { RAIDS } from "@/lib/constants/bosses";
 import { cn } from "@/lib/utils";
 import { isDatabaseConnectionError } from "@/lib/database-errors";
@@ -23,7 +24,7 @@ export const metadata = buildPageMetadata({
 });
 export const dynamic = "force-dynamic";
 
-const BOSS_GRID_COLUMNS = "2fr 60px 60px 60px 120px 100px";
+const BOSS_GRID_COLUMNS = "minmax(0,2fr) minmax(60px,max-content) minmax(60px,max-content) 64px minmax(150px,1fr) 108px";
 const EMPTY_VALUE = "\u2014";
 
 async function getBossStats(includeShortPulls: boolean, difficulty: DifficultyFilterValue) {
@@ -68,10 +69,10 @@ async function getBossStats(includeShortPulls: boolean, difficulty: DifficultyFi
       if (!best || top.dps > best.dps) return { dps: top.dps, playerName: top.player.name };
       return best;
     }, null);
-    const fastestKill = kills.reduce<number | null>(
-      (m, e) => m === null ? e.durationSeconds : Math.min(m, e.durationSeconds),
-      null
-    );
+    const fastestKill = kills.reduce<number | null>((fastest, encounter) => {
+      const seconds = getRecordedDurationSeconds(encounter);
+      return seconds === null ? fastest : fastest === null ? seconds : Math.min(fastest, seconds);
+    }, null);
     return {
       id:         b.id,
       name:       b.name,
@@ -126,7 +127,7 @@ export default async function BossesPage({ searchParams }: {
         description={
           <p>
           {databaseAvailable
-            ? `Fight history and kill performance across ${activeBosses.length} bosses with counted attempts`
+            ? `Fight history and kill performance across ${formatCountLabel(activeBosses.length, "boss", "bosses")} with counted attempts`
             : "Boss results are temporarily unavailable"}
           </p>
         }
@@ -135,7 +136,7 @@ export default async function BossesPage({ searchParams }: {
       {databaseAvailable && (
         <>
         <DifficultyFilter action="/bosses" id="bosses" difficulty={difficulty} searchParams={query} />
-        <p className="text-sm text-text-secondary">{difficultyScopeLabel(difficulty)}. Top DPS and fastest kills use successful attempts.</p>
+        <p className="text-sm text-text-secondary">{difficultyScopeLabel(difficulty)}. Top DPS uses successful attempts. Fastest kills use known recorded kill durations.</p>
         <ShortPullNotice
           shortPulls={bosses.reduce((sum, boss) => sum + boss.shortPulls, 0)}
           includeShortPulls={includeShortPulls}
@@ -180,6 +181,9 @@ export default async function BossesPage({ searchParams }: {
                 const topDps = b.bestKill
                   ? `${formatDps(b.bestKill.dps)} ${b.bestKill.playerName}`
                   : EMPTY_VALUE;
+                const missingKillDuration = b.fastestKill === null
+                  ? b.killCount === 0 ? "No boss kills" : "Kill duration unavailable"
+                  : undefined;
 
                 return (
                   <Link
@@ -208,6 +212,7 @@ export default async function BossesPage({ searchParams }: {
                           label="Fastest"
                           value={b.fastestKill !== null ? formatDuration(b.fastestKill) : EMPTY_VALUE}
                           valueClassName="text-text-secondary"
+                          sub={missingKillDuration}
                         />
                       </div>
 
@@ -215,8 +220,8 @@ export default async function BossesPage({ searchParams }: {
                         <div className="text-xs font-semibold uppercase tracking-widest text-text-dim">
                           Top DPS
                         </div>
-                        <div className="mt-0.5 truncate text-sm text-text-primary tabular-nums">
-                          {topDps}
+                        <div className="mt-0.5 break-words text-sm text-text-primary tabular-nums">
+                          {b.bestKill ? topDps : <NumericValue value={null} />}
                         </div>
                       </div>
                     </div>
@@ -225,10 +230,10 @@ export default async function BossesPage({ searchParams }: {
                       {b.name}
                     </span>
                     <span className="hidden md:block text-right font-bold text-success tabular-nums text-sm">
-                      {b.killCount}
+                      {formatInteger(b.killCount)}
                     </span>
                     <span className="hidden md:block text-right text-text-dim tabular-nums text-sm">
-                      {b.wipeCount}
+                      {formatInteger(b.wipeCount)}
                     </span>
                     <span className={cn("hidden md:block text-right", statusClassName)}>
                       {statusLabel}
@@ -236,13 +241,14 @@ export default async function BossesPage({ searchParams }: {
                     <span className="hidden md:block text-right text-sm">
                       {b.bestKill ? (
                         <span className="tabular-nums text-text-primary font-medium">
-                          {formatDps(b.bestKill.dps)}{" "}
-                          <span className="text-text-dim text-xs">{b.bestKill.playerName}</span>
+                          <span className="block whitespace-nowrap">{formatDps(b.bestKill.dps)}</span>
+                          <span className="block break-words text-text-secondary text-xs">{b.bestKill.playerName}</span>
                         </span>
-                      ) : EMPTY_VALUE}
+                      ) : <NumericValue value={null} />}
                     </span>
                     <span className="hidden md:block text-right text-sm tabular-nums text-text-secondary">
-                      {b.fastestKill !== null ? formatDuration(b.fastestKill) : EMPTY_VALUE}
+                      {b.fastestKill !== null ? formatDuration(b.fastestKill) : <NumericValue value={null} />}
+                      {missingKillDuration && <span className="block text-xs">{missingKillDuration}</span>}
                     </span>
                   </Link>
                 );
@@ -255,7 +261,7 @@ export default async function BossesPage({ searchParams }: {
             <summary className="flex min-h-14 cursor-pointer list-none items-center justify-between gap-4 rounded-sm px-2 py-3 transition-colors hover:bg-bg-panel/45 [&::-webkit-details-marker]:hidden">
               <span>
                 <span className="heading-cinzel block font-semibold text-gold-light">Bosses without counted attempts in this selection</span>
-                <span className="mt-1 block text-sm text-text-dim">{inactiveBossCount} bosses hidden until needed</span>
+                <span className="mt-1 block text-sm text-text-dim">{formatCountLabel(inactiveBossCount, "boss", "bosses")} hidden until needed</span>
               </span>
               <span className="text-xl text-text-dim transition-transform group-open:rotate-180" aria-hidden="true">⌄</span>
             </summary>
@@ -286,15 +292,18 @@ function BossMobileMetric({
   label,
   value,
   valueClassName,
+  sub,
 }: {
   label: string;
   value: string | number;
   valueClassName: string;
+  sub?: string;
 }) {
   return (
     <div className="min-w-0 px-2 py-1 text-center">
-      <div className={cn("truncate text-sm font-bold tabular-nums", valueClassName)}>{value}</div>
+      <div className={cn("break-words text-sm font-bold tabular-nums", valueClassName)}>{typeof value === "number" ? formatInteger(value) : value === EMPTY_VALUE ? <NumericValue value={null} /> : value}</div>
       <div className="text-xs uppercase tracking-wide text-text-dim">{label}</div>
+      {sub && <div className="mt-1 text-xs text-text-secondary">{sub}</div>}
     </div>
   );
 }

@@ -1,7 +1,8 @@
 "use client";
 
 import { useId, useState } from "react";
-import { cn, formatDps, formatNumber } from "@/lib/utils";
+import { cn, formatCountLabel, formatInteger, formatPercent } from "@/lib/utils";
+import { NumericValue } from "@/components/ui/NumericValue";
 import { getClassColor } from "@/lib/constants/classes";
 import { getClassIconUrl } from "@/lib/class-icons";
 import { getRevealClassName, getRevealStyle } from "@/lib/ui-animation";
@@ -54,18 +55,21 @@ export function DamageMeter({ participants, metric = "dps" }: DamageMeterProps) 
 
   const maxVal = sorted[0] ? rate(sorted[0]) : 1;
   const totalVal = sorted.reduce((sum, participant) => sum + rate(participant), 0);
+  const totalLabel = metric === "hps" ? "Effective healing" : metric === "aps" ? "Absorbs" : metric === "ha" ? "Healing + absorbs" : "Damage";
+  const rateLabel = metric === "ha" ? "Healing + absorbs /s" : metric.toUpperCase();
 
   return (
     <div>
       {/* Header */}
-      <div className="hidden grid-cols-[minmax(0,2fr)_repeat(4,minmax(0,1fr))] gap-2 px-3 py-2 text-xs font-semibold uppercase tracking-widest text-text-dim sm:grid">
+      <p className="px-3 py-2 text-xs text-text-secondary">{formatCountLabel(sorted.length, "player")} · Highest {rateLabel} first · Positions describe this list</p>
+      <div className="hidden grid-cols-[minmax(0,2fr)_repeat(4,minmax(0,1fr))] gap-2 px-3 py-2 text-xs font-semibold uppercase tracking-widest text-text-dim lg:grid">
         <span>Player</span>
-        <span className="text-right">{metric === "hps" ? "Healing" : metric === "aps" ? "Absorbs" : metric === "ha" ? "Heal + Absorb" : "Damage"}</span>
-        <span className="text-right">{metric === "ha" ? "H+A PS" : metric.toUpperCase()}</span>
+        <span className="text-right">{totalLabel}</span>
+        <span className="text-right">{rateLabel}</span>
         <span className="text-right">
           {metric === "aps" ? "Absorb hits" : metric === "ha" ? "Overall crit / absorbs" : "Overall crit"}
         </span>
-        <span className="text-right">% total</span>
+        <span className="text-right">Share of total</span>
       </div>
 
       <div className="space-y-0.5">
@@ -73,10 +77,12 @@ export function DamageMeter({ participants, metric = "dps" }: DamageMeterProps) 
           const val      = rate(p);
           const rawVal   = raw(p);
           const fillPct  = maxVal > 0 ? (val / maxVal) * 100 : 0;
-          const pct      = totalVal > 0 ? Math.round((val / totalVal) * 100) : 0;
+          const pct      = totalVal > 0 ? (val / totalVal) * 100 : null;
           const color    = getClassColor(p.player.class ?? p.player.name);
           const classIconUrl = getClassIconUrl(p.player.class);
           const isActive = selected === p.player.name;
+          const absorbHits = absorbHitCount(p.absorbBreakdown);
+          const absorbHitsLabel = absorbHits === null ? "Absorb hits unavailable" : formatCountLabel(absorbHits, "absorb hit");
 
           return (
             <div key={p.player.name}>
@@ -84,7 +90,7 @@ export function DamageMeter({ participants, metric = "dps" }: DamageMeterProps) 
                 type="button"
                 className={cn(
                   getRevealClassName(),
-                  "meter-row grid w-full grid-cols-[minmax(0,1fr)_auto] items-center gap-x-3 gap-y-1 bg-bg-card px-3 py-3 text-left sm:grid-cols-[minmax(0,2fr)_repeat(4,minmax(0,1fr))] sm:gap-2 sm:py-2.5",
+                  "meter-row grid w-full grid-cols-2 items-center gap-x-3 gap-y-2 bg-bg-card px-3 py-3 text-left lg:grid-cols-[minmax(0,2fr)_repeat(4,minmax(0,1fr))] lg:gap-2 lg:py-2.5",
                   isActive && "active"
                 )}
                 style={getRevealStyle(idx)}
@@ -99,8 +105,8 @@ export function DamageMeter({ participants, metric = "dps" }: DamageMeterProps) 
                 />
 
                 {/* Player name */}
-                <div className="relative z-10 flex min-w-0 items-center gap-2">
-                  <span className="w-4 text-right text-xs font-bold text-text-dim">{idx + 1}</span>
+                <div className="relative z-10 col-span-2 flex min-w-0 items-center gap-2 lg:col-span-1">
+                  <span className="shrink-0 text-right text-xs font-bold tabular-nums text-text-secondary"><span className="sr-only">Position </span><span aria-hidden="true">#</span>{formatInteger(idx + 1)}</span>
                   <span
                     className="flex h-6 w-6 shrink-0 items-center justify-center overflow-hidden rounded-xs border text-[9px] font-bold"
                     style={{ background: `${color}22`, color }}
@@ -118,40 +124,43 @@ export function DamageMeter({ participants, metric = "dps" }: DamageMeterProps) 
                 </div>
 
                 {/* Damage */}
-                <div className="relative z-10 row-start-2 text-left sm:row-start-auto sm:text-right">
+                <div className="relative z-10 min-w-0 text-left lg:text-right">
+                  <span className="block text-xs text-text-secondary lg:hidden">{totalLabel}</span>
                   <div className="text-sm font-semibold tabular-nums text-text-primary">
-                    {formatNumber(rawVal)}
+                    <NumericValue value={rawVal} />
                   </div>
                   {/* Boss-only damage sub-label — shown when adds inflated the total */}
                   {metric === "dps" && p.bossDmg !== undefined && p.bossDmg < rawVal * 0.98 && (
                     <div className="text-xs tabular-nums leading-tight text-text-dim">
-                      {formatNumber(p.bossDmg)} boss
+                      <NumericValue value={p.bossDmg} /> boss damage
                     </div>
                   )}
                 </div>
 
                 {/* DPS/HPS */}
-                <div className="relative z-10 col-start-2 row-start-1 text-right sm:col-start-auto sm:row-start-auto">
+                <div className="relative z-10 min-w-0 text-right">
+                  <span className="block text-xs text-text-secondary lg:hidden">{rateLabel}</span>
                   <div className="text-sm font-semibold tabular-nums text-text-primary">
-                    {formatDps(val)}
+                    <NumericValue value={val} kind="rate" />
                   </div>
                 </div>
 
                 {/* Hits + crit */}
-                <div className="relative z-10 hidden text-right sm:block">
+                <div className="relative z-10 text-left lg:text-right">
                   <span className="text-xs text-text-secondary tabular-nums">
-                    {p.deaths > 0 && <span className="text-danger mr-1">☠{p.deaths}</span>}
+                    {p.deaths > 0 && <><span className="text-danger">{formatCountLabel(p.deaths, "death")}</span>{" · "}</>}
                     {metric === "aps"
-                      ? `${absorbHitCount(p.absorbBreakdown).toLocaleString()} hits`
+                      ? absorbHitsLabel
                       : metric === "ha"
-                        ? `${p.critPct.toFixed(0)}% overall crit · ${absorbHitCount(p.absorbBreakdown).toLocaleString()} absorbs`
-                        : `${p.critPct.toFixed(0)}% overall crit`}
+                        ? `${formatPercent(p.critPct)} overall crit · ${absorbHitsLabel}`
+                        : `${formatPercent(p.critPct)} overall crit`}
                   </span>
                 </div>
 
                 {/* % of total */}
-                <div className="relative z-10 col-start-2 row-start-2 text-right text-sm tabular-nums text-text-secondary sm:col-start-auto sm:row-start-auto">
-                  {pct}%
+                <div className="relative z-10 text-right text-sm tabular-nums text-text-secondary">
+                  <span className="block text-xs lg:hidden">Share of total</span>
+                  <NumericValue value={pct} kind="percent" />
                 </div>
               </button>
 
@@ -184,38 +193,42 @@ function isAbsorbBreakdown(value: unknown): value is Record<string, AbsorbEntry>
   return !!value && typeof value === "object" && !Array.isArray(value);
 }
 
-function absorbHitCount(value: unknown): number {
-  if (!isAbsorbBreakdown(value)) return 0;
-  return Object.values(value).reduce((sum, entry) => sum + entry.hits, 0);
+function absorbHitCount(value: unknown): number | null {
+  if (!isAbsorbBreakdown(value)) return null;
+  const entries = Object.values(value);
+  if (entries.some(entry => !entry || !Number.isFinite(entry.hits) || entry.hits < 0)) return null;
+  return entries.reduce((sum, entry) => sum + entry.hits, 0);
 }
 
-function AbsorbBreakdown({ breakdown }: { breakdown: Record<string, AbsorbEntry> }) {
+export function AbsorbBreakdown({ breakdown }: { breakdown: Record<string, AbsorbEntry> }) {
   const entries = Object.entries(breakdown).sort((a, b) => b[1].amount - a[1].amount);
   const maxAmount = Math.max(...entries.map(([, stats]) => stats.amount), 0);
 
   return (
     <div className="bg-bg-panel border border-gold-dim border-t-0 rounded-b px-3 py-2 mb-1 space-y-1 animate-fade-in-up">
+      <p className="py-1 text-xs text-text-secondary">{formatCountLabel(entries.length, "shield ability", "shield abilities")} · Highest absorbs first</p>
       {entries.map(([spell, stats]) => {
         const pct = maxAmount > 0
           ? Math.min(100, Math.max(0, (stats.amount / maxAmount) * 100))
           : 0;
 
         return (
-          <div key={spell} className="flex items-center gap-2 text-xs">
-            <span className="w-40 text-text-primary truncate font-medium">{spell}</span>
+          <div key={spell} className="grid grid-cols-2 items-center gap-x-3 gap-y-1 py-1 text-sm lg:grid-cols-[minmax(0,2fr)_minmax(0,1fr)_auto_auto]">
+            <span className="min-w-0 break-words text-text-primary font-medium">{spell}</span>
             <div
-              className="flex-1 h-3 bg-bg-hover rounded-sm overflow-hidden"
+              className="col-span-2 row-start-3 h-3 bg-bg-hover rounded-sm overflow-hidden lg:col-span-1 lg:row-start-auto"
               role="meter"
               aria-label={`${spell} relative absorb volume`}
               aria-valuemin={0}
               aria-valuemax={100}
-              aria-valuenow={Math.round(pct)}
+              aria-valuenow={pct}
+              aria-valuetext={`${formatPercent(pct)} of the largest shield ability`}
             >
               <div className="h-full rounded-sm bg-school-holy" style={{ width: `${pct}%` }} />
             </div>
-            <span className="w-16 shrink-0 text-right tabular-nums text-text-secondary">{formatNumber(stats.amount)}</span>
-            <span className="hidden w-20 shrink-0 text-right tabular-nums text-text-dim sm:block">
-              {stats.hits} hits{stats.ambiguousHits > 0 ? `, ${stats.ambiguousHits} mixed` : ""}
+            <span className="text-right tabular-nums text-text-secondary"><NumericValue value={stats.amount} /> absorbs</span>
+            <span className="col-span-2 text-right text-xs tabular-nums text-text-secondary lg:col-span-1">
+              {formatCountLabel(stats.hits, "hit")}{stats.ambiguousHits > 0 ? ` · ${formatCountLabel(stats.ambiguousHits, "mixed hit")}` : ""}
             </span>
           </div>
         );
@@ -228,17 +241,18 @@ function isSpellBreakdown(value: unknown): value is Record<string, SpellEntry> {
   return !!value && typeof value === "object" && !Array.isArray(value);
 }
 
-function SpellBreakdown({
+export function SpellBreakdown({
   breakdown,
   outputMetric,
 }: {
   breakdown: Record<string, SpellEntry>;
   outputMetric: "damage" | "healing";
 }) {
+  const [visibleLimit, setVisibleLimit] = useState(15);
   const entries = Object.entries(breakdown)
     .filter(([, spell]) => spell[outputMetric] > 0)
-    .sort((a, b) => b[1][outputMetric] - a[1][outputMetric])
-    .slice(0, 15);
+    .sort((a, b) => b[1][outputMetric] - a[1][outputMetric]);
+  const visibleEntries = entries.slice(0, visibleLimit);
 
   const maxSpell = Math.max(
     ...entries.map(([, spell]) => spell[outputMetric]),
@@ -247,7 +261,8 @@ function SpellBreakdown({
 
   return (
     <div className="bg-bg-panel border border-gold-dim border-t-0 rounded-b px-3 py-2 mb-1 space-y-1 animate-fade-in-up">
-      {entries.map(([spell, s]) => {
+      <p className="py-1 text-xs text-text-secondary" role="status">Showing {formatInteger(visibleEntries.length)} of {formatCountLabel(entries.length, "spell")} · Highest {outputMetric} first</p>
+      {visibleEntries.map(([spell, s]) => {
         const val = s[outputMetric];
         const pct = maxSpell > 0
           ? Math.min(100, Math.max(0, (val / maxSpell) * 100))
@@ -259,30 +274,36 @@ function SpellBreakdown({
         const color = schoolColors[s.school] ?? "var(--color-text-dim)";
 
         return (
-          <div key={spell} className="flex items-center gap-2 text-xs">
-            <span className="w-32 text-text-primary truncate font-medium">{spell}</span>
+          <div key={spell} className="grid grid-cols-2 items-center gap-x-3 gap-y-1 py-1 text-sm lg:grid-cols-[minmax(0,2fr)_minmax(0,1fr)_auto_auto]">
+            <span className="min-w-0 break-words text-text-primary font-medium">{spell}</span>
             <div
-              className="flex-1 h-3 bg-bg-hover rounded-sm overflow-hidden"
+              className="col-span-2 row-start-3 h-3 bg-bg-hover rounded-sm overflow-hidden lg:col-span-1 lg:row-start-auto"
               role="meter"
               aria-label={`${spell} relative ${outputMetric} volume`}
               aria-valuemin={0}
               aria-valuemax={100}
-              aria-valuenow={Math.round(pct)}
+              aria-valuenow={pct}
+              aria-valuetext={`${formatPercent(pct)} of the largest ${outputMetric} ability`}
             >
               <div
                 className="h-full rounded-sm"
                 style={{ width: `${pct}%`, background: color }}
               />
             </div>
-            <span className="w-14 text-right tabular-nums text-text-secondary">
-              {formatNumber(val)}
+            <span className="text-right tabular-nums text-text-secondary">
+              <NumericValue value={val} /> {outputMetric}
             </span>
-            <span className="hidden w-40 shrink-0 text-right tabular-nums text-text-dim sm:block">
-              {s.hits.toLocaleString()} total events · {Math.round(s.crits / Math.max(1, s.hits) * 100)}% overall crit
+            <span className="col-span-2 text-right text-xs tabular-nums text-text-secondary lg:col-span-1">
+              {formatCountLabel(s.hits, "total event")} · <NumericValue value={s.hits > 0 ? s.crits / s.hits * 100 : null} kind="percent" /> overall crit
             </span>
           </div>
         );
       })}
+      {visibleEntries.length < entries.length && (
+        <button type="button" onClick={() => setVisibleLimit(limit => limit + 15)} className="mt-2 inline-flex min-h-11 items-center rounded-sm border border-gold-dim px-3 text-sm font-semibold text-gold hover:border-gold">
+          Show {formatCountLabel(Math.min(15, entries.length - visibleEntries.length), "more spell")}
+        </button>
+      )}
     </div>
   );
 }

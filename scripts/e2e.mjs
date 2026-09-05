@@ -174,23 +174,23 @@ try {
   assert.match(await page.locator("main").innerText(), /54[.,]0K|54,000/, "UI must display the same damage primitive");
   const metricColumns = [
     ["name", "Player"], ["totalDamage", "Total Damage"], ["dps", "DPS"],
-    ["heal", "Heal"], ["healPerSecond", "H+A PS"], ["damageTaken", "Damage Taken"], ["dtps", "DTPS"],
+    ["heal", "Healing + absorbs"], ["healPerSecond", "Healing + absorbs /s"], ["damageTaken", "Damage Taken"], ["dtps", "DTPS"],
   ];
-  const playerView = (label, width) => page.getByRole(width < 768 ? "list" : "table", { name: label, exact: true });
-  const playerNames = (view, width) => width < 768
+  const playerView = (label, width) => page.getByRole(width < 1280 ? "list" : "table", { name: label, exact: true });
+  const playerNames = (view, width) => width < 1280
     ? view.locator(":scope > li > div:first-child").allTextContents()
     : view.locator("tbody th[scope='row']").allTextContents();
   const cardValue = (scope, label) => scope.getByText(label, { exact: true }).locator("..").locator(":scope > div").nth(1).innerText();
   const assertKillCards = async () => {
     const scope = page.getByRole("region", { name: "Boss kill summary", exact: true });
-    assert.equal(await cardValue(scope, "Total Damage"), "1.5K");
-    assert.equal(await cardValue(scope, "Heal"), "900");
+    assert.equal(await cardValue(scope, "Total Damage"), "1,500");
+    assert.equal(await cardValue(scope, "Healing + absorbs"), "900");
     assert.equal(await cardValue(scope, "Damage Taken"), "450");
   };
   const assertPlayerValues = async (view, width, expected) => {
     for (const [index, values] of expected.entries()) {
-      const row = width < 768 ? view.locator(":scope > li").nth(index) : view.locator("tbody tr").nth(index);
-      assert.deepEqual(await row.locator(width < 768 ? "dd" : "td").allTextContents(), values);
+      const row = width < 1280 ? view.locator(":scope > li").nth(index) : view.locator("tbody tr").nth(index);
+      assert.deepEqual(await row.locator(width < 1280 ? "dd" : "td").allTextContents(), values);
     }
   };
   const assertSorting = async (label, width, ascending) => {
@@ -199,7 +199,7 @@ try {
     for (const [key, column] of metricColumns) {
       for (const direction of ["ascending", "descending"]) {
         const status = `${label}: sorted by ${column}, ${direction}.`;
-        if (width < 768) {
+        if (width < 1280) {
           await controls.getByRole("combobox", { name: `${label}: sort by`, exact: true }).selectOption(key);
           if ((await controls.getByRole("status").innerText()) !== status) {
             await controls.getByRole("button", { name: `Sort ${direction} by ${column}`, exact: true }).click();
@@ -241,7 +241,7 @@ try {
     await page.setViewportSize({ width, height: 1000 });
     await page.goto(new URL(policyReport, base).href);
     const defaultText = await page.locator("main").innerText();
-    assert.match(defaultText, /1K \/ 1W/);
+    assert.match(defaultText, /1 kill \/ 1 wipe/);
     assert.match(defaultText, /1 short pull excluded/);
     await assertKillCards();
     assert.equal(await page.locator('a[href^="/encounters/"]').count(), 2);
@@ -257,7 +257,7 @@ try {
     assert.equal(await fullToggle.getAttribute("aria-expanded"), "false");
     assert.equal(await fullContent.getAttribute("aria-hidden"), "true");
     assert.equal(await fullContent.evaluate(element => element.inert), true);
-    const hiddenControl = fullContent.locator(width < 768 ? "select" : "table button").first();
+    const hiddenControl = fullContent.locator(width < 1280 ? "select" : "table button").first();
     await hiddenControl.evaluate(element => element.focus());
     assert.equal(await hiddenControl.evaluate(element => document.activeElement === element), false, "Collapsed metrics cannot receive keyboard focus");
     await fullToggle.click();
@@ -266,9 +266,9 @@ try {
     const fullView = playerView("Full session player metrics", width);
     await fullView.waitFor();
     const fullTotals = fullContent.locator('[aria-label="Full session totals"]');
-    assert.equal(await cardValue(fullTotals, "Total Damage"), "4.8K");
-    assert.equal(await cardValue(fullTotals, "Heal"), "1.9K");
-    assert.equal(await cardValue(fullTotals, "Damage Taken"), "1.4K");
+    assert.equal(await cardValue(fullTotals, "Total Damage"), "4,800");
+    assert.equal(await cardValue(fullTotals, "Healing + absorbs"), "1,900");
+    assert.equal(await cardValue(fullTotals, "Damage Taken"), "1,450");
     assert.deepEqual(await playerNames(fullView, width), ["SyntheticFirst", "SyntheticSecond", "SyntheticTrashOnly", "SyntheticThird"]);
     assert.equal(await fullView.getByRole("link", { name: /SyntheticTrashOnly/ }).count(), 0, "A trash-only player has no boss-attempt link");
     await assertSorting("Full session player metrics", width, fullAscending);
@@ -297,7 +297,7 @@ try {
     await toggleShortPulls(page, "Include short pulls");
     await page.waitForURL(new URL(`${policyReport}?includeShortPulls=1`, base).href);
     const includedText = await page.locator("main").innerText();
-    assert.match(includedText, /1K \/ 2W/);
+    assert.match(includedText, /1 kill \/ 2 wipes/);
     assert.match(includedText, /1 short pull included/);
     await assertKillCards();
     const includedKillView = playerView("Boss kill player metrics", width);
@@ -307,7 +307,7 @@ try {
     await page.screenshot({ path: path.join(out, `${width}-short-pulls-included.png`), fullPage: true });
     await toggleShortPulls(page, "Exclude short pulls");
     await page.waitForURL(new URL(policyReport, base).href);
-    assert.match(await page.locator("main").innerText(), /1K \/ 1W/);
+    assert.match(await page.locator("main").innerText(), /1 kill \/ 1 wipe/);
   }
   const briefAttempt = policyEncounters.find(value => value.outcome === "WIPE" && value.durationMs < 10000);
   assert.ok(briefAttempt);
@@ -409,6 +409,22 @@ try {
   failures.push(...adminViolations.map(item => ({ route: "/admin", width: 1920, ...item })));
   await page.screenshot({ path: path.join(out, "1920-admin-authenticated.png"), fullPage: true });
   observations.push({ check: "password-only denial, MFA enrollment, enrollment revocation and fresh recovery-code login", status: "pass" });
+  for (const width of [375, 768, 1440]) {
+    await page.setViewportSize({ width, height: 1000 });
+    for (const route of ["/admin", "/admin/uploads", `/admin/uploads/${first.uploadId}`, "/admin/security"]) {
+      await page.goto(new URL(route, base).href, { waitUntil: "load" });
+      await page.evaluate(() => document.fonts.ready);
+      assert.equal(new URL(page.url()).pathname, route, "Authenticated admin route remains accessible");
+      assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth), false, `Admin overflow: ${width} ${route}`);
+      await page.evaluate(axe);
+      const violations = await page.evaluate(async () => (await window.axe.run(document,
+        { runOnly: { type: "tag", values: ["wcag2a", "wcag2aa", "wcag21aa", "wcag22aa"] } })).violations.map(item => ({ id: item.id, nodes: item.nodes.map(node => node.target) })));
+      failures.push(...violations.map(item => ({ route, width, ...item })));
+      const screenshot = `${width}-${route.replaceAll("/", "_")}-authenticated.png`;
+      await page.screenshot({ path: path.join(out, screenshot), fullPage: true });
+      observations.push({ check: "private history, details, diagnostics and security layout", route, width, screenshot });
+    }
+  }
   const fullCookie = await cookieHeader();
   await page.goto(new URL("/admin/security", base).href);
   await page.getByRole("button", { name: "Sign out all devices", exact: true }).click();

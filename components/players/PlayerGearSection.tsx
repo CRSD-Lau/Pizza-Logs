@@ -5,7 +5,7 @@ import { AccordionSection } from "@/components/ui/AccordionSection";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { getPlayerGearGroups } from "@/lib/gear-layout";
 import { calculateGearScore } from "@/lib/gearscore";
-import { cn } from "@/lib/utils";
+import { cn, formatCountLabel, formatDateTimeUtc, formatInteger } from "@/lib/utils";
 
 function GearScoreSummary({
   summary,
@@ -17,7 +17,7 @@ function GearScoreSummary({
       <div>
         <p className="text-xs font-bold uppercase tracking-widest text-text-dim">GearScoreLite</p>
         <p className="mt-0.5 text-2xl font-bold tabular-nums text-text-primary" style={{ color: summary.quality.color }}>
-          {summary.score.toLocaleString()}
+          {formatInteger(summary.score)}
         </p>
       </div>
       <div className="flex flex-wrap gap-2 text-xs">
@@ -25,10 +25,10 @@ function GearScoreSummary({
           {summary.quality.description}
         </span>
         <span className="rounded-sm border border-gold-dim bg-bg-deep px-2 py-1 text-text-secondary">
-          avg ilvl {summary.averageItemLevel}
+          Average item level {formatInteger(summary.averageItemLevel)}
         </span>
         <span className="rounded-sm border border-gold-dim bg-bg-deep px-2 py-1 text-text-dim">
-          {summary.scoredItemCount} scored slots
+          {formatCountLabel(summary.scoredItemCount, "scored slot")}
         </span>
       </div>
     </div>
@@ -61,7 +61,7 @@ function GearGrid({ gear, stale = false, playerClass }: { gear: ArmoryCharacterG
       <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-text-dim">
         <span>
           {stale ? "Cached copy from " : "Fetched "}
-          {new Date(gear.fetchedAt).toLocaleString()}
+          {formatDateTimeUtc(gear.fetchedAt)}
         </span>
         <Link href={gear.sourceUrl} target="_blank" className="text-gold hover:text-gold-light">
           Source: Warmane Armory

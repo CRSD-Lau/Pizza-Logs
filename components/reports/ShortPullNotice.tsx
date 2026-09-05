@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { formatCountLabel } from "@/lib/utils";
 
 interface Props {
   shortPulls: number;
@@ -17,9 +18,9 @@ export function ShortPullNotice({ shortPulls, includeShortPulls, basePath }: Pro
   return (
     <details className="border-y border-gold-dim text-sm text-text-secondary">
       <summary className="min-h-11 cursor-pointer py-3 marker:text-gold">
-        <span className="font-semibold text-text-primary">{shortPulls} short {shortPulls === 1 ? "pull" : "pulls"}</span>
+        <span className="font-semibold text-text-primary">{formatCountLabel(shortPulls, "short pull")}</span>
         {includeShortPulls ? " included in counts" : " excluded from counts"}
-        <span className="ml-2 text-gold">Details</span>
+        {" "}<span className="ml-2 text-gold">Details</span>
       </summary>
       <div className="pb-3 pl-4">
         <p>Wipes under one minute with no recorded deaths are excluded from wipe and pull counts by default. Short successful kills still count. All original attempts remain available.</p>

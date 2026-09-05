@@ -8,6 +8,7 @@ import { WOW_CLASSES } from "@/lib/constants/classes";
 import { DatabaseUnavailable } from "@/components/ui/DatabaseUnavailable";
 import { isDatabaseConnectionError } from "@/lib/database-errors";
 import { parseDirectoryFilters, parseDirectoryPage, type DirectoryQueryValue } from "@/lib/directory-pagination";
+import { formatCountLabel, formatDateTimeUtc } from "@/lib/utils";
 
 export const metadata = buildPageMetadata({
   title: "Guild Roster",
@@ -43,11 +44,11 @@ export default async function GuildRosterPage({ searchParams }: Props) {
         title="Guild Roster"
         description={<p>
           {members.length > 0
-            ? `${members.length} ${DEFAULT_GUILD_NAME} members on ${DEFAULT_GUILD_REALM}`
+            ? `${formatCountLabel(members.length, `${DEFAULT_GUILD_NAME} member`)} on ${DEFAULT_GUILD_REALM}`
             : `${DEFAULT_GUILD_NAME} members on ${DEFAULT_GUILD_REALM}`}
           {latestSync && (
             <span className="text-text-dim">
-              {" "}· Last synced {latestSync.toLocaleString()}
+              {" "}· Last synced {formatDateTimeUtc(latestSync)}
             </span>
           )}
         </p>}
