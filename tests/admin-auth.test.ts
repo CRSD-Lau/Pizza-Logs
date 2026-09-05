@@ -1,50 +1,42 @@
 import assert from "node:assert/strict";
-import {
-  ADMIN_SESSION_MAX_AGE_SECONDS,
-  createAdminSessionToken,
-  shouldUseSecureAdminCookie,
-  verifyAdminSecretValue,
-  verifyAdminSessionToken,
-} from "../lib/admin-auth";
+import { getAdminAuthConfiguration } from "../lib/admin-auth-config";
+import { hasTrustedAdminOrigin } from "../lib/admin-request";
 
-const originalSecret = process.env["ADMIN_SECRET"];
-const originalNodeEnv = process.env["NODE_ENV"];
-const originalCookieSecure = process.env["ADMIN_COOKIE_SECURE"];
-
-function setEnvironment(name: string, value: string | undefined) {
-  if (value === undefined) delete process.env[name];
-  else process.env[name] = value;
-}
-
+const names = ["ADMIN_SECRET", "ADMIN_AUTH_URL", "NODE_ENV", "ADMIN_COOKIE_SECURE"] as const;
+const environment: Record<string, string | undefined> = process.env;
+const original = Object.fromEntries(names.map(name => [name, process.env[name]]));
 try {
-  setEnvironment("ADMIN_SECRET", undefined);
-  setEnvironment("NODE_ENV", "development");
-  assert.equal(verifyAdminSecretValue("anything"), false, "missing secrets must fail closed everywhere");
-  assert.equal(createAdminSessionToken(), null);
-
-  setEnvironment("ADMIN_SECRET", "correct horse battery staple");
-  assert.equal(verifyAdminSecretValue("correct horse battery staple"), true);
-  assert.equal(verifyAdminSecretValue("wrong"), false);
-  assert.equal(verifyAdminSecretValue(undefined), false);
-
-  const issuedAt = 1_000_000;
-  const token = createAdminSessionToken(issuedAt);
-  assert.equal(typeof token, "string");
-  assert.notEqual(token, process.env.ADMIN_SECRET, "the cookie token must not contain the reusable admin secret");
-  assert.equal(verifyAdminSessionToken(token, issuedAt), true);
-  assert.equal(verifyAdminSessionToken(token, issuedAt + ADMIN_SESSION_MAX_AGE_SECONDS), false);
-  assert.equal(verifyAdminSessionToken("wrong", issuedAt), false);
-  assert.equal(verifyAdminSecretValue(token), false, "session tokens must not authenticate as raw secrets");
-
-  setEnvironment("NODE_ENV", "production");
-  setEnvironment("ADMIN_COOKIE_SECURE", undefined);
-  assert.equal(shouldUseSecureAdminCookie(), true);
-  setEnvironment("ADMIN_COOKIE_SECURE", "false");
-  assert.equal(shouldUseSecureAdminCookie(), false);
-
-  console.log("admin auth tests passed");
+  delete process.env.ADMIN_SECRET;
+  process.env.ADMIN_AUTH_URL = "https://logs.example.test";
+  assert.equal(getAdminAuthConfiguration(), null, "missing server key must fail closed");
+  process.env.ADMIN_SECRET = "too-short";
+  assert.equal(getAdminAuthConfiguration(), null);
+  process.env.ADMIN_SECRET = "synthetic-auth-server-key-at-least-32-characters";
+  delete process.env.ADMIN_AUTH_URL;
+  assert.equal(getAdminAuthConfiguration(), null, "the origin must be explicitly configured");
+  environment.NODE_ENV = "production";
+  for (const origin of ["http://logs.example.test", "https://user:pass@logs.example.test", "https://logs.example.test/path", "https://logs.example.test?secret=x", "not-a-url"]) {
+    process.env.ADMIN_AUTH_URL = origin;
+    assert.equal(getAdminAuthConfiguration(), null, origin);
+  }
+  process.env.ADMIN_AUTH_URL = "https://logs.example.test";
+  process.env.ADMIN_COOKIE_SECURE = "false";
+  assert.equal(getAdminAuthConfiguration()?.secureCookies, true, "public HTTPS cannot disable secure cookies");
+  assert.equal(hasTrustedAdminOrigin(new Headers({ origin: "https://logs.example.test" })), true);
+  for (const origin of ["https://logs.example.test.evil.test", "http://logs.example.test", "null", "https://evil.test"]) {
+    assert.equal(hasTrustedAdminOrigin(new Headers({ origin })), false);
+  }
+  assert.equal(hasTrustedAdminOrigin(new Headers()), false);
+  process.env.ADMIN_AUTH_URL = "http://127.0.0.1:53075";
+  delete process.env.ADMIN_COOKIE_SECURE;
+  assert.equal(getAdminAuthConfiguration(), null, "production-mode HTTP needs an explicit loopback-only override");
+  process.env.ADMIN_COOKIE_SECURE = "false";
+  assert.equal(getAdminAuthConfiguration()?.secureCookies, false);
+  process.env.ADMIN_AUTH_URL = "http://public.example.test";
+  assert.equal(getAdminAuthConfiguration(), null, "the HTTP override must never permit public cleartext auth");
 } finally {
-  setEnvironment("ADMIN_SECRET", originalSecret);
-  setEnvironment("NODE_ENV", originalNodeEnv);
-  setEnvironment("ADMIN_COOKIE_SECURE", originalCookieSecure);
+  for (const name of names) {
+    if (original[name] === undefined) delete environment[name];
+    else environment[name] = original[name];
+  }
 }

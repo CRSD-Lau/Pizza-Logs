@@ -63,7 +63,7 @@ Install the web dependencies and create local configuration:
 npm ci --legacy-peer-deps
 cp .env.example .env.local
 npm run db:generate
-npm run db:push
+npx prisma migrate deploy
 npm run db:seed
 ```
 
@@ -104,8 +104,10 @@ npm run dev
 
 Then open <http://localhost:3000>. A local production-style stack is also available:
 
+Set a random `ADMIN_SECRET` of at least 32 characters in `.env.local` before starting Compose.
+
 ```bash
-docker compose up --build
+docker compose --env-file .env.local up --build
 ```
 
 See [development setup](docs/development/setup.md) for database, item metadata, Windows launchers, and environment details.
@@ -116,11 +118,15 @@ See [development setup](docs/development/setup.md) for database, item metadata, 
 | --- | --- | --- |
 | `DATABASE_URL` | Yes | PostgreSQL connection used by Prisma |
 | `PARSER_SERVICE_URL` | Yes | Internal FastAPI service base URL |
-| `ADMIN_SECRET` | Yes | Long random secret for admin authentication; every environment fails closed without it |
+| `ADMIN_SECRET` | Yes for admin | Server-only signing/encryption key, at least 32 random characters; never a browser login credential |
+| `ADMIN_AUTH_URL` | Yes for admin | Exact public HTTPS origin; loopback HTTP is supported for isolated development |
 | `ADMIN_COOKIE_SECURE` | Local HTTP only | Set `false` only for local production-mode HTTP |
 | `ENABLE_LEGACY_PARSER_ROUTES` | No | Local parser compatibility escape hatch; disabled by default |
 
 Never commit local `.env` files. The checked-in [`.env.example`](.env.example) contains placeholders only.
+
+Admin access uses an operator-provisioned account, an authenticator code and revocable sessions.
+Follow [admin account setup and recovery](docs/operations/admin-access.md) before enabling it.
 
 ## Validation
 

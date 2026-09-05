@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { randomUUID } from "node:crypto";
+import { createHmac, randomUUID } from "node:crypto";
 import fs from "node:fs/promises";
 import path from "node:path";
 import { chromium } from "playwright";
@@ -14,6 +14,19 @@ if (!["localhost", "127.0.0.1", "[::1]"].includes(base.hostname)) {
 const out = path.resolve(process.env.PIZZA_TEST_ARTIFACTS ?? ".test-artifacts/e2e");
 await fs.mkdir(out, { recursive: true });
 const observations = [];
+function authenticatorCode(secret) {
+  const alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZ234567";
+  const bits = [...secret.replace(/=+$/, "").toUpperCase()].map(character => {
+    const value = alphabet.indexOf(character);
+    assert.ok(value >= 0, "setup key must be base32");
+    return value.toString(2).padStart(5, "0");
+  }).join("");
+  const key = Buffer.from(bits.match(/.{8}/g).map(byte => Number.parseInt(byte, 2)));
+  const counter = Buffer.alloc(8);
+  counter.writeBigUInt64BE(BigInt(Math.floor(Date.now() / 30_000)));
+  const hash = createHmac("sha1", key).update(counter).digest();
+  return String((hash.readUInt32BE(hash[hash.length - 1] & 15) & 0x7fffffff) % 1_000_000).padStart(6, "0");
+}
 let stackReady = false;
 for (let attempt = 0; attempt < 30; attempt += 1) {
   try {
@@ -50,7 +63,7 @@ observations.push({ check: "ZIP upload through web, parser and persistence", sta
 for (const endpoint of ["/api/encounters?take=-1", "/api/encounters?skip=NaN", "/api/leaderboard?metric=invalid"]) {
   assert.equal((await fetch(new URL(endpoint, base))).status, 400);
 }
-assert.equal((await fetch(new URL("/api/guild-roster/sync", base), { method: "POST", body: "null", headers: { "content-type": "application/json" } })).status, 400);
+assert.equal((await fetch(new URL("/api/guild-roster/sync", base), { method: "POST", body: "null", headers: { "content-type": "application/json" } })).status, 401);
 assert.equal((await fetch(new URL("/admin", base), { redirect: "manual" })).status, 307);
 assert.equal((await fetch(new URL("/api/health/ready", base))).status, 200);
 const report = `/raids/${first.publicReportSlug}/sessions/${first.firstSessionSlug}`;
@@ -193,11 +206,54 @@ try {
   await page.getByRole("button", { name: "Try Again", exact: true }).click();
   await page.getByRole("button", { name: "Choose File", exact: true }).waitFor();
   observations.push({ check: "invalid log error announcement and retry", status: "pass" });
-  const adminSecret = process.env.PIZZA_TEST_ADMIN_SECRET ?? process.env.ADMIN_SECRET;
-  assert.ok(adminSecret, "Set the isolated stack's test admin secret for authenticated acceptance");
-  await page.goto(new URL("/admin/login", base).href);
-  await page.getByLabel("Admin Secret").fill(adminSecret);
-  await page.getByRole("button", { name: "Enter", exact: true }).click();
+  const fixture = spawnSync(process.execPath, ["node_modules/tsx/dist/cli.mjs", "scripts/admin-e2e-fixture.ts"], {
+    encoding: "utf8", env: process.env, timeout: 30_000,
+  });
+  assert.equal(fixture.status, 0, "Provision the synthetic admin only in the dedicated loopback database");
+  const credentials = JSON.parse(fixture.stdout);
+  const loginPassword = async () => {
+    await page.goto(new URL("/admin/login", base).href);
+    await page.getByLabel("Email address", { exact: true }).fill(credentials.email);
+    await page.getByLabel("Password", { exact: true }).fill(credentials.password);
+    await page.getByRole("button", { name: "Continue", exact: true }).click();
+  };
+  const cookieHeader = async () => (await context.cookies()).map(cookie => `${cookie.name}=${cookie.value}`).join("; ");
+  const assertPrivateDenied = async cookies => {
+    for (const route of ["/admin", "/admin/uploads", `/admin/uploads/${first.uploadId}`]) {
+      const response = await fetch(new URL(route, base), { redirect: "manual", headers: { cookie: cookies } });
+      assert.equal(response.status, 307, "A session without full MFA must be redirected before private data is loaded");
+      assert.doesNotMatch(await response.text(), /synthetic\.txt/);
+    }
+  };
+  await assertPrivateDenied("pizza-logs-auth.session_token=forged");
+  assert.equal((await fetch(new URL("/admin", base), { redirect: "manual", headers: { "x-admin-secret": process.env.ADMIN_SECRET } })).status, 307);
+  assert.equal((await fetch(new URL("/api/guild-roster/sync", base), {
+    method: "POST", headers: { origin: base.origin, "content-type": "application/json" }, body: JSON.stringify({ secret: process.env.ADMIN_SECRET }),
+  })).status, 401);
+  assert.equal((await fetch(new URL("/api/auth/sign-up/email", base), {
+    method: "POST", headers: { origin: base.origin, "content-type": "application/json" }, body: "{}",
+  })).status, 404);
+  await loginPassword();
+  await page.waitForURL(new URL("/admin/enroll", base).href);
+  const enrollmentCookie = await cookieHeader();
+  await assertPrivateDenied(enrollmentCookie);
+  await page.getByLabel("Password", { exact: true }).fill(credentials.password);
+  await page.getByRole("button", { name: "Set up authenticator", exact: true }).click();
+  const setupKey = await page.locator("dt").filter({ hasText: /^Setup key$/ }).locator("xpath=following-sibling::dd").innerText();
+  await page.getByLabel("Authenticator code", { exact: true }).fill(authenticatorCode(setupKey));
+  await page.getByRole("button", { name: "Verify authenticator", exact: true }).click();
+  const recoveryList = page.getByRole("list", { name: "Recovery codes", exact: true });
+  await recoveryList.waitFor();
+  const recoveryCodes = await recoveryList.getByRole("listitem").allTextContents();
+  assert.equal(recoveryCodes.length, 10);
+  await assertPrivateDenied(enrollmentCookie);
+  await page.getByRole("checkbox", { name: "I have saved these recovery codes somewhere safe." }).check();
+  await page.getByRole("button", { name: "Finish and sign in", exact: true }).click();
+  await page.waitForURL(new URL("/admin/login", base).href);
+  await loginPassword();
+  await page.getByRole("button", { name: "Use a recovery code", exact: true }).click();
+  await page.getByLabel("Recovery code", { exact: true }).fill(recoveryCodes[0]);
+  await page.getByRole("button", { name: "Sign in", exact: true }).click();
   await page.waitForURL(new URL("/admin", base).href);
   assert.match(await page.locator("main").innerText(), /Diagnostics/i);
   await page.evaluate(axe);
@@ -205,7 +261,25 @@ try {
     { runOnly: { type: "tag", values: ["wcag2a", "wcag2aa", "wcag21aa", "wcag22aa"] } })).violations.map(item => ({ id: item.id, impact: item.impact, nodes: item.nodes.map(node => node.target) })));
   failures.push(...adminViolations.map(item => ({ route: "/admin", width: 1920, ...item })));
   await page.screenshot({ path: path.join(out, "1920-admin-authenticated.png"), fullPage: true });
-  observations.push({ check: "authenticated admin diagnostics, no destructive actions", status: "pass" });
+  observations.push({ check: "password-only denial, MFA enrollment, enrollment revocation and fresh recovery-code login", status: "pass" });
+  const fullCookie = await cookieHeader();
+  await page.goto(new URL("/admin/security", base).href);
+  await page.getByRole("button", { name: "Sign out all devices", exact: true }).click();
+  await page.waitForURL(new URL("/admin/login", base).href);
+  await assertPrivateDenied(fullCookie);
+  await loginPassword();
+  await page.getByRole("button", { name: "Use a recovery code", exact: true }).click();
+  await page.getByLabel("Recovery code", { exact: true }).fill(recoveryCodes[0]);
+  await page.getByRole("button", { name: "Sign in", exact: true }).click();
+  await page.getByRole("alert").waitFor();
+  assert.equal(new URL(page.url()).pathname, "/admin/login", "a consumed recovery code cannot grant access again");
+  await page.getByLabel("Recovery code", { exact: true }).fill(recoveryCodes[1]);
+  await page.getByRole("button", { name: "Sign in", exact: true }).click();
+  await page.waitForURL(new URL("/admin", base).href);
+  await page.goto(new URL("/admin/security", base).href);
+  await page.getByRole("button", { name: "Sign out this device", exact: true }).click();
+  await page.waitForURL(new URL("/admin/login", base).href);
+  observations.push({ check: "admin diagnostics, revoked-session denial, one-use recovery codes and logout; no raid mutations", status: "pass" });
 } finally {
   await browser.close();
   await fs.writeFile(path.join(out, "report.json"), JSON.stringify({ author: "Neil Mitchell", modifier: "Neil Mitchell", observations, failures }, null, 2));

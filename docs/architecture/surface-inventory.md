@@ -4,11 +4,13 @@ Author: Neil Mitchell
 
 Last modified by: Neil Mitchell
 
-Static route inventory reviewed during the acquisition audit. Dynamic parameters are shown in brackets. Admin page access is checked by proxy.ts and action authorization; public reports are intentionally readable. Retired userscript endpoints return inert retirement scripts, not credentials.
+Static route inventory maintained after the quality review. Dynamic parameters are shown in brackets. Admin pages and metadata verify the full MFA session before querying private data; actions and APIs verify it independently before mutation. The proxy only performs optimistic cookie routing. Public reports are intentionally readable. Retired userscript endpoints return inert retirement scripts, not credentials.
 
 | Route | Kind / methods | Source |
 |---|---|---|
 | `/admin/login` | Page | `app/admin/login/page.tsx` |
+| `/admin/enroll` | Page; enrollment session required | `app/admin/enroll/page.tsx` |
+| `/admin/security` | Page; full MFA required | `app/admin/security/page.tsx` |
 | `/admin` | Page | `app/admin/page.tsx` |
 | `/admin/uploads/[id]` | Page | `app/admin/uploads/[id]/page.tsx` |
 | `/admin/uploads` | Page | `app/admin/uploads/page.tsx` |
@@ -19,6 +21,7 @@ Static route inventory reviewed during the acquisition audit. Dynamic parameters
 | `/api/admin/guild-roster/userscript.user.js` | GET (re-export) | `app/api/admin/guild-roster/userscript.user.js/route.ts` |
 | `/api/admin/guild-roster/userscript` | GET | `app/api/admin/guild-roster/userscript/route.ts` |
 | `/api/bosses` | GET | `app/api/bosses/route.ts` |
+| `/api/auth/[...all]` | GET/POST; allowlisted auth operations only | `app/api/auth/[...all]/route.ts` |
 | `/api/encounters/[id]` | GET | `app/api/encounters/[id]/route.ts` |
 | `/api/encounters` | GET | `app/api/encounters/route.ts` |
 | `/api/guild-roster` | GET | `app/api/guild-roster/route.ts` |
@@ -56,7 +59,7 @@ Metadata routes: /robots.txt, /sitemap.xml, /manifest.webmanifest, /icon.svg. Ca
 
 ## Server actions and parser endpoints
 
-The built server-action manifest registers loginAdmin, clearDatabase, clearArmoryGearCache, deleteUpload and syncGuildRosterFromAdmin. Destructive actions validate the admin session. computeMilestones is an internal helper, not a remotely callable action. The public roster sync API checks the shared secret independently.
+The server-action manifest registers clearDatabase, clearArmoryGearCache, deleteUpload and syncGuildRosterFromAdmin. Every action validates the live designated-admin MFA session. Authentication runs through the bounded `/api/auth/*` handler so HTTP throttling and origin checks apply. computeMilestones is an internal helper, not a remotely callable action. The roster sync API requires the same MFA session and a matching configured Origin; legacy secret payloads no longer authenticate.
 
 Parser: GET /health and GET /ready; POST /uploads/{upload_id}/stream; GET /uploads/{upload_id}. The /parse, /parse-debug and /parse-stream legacy routes are disabled by default. Parser docs are disabled by default. Never expose the parser directly to the public Internet; the web boundary performs public validation.
 

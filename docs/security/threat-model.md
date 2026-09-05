@@ -13,7 +13,7 @@ flowchart LR
   Public["Untrusted public client"] --> Web["Next.js validation boundary"]
   Web --> Parser["Parser/resource boundary"]
   Web --> DB["Prisma/database boundary"]
-  Admin["Derived admin session cookie"] --> Web
+  Admin["Revocable session after MFA"] --> Web
   Upstream["Untrusted Warmane response"] --> Web
   CI["Pinned CI supply chain"] --> Deploy["Railway production"]
 ```
@@ -29,7 +29,7 @@ flowchart LR
 | Parser filesystem access | Arbitrary path route removed; only verified upload directory files are opened | Deployment filesystem permissions remain defense in depth |
 | Internal error disclosure | Fixed public error codes/messages; modern parser logs include validated correlation IDs and exception types without raw exception text | Operational logs remain sensitive; local opt-in legacy routes retain diagnostic traces |
 | Raw upload/database enumeration | No public upload-row listing; canonical report routes expose only intended reports | Public reports expose game identities by design |
-| Admin bypass | Production fail-closed secret, HttpOnly strict cookie, route/action checks | Shared-secret model has no per-user audit identity or MFA |
+| Admin bypass | Operator-provisioned identity, mandatory TOTP, server-recorded per-session MFA, live database authorization on pages/actions/APIs, no legacy secret paths | Protect the server key and operator recovery access; deployed enrollment must be verified |
 | Secret leakage in URL/client | Admin query-string import removed; no browser storage; server-only variables | Maintainer handling and screenshots remain human risks |
 | Cross-site scripting/content injection | React escaping, schema/input constraints, CSP, Slack escaping | CSP allows inline script/style for Next.js and isolated model compatibility |
 | Clickjacking | CSP `frame-ancestors 'none'` and `X-Frame-Options: DENY` | None known |

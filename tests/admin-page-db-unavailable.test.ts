@@ -42,9 +42,11 @@ async function main() {
   const originalResolve = moduleLoader._resolveFilename;
   const dbMockPath = path.join(process.cwd(), "tests", "__mocks__", "admin-page-db.js");
   const navigationMockPath = path.join(process.cwd(), "tests", "__mocks__", "next-navigation.js");
+  const adminGuardMockPath = path.join(process.cwd(), "tests", "__mocks__", "admin-guard.js");
 
   moduleLoader._resolveFilename = function resolveAlias(request, parent, isMain, options) {
     if (request === "@/lib/db") return dbMockPath;
+    if (request === "@/lib/require-admin") return adminGuardMockPath;
     if (request === "next/navigation") return navigationMockPath;
     if (request.startsWith("@/")) {
       const base = path.join(process.cwd(), request.slice(2));
@@ -65,6 +67,12 @@ async function main() {
     filename: dbMockPath,
     loaded: true,
     exports: { db },
+  } as NodeModule;
+  require.cache[adminGuardMockPath] = {
+    id: adminGuardMockPath,
+    filename: adminGuardMockPath,
+    loaded: true,
+    exports: { requireAdmin: async () => ({ user: { id: "synthetic-authorized-admin" } }) },
   } as NodeModule;
   require.cache[navigationMockPath] = {
     id: navigationMockPath,
@@ -113,6 +121,7 @@ async function main() {
     global.fetch = originalFetch;
     moduleLoader._resolveFilename = originalResolve;
     delete require.cache[dbMockPath];
+    delete require.cache[adminGuardMockPath];
     delete require.cache[navigationMockPath];
   }
 

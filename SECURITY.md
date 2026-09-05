@@ -24,8 +24,9 @@ Pizza Logs stores and displays:
 - public in-game character names, raid events, and derived performance statistics;
 - cached PizzaWarriors roster and Warmane gear/profile data;
 - protected operational diagnostics and upload administration data.
+- the private administrator's email/name, password hash, encrypted MFA and recovery material, database sessions and authentication control records.
 
-It does not provide end-user accounts and is not designed to hold passwords, payment data, health information, financial records, or government identifiers. Railway and upstream service logs may contain ordinary request metadata such as IP address and user agent.
+It does not provide public end-user accounts or store plaintext login passwords. It is not designed to hold payment data, health information, financial records or government identifiers. Administrator sessions and Railway/upstream service logs may contain ordinary request metadata such as IP address and user agent.
 
 ## Implemented Controls
 
@@ -42,11 +43,15 @@ It does not provide end-user accounts and is not designed to hold passwords, pay
 
 ### Admin boundary
 
-- Every environment fails closed when `ADMIN_SECRET` is absent.
-- Login uses timing-safe verification and stores a derived, eight-hour session token—not the reusable secret—in an `HttpOnly`, `SameSite=Strict`, secure-in-production cookie.
-- Admin routes and mutation paths re-verify the configured server-side secret.
-- The reusable secret is not accepted in public query strings or stored in browser local storage.
+- Every environment fails closed when the server authentication key or allowed origin is missing or invalid.
+- An operator provisions one administrator; public registration and social login are disabled. Password login must complete authenticator MFA before accessing administrative data.
+- Database sessions expire after eight hours and carry server-recorded MFA proof. Every admin page, action and API verifies the designated identity and live session; cookie caching cannot delay revocation.
+- Initial enrollment grants no administrative access. Completing enrollment revokes onboarding sessions and requires a fresh MFA login. Recovery cannot grant a password-only admin session.
+- The old shared-secret login, header, body and cookie paths are removed. `ADMIN_SECRET` remains a server-only encryption/signing key and is never a browser credential.
+- Authentication throttling persists in PostgreSQL. Cookie-authenticated API mutations and server actions require the exact configured origin in addition to their session checks.
 - Gear and roster refreshes use authenticated first-party server paths.
+
+See [admin access and recovery](docs/operations/admin-access.md) for provisioning, recovery and rollout verification.
 
 ### Application and delivery
 

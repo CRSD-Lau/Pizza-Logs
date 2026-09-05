@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { db } from "@/lib/db";
+import { requireAdmin } from "@/lib/require-admin";
 import { SectionHeader } from "@/components/ui/SectionHeader";
 import { StatCard } from "@/components/ui/StatCard";
 import { formatBytes } from "@/lib/utils";
@@ -30,6 +31,7 @@ type LatestItemImportRow = { importedAt: Date | null } | null;
 type LatestGearRefreshRow = { lastSuccessAt: Date | null } | null;
 
 export default async function AdminPage() {
+  await requireAdmin();
   const deployment = getDeploymentInfo();
   const parserHealthPromise = fetch(`${process.env.PARSER_SERVICE_URL ?? "http://localhost:8000"}/health`, {
     cache: "no-store",
@@ -141,6 +143,9 @@ export default async function AdminPage() {
           <p className="text-text-secondary text-sm mt-1">System health and database statistics</p>
           <Link href="/admin/uploads" className="text-xs text-gold hover:text-gold-light uppercase tracking-wide mt-3 inline-block">
             View upload history &rarr;
+          </Link>
+          <Link href="/admin/security" className="text-xs text-gold hover:text-gold-light uppercase tracking-wide mt-3 ml-4 inline-block">
+            Account security &rarr;
           </Link>
         </div>
         <ClearDatabaseButton />

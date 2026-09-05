@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { db } from "@/lib/db";
+import { requireAdmin } from "@/lib/require-admin";
 import { Badge } from "@/components/ui/Badge";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { SectionHeader } from "@/components/ui/SectionHeader";
@@ -12,6 +13,7 @@ export const metadata: Metadata = { title: "Admin Upload History" };
 export const dynamic = "force-dynamic";
 
 export default async function AdminUploadsPage() {
+  await requireAdmin();
   const uploads = await db.upload.findMany({
     orderBy: { createdAt: "desc" },
     take: 100,

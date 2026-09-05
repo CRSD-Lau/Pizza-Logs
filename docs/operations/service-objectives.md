@@ -67,7 +67,9 @@ Before adopting these targets, the infrastructure owner must:
    access controls and a successful backup identifier. Choose PITR if a 24-hour loss is unacceptable.
 2. Restore a selected backup to a new isolated database without changing production routing.
 3. Validate migration history, schema, row counts, relationships, representative historical
-   reports and numeric totals. Run the application and smoke checks against the restored copy.
+   reports and numeric totals. Keep restored administration inaccessible while comparing evidence.
+   Then follow [post-restore admin recovery](admin-access.md#restoring-a-backup) to invalidate restored
+   sessions and recovery codes and enroll MFA again before running authenticated smoke checks.
 4. Measure recovery duration and newest recovered transaction timestamp; record actual RTO/RPO.
 5. Destroy the isolated restored copy only under a separately approved exact cleanup scope.
 
