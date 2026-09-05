@@ -115,6 +115,11 @@ The same command then runs `scripts/upload-journey-e2e.mjs` and `scripts/ux-navi
 
 ## CI and Security Gates
 
+The navigation audit allows up to 12 seconds for React's streamed fallback/content
+swap to settle before reporting duplicate IDs. It still examines hidden elements;
+browser controls verify that transient duplicates clear and persistent hidden
+duplicates are reported.
+
 The display-consistency browser suite also runs in `test:e2e`. It uploads an isolated
 synthetic report with eight-digit totals, a tiny nonzero contribution, a death,
 18 spells and a midnight crossing. At 375, 768, 1024 and 1440 pixels it checks compact
