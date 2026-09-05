@@ -1,6 +1,15 @@
 # Intro Animation Pipeline
 
+Author: Neil Mitchell
+
+Last modified by: Neil Mitchell
+
 The source is `animations/source/Veo.mp4`. Generated web assets have one canonical location: `public/animations/`.
+
+Neil Mitchell identifies the source as his Google Veo-generated intro. It entered
+Git in `47f4f68` on 2026-05-06; that is an introduction date, not a verified generation
+date. Current provenance and usage limits are recorded in the
+[asset register](security/asset-provenance.md).
 
 ```text
 animations/source/Veo.mp4

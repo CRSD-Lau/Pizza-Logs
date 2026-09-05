@@ -42,7 +42,8 @@ services:
       DATABASE_URL:        postgresql://pizzalogs:pizzalogs@postgres:5432/pizzalogs?schema=public
       PARSER_SERVICE_URL:  http://parser:8000
       UPLOAD_DIR:          /app/uploads
-      ADMIN_SECRET:        ${ADMIN_SECRET:-local-dev-admin-secret}
+      ADMIN_SECRET:        ${ADMIN_SECRET:?Set a random ADMIN_SECRET of at least 32 characters}
+      ADMIN_AUTH_URL:      ${ADMIN_AUTH_URL:-http://localhost:3000}
       ADMIN_COOKIE_SECURE: false
       NODE_ENV:            production
     volumes:

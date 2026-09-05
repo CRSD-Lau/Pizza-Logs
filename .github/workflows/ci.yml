@@ -34,7 +34,8 @@ jobs:
     env:
       DATABASE_URL: postgresql://pizzalogs:pizzalogs@localhost:5432/pizzalogs?schema=public
       PARSER_SERVICE_URL: http://localhost:8000
-      ADMIN_SECRET: ci-placeholder-not-production
+      ADMIN_SECRET: ci-isolated-admin-auth-key-not-for-production
+      ADMIN_AUTH_URL: http://127.0.0.1:3000
       TEST_DATABASE_URL: postgresql://pizzalogs:pizzalogs@localhost:5432/pizzalogs
       PARSER_CONTRACT_PYTHON: python
 
@@ -142,7 +143,7 @@ jobs:
         run: |
           npx playwright install --with-deps chromium
           docker run -d --name pizza-parser-ci --network host pizza-logs-parser:ci
-          docker run -d --name pizza-web-ci --network host -e DATABASE_URL -e PARSER_SERVICE_URL -e ADMIN_SECRET -e ADMIN_COOKIE_SECURE=false pizza-logs-web:ci
+          docker run -d --name pizza-web-ci --network host -e DATABASE_URL -e PARSER_SERVICE_URL -e ADMIN_SECRET -e ADMIN_AUTH_URL -e ADMIN_COOKIE_SECURE=false pizza-logs-web:ci
           for attempt in $(seq 1 30); do
             if curl --fail --silent http://127.0.0.1:3000/api/health/ready; then break; fi
             sleep 2

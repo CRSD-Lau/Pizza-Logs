@@ -1,15 +1,15 @@
 "use server";
 
-import { cookies } from "next/headers";
+import { headers } from "next/headers";
 import { revalidatePath } from "next/cache";
 import { db } from "@/lib/db";
 import { syncGuildRoster } from "@/lib/warmane-guild-roster";
-import { ADMIN_SESSION_COOKIE, verifyAdminSessionToken } from "@/lib/admin-auth";
+import { getAdminSession } from "@/lib/admin-auth";
+import { hasTrustedAdminOrigin } from "@/lib/admin-request";
 
 async function verifyAdmin(): Promise<boolean> {
-  const cookieStore = await cookies();
-  const provided = cookieStore.get(ADMIN_SESSION_COOKIE)?.value;
-  return verifyAdminSessionToken(provided);
+  const requestHeaders = await headers();
+  return hasTrustedAdminOrigin(requestHeaders) && (await getAdminSession(requestHeaders)) !== null;
 }
 
 export async function clearDatabase(): Promise<{ ok: true } | { ok: false; error: string }> {

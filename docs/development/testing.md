@@ -95,18 +95,19 @@ Start the migrated and seeded local web/parser/database stack, for example using
 npx playwright install chromium
 ```
 
-Set the local web URL and the same admin secret configured on that web process:
+Use a dedicated disposable database for the local web process and this runner. Set `DATABASE_URL`, the same server key and origin used by the web process, and the local web URL:
 
 ```powershell
 $env:PIZZA_TEST_BASE_URL = 'http://127.0.0.1:3000'
-$env:PIZZA_TEST_ADMIN_SECRET = 'local-test-secret'
+$env:ADMIN_SECRET = 'isolated-test-server-key-at-least-32-characters'
+$env:ADMIN_AUTH_URL = 'http://127.0.0.1:3000'
 $env:PARSER_CONTRACT_PYTHON = (Resolve-Path 'parser/.venv/Scripts/python.exe').Path
 npm run test:e2e
 ```
 
-The runner accepts loopback URLs only and requires `PIZZA_TEST_ADMIN_SECRET` or `ADMIN_SECRET`. For a production-mode container served over local HTTP, configure `ADMIN_COOKIE_SECURE=false` on that local web process so the login cookie can be tested. Production HTTPS must retain secure cookies.
+The runner and admin fixture accept loopback URLs only. The fixture privately provisions the synthetic `pizza-admin-e2e@example.test` identity, or resets that same identity on a repeated test; it refuses to replace another designated administrator. Never run it against a database containing a real administrator. For a production-mode container served over local HTTP, configure `ADMIN_COOKIE_SECURE=false` on that local web process so the login cookie can be tested. Production HTTPS must retain secure cookies.
 
-The runner uploads synthetic text and ZIP fixtures, checks concurrent duplicate handling and stored totals, visits public report/player/leaderboard pages at six viewport widths, checks keyboard focus and selected axe accessibility rules, and signs into the read-only admin diagnostics view. It records screenshots and a JSON report under `.test-artifacts/e2e` by default; `PIZZA_TEST_ARTIFACTS` changes that destination. Browser requests for external assets are blocked during capture; server-side upstream integrations are not fully mocked. These checks do not prove live provider availability or visual equivalence for private raid logs.
+The runner uploads synthetic text and ZIP fixtures, checks concurrent duplicate handling and stored totals, visits public report/player/leaderboard pages at six viewport widths, and checks keyboard focus and selected axe accessibility rules. Admin acceptance covers rejected legacy credentials and forged cookies, password-only access denial, authenticator enrollment, enrollment-session revocation, fresh recovery-code login, one-use recovery codes and logout. It views diagnostics without mutating raid data. It records screenshots and a JSON report under `.test-artifacts/e2e` by default; `PIZZA_TEST_ARTIFACTS` changes that destination. Setup keys, passwords and recovery codes are not written into screenshots or reports. Browser requests for external assets are blocked during capture; server-side upstream integrations are not fully mocked. These checks do not prove live provider availability, real administrator enrollment or visual equivalence for private raid logs.
 
 ## CI and Security Gates
 

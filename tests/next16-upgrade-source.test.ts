@@ -12,8 +12,8 @@ assert.equal(fs.existsSync(legacyMiddlewarePath), false, "Next 16 must use proxy
 assert.match(proxySource, /export function proxy\(request: NextRequest\)/);
 assert.match(proxySource, /matcher:\s*["']\/admin\/:path\*["']/);
 assert.match(proxySource, /pathname === ["']\/admin\/login["']/);
-assert.match(proxySource, /verifyAdminSessionToken\(cookie\)/);
-assert.match(proxySource, /verifyAdminSecretValue\(header\)/);
+assert.match(proxySource, /getSessionCookie\(request/);
+assert.doesNotMatch(proxySource, /verifyAdminSecretValue|x-admin-secret/);
 assert.match(proxySource, /NextResponse\.redirect\(new URL\(["']\/admin\/login["']/);
 
 assert.doesNotMatch(
@@ -26,12 +26,10 @@ assert.match(rootLayoutSource, /@fontsource\/cinzel\/latin-700\.css/);
 assert.match(rootLayoutSource, /@fontsource\/rajdhani\/latin-300\.css/);
 assert.match(rootLayoutSource, /@fontsource\/rajdhani\/latin-700\.css/);
 
-for (const file of [
-  "app/admin/actions.ts",
-  "app/admin/login/actions.ts",
-]) {
-  const source = fs.readFileSync(path.join(root, file), "utf8");
-  assert.match(source, /await cookies\(\)/, `${file} must use Next 16's async cookies API`);
-}
+const actionsSource = fs.readFileSync(path.join(root, "app/admin/actions.ts"), "utf8");
+assert.match(actionsSource, /await headers\(\)/, "admin actions must use Next 16's async headers API");
+assert.match(actionsSource, /hasTrustedAdminOrigin\(requestHeaders\)/);
+assert.match(actionsSource, /getAdminSession\(requestHeaders\)/);
+assert.equal(fs.existsSync(path.join(root, "app/admin/login/actions.ts")), false, "legacy secret login must remain removed");
 
 console.log("next16-upgrade-source tests passed");

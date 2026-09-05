@@ -32,6 +32,7 @@ This directory contains maintained, versioned project documentation. GitHub issu
 ## Operations and Security
 
 - [Railway runbook](operations/railway.md)
+- [Admin account setup and recovery](operations/admin-access.md)
 - [Service objectives and recovery](operations/service-objectives.md)
 - [Parser runtime maintenance](operations/parser-runtime.md)
 - [Security policy](../SECURITY.md)

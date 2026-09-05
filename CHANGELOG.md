@@ -8,6 +8,8 @@ This project follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) an
 
 ### Added
 
+- Private administrator account provisioning, authenticator enrollment, single-use recovery codes and an account security page, with no paid authentication service.
+- Public third-party license notices and owner-confirmed Veo/ChatGPT media provenance with Git introduction dates; sale or transfer clearance is outside the current site's scope.
 - Additional independently captured UwU mode, outcome, spell and target comparisons, with explicit mismatch classifications; current evidence is 14 exact cases and 12 visible differences, not full parity.
 - Read-only database evidence capture and restoration comparison covering row content, enums, schema, migration history and report totals.
 - Full runtime-image vulnerability/SBOM gates, parser tests on the production OS, 90-day CI evidence retention and an exact media provenance register.
@@ -42,6 +44,8 @@ This project follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) an
 
 ### Security
 
+- Apply Alpine's `libuuid` 2.42.3-r1 security update in the existing parser runtime, preserving the pinned Python/Alpine base, Python lockfiles and unsuppressed image scan gate.
+- Replace the shared-secret admin login and header/body bypasses with password plus MFA, server-side session checks, database-backed throttling, exact-origin mutation checks and immediate session revocation. Deployment requires owner configuration and enrollment before admin access is available.
 - Bound parser transport, archive metadata and physical lines; retain worker capacity and temporary files until cancelled work actually exits. ZIP members support stored/deflate compression only.
 - Remove unused installer tools from runtime images and update vulnerable transitive npm dependencies. The follow-up parser image replaces the affected Debian base; the original findings and rollout implications remain documented.
 - Removed the unauthenticated upload-row listing and query-string admin import endpoint.

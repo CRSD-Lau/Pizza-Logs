@@ -1,18 +1,20 @@
-# Acquisition review and release conditions
+# Quality review and release conditions
 
 Author: Neil Mitchell
 
 Last modified by: Neil Mitchell
 
-Observed: 2026-09-04
+Observed: 2026-09-04; asset scope clarified: 2026-09-05
 
 ## Decision
 
-**Buy with conditions.** The application has a useful, independently implemented
-raid-analysis core and now has reproducible database, parser, upload and browser gates.
-It is not yet a demonstrated replacement for all UwU analytical surfaces. Acquisition
-and an enterprise production commitment require the parity, base-image, recovery and
-ownership conditions below. A green regression build is not evidence of full parity,
+**Continue improving the site against the documented quality findings.** Neil
+Mitchell confirmed on 2026-09-05 that the acquisition framing was a quality benchmark;
+Pizza Logs is his own site and is not being sold or transferred. Buyer-facing asset
+assignment and transfer clearance are not current release conditions. The application
+has a useful, independently implemented raid-analysis core and reproducible database,
+parser, upload and browser gates. It is not yet a demonstrated replacement for all UwU
+analytical surfaces. A green regression build is not evidence of full parity,
 continuous availability, a successful restore, or security certification.
 
 The starting Pizza revision was `8a90aee2651663613b8aaf2dbd148ea493eae2a3`.
@@ -28,7 +30,7 @@ Railway reported successful web and parser deployments from that revision. The
 [post-deployment smoke run](https://github.com/CRSD-Lau/Pizza-Logs/actions/runs/33922902058)
 passed all 12 public checks, dependency readiness returned 200, and GitHub reported
 zero open Dependabot alerts. These observations replace the earlier delivery's
-pending-deployment status; they do not close unrelated acquisition conditions.
+pending-deployment status; they do not close unrelated quality findings.
 
 PR 77 was merged as `b5636482eea8527d2cafc0824c7f6dca4fa8d8be` on 2026-09-04.
 It adds complete hover-model framing, a reviewed Alpine parser runtime, full-image
@@ -126,17 +128,18 @@ Public descriptions deliberately omit payloads and detailed exploitation procedu
 | A12 P1 High, open | [Parity matrix](uwu-analytics-parity.md): broad historical claims exceeded independently observed evidence. | Certain for a full replacement claim | **Coverage expanded; full parity incomplete.** Fourteen exact synthetic cases, twelve explicit mismatches, seven unproven categories; four private ICC samples exposed two parser corrections. | Private ICC data is now available. Broader modes/raids, unresolved attribution/detail differences and the missing historical source archive still need evidence; synthetic and private results remain distinct. |
 | A13 P1 High, open | Provider inspection found no scheduled backups; newest listed snapshot was 2026-08-23. | Recovery exposure is confirmed; native restoration remains untested | **Logical restore verified; provider recovery remains open.** Neil chose to keep Railway backup settings unchanged. | Respect that decision. Enterprise RPO/RTO remains unproven until an independently approved provider backup and isolated restore demonstration exists. |
 | A14 Critical/High scanner findings, remediated and deployed | Previous Debian parser image reproduced 3 Critical and 51 High package/advisory instances. | Historical runtime package exposure; future images require scanning | **Reviewed replacement scans clean; PR 77 rollout verified.** Digest-pinned supported Alpine runtime, actual-OS tests, unchanged hash locks and no severity suppression. | [Runtime evidence and tradeoffs](operations/parser-runtime.md): 388 tests, real HTTP cancellation/upload checks, zero detected OS/Python findings. Railway source revision/readiness and production smoke passed; future Critical/High findings block CI. |
-| A15 P2 Medium, open | Shared-secret admin model, process-local progress/admission, single-region dependencies and single CODEOWNER. | Operational growth or outage | **Bounded locally; architecture decision deferred.** | Add identity/MFA, distributed admission and durable job storage only with owner/provider design, privacy and cost approval. |
-| A16 P2 Medium, open | Warcraft-related media and external source rights are not established by npm license metadata. | Commercial acquisition/distribution | **[Exact asset register](security/asset-provenance.md) complete; rights not certified.** No UwU code/assets copied. | Neil and the relevant rights holders must supply the listed creation/permission records and disposition for each local and remote asset group. |
+| A15 P2 Medium, open pending operational acceptance | Private identity/MFA implementation replaces shared-secret admin access; progress/admission remain process-local, with single-region dependencies and a single CODEOWNER. | Operational growth or outage | **[Admin login implemented](operations/admin-access.md); deployment and real enrollment remain required.** | Record deployed MFA acceptance and the remaining upload-reliability decision. Interrupted uploads still require reupload; no added infrastructure cost is authorized. |
+| A16 P2 Medium, scope resolved | The earlier asset-clearance condition assumed a sale or transfer that is not planned. | Acquisition/transfer is out of scope | **[Asset scope corrected](security/asset-provenance.md):** Neil identifies the intro as Veo-generated and social preview as ChatGPT-generated. Font/jQuery notices are retained; no UwU code/assets copied. | Buyer clearance is not a current release gate. Ordinary third-party terms still apply; unverified media-use details remain recorded without claiming blanket rights certification. |
 
 Four High implementation finding groups and seven Medium groups were corrected.
-The open rows are release/acquisition conditions, not silently accepted exceptions.
+The open rows remain quality findings with their stated evidence and owner decisions.
 The follow-up work is assigned to the maintainer in GitHub:
 [A12 representative parity](https://github.com/CRSD-Lau/Pizza-Logs/issues/73),
 [A13 provider recovery](https://github.com/CRSD-Lau/Pizza-Logs/issues/74),
-[A15 identity and durable uploads](https://github.com/CRSD-Lau/Pizza-Logs/issues/75),
-and [A16 asset rights](https://github.com/CRSD-Lau/Pizza-Logs/issues/76).
-Each issue records the evidence or decision needed for closure.
+[A15 identity and durable uploads](https://github.com/CRSD-Lau/Pizza-Logs/issues/75).
+[A16 asset rights](https://github.com/CRSD-Lau/Pizza-Logs/issues/76) records the corrected
+scope; it is not a buyer-clearance prerequisite for the owner's site. Each issue
+records its evidence or decision.
 No exposed secret was detected in the scanned history/delivery diff; no rotation was
 triggered by a discovered value. This does not attest to provider-side secret handling.
 
@@ -159,8 +162,8 @@ The unrelated local notes directory was preserved and excluded from the delivery
 
 SBOMs/scanner output, benchmark samples and screenshots are evidence artifacts, not
 application source. Follow-up CI retains synthetic acceptance and complete container
-scan/SBOM artifacts for 90 days (PR 72 used 14 days). The PR links the exact run; an
-acquirer should archive approved evidence under controlled retention before expiry.
+scan/SBOM artifacts for 90 days (PR 72 used 14 days). The PR links the exact run; the
+maintainer should archive relevant evidence under controlled retention before expiry.
 
 ## Performance and capacity
 
@@ -198,8 +201,9 @@ targets, not measured uptime. Proposed RPO <=24 hours/RTO <=4 hours require a ba
 restore demonstration. Nine nines would allow about 31.5 ms of annual downtime and is
 not credible for this unmeasured single-region dependency chain.
 
-Before deployment the owner must resolve/accept A12-A16 explicitly, preserve a verified
-database backup, inspect existing schema/ledger drift, and capture current image SHAs.
+Before deployment the owner must resolve/accept the applicable A12-A15 findings,
+preserve a verified database backup, inspect existing schema/ledger drift, and
+capture current image SHAs.
 Deploy the parser first, then the web additive migrations and new web image. Verify
 readiness, synthetic acceptance in staging and ordinary production smoke. Stop if
 migration/startup fails; do not clear the ledger or mark failures applied. Roll back

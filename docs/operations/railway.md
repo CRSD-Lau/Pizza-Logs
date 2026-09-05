@@ -16,12 +16,19 @@ Web:
 
 - `DATABASE_URL`
 - `PARSER_SERVICE_URL` pointing to the internal parser service
-- `ADMIN_SECRET` set to a long random value
+- `ADMIN_SECRET` set to a random server-only key of at least 32 characters
+- `ADMIN_AUTH_URL` set to the exact public HTTPS origin
 - Railway-provided deployment metadata used by admin diagnostics, when available
 
 Parser limits have safe defaults in code. Do not set `ENABLE_LEGACY_PARSER_ROUTES=true` in production. Do not set `ADMIN_COOKIE_SECURE=false` in production.
 
 Secrets belong in Railway configuration, never Git, a PR body, issue, screenshot, browser storage, or client bundle.
+
+For the MFA rollout, follow [admin setup and recovery](admin-access.md). Auth tables are additive;
+existing raid reports are not rewritten. Old admin cookies and shared-secret callers stop authenticating.
+The owner must configure the origin/key and provision/enroll the account. An agent must not change
+Railway production environment variables. Keep #75 open until actual enrollment and deployed enforcement
+are verified; build/CI success alone is not enrollment proof.
 
 ## Deployment Flow
 

@@ -14,11 +14,11 @@
 npm ci --legacy-peer-deps
 cp .env.example .env.local
 npm run db:generate
-npm run db:push
+npx prisma migrate deploy
 npm run db:seed
 ```
 
-`db:push` is suitable for an empty local database. Schema changes intended for production must use a reviewed Prisma migration rather than an undocumented push.
+Use the committed migrations for local setup as well as deployment; they include database constraints that `db:push` cannot reproduce from the Prisma model alone. Existing databases require the reviewed [legacy migration procedure](../operations/railway.md). Schema changes intended for production must use a reviewed migration.
 
 To import WotLK item metadata:
 
@@ -63,10 +63,10 @@ Open <http://localhost:3000>. `PARSER_SERVICE_URL` should point to <http://local
 ## Local Compose
 
 ```bash
-docker compose up --build
+docker compose --env-file .env.local up --build
 ```
 
-This starts PostgreSQL, the non-root parser service, and the production-style web image. The compose-only admin fallback is for local development and must never be copied into Railway.
+This starts PostgreSQL, the non-root parser service, and the production-style web image. Replace the example `ADMIN_SECRET` with a random key of at least 32 characters before starting it. Compose explicitly loads `.env.local`; there is no fallback admin password. Follow [admin provisioning](../operations/admin-access.md) to create the local administrator. Keep local credentials separate from Railway.
 
 ## Windows Launchers
 
@@ -85,7 +85,8 @@ The stop launcher may need elevation to stop a Windows PostgreSQL service. The s
 | --- | --- | --- |
 | `DATABASE_URL` | Web | Required |
 | `PARSER_SERVICE_URL` | Web | `http://localhost:8000` local fallback |
-| `ADMIN_SECRET` | Web | Required in production; development may use a placeholder |
+| `ADMIN_SECRET` | Web | Server-only auth key of at least 32 characters; generate a random value |
+| `ADMIN_AUTH_URL` | Web | Exact public HTTPS origin, or local loopback origin for development |
 | `ADMIN_COOKIE_SECURE` | Web | Secure in production; `false` only for local HTTP |
 | `PORT` | Both | Web 3000, parser 8000 by deployment config |
 | `ENABLE_LEGACY_PARSER_ROUTES` | Parser | Disabled |

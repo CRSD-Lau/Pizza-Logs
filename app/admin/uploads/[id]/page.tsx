@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { db } from "@/lib/db";
+import { requireAdmin } from "@/lib/require-admin";
 import { Badge } from "@/components/ui/Badge";
 import { SectionHeader } from "@/components/ui/SectionHeader";
 import { StatCard } from "@/components/ui/StatCard";
@@ -17,12 +18,14 @@ interface Props {
 }
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
+  await requireAdmin();
   const { id } = await params;
   const upload = await db.upload.findUnique({ where: { id }, select: { filename: true } });
   return { title: upload ? `Admin Upload: ${upload.filename}` : "Admin Upload" };
 }
 
 export default async function AdminUploadDetailPage({ params }: Props) {
+  await requireAdmin();
   const { id } = await params;
 
   const upload = await db.upload.findUnique({

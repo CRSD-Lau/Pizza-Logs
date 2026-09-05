@@ -7,6 +7,122 @@ datasource db {
   provider = "postgresql"
 }
 
+// Private administrator authentication. These identities never belong to raid players.
+model AdminAuthUser {
+  id               String   @id
+  name             String
+  email            String   @unique
+  emailVerified    Boolean  @default(false)
+  image            String?
+  twoFactorEnabled Boolean  @default(false)
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+  sessions         AdminAuthSession[]
+  accounts         AdminAuthAccount[]
+  twoFactor        AdminAuthTwoFactor?
+  administrator    AdminIdentity?
+
+  @@map("admin_auth_users")
+}
+
+model AdminAuthSession {
+  id              String   @id
+  token           String   @unique
+  userId          String
+  user            AdminAuthUser @relation(fields: [userId], references: [id], onDelete: Cascade)
+  expiresAt       DateTime
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  ipAddress       String?
+  userAgent       String?
+  mfaVerifiedAt   DateTime?
+  adminRevision   Int      @default(0)
+
+  @@index([userId])
+  @@index([expiresAt])
+  @@map("admin_auth_sessions")
+}
+
+model AdminAuthAccount {
+  id                    String   @id
+  issuer                String
+  accountId             String
+  providerId            String
+  userId                String
+  user                  AdminAuthUser @relation(fields: [userId], references: [id], onDelete: Cascade)
+  password              String?
+  accessToken           String?
+  refreshToken          String?
+  idToken               String?
+  accessTokenExpiresAt  DateTime?
+  refreshTokenExpiresAt DateTime?
+  scope                 String?
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+
+  @@unique([issuer, accountId])
+  @@index([userId])
+  @@map("admin_auth_accounts")
+}
+
+model AdminAuthVerification {
+  id         String   @id
+  identifier String
+  value      String
+  expiresAt  DateTime
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@index([identifier])
+  @@index([expiresAt])
+  @@map("admin_auth_verifications")
+}
+
+model AdminAuthTwoFactor {
+  id                      String   @id
+  userId                  String   @unique
+  user                    AdminAuthUser @relation(fields: [userId], references: [id], onDelete: Cascade)
+  secret                  String
+  backupCodes             String
+  verified                Boolean  @default(false)
+  failedVerificationCount Int      @default(0)
+  lockedUntil             DateTime?
+
+  @@map("admin_auth_two_factors")
+}
+
+model AdminAuthRateLimit {
+  id          String @id
+  key         String @unique
+  count       Int
+  lastRequest BigInt
+
+  @@map("admin_auth_rate_limits")
+}
+
+// The migration CHECK(id = 1), primary key and transaction lock enforce one admin.
+// Recovery changes its revision, never its identity or authorization grant.
+model AdminIdentity {
+  id        Int      @id @default(1)
+  userId    String   @unique
+  user      AdminAuthUser @relation(fields: [userId], references: [id], onDelete: Restrict)
+  revision  Int      @default(1)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("admin_identity")
+}
+
+// Consumed TOTP fingerprints prevent replay across separate login challenges.
+// Plain codes and authenticator secrets are never stored here.
+model AdminAuthTotpUse {
+  fingerprint String @id
+  expiresAt   DateTime
+
+  @@index([expiresAt])
+  @@map("admin_auth_totp_uses")
+}
+
 // ─────────────────────────────────────────────
 //  REALM & GUILD
 // ─────────────────────────────────────────────
