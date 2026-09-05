@@ -1,11 +1,12 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import type { ArmoryCharacterAppearance } from "@/lib/warmane-armory";
 
 const VIEWER_MESSAGE = "pizza-logs-warmane-model";
+const VIEWER_TIMEOUT_MS = 15_000;
 
-function buildWarmaneModelViewerDocument(appearance: ArmoryCharacterAppearance): string {
+export function buildWarmaneModelViewerDocument(appearance: ArmoryCharacterAppearance): string {
   const recipe = JSON.stringify(appearance).replace(/</g, "\\u003c");
 
   return `<!doctype html>
@@ -27,7 +28,7 @@ function buildWarmaneModelViewerDocument(appearance: ArmoryCharacterAppearance):
   <script>
     (() => {
       const appearance = ${recipe};
-      const send = (status) => parent.postMessage({ type: "${VIEWER_MESSAGE}", status }, "*");
+      const send = (status, reason) => parent.postMessage({ type: "${VIEWER_MESSAGE}", status, reason }, "*");
 
       try {
         const container = document.getElementById("model");
@@ -57,6 +58,13 @@ function buildWarmaneModelViewerDocument(appearance: ArmoryCharacterAppearance):
           }
         });
 
+        // Warmane falls back to its retired Flash renderer when WebGL is
+        // unavailable. That path cannot create a character canvas.
+        if (viewer.mode === ModelViewer.FLASH) {
+          send("failed", "webgl");
+          return;
+        }
+
         const renderer = viewer.renderer;
         if (renderer?.zoom && renderer.projMatrix?.length === 16) {
           // Leave room for helmets above the body bounds, then lower the view
@@ -69,10 +77,10 @@ function buildWarmaneModelViewerDocument(appearance: ArmoryCharacterAppearance):
         const verify = () => {
           attempts += 1;
           const canvas = document.querySelector("canvas");
-          // Warmane renders into a WebGL-backed canvas, which cannot be sampled
-          // reliably as a 2D canvas. Allow its model/assets time to settle, then
-          // reveal it only when the correctly sized render surface is present.
-          if (attempts >= 8 && canvas && canvas.width >= 80 && canvas.height >= 120) {
+          // A canvas alone does not mean that character geometry has loaded.
+          // The viewer's public method returns null until its model exists.
+          const modelLoaded = typeof viewer.method === "function" && viewer.method("isLoaded") === true;
+          if (attempts >= 8 && canvas && canvas.width >= 80 && canvas.height >= 120 && modelLoaded) {
             send("ready");
             return;
           }
@@ -101,7 +109,8 @@ export function WarmaneCharacterModel({
 }) {
   const frameRef = useRef<HTMLIFrameElement | null>(null);
   const [isDesktop, setIsDesktop] = useState(false);
-  const [ready, setReady] = useState(false);
+  const [status, setStatus] = useState<"loading" | "ready" | "failed">("loading");
+  const [failureReason, setFailureReason] = useState<string | null>(null);
   const document = useMemo(() => buildWarmaneModelViewerDocument(appearance), [appearance]);
 
   useEffect(() => {
@@ -112,30 +121,49 @@ export function WarmaneCharacterModel({
     return () => media.removeEventListener("change", sync);
   }, []);
 
-  useEffect(() => {
-    setReady(false);
+  useLayoutEffect(() => {
+    if (!isDesktop) return;
+    setStatus("loading");
+    setFailureReason(null);
+    // A blocked script or an unavailable renderer may never send a message.
+    const timeout = window.setTimeout(() => setStatus("failed"), VIEWER_TIMEOUT_MS);
     const receive = (event: MessageEvent) => {
       if (event.source !== frameRef.current?.contentWindow) return;
       if (!event.data || event.data.type !== VIEWER_MESSAGE) return;
-      setReady(event.data.status === "ready");
+      if (event.data.status !== "ready" && event.data.status !== "failed") return;
+      window.clearTimeout(timeout);
+      setStatus(event.data.status);
+      setFailureReason(event.data.reason === "webgl" ? "This browser cannot display 3D models." : null);
     };
 
     window.addEventListener("message", receive);
-    return () => window.removeEventListener("message", receive);
-  }, [document]);
+    return () => {
+      window.clearTimeout(timeout);
+      window.removeEventListener("message", receive);
+    };
+  }, [document, isDesktop]);
 
   if (!isDesktop) return null;
 
   return (
-    <iframe
-      ref={frameRef}
-      title={`${characterName} 3D character model`}
-      srcDoc={document}
-      sandbox="allow-scripts"
-      referrerPolicy="no-referrer"
-      className={`absolute inset-0 z-10 h-full w-full border-0 transition-opacity duration-300 ${ready ? "opacity-100" : "opacity-0"}`}
-      tabIndex={-1}
-      aria-hidden="true"
-    />
+    <>
+      {status !== "ready" && (
+        <div role="status" className="absolute inset-x-2 top-3 z-20 rounded-xs bg-bg-deep/90 px-2 py-1.5 text-center text-[11px] text-text-secondary">
+          <p>{status === "loading" ? "Loading 3D model…" : "3D model unavailable"}</p>
+          {status === "failed" && failureReason && <p className="mt-1">{failureReason}</p>}
+        </div>
+      )}
+      <iframe
+        key={document}
+        ref={frameRef}
+        title={`${characterName} 3D character model`}
+        srcDoc={document}
+        sandbox="allow-scripts"
+        referrerPolicy="no-referrer"
+        className={`absolute inset-0 z-10 h-full w-full border-0 transition-opacity duration-300 ${status === "ready" ? "opacity-100" : "opacity-0"}`}
+        tabIndex={-1}
+        aria-hidden="true"
+      />
+    </>
   );
 }

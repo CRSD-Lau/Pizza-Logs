@@ -276,8 +276,12 @@ function GearPreviewPanel({
               <div className="relative flex min-h-80 flex-col items-center justify-center overflow-hidden rounded-sm border border-gold-dim/70 bg-[radial-gradient(circle_at_center,rgba(196,157,52,0.16),rgba(8,11,16,0.92)_62%)] shadow-inner shadow-black/80">
                 <div className="absolute inset-3 rounded-full border border-gold-dim/25" aria-hidden="true" />
                 <div className="absolute inset-7 rounded-full border border-gold-dim/15" aria-hidden="true" />
-                {preview.gear.appearance && (
+                {preview.gear.appearance ? (
                   <WarmaneCharacterModel appearance={preview.gear.appearance} characterName={name} />
+                ) : (
+                  <p className="absolute inset-x-2 top-3 z-20 rounded-xs bg-bg-deep/90 px-2 py-1.5 text-center text-[11px] text-text-secondary">
+                    Appearance unavailable from Armory
+                  </p>
                 )}
                 {classIconUrl ? (
                   // eslint-disable-next-line @next/next/no-img-element -- Static WoW class icon host.
@@ -319,6 +323,7 @@ function GearPreviewPanel({
           <div className="flex items-center justify-between gap-3 border-t border-gold-dim bg-bg-panel px-3 py-2 text-[11px] text-text-dim">
             <span>
               {preview.stale ? "Cached fallback" : "Live Armory"} · {new Date(preview.gear.fetchedAt).toLocaleString()}
+              {preview.gear.appearanceStale && <span className="hidden sm:inline"> · Cached appearance</span>}
             </span>
             {preview.gearScore && <span>avg ilvl {preview.gearScore.averageItemLevel}</span>}
           </div>

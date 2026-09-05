@@ -5,6 +5,7 @@ import path from "node:path";
 import { chromium } from "playwright";
 import { createRequire } from "node:module";
 import { spawnSync } from "node:child_process";
+import { verifyPlayerQuickLooks } from "./player-quicklook-e2e.mjs";
 
 const require = createRequire(import.meta.url);
 const base = new URL(process.env.PIZZA_TEST_BASE_URL ?? "http://127.0.0.1:3000");
@@ -132,6 +133,7 @@ const routes = ["/", "/raids", "/bosses", "/leaderboards", "/players", "/weekly"
 const browser = await chromium.launch({ headless: true });
 const failures = [];
 try {
+  observations.push(...await verifyPlayerQuickLooks({ browser, base, out, report, encounterId: encounter.id }));
   const context = await browser.newContext({ reducedMotion: "reduce", locale: "en-US", timezoneId: "UTC" });
   await context.addInitScript(() => sessionStorage.setItem("pizza-logs-intro-seen", "true"));
   // Fix browser assets; server-side Warmane fallback is separately bounded.

@@ -25,6 +25,7 @@ This project follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) an
 
 ### Changed
 
+- Keep the centered character quick look consistent across guild, raid and player pages: preserve a valid cached appearance during partial Armory failures, identify cached outfits, and show loading, missing-appearance and unavailable-WebGL states in the shared portrait.
 - Focus raid summaries, player totals/rates and target breakdowns on successful boss fights, excluding wipes and between-fight trash while retaining encounter adds. Add ascending/descending player-table sorting on desktop and mobile, and keep complete session totals in a separate collapsed section. Existing reports use stored encounters without reprocessing.
 - Keep collapsed breakdown controls out of keyboard navigation and brighten two fallback player-name colors so players with an unknown class remain readable on dark report surfaces.
 - Exclude recorded wipes under one minute with no recorded deaths from default public wipe/pull counts. Show a short-pull count and an Include short pulls control; preserve every stored attempt, short kill, death-bearing wipe, unknown outcome and combat metric. The policy also applies to existing reports without reprocessing.
