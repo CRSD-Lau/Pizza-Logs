@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { randomBytes } from "node:crypto";
+import { randomInt } from "node:crypto";
 import fs from "node:fs/promises";
 import path from "node:path";
 import { chromium } from "playwright";
@@ -71,7 +71,7 @@ try {
 
   await character.fill("Synthetic UX");
   const source = await fs.readFile(new URL("../parser/tests/fixtures/icc-25n-synthetic/combatlog.txt", import.meta.url), "utf8");
-  const suffix = [...randomBytes(6)].map(value => String.fromCharCode(97 + value % 26)).join("");
+  const suffix = Array.from({ length: 6 }, () => String.fromCharCode(97 + randomInt(26))).join("");
   const hours = String(Math.floor(Math.random() * 24)).padStart(2, "0");
   const minutes = String(Math.floor(Math.random() * 60)).padStart(2, "0");
   const input = Buffer.from(source.replaceAll("1/1 00:00:", `1/2 ${hours}:${minutes}:`).replaceAll('"Phyre"', `"Uxtest${suffix}"`));
