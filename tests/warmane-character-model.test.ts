@@ -9,7 +9,13 @@ const appearance: ArmoryCharacterAppearance = {
   classId: 2, items: [[1, 63931]],
 };
 const html = buildWarmaneModelViewerDocument(appearance);
-const script = [...html.matchAll(/<script>([\s\S]*?)<\/script>/g)].at(-1)?.[1];
+// This is our generated template, not an arbitrary HTML parser or sanitizer.
+const scriptTag = html.lastIndexOf("<script>");
+assert.ok(scriptTag >= 0);
+const scriptStart = scriptTag + "<script>".length;
+const scriptEnd = html.indexOf("</script>", scriptStart);
+assert.ok(scriptEnd > scriptStart);
+const script = html.slice(scriptStart, scriptEnd);
 assert.ok(script, "The actual sandbox startup script must be exercised");
 
 function runViewer({ mode = 1, throws = false, canvas = true, loadedAt = 0 } = {}) {
@@ -28,7 +34,7 @@ function runViewer({ mode = 1, throws = false, canvas = true, loadedAt = 0 } = {
       if (throws) throw new Error("Synthetic renderer failure");
     }
   }
-  vm.runInNewContext(script!, {
+  vm.runInNewContext(script, {
     ModelViewer,
     $: () => ({}),
     document: {
