@@ -6,6 +6,8 @@ import { MobBreakdown, type MobEntry } from "@/components/meter/MobBreakdown";
 import { PlayerAvatar } from "@/components/players/PlayerAvatar";
 import { AccordionSection } from "@/components/ui/AccordionSection";
 import { StatCard } from "@/components/ui/StatCard";
+import { ShortPullNotice } from "@/components/reports/ShortPullNotice";
+import { countAttempts, isShortPull, parseIncludeShortPulls } from "@/lib/attempt-policy";
 import { getClassColor } from "@/lib/constants/classes";
 import { getClassIconUrl } from "@/lib/class-icons";
 import {
@@ -21,6 +23,7 @@ import { cn, formatDuration, formatDurationPrecise, formatNumber } from "@/lib/u
 
 interface Props {
   params: Promise<{ id: string; sessionIdx: string }>;
+  searchParams: Promise<{ includeShortPulls?: string | string[] }>;
 }
 
 interface SessionPlayerAnalytics {
@@ -44,8 +47,9 @@ interface SessionAnalytics {
   players: Record<string, SessionPlayerAnalytics>;
 }
 
-export async function generateMetadata({ params }: Props): Promise<Metadata> {
+export async function generateMetadata({ params, searchParams }: Props): Promise<Metadata> {
   const { id, sessionIdx } = await params;
+  const includeShortPulls = parseIncludeShortPulls((await searchParams).includeShortPulls);
   const resolution = await resolveRaidSession(id, sessionIdx);
   if (!resolution) return { title: "Raid" };
 
@@ -59,6 +63,9 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
       where: { uploadId, sessionIndex: route.sessionIndex },
       select: {
         outcome: true,
+        durationMs: true,
+        durationSeconds: true,
+        participants: { select: { deaths: true } },
         boss: { select: { raid: true } },
       },
     }),
@@ -69,22 +76,24 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const raidNames = [...new Set(encounters.map(encounter => encounter.boss.raid))];
   const raidLabel = raidNames.length > 0 ? raidNames.join(" + ") : "Raid";
   const guildLabel = upload?.guild?.name ? ` for ${upload.guild.name}` : "";
-  const kills = encounters.filter(encounter => encounter.outcome === "KILL").length;
-  const wipes = encounters.filter(encounter => encounter.outcome === "WIPE").length;
-  const description = `${raidLabel} raid report${guildLabel} on ${dateLabel}. ${kills} kills, ${wipes} wipes, ${encounters.length} pulls.`;
+  const { kills, wipes, totalPulls } = countAttempts(encounters, { includeShortPulls });
+  const description = `${raidLabel} raid report${guildLabel} on ${dateLabel}. ${kills} kills, ${wipes} wipes, ${totalPulls} pulls.`;
   const canonical = `${PIZZA_LOGS_ORIGIN}${getRaidSessionPath(publicSlug, route)}`;
 
   return buildPageMetadata({ title, description, path: canonical, type: "article" });
 }
 
-export default async function SessionDetailPage({ params }: Props) {
+export default async function SessionDetailPage({ params, searchParams }: Props) {
   const { id, sessionIdx } = await params;
+  const includeShortPulls = parseIncludeShortPulls((await searchParams).includeShortPulls);
   const resolution = await resolveRaidSession(id, sessionIdx);
   if (!resolution) notFound();
 
   const { route: sessionRoute, uploadId, publicSlug } = resolution;
   const sessionPath = getRaidSessionPath(publicSlug, sessionRoute);
-  if (resolution.isLegacyUploadId || resolution.isLegacyIndex) permanentRedirect(sessionPath);
+  const querySuffix = includeShortPulls ? "?includeShortPulls=1" : "";
+  const viewPath = `${sessionPath}${querySuffix}`;
+  if (resolution.isLegacyUploadId || resolution.isLegacyIndex) permanentRedirect(viewPath);
 
   const sessionIndex = sessionRoute.sessionIndex;
   const sessionRoutes = await getRaidSessionRoutes(uploadId);
@@ -125,8 +134,8 @@ export default async function SessionDetailPage({ params }: Props) {
   );
   const encounterRevealIndex = new Map(orderedEncounters.map((enc, index) => [enc.id, index]));
 
-  const kills = orderedEncounters.filter(e => e.outcome === "KILL").length;
-  const wipes = orderedEncounters.filter(e => e.outcome === "WIPE").length;
+  const { kills, wipes, shortPulls, totalPulls } = countAttempts(orderedEncounters, { includeShortPulls });
+  const visibleEncounters = includeShortPulls ? orderedEncounters : orderedEncounters.filter(enc => !isShortPull(enc));
   const sessionDmgMap = (upload.sessionDamage ?? {}) as Record<string, number>;
   const sessionAnalyticsMap = (upload.sessionAnalytics ?? {}) as unknown as Record<string, SessionAnalytics>;
   const sessionAnalytics = sessionAnalyticsMap[String(sessionIndex)];
@@ -165,7 +174,7 @@ export default async function SessionDetailPage({ params }: Props) {
   const sessionBreakdownRows = sessionPlayers.map(([name, metrics]) => ({
     name,
     href: encounterPlayerNames.has(name)
-      ? `${sessionPath}/players/${encodeURIComponent(name)}`
+      ? `${sessionPath}/players/${encodeURIComponent(name)}${querySuffix}`
       : null,
     color: getClassColor(playerSet.get(name) ?? name),
     totalDamage: Math.round(metrics.totalDamage).toLocaleString(),
@@ -242,7 +251,7 @@ export default async function SessionDetailPage({ params }: Props) {
     }));
 
   const raidGroups = new Map<string, typeof encounters>();
-  for (const enc of orderedEncounters) {
+  for (const enc of visibleEncounters) {
     const arr = raidGroups.get(enc.boss.raid) ?? [];
     arr.push(enc);
     raidGroups.set(enc.boss.raid, arr);
@@ -251,7 +260,7 @@ export default async function SessionDetailPage({ params }: Props) {
   return (
     <div className="page-shell">
       <div className="flex flex-wrap items-center gap-1 text-sm text-text-dim">
-        <Link href="/raids" className="inline-flex min-h-11 items-center hover:text-gold">Raids</Link>
+        <Link href={includeShortPulls ? "/raids?includeShortPulls=1" : "/raids"} className="inline-flex min-h-11 items-center hover:text-gold">Raids</Link>
         <span>&gt;</span>
         <span className="text-text-secondary">{sessionTitle}</span>
       </div>
@@ -259,12 +268,12 @@ export default async function SessionDetailPage({ params }: Props) {
       {sessionCount > 1 && (
         <div className="flex items-center gap-3 text-xs flex-wrap">
           {previousSession && (
-            <Link href={getRaidSessionPath(publicSlug, previousSession)} className="text-gold hover:text-gold-light">
+            <Link href={`${getRaidSessionPath(publicSlug, previousSession)}${querySuffix}`} className="text-gold hover:text-gold-light">
               Previous raid
             </Link>
           )}
           {nextSession && (
-            <Link href={getRaidSessionPath(publicSlug, nextSession)} className="text-gold hover:text-gold-light sm:ml-auto">
+            <Link href={`${getRaidSessionPath(publicSlug, nextSession)}${querySuffix}`} className="text-gold hover:text-gold-light sm:ml-auto">
               Next raid
             </Link>
           )}
@@ -277,7 +286,7 @@ export default async function SessionDetailPage({ params }: Props) {
             {sessionTitle}
           </h1>
           <div className="mt-2 flex flex-wrap items-center gap-2 text-xs text-text-dim">
-            <span>{[...raidGroups.keys()].join(" - ")}</span>
+            <span>{[...new Set(orderedEncounters.map(enc => enc.boss.raid))].join(" - ")}</span>
             {upload.guild?.name && <span>- {upload.guild.name}</span>}
             {upload.realm?.name && <span>- {upload.realm.name}</span>}
             {upload.realm?.host && <span>- {upload.realm.host}</span>}
@@ -300,6 +309,8 @@ export default async function SessionDetailPage({ params }: Props) {
         <StatCard label="Damage Taken" value={formatNumber(fullSessionDamageTaken)} sub="full raid session" />
         <StatCard label="Duration" value={formatDurationPrecise(durationMs)} sub="first to last log event" className="col-span-2 sm:col-span-1" />
       </div>
+
+      <ShortPullNotice shortPulls={shortPulls} includeShortPulls={includeShortPulls} basePath={sessionPath} />
 
       {sessionPlayers.length > 0 && (
         <AccordionSection title="Full Session Breakdown" count={sessionPlayers.length} defaultOpen={false}>
@@ -398,13 +409,17 @@ export default async function SessionDetailPage({ params }: Props) {
         </AccordionSection>
       )}
 
-      <AccordionSection title="Encounters" count={encounters.length} defaultOpen>
+      <AccordionSection title="Encounters" count={totalPulls} defaultOpen>
+        {visibleEncounters.length === 0 && (
+          <p className="text-sm text-text-secondary">Only short pulls were recorded. Include short pulls to inspect them.</p>
+        )}
         <div className="space-y-4">
           {Array.from(raidGroups.entries()).map(([raidName, encs]) => (
             <div key={raidName} className="space-y-1">
               <p className="text-xs font-semibold text-text-dim uppercase tracking-widest px-1">{raidName}</p>
               <div className="data-panel divide-y divide-gold-dim">
                 {encs.map((enc) => {
+                  const shortPull = isShortPull(enc);
                   const durationSec = (enc.durationMs ?? 0) > 0
                     ? enc.durationMs / 1000
                     : Math.max(1, enc.durationSeconds);
@@ -415,7 +430,7 @@ export default async function SessionDetailPage({ params }: Props) {
                   return (
                     <Link
                       key={enc.id}
-                      href={`/encounters/${enc.id}`}
+                      href={`/encounters/${enc.id}${querySuffix}`}
                       className={getRevealClassName({
                         boss: true,
                         className:
@@ -427,12 +442,13 @@ export default async function SessionDetailPage({ params }: Props) {
                         <span
                           className={cn(
                             "text-[11px] font-bold px-1.5 py-0.5 rounded-sm",
-                            enc.outcome === "KILL" ? "text-success bg-success/10"
+                            shortPull ? "text-text-secondary bg-bg-hover"
+                              : enc.outcome === "KILL" ? "text-success bg-success/10"
                               : enc.outcome === "WIPE" ? "text-danger bg-danger/10"
                                 : "text-text-dim bg-bg-hover"
                           )}
                         >
-                          {enc.outcome}
+                          {shortPull ? "SHORT PULL" : enc.outcome}
                         </span>
                         <span className="text-sm font-semibold text-text-primary group-hover:text-gold transition-colors">
                           {enc.boss.name}
@@ -499,7 +515,7 @@ export default async function SessionDetailPage({ params }: Props) {
                     size="xs"
                   />
                   <Link
-                    href={`${sessionPath}/players/${encodeURIComponent(name)}`}
+                    href={`${sessionPath}/players/${encodeURIComponent(name)}${querySuffix}`}
                     className="font-medium text-text-primary hover:text-gold-light"
                   >
                     {name}

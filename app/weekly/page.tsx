@@ -9,6 +9,8 @@ import { db } from "@/lib/db";
 import { isDatabaseConnectionError } from "@/lib/database-errors";
 import { buildWeeklyBossKills } from "@/lib/weekly-stats";
 import { PageHeader } from "@/components/ui/PageLayout";
+import { ShortPullNotice } from "@/components/reports/ShortPullNotice";
+import { countAttempts, parseIncludeShortPulls } from "@/lib/attempt-policy";
 
 import { buildPageMetadata } from "@/lib/page-metadata";
 
@@ -19,19 +21,20 @@ export const metadata = buildPageMetadata({
 });
 export const dynamic = "force-dynamic";
 
-async function getWeeklyData() {
+async function getWeeklyData(includeShortPulls: boolean) {
   const { start, end } = getWeekBounds();
 
   const encounters = await db.encounter.findMany({
     where: { startedAt: { gte: start, lt: end } },
     include: {
       boss: { select: { name: true, slug: true, raid: true } },
+      participants: { select: { deaths: true } },
     },
     orderBy: { startedAt: "desc" },
   });
 
   const kills = encounters.filter(e => e.outcome === "KILL");
-  const wipes = encounters.filter(e => e.outcome === "WIPE");
+  const counts = countAttempts(encounters, { includeShortPulls });
 
   const [topDpsRows, topHpsRows] = await Promise.all([
     db.participant.findMany({
@@ -58,8 +61,10 @@ async function getWeeklyData() {
 
   return {
     weekStart: start.toISOString(),
-    totalKills: kills.length,
-    totalWipes: wipes.length,
+    totalKills: counts.kills,
+    totalWipes: counts.wipes,
+    totalPulls: counts.totalPulls,
+    shortPulls: counts.shortPulls,
     bossesCleared: bossKills.length,
     topDps: topDpsRows.map(p => ({
       playerName: p.player.name,
@@ -81,12 +86,16 @@ async function getWeeklyData() {
   };
 }
 
-export default async function WeeklyPage() {
+export default async function WeeklyPage({ searchParams }: {
+  searchParams: Promise<{ includeShortPulls?: string | string[] }>;
+}) {
+  const includeShortPulls = parseIncludeShortPulls((await searchParams).includeShortPulls);
+  const querySuffix = includeShortPulls ? "?includeShortPulls=1" : "";
   let databaseAvailable = true;
   let data: Awaited<ReturnType<typeof getWeeklyData>>;
 
   try {
-    data = await getWeeklyData();
+    data = await getWeeklyData(includeShortPulls);
   } catch (error) {
     if (!isDatabaseConnectionError(error)) throw error;
     databaseAvailable = false;
@@ -95,6 +104,8 @@ export default async function WeeklyPage() {
       weekStart: start.toISOString(),
       totalKills: 0,
       totalWipes: 0,
+      totalPulls: 0,
+      shortPulls: 0,
       bossesCleared: 0,
       topDps: [],
       topHps: [],
@@ -120,6 +131,7 @@ export default async function WeeklyPage() {
 
       {databaseAvailable && (
       <>
+        <ShortPullNotice shortPulls={data.shortPulls} includeShortPulls={includeShortPulls} basePath="/weekly" />
         <div className="grid grid-cols-2 items-stretch gap-y-2 rounded-sm bg-bg-panel/40 p-2 sm:grid-cols-5">
           <StatCard label="Boss Kills" value={data.totalKills} highlight className="col-span-2" />
           <StatCard label="Wipes" value={data.totalWipes} />
@@ -177,7 +189,7 @@ export default async function WeeklyPage() {
               {data.bossKills.map((b) => (
                 <Link
                   key={b.slug}
-                  href={`/bosses/${b.slug}`}
+                  href={`/bosses/${b.slug}${querySuffix}`}
                   className="flex items-center justify-between bg-bg-card border border-gold-dim rounded-sm px-4 py-3 hover:border-gold/40 transition-colors"
                 >
                   <div>
@@ -191,7 +203,7 @@ export default async function WeeklyPage() {
           </section>
         )}
 
-        {data.totalKills === 0 && data.totalWipes === 0 && (
+        {data.totalPulls === 0 && data.shortPulls === 0 && (
           <EmptyState
             title="No data yet"
             description="Upload a combat log to see your weekly summary."

@@ -184,6 +184,38 @@ session does not cover every mode or other raids, and it does not recover the mi
 historical acceptance archive. Public synthetic counts above remain a separate corpus.
 Historical stored reports are not automatically recalculated.
 
+## Initial upload groups and Custom Slice boundaries
+
+At the pinned reference revision, upload report grouping and boss-attempt admission
+are separate operations. The upload reader processes each text archive member through
+its own separator. Candidate chunks use changes in the numeric `HHMMSS` clock value,
+then merge or split using sampled destination-player overlap and a 14-hour gap rule.
+The clock test is not a literal elapsed-time threshold. A group without sampled
+boss evidence is rejected before publication; duplicate and storage admission are
+additional steps. See the pinned [upload separator and sampling](https://github.com/CRSD-Lau/uwu-logs/blob/4c046d266b85ad833ab4d70addb0b6f1a16647e3/logs_upload.py#L265-L446)
+and [report admission](https://github.com/CRSD-Lau/uwu-logs/blob/4c046d266b85ad833ab4d70addb0b6f1a16647e3/logs_upload.py#L692-L718).
+
+Without explicit start and end indices, the reference's
+[default Custom Slice](https://github.com/CRSD-Lau/uwu-logs/blob/4c046d266b85ad833ab4d70addb0b6f1a16647e3/logs_main.py#L181-L193)
+covers the entire chosen report, including activity outside accepted boss attempts.
+It is not necessarily the entire source file. Different report-group boundaries
+change the denominator and available pet context, so compare aligned ranges before
+interpreting differences in whole-session totals or rates.
+
+Reference boss attempts ordinarily require
+[more than 100 selected boss-event lines](https://github.com/CRSD-Lau/uwu-logs/blob/4c046d266b85ad833ab4d70addb0b6f1a16647e3/logs_fight_separator.py#L242-L257),
+with explicit training-target exceptions. Selected lines are not all raw log rows.
+This is not a one-minute wipe filter and can omit a brief attempt with substantial
+casualties. Pizza's [short-pull count policy](guides/reading-reports.md#short-pulls-and-wipe-counts)
+preserves such death-bearing wipes and all stored attempts; it is a deliberate
+product distinction, not a claim of matching reference admission.
+
+Additional permitted full-file ICC comparison retained original bytes and checked
+all overlapping boss windows, short-attempt admission and initial report groups
+privately. Report grouping, ownership, healing/absorb and scripted-finale differences
+remain unresolved or intentionally distinct. No private source or report data is
+published, and local source observations do not establish the live deployment version.
+
 ## Historical acceptance data
 
 The [five-pull acceptance JSON](../parser/tests/baselines/uwu-2026-07-31-lausudo.json)

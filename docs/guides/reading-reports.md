@@ -6,6 +6,29 @@ A canonical report URL identifies the public report and raid date. One uploaded 
 
 The session summary uses one first-to-last-event Custom Slice for its headline totals. That slice includes boss pulls, wipes, trash, and downtime so Total Damage, Heal, Damage Taken, and per-player rates share one duration.
 
+## Short Pulls and Wipe Counts
+
+By default, public wipe and pull counts exclude a recorded **WIPE lasting less than
+one minute with zero recorded participant deaths**. Reports show the number of
+short pulls separately. Choose **Include short pulls** to restore them to the
+counts and encounter list; their individual reports remain accessible throughout.
+
+Confirmed kills, wipes with any recorded death, and unknown outcomes remain
+included, even below one minute. Exactly one minute is included. Precise recorded
+milliseconds take priority, with valid legacy seconds used when milliseconds are
+unavailable. Missing or invalid duration/death evidence does not trigger exclusion.
+
+This is a reversible counting policy, not proof of why a pull ended. Preparation,
+accidental engagements and genuine short attempts can look alike, especially in a
+partial log. Stored outcomes and combat metrics are unchanged. Full-session totals
+still include short pulls, and best-performance values retain their existing scope.
+The policy works on existing reports without re-uploading or changing database rows.
+Admin inventory and the raw encounter API continue to expose the recorded attempts.
+
+Public boss, weekly and player statistics include `shortPullCount`; use
+`includeShortPulls=1` to include these attempts in their counts. The raw
+`/api/encounters` array and direct encounter URLs retain their existing behavior.
+
 ## Encounter Metrics
 
 - **Total Damage / DPS:** raw outgoing damage-event amount divided by the encounter duration.

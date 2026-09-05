@@ -53,6 +53,7 @@ test("PostgreSQL report aggregates preserve filtering, totals, all-outcome maxim
     await db.participant.createMany({ data: encounterData.flatMap((encounter, index) => [0, 1, 2].map(player => ({
       id: `participant-${String(index).padStart(4, "0")}-${player}`, encounterId: encounter.id!, playerId: `player-${player}`,
       dps: index * 3 + player, hps: index + player,
+      deaths: 1,
       spellBreakdown: { synthetic: { damage: 100, healing: 0, hits: 1, crits: 0, school: 1 } },
       deathEvents: [{ offsetSeconds: 2, recentDamage: [{ spell: "Synthetic", amount: 100 }] }],
     }))) });

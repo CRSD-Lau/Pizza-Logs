@@ -23,6 +23,8 @@ This project follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) an
 
 ### Changed
 
+- Exclude recorded wipes under one minute with no recorded deaths from default public wipe/pull counts. Show a short-pull count and an Include short pulls control; preserve every stored attempt, short kill, death-bearing wipe, unknown outcome and combat metric. The policy also applies to existing reports without reprocessing.
+- Keep unknown outcomes separate from wipe totals on the boss index.
 - Parser 1.1.1 counts effective player and owned-pet healing to NPCs, pets and totems in encounter totals and HPS, correcting omitted Valithria healing. Existing stored reports are not automatically recalculated.
 - Recognize Fel Synergy healing as owner-exclusive evidence for a controlled permanent pet, recovering supported pet damage attribution without treating generic healing as ownership.
 - Fit the hover character viewer to the full portrait height and lower its camera framing so tall headgear and feet remain visible.

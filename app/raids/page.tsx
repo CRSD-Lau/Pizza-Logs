@@ -6,6 +6,8 @@ import { isDatabaseConnectionError } from "@/lib/database-errors";
 import { buildRaidSessionRoutesWithAnalytics } from "@/lib/raid-session-slug";
 import { getRevealClassName, getRevealStyle } from "@/lib/ui-animation";
 import { PageHeader } from "@/components/ui/PageLayout";
+import { ShortPullNotice } from "@/components/reports/ShortPullNotice";
+import { countAttempts, parseIncludeShortPulls } from "@/lib/attempt-policy";
 
 import { buildPageMetadata } from "@/lib/page-metadata";
 
@@ -31,6 +33,9 @@ async function getRaidUploads() {
         select: {
           sessionIndex: true,
           outcome: true,
+          durationMs: true,
+          durationSeconds: true,
+          participants: { select: { deaths: true } },
           startedAt: true,
           endedAt: true,
           boss: { select: { raid: true } },
@@ -40,7 +45,11 @@ async function getRaidUploads() {
   });
 }
 
-export default async function RaidsPage() {
+export default async function RaidsPage({ searchParams }: {
+  searchParams: Promise<{ includeShortPulls?: string | string[] }>;
+}) {
+  const includeShortPulls = parseIncludeShortPulls((await searchParams).includeShortPulls);
+  const querySuffix = includeShortPulls ? "?includeShortPulls=1" : "";
   let databaseAvailable = true;
   let uploads: Awaited<ReturnType<typeof getRaidUploads>> = [];
 
@@ -61,6 +70,7 @@ export default async function RaidsPage() {
     kills: number;
     wipes: number;
     encounterCount: number;
+    shortPulls: number;
     realmName: string | null;
     guildName: string | null;
   };
@@ -88,6 +98,7 @@ export default async function RaidsPage() {
       const route = routeBySessionIndex.get(sessionIndex);
       if (!route) continue;
       const raids = [...new Set(encs.map(e => e.boss.raid))];
+      const counts = countAttempts(encs, { includeShortPulls });
       sessions.push({
         publicReportSlug: upload.publicSlug,
         sessionIndex,
@@ -95,9 +106,10 @@ export default async function RaidsPage() {
         startedAt: route.startedAt,
         endedAt: encs[encs.length - 1].endedAt,
         raids,
-        kills: encs.filter(e => e.outcome === "KILL").length,
-        wipes: encs.filter(e => e.outcome === "WIPE").length,
-        encounterCount: encs.length,
+        kills: counts.kills,
+        wipes: counts.wipes,
+        encounterCount: counts.totalPulls,
+        shortPulls: counts.shortPulls,
         realmName: upload.realm?.name ?? null,
         guildName: upload.guild?.name ?? null,
       });
@@ -127,6 +139,14 @@ export default async function RaidsPage() {
         </p>}
       />
 
+      {databaseAvailable && (
+        <ShortPullNotice
+          shortPulls={sessions.reduce((sum, session) => sum + session.shortPulls, 0)}
+          includeShortPulls={includeShortPulls}
+          basePath="/raids"
+        />
+      )}
+
       {!databaseAvailable && (
         <DatabaseUnavailable description="Raid history needs the Pizza Logs database. Start local Postgres to load recorded sessions." />
       )}
@@ -148,7 +168,7 @@ export default async function RaidsPage() {
                 {daySessions.map((s, index) => (
                   <Link
                     key={`${s.publicReportSlug}-${s.sessionIndex}`}
-                    href={`/raids/${s.publicReportSlug}/sessions/${s.routeSlug}`}
+                    href={`/raids/${s.publicReportSlug}/sessions/${s.routeSlug}${querySuffix}`}
                     className={getRevealClassName({
                       boss: true,
                       className:
@@ -173,6 +193,9 @@ export default async function RaidsPage() {
                             {new Date(s.endedAt).toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit", timeZone: "UTC" })}
                           </span>
                           {s.realmName && <span>{s.realmName}</span>}
+                          {s.shortPulls > 0 && (
+                            <span>{s.shortPulls} short pull{s.shortPulls === 1 ? "" : "s"} {includeShortPulls ? "included" : "excluded"}</span>
+                          )}
                         </div>
                       </div>
 

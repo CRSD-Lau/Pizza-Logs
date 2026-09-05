@@ -3,15 +3,17 @@ import { db } from "@/lib/db";
 import { getWeekBounds } from "@/lib/utils";
 import { sortByICCOrder } from "@/lib/constants/bosses";
 import { weeklyAggregateQuery, type WeeklyAggregate } from "@/lib/report-aggregates";
+import { parseIncludeShortPulls } from "@/lib/attempt-policy";
 
 export async function GET(req: NextRequest): Promise<NextResponse> {
   const { searchParams } = new URL(req.url);
   const realmId = searchParams.get("realmId") ?? undefined;
+  const includeShortPulls = parseIncludeShortPulls(searchParams.get("includeShortPulls"));
 
   const { start, end } = getWeekBounds();
 
   const [aggregates, uploads] = await Promise.all([
-    db.$queryRaw<WeeklyAggregate[]>(weeklyAggregateQuery(start, end, realmId)),
+    db.$queryRaw<WeeklyAggregate[]>(weeklyAggregateQuery(start, end, realmId, includeShortPulls)),
     db.upload.count({
       where: {
         createdAt: { gte: start, lt: end },
@@ -78,6 +80,7 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
     weekEnd:      end.toISOString(),
     totalKills:   kills.reduce((total, row) => total + row.count, 0),
     totalWipes:   wipes.reduce((total, row) => total + row.count, 0),
+    shortPullCount: aggregates.reduce((total, row) => total + row.shortPullCount, 0),
     totalUploads: uploads,
     topDps:       allParticipants.map(p => ({
       playerName: p.player.name,
