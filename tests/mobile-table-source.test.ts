@@ -9,13 +9,15 @@ const guildRosterTable = readFileSync(
   "components/guild-roster/GuildRosterTable.tsx",
   "utf8",
 );
+const sessionPlayerTable = readFileSync("components/reports/SessionPlayerTable.tsx", "utf8");
 
-assert.match(sessionPage, /aria-label="Full session player metrics"/);
-assert.match(sessionPage, /className="data-panel md:hidden"/);
-assert.match(sessionPage, /className="data-panel hidden md:block"/);
-assert.doesNotMatch(sessionPage, /min-w-\[760px\]/);
-for (const label of ["Total Damage", "DPS", "Heal", "HPS", "Damage Taken", "DTPS"]) {
-  assert.match(sessionPage, new RegExp(`>${label}<`), `${label} remains visible in the mobile summary`);
+assert.match(sessionPage, /<SessionPlayerTable rows=\{killBreakdownRows\} label="Boss kill player metrics"/);
+assert.match(sessionPage, /<SessionPlayerTable rows=\{sessionBreakdownRows\} label="Full session player metrics"/);
+assert.match(sessionPlayerTable, /className="data-panel md:hidden"/);
+assert.match(sessionPlayerTable, /className="data-panel hidden md:block"/);
+assert.doesNotMatch(sessionPlayerTable, /min-w-\[760px\]/);
+for (const label of ["Total Damage", "DPS", "Heal", "H+A PS", "Damage Taken", "DTPS"]) {
+  assert.ok(sessionPlayerTable.includes(`label: "${label}"`), `${label} remains available in the mobile summary`);
 }
 
 assert.match(guildRosterTable, /aria-label="Guild roster members"/);

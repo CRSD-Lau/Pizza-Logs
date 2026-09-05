@@ -67,26 +67,50 @@ assert.equal((await fetch(new URL("/api/guild-roster/sync", base), { method: "PO
 assert.equal((await fetch(new URL("/admin", base), { redirect: "manual" })).status, 307);
 assert.equal((await fetch(new URL("/api/health/ready", base))).status, 200);
 const report = `/raids/${first.publicReportSlug}/sessions/${first.firstSessionSlug}`;
-// Original synthetic attempts: one brief deathless wipe, one brief wipe with a
-// recorded death, and one brief kill. No private combat log is used in CI.
+// Three synthetic attempts retain the short-pull policy coverage while making
+// kill, wipe and between-fight metrics distinguishable. No private log is used.
 const policyLines = [];
 const policyDay = new Date();
 const policyDate = `${policyDay.getUTCMonth() + 1}/${policyDay.getUTCDate()}`;
 const unit = (id, name) => `0x06000000000000${id},"${name}",0x514`;
 const policyBoss = '0xF130008F98000001,"Lord Marrowgar",0xa48';
+const killAdd = '0xF13000F001000001,"Synthetic Kill Add",0xa48';
+const wipeAdd = '0xF13000F002000001,"Synthetic Wipe Add",0xa48';
+const trashMob = '0xF13000F003000001,"Synthetic Between-Fight Trash",0xa48';
+const killPlayers = [
+  { id: "B1", name: "SyntheticFirst", damage: 900, grossHeal: 140, overheal: 40, heal: 100, taken: 150 },
+  { id: "B2", name: "SyntheticSecond", damage: 400, grossHeal: 650, overheal: 150, heal: 500, taken: 50 },
+  { id: "B3", name: "SyntheticThird", damage: 200, grossHeal: 400, overheal: 100, heal: 300, taken: 250 },
+];
 for (let pull = 0; pull < 3; pull += 1) {
   const timestamp = seconds => `${policyDate} 16:${String(pull * 2).padStart(2, "0")}:${seconds.toFixed(3).padStart(6, "0")}`;
   policyLines.push(`${timestamp(0)}  ENCOUNTER_START,1084,"Lord Marrowgar",4,25`);
   for (let hit = 1; hit <= 12; hit += 1) {
-    const source = pull === 1 && hit > 4 ? unit("B2", "SyntheticSecond") : unit("B1", "SyntheticFirst");
+    const player = pull === 2 ? killPlayers[hit <= 6 ? 0 : hit <= 10 ? 1 : 2] : killPlayers[pull === 1 && hit > 4 ? 1 : 0];
+    const source = unit(player.id, player.name);
     policyLines.push(`${timestamp(hit * (pull === 0 ? 0.5 : 2))}  SPELL_DAMAGE,${source},${policyBoss},48638,"Sinister Strike",0x1,100,0,1,0,0,0,nil,nil,nil`);
     if (pull === 1 && hit === 4) {
       policyLines.push(`${timestamp(8.1)}  UNIT_DIED,0x0000000000000000,nil,0x80000000,${unit("B1", "SyntheticFirst")},0`);
+    }
+    if (pull === 2 && [3, 6, 9].includes(hit)) {
+      const healed = killPlayers[hit / 3 - 1];
+      const target = unit(healed.id, healed.name);
+      policyLines.push(`${timestamp(hit * 2 + 0.1)}  SPELL_HEAL,${target},${target},900001,"Synthetic Restore",0x2,${healed.grossHeal},${healed.overheal},0,nil`);
+      policyLines.push(`${timestamp(hit * 2 + 0.2)}  SPELL_DAMAGE,${policyBoss},${target},900002,"Synthetic Strike",0x1,${healed.taken},0,1,0,0,0,nil,nil,nil`);
+    }
+    if (pull > 0 && hit === 10) {
+      const addSource = pull === 2 ? unit("B1", "SyntheticFirst") : unit("B2", "SyntheticSecond");
+      policyLines.push(`${timestamp(20.1)}  SPELL_DAMAGE,${addSource},${pull === 2 ? killAdd : wipeAdd},48638,"Sinister Strike",0x1,${pull === 2 ? 300 : 200},0,1,0,0,0,nil,nil,nil`);
+      if (pull === 1) {
+        policyLines.push(`${timestamp(20.2)}  SPELL_HEAL,${addSource},${addSource},900001,"Synthetic Restore",0x2,1200,200,0,nil`);
+        policyLines.push(`${timestamp(20.3)}  SPELL_DAMAGE,${policyBoss},${addSource},900002,"Synthetic Strike",0x1,1000,0,1,0,0,0,nil,nil,nil`);
+      }
     }
   }
   if (pull === 2) policyLines.push(`${timestamp(30)}  UNIT_DIED,0x0000000000000000,nil,0x80000000,${policyBoss},0`);
   policyLines.push(`${timestamp(31)}  ENCOUNTER_END,1084,"Lord Marrowgar",4,25,${pull === 2 ? 1 : 0}`);
 }
+policyLines.push(`${policyDate} 16:05:00.000  SPELL_DAMAGE,${unit("B4", "SyntheticTrashOnly")},${trashMob},48638,"Sinister Strike",0x1,700,0,1,0,0,0,nil,nil,nil`);
 const policyUpload = await upload(Buffer.from(`${policyLines.join("\n")}\n`), "synthetic-short-pulls.txt");
 const policyReport = `/raids/${policyUpload.publicReportSlug}/sessions/${policyUpload.firstSessionSlug}`;
 const encounters = await (await fetch(new URL("/api/encounters", base))).json();
@@ -98,7 +122,12 @@ const policyEncounters = encounters.filter(value => value.uploadId === policyUpl
 assert.equal(policyEncounters.length, 3, "Raw encounter inventory preserves all three attempts");
 assert.equal(policyEncounters.filter(value => value.outcome === "WIPE").length, 2);
 assert.equal(policyEncounters.filter(value => value.outcome === "KILL").length, 1);
-assert.equal(policyEncounters.reduce((sum, value) => sum + value.totalDamage, 0), 3600);
+assert.equal(policyEncounters.reduce((sum, value) => sum + value.totalDamage, 0), 4100);
+const policyKill = policyEncounters.find(value => value.outcome === "KILL");
+assert.equal(policyKill.totalDamage, 1500, "Winning-fight damage includes its add, without wipes or between-fight trash");
+assert.equal(policyKill.totalHealing, 900, "Winning-fight healing excludes overheal");
+assert.equal(policyKill.totalDamageTaken, 450);
+assert.ok(policyKill.durationMs > 0);
 const routes = ["/", "/raids", "/bosses", "/leaderboards", "/players", "/weekly", "/guild-roster", "/admin/login", report, `/encounters/${encounter.id}`, "/players/Phyre"];
 const browser = await chromium.launch({ headless: true });
 const failures = [];
@@ -135,14 +164,120 @@ try {
   }
   await page.goto(new URL(report, base).href);
   assert.match(await page.locator("main").innerText(), /54[.,]0K|54,000/, "UI must display the same damage primitive");
+  const metricColumns = [
+    ["name", "Player"], ["totalDamage", "Total Damage"], ["dps", "DPS"],
+    ["heal", "Heal"], ["healPerSecond", "H+A PS"], ["damageTaken", "Damage Taken"], ["dtps", "DTPS"],
+  ];
+  const playerView = (label, width) => page.getByRole(width < 768 ? "list" : "table", { name: label, exact: true });
+  const playerNames = (view, width) => width < 768
+    ? view.locator(":scope > li > div:first-child").allTextContents()
+    : view.locator("tbody th[scope='row']").allTextContents();
+  const cardValue = (scope, label) => scope.getByText(label, { exact: true }).locator("..").locator(":scope > div").nth(1).innerText();
+  const assertKillCards = async () => {
+    const scope = page.getByRole("region", { name: "Boss kill summary", exact: true });
+    assert.equal(await cardValue(scope, "Total Damage"), "1.5K");
+    assert.equal(await cardValue(scope, "Heal"), "900");
+    assert.equal(await cardValue(scope, "Damage Taken"), "450");
+  };
+  const assertPlayerValues = async (view, width, expected) => {
+    for (const [index, values] of expected.entries()) {
+      const row = width < 768 ? view.locator(":scope > li").nth(index) : view.locator("tbody tr").nth(index);
+      assert.deepEqual(await row.locator(width < 768 ? "dd" : "td").allTextContents(), values);
+    }
+  };
+  const assertSorting = async (label, width, ascending) => {
+    const view = playerView(label, width);
+    const controls = view.locator("..").locator("..");
+    for (const [key, column] of metricColumns) {
+      for (const direction of ["ascending", "descending"]) {
+        const status = `${label}: sorted by ${column}, ${direction}.`;
+        if (width < 768) {
+          await controls.getByRole("combobox", { name: `${label}: sort by`, exact: true }).selectOption(key);
+          if ((await controls.getByRole("status").innerText()) !== status) {
+            await controls.getByRole("button", { name: `Sort ${direction} by ${column}`, exact: true }).click();
+          }
+        } else {
+          const sortButton = page.getByRole("button", { name: `Sort ${column} ascending`, exact: true })
+            .or(page.getByRole("button", { name: `Sort ${column} descending`, exact: true }));
+          const heading = view.getByRole("columnheader").filter({ has: sortButton });
+          if ((await heading.getAttribute("aria-sort")) !== direction) await heading.getByRole("button").click();
+          if ((await heading.getAttribute("aria-sort")) !== direction) await heading.getByRole("button").click();
+          assert.equal(await heading.getAttribute("aria-sort"), direction);
+        }
+        await controls.getByText(status, { exact: true }).waitFor();
+        const expected = direction === "ascending" ? ascending[key] : [...ascending[key]].reverse();
+        assert.deepEqual(await playerNames(view, width), expected, `${label}: ${column} ${direction} at ${width}px`);
+      }
+    }
+  };
+  const killAscending = {
+    name: ["SyntheticFirst", "SyntheticSecond", "SyntheticThird"],
+    totalDamage: ["SyntheticThird", "SyntheticSecond", "SyntheticFirst"],
+    dps: ["SyntheticThird", "SyntheticSecond", "SyntheticFirst"],
+    heal: ["SyntheticFirst", "SyntheticThird", "SyntheticSecond"],
+    healPerSecond: ["SyntheticFirst", "SyntheticThird", "SyntheticSecond"],
+    damageTaken: ["SyntheticSecond", "SyntheticFirst", "SyntheticThird"],
+    dtps: ["SyntheticSecond", "SyntheticFirst", "SyntheticThird"],
+  };
+  const fullAscending = {
+    name: ["SyntheticFirst", "SyntheticSecond", "SyntheticThird", "SyntheticTrashOnly"],
+    totalDamage: ["SyntheticThird", "SyntheticTrashOnly", "SyntheticSecond", "SyntheticFirst"],
+    dps: ["SyntheticThird", "SyntheticTrashOnly", "SyntheticSecond", "SyntheticFirst"],
+    heal: ["SyntheticTrashOnly", "SyntheticFirst", "SyntheticThird", "SyntheticSecond"],
+    healPerSecond: ["SyntheticTrashOnly", "SyntheticFirst", "SyntheticThird", "SyntheticSecond"],
+    damageTaken: ["SyntheticTrashOnly", "SyntheticFirst", "SyntheticThird", "SyntheticSecond"],
+    dtps: ["SyntheticTrashOnly", "SyntheticFirst", "SyntheticThird", "SyntheticSecond"],
+  };
+  const rate = amount => new Intl.NumberFormat("en-US", { maximumFractionDigits: 1 }).format(amount / (policyKill.durationMs / 1000));
   for (const width of [390, 1440]) {
     await page.setViewportSize({ width, height: 1000 });
     await page.goto(new URL(policyReport, base).href);
     const defaultText = await page.locator("main").innerText();
     assert.match(defaultText, /1K \/ 1W/);
     assert.match(defaultText, /1 short pull excluded/);
-    assert.match(defaultText, /3[.,]6K|3,600/);
+    await assertKillCards();
     assert.equal(await page.locator('a[href^="/encounters/"]').count(), 2);
+    const killView = playerView("Boss kill player metrics", width);
+    assert.deepEqual(await playerNames(killView, width), killPlayers.map(player => player.name));
+    await assertPlayerValues(killView, width, killPlayers.map(player => [
+      String(player.damage), rate(player.damage), String(player.heal), rate(player.heal), String(player.taken), rate(player.taken),
+    ]));
+    assert.equal(await killView.getByRole("link", { name: "View SyntheticFirst's all-attempt raid report", exact: true }).getAttribute("href"), `${policyReport}/players/SyntheticFirst`);
+    await assertSorting("Boss kill player metrics", width, killAscending);
+    const fullToggle = page.getByRole("button", { name: /^Full Session Breakdown/ });
+    const fullContent = page.locator(`[id="${await fullToggle.getAttribute("aria-controls")}"]`);
+    assert.equal(await fullToggle.getAttribute("aria-expanded"), "false");
+    assert.equal(await fullContent.getAttribute("aria-hidden"), "true");
+    assert.equal(await fullContent.evaluate(element => element.inert), true);
+    const hiddenControl = fullContent.locator(width < 768 ? "select" : "table button").first();
+    await hiddenControl.evaluate(element => element.focus());
+    assert.equal(await hiddenControl.evaluate(element => document.activeElement === element), false, "Collapsed metrics cannot receive keyboard focus");
+    await fullToggle.click();
+    assert.equal(await fullContent.getAttribute("aria-hidden"), "false");
+    assert.equal(await fullContent.evaluate(element => element.inert), false);
+    const fullView = playerView("Full session player metrics", width);
+    await fullView.waitFor();
+    const fullTotals = fullContent.locator('[aria-label="Full session totals"]');
+    assert.equal(await cardValue(fullTotals, "Total Damage"), "4.8K");
+    assert.equal(await cardValue(fullTotals, "Heal"), "1.9K");
+    assert.equal(await cardValue(fullTotals, "Damage Taken"), "1.4K");
+    assert.deepEqual(await playerNames(fullView, width), ["SyntheticFirst", "SyntheticSecond", "SyntheticTrashOnly", "SyntheticThird"]);
+    assert.equal(await fullView.getByRole("link", { name: /SyntheticTrashOnly/ }).count(), 0, "A trash-only player has no boss-attempt link");
+    await assertSorting("Full session player metrics", width, fullAscending);
+    assert.deepEqual(await playerNames(killView, width), ["SyntheticThird", "SyntheticFirst", "SyntheticSecond"], "The two breakdowns keep independent sorting");
+    await fullToggle.click();
+    assert.equal(await fullContent.evaluate(element => element.inert), true);
+    const mobToggle = page.getByRole("button", { name: /^Mob Damage - Boss Kills/ });
+    await mobToggle.click();
+    const mobContent = page.locator(`[id="${await mobToggle.getAttribute("aria-controls")}"]`);
+    assert.match(await mobContent.innerText(), /Lord Marrowgar/);
+    assert.match(await mobContent.innerText(), /Synthetic Kill Add/);
+    assert.doesNotMatch(await mobContent.innerText(), /Synthetic Wipe Add|Synthetic Between-Fight Trash/);
+    // Contrast must be measured after the accordion's opening opacity transition.
+    await page.waitForFunction(id => {
+      const panel = document.getElementById(id);
+      return panel && !panel.inert && getComputedStyle(panel).opacity === "1";
+    }, await mobToggle.getAttribute("aria-controls"));
     await page.evaluate(axe);
     const policyViolations = await page.evaluate(async () => (await window.axe.run(document,
       { runOnly: { type: "tag", values: ["wcag2a", "wcag2aa", "wcag21aa", "wcag22aa"] } })).violations.map(item => ({
@@ -156,7 +291,10 @@ try {
     const includedText = await page.locator("main").innerText();
     assert.match(includedText, /1K \/ 2W/);
     assert.match(includedText, /1 short pull included/);
-    assert.match(includedText, /3[.,]6K|3,600/);
+    await assertKillCards();
+    const includedKillView = playerView("Boss kill player metrics", width);
+    assert.deepEqual((await playerNames(includedKillView, width)).sort(), killPlayers.map(player => player.name).sort(), "Including short pulls cannot add wipe-only players to kill metrics");
+    assert.equal(await includedKillView.getByRole("link", { name: "View SyntheticFirst's all-attempt raid report", exact: true }).getAttribute("href"), `${policyReport}/players/SyntheticFirst?includeShortPulls=1`);
     assert.equal(await page.locator('a[href^="/encounters/"]').count(), 3);
     await page.screenshot({ path: path.join(out, `${width}-short-pulls-included.png`), fullPage: true });
     await page.getByRole("link", { name: "Exclude short pulls", exact: true }).click();
@@ -175,7 +313,8 @@ try {
     await page.getByRole("link", { name: "Exclude short pulls", exact: true }).click();
     await page.waitForURL(url => url.pathname === original.pathname && !url.searchParams.has("includeShortPulls"));
   }
-  observations.push({ check: "short-pull counting, include-all, short kill and death-bearing wipe retention, unchanged damage and direct access", status: "pass" });
+  observations.push({ check: "kill-only totals and targets, retained full-session trash/wipes, all-column sorting in both directions at 390/1440px, independent scopes and collapsed-control focus exclusion", status: "pass" });
+  observations.push({ check: "short-pull counting, include-all without changing kill metrics, short kill and death-bearing wipe retention, direct access", status: "pass" });
   await page.goto(new URL(report, base).href);
   await page.keyboard.press("Tab");
   assert.notEqual(await page.evaluate(() => document.activeElement?.tagName), "BODY");

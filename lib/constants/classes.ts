@@ -27,11 +27,11 @@ export const CLASS_COLORS: Record<string, string> = {
   Unknown:        "#888888",
 };
 
-// Stable palette for unknown classes — consistent per player name
+// Stable palette for unknown classes, with readable text on the dark report surfaces.
 const PALETTE = [
   "#f4a0c0", "#c89040", "#80c0f0", "#f0a040",
   "#e8e8e8", "#0090f8", "#9482c9", "#aad372",
-  "#c41e3a", "#fff468", "#00ff98", "#a330c9",
+  "#f07188", "#fff468", "#00ff98", "#ce87ec",
 ];
 
 export function getClassColor(classOrName: string): string {

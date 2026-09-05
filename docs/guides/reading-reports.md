@@ -4,7 +4,30 @@
 
 A canonical report URL identifies the public report and raid date. One uploaded file can contain multiple dated sessions; a second session on the same date receives a numeric suffix.
 
-The session summary uses one first-to-last-event Custom Slice for its headline totals. That slice includes boss pulls, wipes, trash, and downtime so Total Damage, Heal, Damage Taken, and per-player rates share one duration.
+The main session summary and **Boss Kill Breakdown** include successful boss fights
+only. Total Damage, Heal, Damage Taken and the mob breakdown use stored `KILL`
+encounters. Adds and mechanics within those fights still count; wipes, unknown
+outcomes and between-fight trash do not contribute to the summary.
+
+Player DPS, H+A PS (effective healing plus attributed absorbs per second) and DTPS
+use each player's summed output divided by the combined duration of all successful
+fights. Every player uses this same duration, including fights they sat out; these
+are raid-wide contribution rates, not averages of individual fight rates. Precise
+milliseconds take priority, with valid legacy seconds as a fallback. Missing kill
+duration makes rates unavailable without hiding totals. A session with no recorded
+kills shows an empty summary rather than substituting wipe totals.
+
+Click any player-table column heading to sort it; click again to reverse the order.
+Mobile cards have equivalent sort and direction controls. Player links open the
+player's report across all recorded boss attempts, and the encounter list and roster
+remain available separately.
+
+The collapsed **Full Session Breakdown** retains first-to-last-event totals,
+including boss pulls, wipes, trash and downtime, with its own sortable player table.
+Rates in this section use the entire session duration. Older reports without stored
+full-session analytics retain any known full-session damage total and show an
+availability notice for missing metrics; their kill summary still works from stored
+encounters. Full-session trash spell and target breakdowns are not stored.
 
 ## Short Pulls and Wipe Counts
 
@@ -20,8 +43,9 @@ unavailable. Missing or invalid duration/death evidence does not trigger exclusi
 
 This is a reversible counting policy, not proof of why a pull ended. Preparation,
 accidental engagements and genuine short attempts can look alike, especially in a
-partial log. Stored outcomes and combat metrics are unchanged. Full-session totals
-still include short pulls, and best-performance values retain their existing scope.
+partial log. Stored outcomes and combat metrics are unchanged. The optional
+full-session totals still include short pulls; the main kill summary is unaffected
+by the toggle, and best-performance values retain their existing scope.
 The policy works on existing reports without re-uploading or changing database rows.
 Admin inventory and the raw encounter API continue to expose the recorded attempts.
 
