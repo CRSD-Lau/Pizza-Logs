@@ -53,6 +53,51 @@ The pull request's evidence records exact application image IDs, base digest,
 scanner version/database timestamp, full before/after JSON reports and SBOMs.
 SBOM Author/Creator and modifier metadata are Neil Mitchell.
 
+### 2026-09-05 advisory follow-up
+
+The [PR 80 CI run](https://github.com/CRSD-Lau/Pizza-Logs/actions/runs/33969912645)
+scanned the unchanged parser runtime and reported seven High and one Medium
+package/advisory instances, all assigned to Alpine `libuuid` 2.42.1-r0. The scanned
+image was `sha256:60e23d0e34d4e028eb6a6ea215e40d73efe73e4593eb1e6738b8cd1f8bd31998`;
+the Python dependency result contained no findings. This later observation does
+not invalidate the dated 2026-09-04 scan or establish that the MFA application
+changes introduced these packages.
+
+The High identifiers were CVE-2026-53612, CVE-2026-53613, CVE-2026-53614,
+CVE-2026-76642, CVE-2026-78408, CVE-2026-78409 and CVE-2026-78410. The Medium
+identifier was CVE-2026-27456. Alpine associates these with the `util-linux` source
+package; this scan alone does not prove each advisory is exploitable through the
+shipped `libuuid` binary. That distinction does not waive the release gate.
+
+The CI report listed 2.42.3-r0 as the fixed version. A subsequent read of the
+[official Alpine 3.24 security database](https://secdb.alpinelinux.org/v3.24/main.json)
+on 2026-09-05 listed CVE-2026-78408 under 2.42.3-r1, with the other seven under
+2.42.3-r0. The shared Docker `dependencies` stage therefore upgrades only
+`libuuid` to the exact vendor package `2.42.3-r1`, so both the test and runtime
+targets use the fix. The pinned Python/Alpine base, parser dependency locks and
+Critical/High gate remain unchanged. A version listed in an advisory is not itself
+proof of a repaired release image; the image and compatibility gates below must pass.
+
+The resulting package-only image was
+`sha256:f766dae50d8f75fe170cc0c15383917d6ba6d9122e6789eecfb7ab453e4f35f7`.
+Its complete Trivy 0.74.0 scan, using database update
+`2026-09-05T13:02:41.107875606Z`, reported zero findings at every severity across
+30 OS and 20 Python packages. The image/SBOM identities matched, and SBOM author
+metadata is Neil Mitchell. The installed-package comparison changed only
+`libuuid` from 2.42.1-r0 to 2.42.3-r1. Review this explicit package override when
+refreshing the base digest; do not retain an older pin over a newer required fix.
+
+The shared test target passed all 408 parser tests. Native imports including
+`_uuid` and UUID generation passed; the final image remained UID 10001 with no
+installer/test packages. Synthetic real-HTTP checks passed health/readiness,
+stored/deflated ZIP uploads, parser 1.1.1 provenance, unsupported-codec rejection,
+receive/processing disconnects, temporary-file cleanup and a subsequent upload.
+Three alternating before/after pairs per size measured median 1 MiB processing
+at 239.31/249.14 ms (+4.11%) and 10 MiB at 2,089.81/2,062.69 ms (-1.30%). These
+small local samples do not establish production latency or a performance gain.
+Local compatibility and scan success do not establish production deployment;
+the final pull-request CI and normal Railway rollout gates still apply.
+
 ## Compatibility and performance evidence
 
 The original 380-test parser suite passed inside the Alpine image. The integrated

@@ -4,6 +4,10 @@ FROM python:3.14-alpine3.24@sha256:c6ead215bfd31f1e433d968853b7a769989117115b728
 
 LABEL org.opencontainers.image.authors="Neil Mitchell"
 
+# Patch util-linux's UUID library while the reviewed Python base still ships r0.
+# Both test and runtime targets must exercise the same vendor security fix.
+RUN apk add --no-cache --upgrade libuuid=2.42.3-r1
+
 WORKDIR /app
 
 COPY parser/requirements.lock .

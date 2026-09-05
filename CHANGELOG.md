@@ -44,6 +44,7 @@ This project follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) an
 
 ### Security
 
+- Apply Alpine's `libuuid` 2.42.3-r1 security update in the existing parser runtime, preserving the pinned Python/Alpine base, Python lockfiles and unsuppressed image scan gate.
 - Replace the shared-secret admin login and header/body bypasses with password plus MFA, server-side session checks, database-backed throttling, exact-origin mutation checks and immediate session revocation. Deployment requires owner configuration and enrollment before admin access is available.
 - Bound parser transport, archive metadata and physical lines; retain worker capacity and temporary files until cancelled work actually exits. ZIP members support stored/deflate compression only.
 - Remove unused installer tools from runtime images and update vulnerable transitive npm dependencies. The follow-up parser image replaces the affected Debian base; the original findings and rollout implications remain documented.
