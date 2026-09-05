@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { Menu, X } from "lucide-react";
 import { PlayerSearch } from "@/components/players/PlayerSearch";
 import { cn } from "@/lib/utils";
@@ -21,12 +21,18 @@ const NAV_LINKS = [
 export function Nav() {
   const pathname = usePathname();
   const [mobileOpen, setMobileOpen] = useState(false);
+  const menuButtonRef = useRef<HTMLButtonElement>(null);
 
   return (
-    <header className="relative z-20 border-b border-gold-dim bg-bg-deep/80 backdrop-blur-xs sticky top-0">
+    <header onKeyDown={(event) => {
+      if (event.key === "Escape" && mobileOpen) {
+        setMobileOpen(false);
+        menuButtonRef.current?.focus();
+      }
+    }} className="relative z-20 border-b border-gold-dim bg-bg-deep/95 backdrop-blur-xs sticky top-0">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-16 gap-4">
-          <Link href="/" className="group flex min-h-11 min-w-0 items-center gap-3 rounded-sm" onClick={() => setMobileOpen(false)}>
+          <Link href="/" className="group flex min-h-11 shrink-0 items-center gap-3 rounded-sm" onClick={() => setMobileOpen(false)}>
             <PizzaIcon />
             <div className="min-w-0">
               <div className="heading-cinzel text-lg font-bold text-gold-light text-glow-gold leading-none">
@@ -38,19 +44,20 @@ export function Nav() {
             </div>
           </Link>
 
-          <div className="hidden lg:block w-72 xl:w-80">
+          <div className="hidden xl:block min-w-44 flex-1 max-w-72">
             <PlayerSearch />
           </div>
 
-          <nav className="hidden lg:flex items-center gap-1">
+          <nav aria-label="Main navigation" className="hidden xl:flex shrink-0 items-center gap-1">
             {NAV_LINKS.map(({ href, label }) => {
               const active = href === "/" ? pathname === "/" : pathname.startsWith(href);
               return (
                 <Link
                   key={href}
                   href={href}
+                  aria-current={active ? "page" : undefined}
                   className={cn(
-                    "inline-flex min-h-11 items-center rounded-sm px-4 py-2 text-sm font-semibold uppercase tracking-wide transition-colors duration-150",
+                    "inline-flex min-h-11 items-center whitespace-nowrap rounded-sm px-3 py-2 text-sm font-semibold uppercase tracking-wide transition-colors duration-150",
                     active
                       ? "text-gold-light border-b-2 border-gold"
                       : "text-text-secondary hover:text-text-primary"
@@ -63,22 +70,24 @@ export function Nav() {
           </nav>
 
           <button
+            ref={menuButtonRef}
             type="button"
-            className="inline-flex h-11 w-11 items-center justify-center rounded-sm border border-gold-dim bg-bg-card text-text-secondary transition-colors hover:border-gold/50 hover:text-gold-light lg:hidden"
+            className="inline-flex h-11 w-11 items-center justify-center rounded-sm border border-gold-dim bg-bg-card text-text-secondary transition-colors hover:border-gold/50 hover:text-gold-light xl:hidden"
             aria-label={mobileOpen ? "Close navigation" : "Open navigation"}
             aria-expanded={mobileOpen}
+            aria-controls="mobile-navigation"
             onClick={() => setMobileOpen(open => !open)}
           >
             {mobileOpen ? <X size={18} /> : <Menu size={18} />}
           </button>
         </div>
 
-        <div className="lg:hidden pb-3">
+        <div className="xl:hidden pb-3">
           <PlayerSearch onNavigate={() => setMobileOpen(false)} />
         </div>
 
         {mobileOpen && (
-          <nav className="lg:hidden border-t border-gold-dim py-3">
+          <nav id="mobile-navigation" aria-label="Main navigation" className="xl:hidden border-t border-gold-dim py-3">
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
               {NAV_LINKS.map(({ href, label }) => {
                 const active = href === "/" ? pathname === "/" : pathname.startsWith(href);
@@ -86,6 +95,7 @@ export function Nav() {
                   <Link
                     key={href}
                     href={href}
+                    aria-current={active ? "page" : undefined}
                     onClick={() => setMobileOpen(false)}
                     className={cn(
                       "inline-flex min-h-11 items-center justify-center rounded-sm border px-3 py-2 text-xs font-semibold uppercase tracking-wide transition-colors",

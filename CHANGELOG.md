@@ -25,6 +25,10 @@ This project follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) an
 
 ### Changed
 
+- Remove unscoped player crowns, historical-award sorting and unreliable award-derived best figures. Add alphabetical name/class browsing, guild filtering before pagination, and complete upload-based raid history pagination.
+- Put uploading first, make the guild cinematic optional, request notifications only on explicit opt-in, and provide a primary report link after both new and duplicate uploads.
+- Add difficulty filters, real weekly attempt dates and fight links, report section shortcuts, accessible search announcements and keyboard navigation, a tablet-safe header, compact short-pull details, readable status colors and visitor-facing recovery pages. Historical awards explicitly show rank when achieved.
+
 - Keep the centered character quick look consistent across guild, raid and player pages: preserve a valid cached appearance during partial Armory failures, identify cached outfits, and show loading, missing-appearance and unavailable-WebGL states in the shared portrait.
 - Focus raid summaries, player totals/rates and target breakdowns on successful boss fights, excluding wipes and between-fight trash while retaining encounter adds. Add ascending/descending player-table sorting on desktop and mobile, and keep complete session totals in a separate collapsed section. Existing reports use stored encounters without reprocessing.
 - Keep collapsed breakdown controls out of keyboard navigation and brighten two fallback player-name colors so players with an unknown class remain readable on dark report surfaces.

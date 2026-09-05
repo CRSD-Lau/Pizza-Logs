@@ -3,6 +3,7 @@ import Link from "next/link";
 import { notFound, permanentRedirect } from "next/navigation";
 import { db } from "@/lib/db";
 import { AccordionSection } from "@/components/ui/AccordionSection";
+import { SectionNav } from "@/components/ui/SectionNav";
 import { PlayerAvatar } from "@/components/players/PlayerAvatar";
 import { SessionLineChart } from "@/components/charts/SessionLineChart";
 import type { ChartPoint, PlayerLine } from "@/components/charts/SessionLineChart";
@@ -183,9 +184,9 @@ export default async function SessionPlayerPage({ params, searchParams }: Props)
   return (
     <div className="page-shell">
       <div className="text-xs text-text-dim flex items-center gap-1 flex-wrap">
-        <Link href={`/raids${querySuffix}`} className="hover:text-gold">Raids</Link>
+        <Link href={`/raids${querySuffix}`} className="inline-flex min-h-11 items-center hover:text-gold">Raids</Link>
         <span>&gt;</span>
-        <Link href={`${sessionPath}${querySuffix}`} className="hover:text-gold">
+        <Link href={`${sessionPath}${querySuffix}`} className="inline-flex min-h-11 items-center hover:text-gold">
           {sessionLabel}
         </Link>
         <span>&gt;</span>
@@ -216,6 +217,11 @@ export default async function SessionPlayerPage({ params, searchParams }: Props)
         </div>
       </div>
 
+      <SectionNav items={[
+        ...(chartData.length > 1 ? [{ id: "performance", label: "Performance" }] : []),
+        { id: "encounters", label: "Boss fights" },
+      ]} />
+
       <ShortPullNotice shortPulls={counts.shortPulls} includeShortPulls={includeShortPulls} basePath={`${sessionPath}/players/${encodeURIComponent(name)}`} />
 
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
@@ -229,6 +235,7 @@ export default async function SessionPlayerPage({ params, searchParams }: Props)
 
       {chartData.length > 1 && (
         <AccordionSection
+          id="performance"
           title={`${metric} by Encounter`}
           sub={
             classmateNames.size > 0
@@ -246,7 +253,7 @@ export default async function SessionPlayerPage({ params, searchParams }: Props)
         </AccordionSection>
       )}
 
-      <AccordionSection title="Encounter Breakdown" count={visibleStats.length} defaultOpen>
+      <AccordionSection id="encounters" title="Encounter Breakdown" count={visibleStats.length} defaultOpen>
         {visibleStats.length === 0 && <EmptyState title="No counted encounters" />}
         <div className="bg-bg-panel border border-gold-dim rounded-sm divide-y divide-gold-dim overflow-hidden">
           {visibleStats.map((e, index) => (
@@ -263,7 +270,7 @@ export default async function SessionPlayerPage({ params, searchParams }: Props)
               <div className="flex items-center gap-3 flex-wrap">
                 <span
                   className={cn(
-                    "text-[11px] font-bold px-1.5 py-0.5 rounded-sm",
+                    "text-xs font-bold px-1.5 py-0.5 rounded-sm",
                     e.outcome === "KILL"
                       ? "text-success bg-success/10"
                       : e.outcome === "WIPE"

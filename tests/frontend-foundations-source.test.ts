@@ -56,7 +56,7 @@ assert.doesNotMatch(mobBreakdown, /gridTemplateColumns: "2fr 1fr 1fr 1fr"/);
 
 assert.match(playersPage, /PLAYERS_PER_PAGE = 30/);
 assert.match(playersPage, /visiblePlayers/);
-assert.match(leaderboardsPage, /<details/);
+assert.match(leaderboardsPage, /<AccordionSection/);
 assert.match(encounterPage, /defaultOpen=\{false\}/);
 assert.match(analyticsBreakdown, /sm:grid-cols-\[minmax\(0,1fr\)_minmax\(0,2fr\)_auto_auto\]/);
 assert.match(sessionChart, /var\(--color-text-secondary\)/);

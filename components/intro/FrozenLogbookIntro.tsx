@@ -1,16 +1,11 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
-import { Volume2, VolumeX } from "lucide-react";
-import { usePathname } from "next/navigation";
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
+import { Pause, Play, Volume2, VolumeX } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 
-export const INTRO_DURATION_MS = 8400;
-const INTRO_EXIT_MS = 650;
-const REDUCED_MOTION_DURATION_MS = 350;
 const DESKTOP_POSTER = "/animations/posters/desktop-poster.jpg";
 const MOBILE_POSTER = "/animations/posters/mobile-poster.jpg";
-const INTRO_SESSION_KEY = "pizza-logs-intro-seen";
 
 type IntroVariant = {
   id: string;
@@ -65,128 +60,116 @@ const INTRO_VARIANTS: IntroVariant[] = [
   },
 ];
 
-type IntroPhase = "hidden" | "showing" | "leaving";
-
 function getPreferredVariant() {
   return INTRO_VARIANTS.find(variant => (
     !variant.media || window.matchMedia(variant.media).matches
   )) ?? INTRO_VARIANTS[INTRO_VARIANTS.length - 1];
 }
 
-function canPreferWebM() {
-  const video = document.createElement("video");
-  return video.canPlayType("video/webm; codecs=vp9") !== "";
-}
-
 export function FrozenLogbookIntro() {
-  const pathname = usePathname();
+  const triggerRef = useRef<HTMLButtonElement>(null);
+  const dialogRef = useRef<HTMLDialogElement>(null);
+  const closeRef = useRef<HTMLButtonElement>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
-  const [phase, setPhase] = useState<IntroPhase>("hidden");
+  const [visible, setVisible] = useState(false);
   const [reducedMotion, setReducedMotion] = useState(false);
+  const [playDespiteReducedMotion, setPlayDespiteReducedMotion] = useState(false);
+  const [paused, setPaused] = useState(false);
+  const [videoFailed, setVideoFailed] = useState(false);
   const [soundEnabled, setSoundEnabled] = useState(false);
   const [variant, setVariant] = useState<IntroVariant>(INTRO_VARIANTS[INTRO_VARIANTS.length - 1]);
-  const [preferWebM, setPreferWebM] = useState(true);
-
-  const visible = phase !== "hidden";
-  const className = phase === "showing"
-    ? "frozen-intro-overlay frozen-intro-overlay--showing"
-    : "frozen-intro-overlay frozen-intro-overlay--leaving";
+  const playVideo = (!reducedMotion || playDespiteReducedMotion) && !videoFailed;
 
   const finishIntro = useCallback(() => {
-    setPhase(current => current === "hidden" ? current : "leaving");
+    videoRef.current?.pause();
+    dialogRef.current?.close();
+    setVisible(false);
+    triggerRef.current?.focus();
   }, []);
 
-  const toggleSound = useCallback(() => {
-    const next = !soundEnabled;
-    const video = videoRef.current;
+  const openIntro = () => {
+    setVariant(getPreferredVariant());
+    setReducedMotion(window.matchMedia("(prefers-reduced-motion: reduce)").matches);
+    setPlayDespiteReducedMotion(false);
+    setSoundEnabled(false);
+    setPaused(false);
+    setVideoFailed(false);
+    setVisible(true);
+  };
 
-    setSoundEnabled(next);
-
-    if (video) {
-      video.muted = !next;
-      if (next) {
-        void video.play().catch(() => {
-          video.muted = true;
-          setSoundEnabled(false);
-        });
-      }
-    }
-  }, [soundEnabled]);
-
-  useEffect(() => {
-    if (pathname !== "/" || window.sessionStorage.getItem(INTRO_SESSION_KEY)) {
-      setPhase("hidden");
-      return;
-    }
-
-    window.sessionStorage.setItem(INTRO_SESSION_KEY, "true");
-    const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-    const variantMedia = INTRO_VARIANTS
-      .filter((source): source is IntroVariant & { media: string } => Boolean(source.media))
-      .map(source => window.matchMedia(source.media));
-    const syncVariant = () => setVariant(getPreferredVariant());
-
-    setReducedMotion(reduceMotion);
-    setPreferWebM(canPreferWebM());
-    syncVariant();
-    setPhase("showing");
-
-    const timeout = window.setTimeout(
-      finishIntro,
-      reduceMotion ? REDUCED_MOTION_DURATION_MS : INTRO_DURATION_MS
-    );
-
-    variantMedia.forEach(media => media.addEventListener("change", syncVariant));
-
+  useLayoutEffect(() => {
+    if (!visible) return;
+    const dialog = dialogRef.current;
+    dialog?.showModal();
+    closeRef.current?.focus();
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
     return () => {
-      window.clearTimeout(timeout);
-      variantMedia.forEach(media => media.removeEventListener("change", syncVariant));
+      dialog?.close();
+      document.body.style.overflow = previousOverflow;
     };
-  }, [finishIntro, pathname]);
+  }, [visible]);
 
   useEffect(() => {
-    if (phase !== "leaving") return;
-
-    const timeout = window.setTimeout(() => setPhase("hidden"), INTRO_EXIT_MS);
-    return () => window.clearTimeout(timeout);
-  }, [phase]);
-
-  useEffect(() => {
-    if (!visible || reducedMotion) return;
-
-    const preload = document.createElement("link");
-    preload.rel = "preload";
-    preload.as = "video";
-    preload.href = preferWebM ? variant.webm : variant.mp4;
-    preload.type = preferWebM ? "video/webm" : "video/mp4";
-    document.head.appendChild(preload);
-
-    return () => {
-      preload.remove();
+    if (!visible) return;
+    const media = window.matchMedia("(prefers-reduced-motion: reduce)");
+    const sync = () => {
+      setReducedMotion(media.matches);
+      if (media.matches) setPlayDespiteReducedMotion(false);
     };
-  }, [preferWebM, reducedMotion, variant, visible]);
-
-  if (!visible) return null;
+    media.addEventListener("change", sync);
+    return () => media.removeEventListener("change", sync);
+  }, [visible]);
 
   return (
-    <div className={className} role="dialog" aria-label="Pizza Logs cinematic intro">
-      {reducedMotion ? (
+    <>
+      <Button ref={triggerRef} type="button" size="sm" variant="ghost" onClick={openIntro} aria-haspopup="dialog">
+        <Play size={14} aria-hidden="true" /> Watch guild intro
+      </Button>
+      <dialog
+        ref={dialogRef}
+        className="frozen-intro-overlay frozen-intro-overlay--showing m-0 h-dvh max-h-none w-screen max-w-none border-0 p-0 motion-reduce:transition-none"
+        style={{ minHeight: "100dvh" }}
+        aria-label="Pizza Logs guild intro"
+        onCancel={event => { event.preventDefault(); finishIntro(); }}
+        onKeyDown={event => {
+          if (event.key !== "Tab") return;
+          const controls = event.currentTarget.querySelectorAll<HTMLButtonElement>("button:not([disabled])");
+          const first = controls[0];
+          const last = controls[controls.length - 1];
+          if (event.shiftKey && document.activeElement === first) {
+            event.preventDefault();
+            last?.focus();
+          } else if (!event.shiftKey && document.activeElement === last) {
+            event.preventDefault();
+            first?.focus();
+          }
+        }}
+        onClose={() => {
+          if (dialogRef.current?.open) return;
+          setVisible(false);
+          triggerRef.current?.focus();
+        }}
+      >
+      {visible && <>
         <div
           className="frozen-intro-poster"
           style={{ backgroundImage: `url(${variant.poster})` }}
           aria-hidden="true"
         />
-      ) : (
+      {playVideo && (
         <video
           ref={videoRef}
           className="frozen-intro-video"
           autoPlay
           muted={!soundEnabled}
           playsInline
-          preload="auto"
+          preload="metadata"
           poster={variant.poster}
           onEnded={finishIntro}
-          onError={finishIntro}
+          onError={() => setVideoFailed(true)}
+          onPlay={() => setPaused(false)}
+          onPause={() => setPaused(true)}
           disablePictureInPicture
           controlsList="nodownload nofullscreen noremoteplayback"
           aria-hidden="true"
@@ -198,33 +181,60 @@ export function FrozenLogbookIntro() {
 
       <div className="frozen-intro-vignette" aria-hidden="true" />
 
-      {!reducedMotion && (
+      {playVideo && (
+        <div className="absolute bottom-6 left-4 z-20 flex items-center gap-2">
+        <Button type="button" size="sm" variant="ghost"
+          className="border-gold-dim bg-bg-deep/90 text-text-primary"
+          onClick={() => {
+            const video = videoRef.current;
+            if (!video) return;
+            if (video.paused) void video.play().catch(() => setVideoFailed(true));
+            else video.pause();
+          }}>
+          {paused ? <Play size={16} aria-hidden="true" /> : <Pause size={16} aria-hidden="true" />}
+          {paused ? "Play" : "Pause"}
+        </Button>
         <Button
           type="button"
           size="sm"
           variant="ghost"
-          className="frozen-intro-sound border-white/15 bg-black/45 text-white/80 backdrop-blur-md hover:border-school-frost/45 hover:text-white"
-          onClick={toggleSound}
+          className="min-w-11 border-gold-dim bg-bg-deep/90 text-text-primary"
+          onClick={() => setSoundEnabled(current => !current)}
           aria-label={soundEnabled ? "Mute intro audio" : "Play intro audio"}
           title={soundEnabled ? "Mute intro audio" : "Play intro audio"}
         >
           {soundEnabled ? <Volume2 size={16} aria-hidden="true" /> : <VolumeX size={16} aria-hidden="true" />}
         </Button>
+        </div>
+      )}
+
+      {!playVideo && (
+        <div className="absolute inset-x-4 bottom-6 z-20 rounded-sm border border-gold-dim bg-bg-deep/95 p-4 text-center text-sm text-text-primary">
+          <p>{videoFailed ? "The intro could not play. You can close this preview and keep browsing." : "A still preview is shown because reduced motion is enabled."}</p>
+          {!videoFailed && <Button type="button" size="sm" className="mt-2" onClick={() => setPlayDespiteReducedMotion(true)}>Play video</Button>}
+        </div>
       )}
 
       <Button
+        ref={closeRef}
         type="button"
         size="sm"
         variant="ghost"
-        className="frozen-intro-skip border-white/15 bg-black/45 text-white/80 backdrop-blur-md hover:border-school-frost/45 hover:text-white"
+        className="frozen-intro-skip border-gold-dim bg-bg-deep/90 text-text-primary"
         onClick={finishIntro}
       >
-        Skip
+        Close intro
       </Button>
 
-      <div className="frozen-intro-brand" aria-hidden="true">
+      <div
+        className="frozen-intro-brand"
+        style={reducedMotion ? { transform: "translateX(-50%)" } : undefined}
+        aria-hidden="true"
+      >
         <span>Pizza Logs</span>
       </div>
-    </div>
+      </>}
+      </dialog>
+    </>
   );
 }

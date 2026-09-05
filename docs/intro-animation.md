@@ -33,4 +33,4 @@ The scripts remove only known generated outputs under `public/animations`, prese
 
 Do not add a second generated mirror under `animations/`; it previously duplicated roughly 91 MiB in Git without providing a runtime consumer.
 
-`components/intro/FrozenLogbookIntro.tsx` chooses a responsive format, starts muted for autoplay compatibility, offers a sound toggle, and respects `prefers-reduced-motion`. A full page load mounts the intro; normal in-app navigation does not replay it.
+`components/intro/FrozenLogbookIntro.tsx` is available through **Watch guild intro** on the homepage. Opening it chooses a responsive format and starts muted, with a sound toggle. It does not mount video or request intro media during ordinary page loads. The native modal closes with Escape or its close button and restores focus to its trigger. Reduced-motion users see the poster until they choose **Play video**. Deep links never launch the intro.

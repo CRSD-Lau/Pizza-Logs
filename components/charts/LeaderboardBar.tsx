@@ -21,13 +21,14 @@ interface LeaderboardBarProps {
   entries: LeaderboardEntry[];
   metric: "dps" | "hps";
   className?: string;
+  querySuffix?: string;
 }
 
-export function LeaderboardBar({ entries, metric, className }: LeaderboardBarProps) {
+export function LeaderboardBar({ entries, metric, className, querySuffix = "" }: LeaderboardBarProps) {
   const maxVal = entries[0]?.value ?? 1;
 
   return (
-    <div className={cn("space-y-2", className)}>
+    <div className={cn("@container space-y-2", className)}>
       {entries.map((e, index) => {
         const fillPct = maxVal > 0 ? (e.value / maxVal) * 100 : 0;
         const color = getClassColor(e.class ?? e.playerName);
@@ -46,10 +47,10 @@ export function LeaderboardBar({ entries, metric, className }: LeaderboardBarPro
               style={{ background: color, opacity: 0.1, width: `${fillPct}%` }}
             />
 
-            <div className="relative z-10 grid grid-cols-[auto_minmax(0,1fr)_auto] gap-x-3 gap-y-2 px-3 py-3 sm:grid-cols-[28px_minmax(0,1fr)_80px_80px_56px] sm:items-center">
+            <div className="relative z-10 grid grid-cols-[auto_minmax(0,1fr)_auto] gap-x-3 gap-y-2 px-3 py-3 @lg:grid-cols-[28px_minmax(0,1fr)_80px_80px_56px] @lg:items-center">
               <span
                 className={cn(
-                  "rank-badge text-center row-span-2 sm:row-span-1",
+                  "rank-badge text-center row-span-2 @lg:row-span-1",
                   e.rank === 1 && "rank-1",
                   e.rank === 2 && "rank-2",
                   e.rank === 3 && "rank-3",
@@ -61,19 +62,19 @@ export function LeaderboardBar({ entries, metric, className }: LeaderboardBarPro
               <div className="min-w-0">
                 <Link
                   href={`/players/${encodeURIComponent(e.playerName)}`}
-                  className="text-sm font-semibold hover:underline truncate block"
+                  className="flex min-h-11 items-center text-sm font-semibold hover:underline"
                   style={{ color }}
                 >
-                  {e.playerName}
+                  <span className="truncate">{e.playerName}</span>
                 </Link>
-                <div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-text-secondary">
-                  <Link href={`/bosses/${e.bossSlug}`} className="hover:text-text-secondary truncate">
+                <div className="mt-1 flex flex-wrap items-center gap-x-2 text-sm text-text-secondary">
+                  <Link href={`/bosses/${e.bossSlug}${querySuffix}`} className="inline-flex min-h-11 items-center hover:text-text-primary">
                     {e.bossName}
                   </Link>
                   <span className={cn("diff-badge", e.difficulty.endsWith("H") ? "heroic" : "normal")} style={{ color: "var(--color-text-secondary)" }}>
                     {e.difficulty}
                   </span>
-                  <span className="sm:hidden">
+                  <span className="@lg:hidden">
                     {formatShortDateUtc(e.date)}
                   </span>
                 </div>
@@ -83,23 +84,24 @@ export function LeaderboardBar({ entries, metric, className }: LeaderboardBarPro
                 <span className="text-base font-bold tabular-nums text-text-primary">
                   {formatDps(e.value)}
                 </span>
-                <span className="block text-xs text-text-secondary uppercase">{metric}</span>
+                <span className="block text-sm text-text-secondary uppercase">{metric}</span>
               </div>
 
-              <div className="hidden text-right text-xs tabular-nums text-text-secondary sm:block">
+              <div className="hidden text-right text-sm tabular-nums text-text-secondary @lg:block">
                 {formatShortDateUtc(e.date)}
               </div>
 
-              <div className="col-start-3 row-start-2 text-right sm:col-start-5 sm:row-start-1">
+              <div className="col-start-3 row-start-2 text-right @lg:col-start-5 @lg:row-start-1">
                 {e.encounterId ? (
                   <Link
-                    href={`/encounters/${e.encounterId}`}
-                    className="inline-flex min-h-11 items-center text-xs text-gold hover:text-gold-light transition-colors"
+                    href={`/encounters/${e.encounterId}${querySuffix}`}
+                    aria-label={`View ${e.playerName}'s ${e.bossName} ${e.difficulty} attempt`}
+                    className="inline-flex min-h-11 min-w-11 items-center text-sm text-gold hover:text-gold-light transition-colors"
                   >
                     View &rarr;
                   </Link>
                 ) : (
-                  <span className="text-xs text-text-secondary">Week view</span>
+                  <span className="text-sm text-text-secondary">Report unavailable</span>
                 )}
               </div>
             </div>

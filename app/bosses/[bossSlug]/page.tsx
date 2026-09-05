@@ -10,10 +10,15 @@ import { formatDps, formatDuration } from "@/lib/utils";
 import { buildPageMetadata } from "@/lib/page-metadata";
 import { ShortPullNotice } from "@/components/reports/ShortPullNotice";
 import { countAttempts, isShortPull, parseIncludeShortPulls } from "@/lib/attempt-policy";
+import { AccordionSection } from "@/components/ui/AccordionSection";
+import { PageHeader } from "@/components/ui/PageLayout";
+import { SectionNav } from "@/components/ui/SectionNav";
+import { DifficultyFilter } from "@/components/reports/DifficultyFilter";
+import { difficultyFilterWhere, difficultyScopeLabel, parseDifficultyFilter, reportQueryString, type DifficultyFilterValue, type ReportSearchParams } from "@/lib/difficulty-filter";
 
 interface Props {
   params: Promise<{ bossSlug: string }>;
-  searchParams: Promise<{ includeShortPulls?: string | string[] }>;
+  searchParams: Promise<ReportSearchParams>;
 }
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
@@ -32,11 +37,12 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   });
 }
 
-async function getBossData(slug: string, includeShortPulls: boolean) {
+async function getBossData(slug: string, includeShortPulls: boolean, difficulty: DifficultyFilterValue) {
   const boss = await db.boss.findUnique({
     where: { slug },
     include: {
       encounters: {
+        where: difficultyFilterWhere(difficulty),
         orderBy: { startedAt: "desc" },
         include: {
           participants: {
@@ -51,7 +57,7 @@ async function getBossData(slug: string, includeShortPulls: boolean) {
   if (!boss) return null;
 
   const wipeEvidence = await db.encounter.findMany({
-    where: { bossId: boss.id, outcome: "WIPE" },
+    where: { bossId: boss.id, outcome: "WIPE", ...difficultyFilterWhere(difficulty) },
     select: { id: true, participants: { select: { deaths: true } } },
   });
   const deathsByEncounter = new Map(wipeEvidence.map(encounter => [encounter.id, encounter.participants]));
@@ -65,7 +71,7 @@ async function getBossData(slug: string, includeShortPulls: boolean) {
 
   // All-time DPS leaderboard (kills only)
   const dpsLeaders = await db.participant.findMany({
-    where: { encounter: { bossId: boss.id, outcome: "KILL" }, dps: { gt: 0 } },
+    where: { encounter: { bossId: boss.id, outcome: "KILL", ...difficultyFilterWhere(difficulty) }, dps: { gt: 0 } },
     orderBy: { dps: "desc" },
     take: 25,
     distinct: ["playerId"],
@@ -80,7 +86,7 @@ async function getBossData(slug: string, includeShortPulls: boolean) {
 
   // All-time HPS leaderboard
   const hpsLeaders = await db.participant.findMany({
-    where: { encounter: { bossId: boss.id, outcome: "KILL" }, hps: { gt: 100 } },
+    where: { encounter: { bossId: boss.id, outcome: "KILL", ...difficultyFilterWhere(difficulty) }, hps: { gt: 100 } },
     orderBy: { hps: "desc" },
     take: 25,
     distinct: ["playerId"],
@@ -98,9 +104,11 @@ async function getBossData(slug: string, includeShortPulls: boolean) {
 
 export default async function BossPage({ params, searchParams }: Props) {
   const { bossSlug } = await params;
-  const includeShortPulls = parseIncludeShortPulls((await searchParams).includeShortPulls);
-  const querySuffix = includeShortPulls ? "?includeShortPulls=1" : "";
-  const data = await getBossData(bossSlug, includeShortPulls);
+  const query = await searchParams;
+  const includeShortPulls = parseIncludeShortPulls(query.includeShortPulls);
+  const difficulty = parseDifficultyFilter(query.difficulty);
+  const querySuffix = reportQueryString(query, { difficulty: difficulty === "all" ? null : difficulty });
+  const data = await getBossData(bossSlug, includeShortPulls, difficulty);
   if (!data) notFound();
 
   const { boss, dpsLeaders, hpsLeaders, counts, visibleEncounters } = data;
@@ -110,7 +118,7 @@ export default async function BossPage({ params, searchParams }: Props) {
     (m, e) => m === null ? e.durationSeconds : Math.min(m, e.durationSeconds), null
   );
 
-  const DIFFICULTIES = ["10N", "25N", "10H", "25H"];
+  const DIFFICULTIES = ["10N", "25N", "10H", "25H", "UNKNOWN"];
   const killsByDiff = DIFFICULTIES.reduce<Record<string, number>>((acc, d) => {
     acc[d] = kills.filter(e => e.difficulty === d).length;
     return acc;
@@ -119,21 +127,25 @@ export default async function BossPage({ params, searchParams }: Props) {
   return (
     <div className="page-shell">
       {/* Breadcrumb */}
-      <div className="text-xs text-text-dim">
-        <Link href={`/bosses${querySuffix}`} className="hover:text-gold">Bosses</Link>
+      <nav aria-label="Breadcrumb" className="flex flex-wrap items-center text-sm text-text-secondary">
+        <Link href={`/bosses${querySuffix}`} className="inline-flex min-h-11 items-center hover:text-gold">Bosses</Link>
         <span className="mx-2">›</span>
         <span>{boss.raid}</span>
         <span className="mx-2">›</span>
         <span className="text-text-secondary">{boss.name}</span>
-      </div>
+      </nav>
 
       {/* Header */}
-      <div>
-        <h1 className="heading-cinzel text-3xl font-bold text-gold-light text-glow-gold">{boss.name}</h1>
-        <p className="text-text-secondary text-sm mt-1">{boss.raid}</p>
-      </div>
+      <PageHeader title={boss.name} description={<p>{boss.raid} · Fight history and kill rankings</p>} />
 
-      <ShortPullNotice shortPulls={counts.shortPulls} includeShortPulls={includeShortPulls} basePath={`/bosses/${bossSlug}`} />
+      <DifficultyFilter action={`/bosses/${bossSlug}`} id="boss" difficulty={difficulty} searchParams={query} />
+      <p className="text-sm text-text-secondary">{difficultyScopeLabel(difficulty)}. Choose one difficulty to compare the same raid size and mode.</p>
+      <SectionNav label="Boss page sections" items={[
+        { id: "boss-history", label: "Fight history" },
+        { id: "boss-dps", label: "DPS rankings" },
+        { id: "boss-hps", label: "HPS rankings" },
+      ]} />
+      <ShortPullNotice shortPulls={counts.shortPulls} includeShortPulls={includeShortPulls} basePath={`/bosses/${bossSlug}${querySuffix}`} />
 
       {/* Stats */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
@@ -150,18 +162,18 @@ export default async function BossPage({ params, searchParams }: Props) {
             <div key={d} className="bg-bg-card border border-gold-dim rounded-sm px-4 py-2 text-center">
               <div className={`diff-badge mb-1 ${d.endsWith("H") ? "heroic" : "normal"}`}>{d}</div>
               <div className="text-xl font-bold text-text-primary tabular-nums">{killsByDiff[d] ?? 0}</div>
-              <div className="text-[10px] text-text-dim">kills</div>
+              <div className="text-sm text-text-secondary">kills</div>
             </div>
           ))}
         </div>
       )}
 
       {/* DPS Leaderboard */}
-      <section>
-        <SectionHeader title="All-Time DPS Leaderboard" sub="Best single-encounter DPS on kills" />
+      <AccordionSection id="boss-dps" title="DPS rankings" sub="All-time best single-attempt DPS on kills. One entry per player." count={dpsLeaders.length} defaultOpen={false}>
         {dpsLeaders.length > 0 ? (
           <LeaderboardBar
             metric="dps"
+            querySuffix={querySuffix}
             entries={dpsLeaders.map((p, i) => ({
               rank:        i + 1,
               playerName:  p.player.name,
@@ -175,16 +187,16 @@ export default async function BossPage({ params, searchParams }: Props) {
             }))}
           />
         ) : (
-          <EmptyState title="No kill data yet" description="Upload a log with a kill of this boss to start the leaderboard." />
+          <EmptyState title="No damage rankings for this selection" description="Choose another difficulty or upload a log containing a kill of this boss." />
         )}
-      </section>
+      </AccordionSection>
 
       {/* HPS Leaderboard */}
-      {hpsLeaders.length > 0 && (
-        <section>
-          <SectionHeader title="All-Time HPS Leaderboard" sub="Best single-encounter HPS on kills" />
+      <AccordionSection id="boss-hps" title="HPS rankings" sub="All-time best single-attempt HPS on kills. One entry per player." count={hpsLeaders.length} defaultOpen={false}>
+        {hpsLeaders.length > 0 ? (
           <LeaderboardBar
             metric="hps"
+            querySuffix={querySuffix}
             entries={hpsLeaders.map((p, i) => ({
               rank:        i + 1,
               playerName:  p.player.name,
@@ -197,14 +209,14 @@ export default async function BossPage({ params, searchParams }: Props) {
               date:        p.encounter.startedAt.toISOString(),
             }))}
           />
-        </section>
-      )}
+        ) : <EmptyState title="No qualifying healing rankings for this selection" />}
+      </AccordionSection>
 
       {/* Recent encounters */}
-      <section>
+      <section id="boss-history" className="scroll-mt-40">
         <SectionHeader
-          title="Recent Encounters"
-          sub={`${counts.totalPulls} total pulls`}
+          title="Fight history"
+          sub={`Latest ${Math.min(visibleEncounters.length, 20)} of ${counts.totalPulls} counted attempts · Dates in UTC`}
         />
         {visibleEncounters.length > 0 ? (
           <div className="bg-bg-panel border border-gold-dim rounded-sm divide-y divide-gold-dim">
@@ -214,9 +226,9 @@ export default async function BossPage({ params, searchParams }: Props) {
                 <Link
                   key={enc.id}
                   href={`/encounters/${enc.id}${querySuffix}`}
-                  className="flex items-center justify-between px-4 py-3 hover:bg-bg-hover transition-colors"
+                  className="flex min-h-11 flex-col gap-3 px-4 py-3 hover:bg-bg-hover transition-colors sm:flex-row sm:items-center sm:justify-between"
                 >
-                  <div className="flex items-center gap-3">
+                  <div className="flex flex-wrap items-center gap-3">
                     <span className={enc.outcome === "KILL" ? "outcome-kill" : enc.outcome === "WIPE" ? "outcome-wipe" : "outcome-unknown"}>
                       {enc.outcome}
                     </span>
@@ -227,14 +239,14 @@ export default async function BossPage({ params, searchParams }: Props) {
                       {formatDuration(enc.durationSeconds)}
                     </span>
                   </div>
-                  <div className="flex items-center gap-4 text-sm text-text-dim">
+                  <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 text-sm text-text-secondary">
                     {top && (
                       <span className="text-text-secondary">
                         Top: <span className="text-text-primary font-medium">{top.player.name}</span>{" "}
                         <span className="tabular-nums">{formatDps(top.dps)} dps</span>
                       </span>
                     )}
-                    <span>{new Date(enc.startedAt).toLocaleDateString()}</span>
+                    <span>{new Date(enc.startedAt).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric", timeZone: "UTC" })}</span>
                   </div>
                 </Link>
               );

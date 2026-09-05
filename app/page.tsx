@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { db } from "@/lib/db";
 import { UploadZoneWithRefresh } from "@/components/upload/UploadZoneWithRefresh";
+import { FrozenLogbookIntro } from "@/components/intro/FrozenLogbookIntro";
 import { StatCard } from "@/components/ui/StatCard";
 import { PageHeader, PageSection, PageShell } from "@/components/ui/PageLayout";
 import { DatabaseUnavailable } from "@/components/ui/DatabaseUnavailable";
@@ -46,33 +47,30 @@ export default async function HomePage({ searchParams }: {
   return (
     <PageShell>
       <PageHeader
-        title="Pizza Logs"
-        className="text-center sm:block"
+        title="Upload a raid log"
         description={
-          <p className="mx-auto max-w-xl">
-          WoW raid combat log analytics for PizzaWarriors. Upload a log, track your best kills,
-          and claim all-time records across every WotLK boss.
-          </p>
+          <p>See boss kills, damage and healing from your Warmane combat log.</p>
         }
+        actions={<Link href="/raids" className="inline-flex min-h-11 items-center rounded-sm text-sm font-semibold text-gold hover:text-gold-light">Browse raids &rarr;</Link>}
       />
 
-      <div className="grid grid-cols-2 items-stretch gap-y-2 rounded-sm bg-bg-panel/40 p-2 sm:grid-cols-6">
-        <StatCard label="Boss Kills" value={stats.totalKills.toLocaleString()} highlight className="col-span-2 sm:col-span-2" />
-        <StatCard label="Kills This Week" value={stats.weekKills.toLocaleString()} className="sm:col-span-1" />
-        <StatCard label="Encounters" value={stats.totalEncounters.toLocaleString()} className="sm:col-span-1" />
-        <StatCard label="Tracked Bosses" value="56" sub="WotLK content" className="col-span-2 sm:col-span-2" />
-      </div>
-
-      {stats.databaseAvailable && (
-        <ShortPullNotice shortPulls={stats.shortPulls} includeShortPulls={includeShortPulls} basePath="/" />
-      )}
-
       {!stats.databaseAvailable && (
-        <DatabaseUnavailable description="Live stats, uploads, and leaderboard data need the Pizza Logs database. The header and navigation remain available while Postgres is offline." />
+        <DatabaseUnavailable description="Uploads and raid data are temporarily unavailable. Please try again shortly." />
       )}
 
-      <PageSection title="Upload Combat Log" description="Drag and drop your WoWCombatLog.txt">
+      <section aria-label="Upload combat log">
         <UploadZoneWithRefresh />
+      </section>
+
+      <PageSection title="Raid activity" action={<FrozenLogbookIntro />}>
+        <div className="grid grid-cols-2 items-stretch gap-y-2 rounded-sm bg-bg-panel/40 p-2 sm:grid-cols-4">
+          <StatCard label="Boss Kills" value={stats.databaseAvailable ? stats.totalKills.toLocaleString() : "—"} highlight className="col-span-2" />
+          <StatCard label="Kills This Week" value={stats.databaseAvailable ? stats.weekKills.toLocaleString() : "—"} />
+          <StatCard label="Encounters" value={stats.databaseAvailable ? stats.totalEncounters.toLocaleString() : "—"} />
+        </div>
+        {stats.databaseAvailable && (
+          <ShortPullNotice shortPulls={stats.shortPulls} includeShortPulls={includeShortPulls} basePath="/" />
+        )}
       </PageSection>
 
       <PageSection
@@ -89,7 +87,7 @@ export default async function HomePage({ searchParams }: {
           className="group flex min-h-24 items-center justify-between gap-4 border-y border-gold-dim px-2 py-6 transition-colors hover:bg-bg-panel/45 sm:px-4"
         >
           <span>
-            <span className="heading-cinzel block text-xl font-bold text-gold-light transition-colors group-hover:text-gold">Browse every record</span>
+            <span className="heading-cinzel block text-xl font-bold text-gold-light transition-colors group-hover:text-gold">Compare boss performances</span>
             <span className="mt-1 block text-sm text-text-secondary">Compare boss-specific damage and healing performances.</span>
           </span>
           <span className="text-2xl text-gold" aria-hidden="true">&rarr;</span>

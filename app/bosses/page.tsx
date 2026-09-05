@@ -11,11 +11,13 @@ import { getRevealClassName, getRevealStyle } from "@/lib/ui-animation";
 import { PageHeader, PageShell } from "@/components/ui/PageLayout";
 import { ShortPullNotice } from "@/components/reports/ShortPullNotice";
 import { countAttempts, parseIncludeShortPulls } from "@/lib/attempt-policy";
+import { DifficultyFilter } from "@/components/reports/DifficultyFilter";
+import { difficultyFilterWhere, difficultyScopeLabel, parseDifficultyFilter, reportQueryString, type DifficultyFilterValue, type ReportSearchParams } from "@/lib/difficulty-filter";
 
 import { buildPageMetadata } from "@/lib/page-metadata";
 
 export const metadata = buildPageMetadata({
-  title: "Boss Rankings",
+  title: "Bosses",
   description: "Explore WotLK boss history, kill totals, and performance rankings.",
   path: "/bosses",
 });
@@ -24,11 +26,12 @@ export const dynamic = "force-dynamic";
 const BOSS_GRID_COLUMNS = "2fr 60px 60px 60px 120px 100px";
 const EMPTY_VALUE = "\u2014";
 
-async function getBossStats(includeShortPulls: boolean) {
+async function getBossStats(includeShortPulls: boolean, difficulty: DifficultyFilterValue) {
   const bosses = await db.boss.findMany({
     orderBy: { sortOrder: "asc" },
     include: {
       encounters: {
+        where: difficultyFilterWhere(difficulty),
         select: {
           id:              true,
           outcome:         true,
@@ -48,7 +51,7 @@ async function getBossStats(includeShortPulls: boolean) {
   // The ranking query deliberately keeps just the top DPS actor. Classifying
   // an attempt requires death evidence from every participant instead.
   const wipeEvidence = await db.encounter.findMany({
-    where: { outcome: "WIPE" },
+    where: { outcome: "WIPE", ...difficultyFilterWhere(difficulty) },
     select: { id: true, participants: { select: { deaths: true } } },
   });
   const deathsByEncounter = new Map(wipeEvidence.map(encounter => [encounter.id, encounter.participants]));
@@ -87,15 +90,17 @@ async function getBossStats(includeShortPulls: boolean) {
 }
 
 export default async function BossesPage({ searchParams }: {
-  searchParams: Promise<{ includeShortPulls?: string | string[] }>;
+  searchParams: Promise<ReportSearchParams>;
 }) {
-  const includeShortPulls = parseIncludeShortPulls((await searchParams).includeShortPulls);
-  const querySuffix = includeShortPulls ? "?includeShortPulls=1" : "";
+  const query = await searchParams;
+  const includeShortPulls = parseIncludeShortPulls(query.includeShortPulls);
+  const difficulty = parseDifficultyFilter(query.difficulty);
+  const querySuffix = reportQueryString(query, { difficulty: difficulty === "all" ? null : difficulty });
   let databaseAvailable = true;
   let bosses: Awaited<ReturnType<typeof getBossStats>> = [];
 
   try {
-    bosses = await getBossStats(includeShortPulls);
+    bosses = await getBossStats(includeShortPulls, difficulty);
   } catch (error) {
     if (!isDatabaseConnectionError(error)) throw error;
     databaseAvailable = false;
@@ -117,26 +122,30 @@ export default async function BossesPage({ searchParams }: {
   return (
     <PageShell>
       <PageHeader
-        title="Boss Rankings"
+        title="Bosses"
         description={
           <p>
           {databaseAvailable
-            ? `All-time records across ${activeBosses.length} bosses`
-            : "Boss rankings are unavailable while the database is offline"}
+            ? `Fight history and kill performance across ${activeBosses.length} bosses with counted attempts`
+            : "Boss results are temporarily unavailable"}
           </p>
         }
       />
 
       {databaseAvailable && (
+        <>
+        <DifficultyFilter action="/bosses" id="bosses" difficulty={difficulty} searchParams={query} />
+        <p className="text-sm text-text-secondary">{difficultyScopeLabel(difficulty)}. Top DPS and fastest kills use successful attempts.</p>
         <ShortPullNotice
           shortPulls={bosses.reduce((sum, boss) => sum + boss.shortPulls, 0)}
           includeShortPulls={includeShortPulls}
-          basePath="/bosses"
+          basePath={`/bosses${querySuffix}`}
         />
+        </>
       )}
 
       {!databaseAvailable && (
-        <DatabaseUnavailable description="Boss rankings need the Pizza Logs database. Start local Postgres to load encounters and records." />
+        <DatabaseUnavailable description="Boss results are temporarily unavailable. Please try again shortly." />
       )}
 
       {databaseAvailable && (byRaid.length === 0 ? (
@@ -158,7 +167,7 @@ export default async function BossesPage({ searchParams }: {
                 <span>Boss</span>
                 <span className="text-right">Kills</span>
                 <span className="text-right">Wipes</span>
-                <span className="text-right">Best</span>
+                <span className="text-right">Outcome</span>
                 <span className="text-right">Top DPS</span>
                 <span className="text-right">Fastest Kill</span>
               </div>
@@ -193,8 +202,8 @@ export default async function BossesPage({ searchParams }: {
                       </div>
 
                       <div className="grid grid-cols-3 gap-2">
-                        <BossMobileMetric label="Kills" value={b.killCount || EMPTY_VALUE} valueClassName="text-success" />
-                        <BossMobileMetric label="Wipes" value={b.wipeCount || EMPTY_VALUE} valueClassName="text-danger" />
+                        <BossMobileMetric label="Kills" value={b.killCount} valueClassName="text-success" />
+                        <BossMobileMetric label="Wipes" value={b.wipeCount} valueClassName="text-danger" />
                         <BossMobileMetric
                           label="Fastest"
                           value={b.fastestKill !== null ? formatDuration(b.fastestKill) : EMPTY_VALUE}
@@ -216,10 +225,10 @@ export default async function BossesPage({ searchParams }: {
                       {b.name}
                     </span>
                     <span className="hidden md:block text-right font-bold text-success tabular-nums text-sm">
-                      {b.killCount || EMPTY_VALUE}
+                      {b.killCount}
                     </span>
                     <span className="hidden md:block text-right text-text-dim tabular-nums text-sm">
-                      {b.wipeCount || EMPTY_VALUE}
+                      {b.wipeCount}
                     </span>
                     <span className={cn("hidden md:block text-right", statusClassName)}>
                       {statusLabel}
@@ -245,7 +254,7 @@ export default async function BossesPage({ searchParams }: {
           <details className="group border-y border-gold-dim">
             <summary className="flex min-h-14 cursor-pointer list-none items-center justify-between gap-4 rounded-sm px-2 py-3 transition-colors hover:bg-bg-panel/45 [&::-webkit-details-marker]:hidden">
               <span>
-                <span className="heading-cinzel block font-semibold text-gold-light">Bosses without counted attempts</span>
+                <span className="heading-cinzel block font-semibold text-gold-light">Bosses without counted attempts in this selection</span>
                 <span className="mt-1 block text-sm text-text-dim">{inactiveBossCount} bosses hidden until needed</span>
               </span>
               <span className="text-xl text-text-dim transition-transform group-open:rotate-180" aria-hidden="true">⌄</span>

@@ -5,6 +5,7 @@ import { db } from "@/lib/db";
 import { MobBreakdown, type MobEntry } from "@/components/meter/MobBreakdown";
 import { PlayerAvatar } from "@/components/players/PlayerAvatar";
 import { AccordionSection } from "@/components/ui/AccordionSection";
+import { SectionNav } from "@/components/ui/SectionNav";
 import { StatCard } from "@/components/ui/StatCard";
 import { ShortPullNotice } from "@/components/reports/ShortPullNotice";
 import { SessionPlayerTable } from "@/components/reports/SessionPlayerTable";
@@ -302,11 +303,18 @@ export default async function SessionDetailPage({ params, searchParams }: Props)
         </div>
       </div>
 
+      <SectionNav items={[
+        { id: "boss-kill-breakdown", label: "Player totals" },
+        { id: "encounters", label: "Boss fights" },
+        ...(mobEntries.length > 0 ? [{ id: "targets", label: "Targets" }] : []),
+        { id: "full-session", label: "Full session" },
+        ...(playerSet.size > 0 ? [{ id: "roster", label: "Roster" }] : []),
+      ]} />
+
       <section aria-label="Boss kill summary" className="space-y-2">
         <h2 className="heading-cinzel text-sm font-bold uppercase tracking-widest text-gold">Successful Boss Fights</h2>
         <p className="text-sm text-text-secondary">
-          Damage, healing and damage taken during boss kills only, including encounter adds.
-          Wipes and between-fight trash are excluded. Rates use the combined duration of every boss kill.
+          Totals cover winning boss fights and their adds. Wipes and between-fight trash are excluded.
         </p>
         <div className="grid grid-cols-2 items-stretch gap-y-2 rounded-sm bg-bg-panel/40 p-2 sm:grid-cols-3 lg:grid-cols-6">
           <StatCard label="Kills / Wipes" value={`${kills}K / ${wipes}W`} sub="recorded attempts" highlight className="col-span-2" />
@@ -319,14 +327,17 @@ export default async function SessionDetailPage({ params, searchParams }: Props)
 
       <ShortPullNotice shortPulls={shortPulls} includeShortPulls={includeShortPulls} basePath={sessionPath} />
 
-      <AccordionSection title="Boss Kill Breakdown" count={killBreakdownRows.length} defaultOpen>
+      <AccordionSection id="boss-kill-breakdown" title="Boss Kill Breakdown" count={killBreakdownRows.length} defaultOpen>
         {killBreakdownRows.length > 0 ? (
           <>
-            <p className="mb-3 text-sm text-text-secondary">
+            <details className="mb-3 text-sm text-text-secondary">
+              <summary className="min-h-11 cursor-pointer py-3 text-gold">How totals and rates are calculated</summary>
+              <p className="pb-3">
               Heal includes effective healing and attributed absorbs; H+A PS is their combined rate.
               Every player uses the same combined kill time, including fights they sat out.
               Player links open their report across all attempts.
-            </p>
+              </p>
+            </details>
             {killSummary.durationMs === null && (
               <p className="mb-3 text-sm text-text-secondary">Some kill durations are missing. Totals remain available; rates are unavailable.</p>
             )}
@@ -340,7 +351,7 @@ export default async function SessionDetailPage({ params, searchParams }: Props)
         )}
       </AccordionSection>
 
-      <AccordionSection title="Encounters" count={totalPulls} defaultOpen>
+      <AccordionSection id="encounters" title="Encounters" count={totalPulls} defaultOpen>
         {visibleEncounters.length === 0 && (
           <p className="text-sm text-text-secondary">Only short pulls were recorded. Include short pulls to inspect them.</p>
         )}
@@ -372,7 +383,7 @@ export default async function SessionDetailPage({ params, searchParams }: Props)
                       <div className="flex items-center gap-3 flex-wrap">
                         <span
                           className={cn(
-                            "text-[11px] font-bold px-1.5 py-0.5 rounded-sm",
+                            "text-xs font-bold px-1.5 py-0.5 rounded-sm",
                             shortPull ? "text-text-secondary bg-bg-hover"
                               : enc.outcome === "KILL" ? "text-success bg-success/10"
                               : enc.outcome === "WIPE" ? "text-danger-light bg-danger/10"
@@ -407,6 +418,7 @@ export default async function SessionDetailPage({ params, searchParams }: Props)
 
       {mobEntries.length > 0 && (
         <AccordionSection
+          id="targets"
           title="Mob Damage - Boss Kills"
           sub="Damage to targets during successful boss fights, including encounter adds - click to drill down by player"
           count={mobEntries.length}
@@ -419,6 +431,7 @@ export default async function SessionDetailPage({ params, searchParams }: Props)
       )}
 
       <AccordionSection
+        id="full-session"
         title="Full Session Breakdown"
         sub="Optional totals including wipes, trash and downtime"
         count={sessionPlayers.length}
@@ -456,7 +469,7 @@ export default async function SessionDetailPage({ params, searchParams }: Props)
       </AccordionSection>
 
       {playerSet.size > 0 && (
-        <AccordionSection title="Raid Roster" count={playerSet.size} defaultOpen={false}>
+        <AccordionSection id="roster" title="Raid Roster" count={playerSet.size} defaultOpen={false}>
           <div className="flex flex-wrap gap-2 border-y border-gold-dim px-2 py-4">
             {Array.from(playerSet.entries()).map(([name, cls], index) => {
               const rosterMember = rosterMemberMap.get(name.toLowerCase());
@@ -484,7 +497,7 @@ export default async function SessionDetailPage({ params, searchParams }: Props)
                   />
                   <Link
                     href={`${sessionPath}/players/${encodeURIComponent(name)}${querySuffix}`}
-                    className="font-medium text-text-primary hover:text-gold-light"
+                    className="inline-flex min-h-11 items-center font-medium text-text-primary hover:text-gold-light"
                   >
                     {name}
                   </Link>

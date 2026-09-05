@@ -28,7 +28,12 @@ Pizza Logs uses a dark raid-log workspace with a restrained gold accent. The int
 - Buttons, fields, filters, pagination, and compact navigation expose a minimum 44px interaction box.
 - Clickable rows must use native button or link semantics, a visible focus state, and `aria-expanded` when they reveal details.
 - Dense analytics collapse to a two-column summary on small screens. Desktop-only columns may be hidden when their values remain available in the primary or expanded view.
-- The cinematic intro is homepage-only and runs once per browser session. Deep links are never blocked by it.
+- The cinematic intro is an optional **Watch guild intro** action on the homepage. It must not block browsing, request media before activation, or autoplay for reduced-motion users.
+- Directories sort alphabetically and expose search/filter controls before results. Historical award ranks must never masquerade as current overall player rankings.
+- Report shortcuts lead to stable section IDs, open the relevant disclosure and move keyboard focus to its heading control. Every major disclosure exposes a real heading.
+- Short-pull counting rules use a compact disclosure; their count and included/excluded state remain visible.
+- The full desktop navigation appears only when the logo, search and links fit without overlapping. Narrower viewports use a named menu, with current-page and Escape/focus behavior.
+- Numeric comparisons state boss/difficulty/time scope. Weekly attempt rows retain their actual date and a link to the source fight.
 
 ## Tokens
 

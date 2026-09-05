@@ -12,7 +12,7 @@ export const WOW_CLASSES = [
 ] as const;
 
 export const CLASS_COLORS: Record<string, string> = {
-  "Death Knight": "#c41e3a",
+  "Death Knight": "#f07188",
   Druid:          "#f0a040",
   Hunter:         "#aad372",
   Mage:           "#80c0f0",
@@ -23,7 +23,7 @@ export const CLASS_COLORS: Record<string, string> = {
   Shaman:         "#0090f8",
   Warlock:        "#9482c9",
   Warrior:        "#c89040",
-  "Demon Hunter": "#a330c9",
+  "Demon Hunter": "#ce87ec",
   Unknown:        "#888888",
 };
 

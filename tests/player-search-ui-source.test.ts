@@ -16,8 +16,8 @@ assert.match(component, /cacheRef/);
 assert.match(component, /getPlayerSearchKeyboardAction/);
 
 assert.match(nav, /import \{ PlayerSearch \}/);
-assert.match(nav, /hidden lg:block[\s\S]*<PlayerSearch/);
-assert.match(nav, /lg:hidden[\s\S]*<PlayerSearch/);
+assert.match(nav, /hidden xl:block[\s\S]*<PlayerSearch/);
+assert.match(nav, /xl:hidden[\s\S]*<PlayerSearch/);
 assert.match(nav, /onNavigate=\{\(\) => setMobileOpen\(false\)\}/);
 
 console.log("player-search-ui-source tests passed");

@@ -8,7 +8,7 @@ import "@fontsource/rajdhani/latin-500.css";
 import "@fontsource/rajdhani/latin-600.css";
 import "@fontsource/rajdhani/latin-700.css";
 import "./globals.css";
-import { FrozenLogbookIntro } from "@/components/intro/FrozenLogbookIntro";
+import Link from "next/link";
 import { Nav } from "@/components/layout/Nav";
 import { PIZZA_LOGS_ORIGIN } from "@/lib/site";
 
@@ -57,17 +57,21 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="en">
       <body className="min-h-screen bg-bg-deep text-text-primary antialiased">
-        <FrozenLogbookIntro />
+        <a href="#main-content" className="skip-link">Skip to content</a>
         <div className="page-glow">
           <Nav />
-          <main className="relative z-10 mx-auto max-w-7xl px-4 pb-20 sm:px-6 lg:px-8">
+          <main id="main-content" tabIndex={-1} className="relative z-10 mx-auto max-w-7xl px-4 pb-20 sm:px-6 lg:px-8">
             {children}
           </main>
           <footer className="relative z-10 mt-12 border-t border-gold-dim py-6 text-center sm:mt-16">
             <p className="text-sm text-text-dim">
-              Pizza Logs &mdash; All parsing handled server-side on Railway &nbsp;·&nbsp;
+              Pizza Logs &mdash; WotLK raid analytics &nbsp;·&nbsp;
               <span className="text-gold">PizzaWarriors</span>
             </p>
+            <nav aria-label="Footer" className="mt-2 flex flex-wrap justify-center gap-x-6">
+              <Link href="/" className="inline-flex min-h-11 items-center text-sm text-gold hover:text-gold-light">Upload a log</Link>
+              <Link href="/raids" className="inline-flex min-h-11 items-center text-sm text-gold hover:text-gold-light">Browse raids</Link>
+            </nav>
           </footer>
         </div>
       </body>

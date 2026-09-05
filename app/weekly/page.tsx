@@ -11,6 +11,8 @@ import { buildWeeklyBossKills } from "@/lib/weekly-stats";
 import { PageHeader } from "@/components/ui/PageLayout";
 import { ShortPullNotice } from "@/components/reports/ShortPullNotice";
 import { countAttempts, parseIncludeShortPulls } from "@/lib/attempt-policy";
+import { DifficultyFilter } from "@/components/reports/DifficultyFilter";
+import { difficultyFilterWhere, difficultyScopeLabel, parseDifficultyFilter, reportQueryString, type DifficultyFilterValue, type ReportSearchParams } from "@/lib/difficulty-filter";
 
 import { buildPageMetadata } from "@/lib/page-metadata";
 
@@ -21,11 +23,11 @@ export const metadata = buildPageMetadata({
 });
 export const dynamic = "force-dynamic";
 
-async function getWeeklyData(includeShortPulls: boolean) {
+async function getWeeklyData(includeShortPulls: boolean, difficulty: DifficultyFilterValue) {
   const { start, end } = getWeekBounds();
 
   const encounters = await db.encounter.findMany({
-    where: { startedAt: { gte: start, lt: end } },
+    where: { startedAt: { gte: start, lt: end }, ...difficultyFilterWhere(difficulty) },
     include: {
       boss: { select: { name: true, slug: true, raid: true } },
       participants: { select: { deaths: true } },
@@ -38,21 +40,21 @@ async function getWeeklyData(includeShortPulls: boolean) {
 
   const [topDpsRows, topHpsRows] = await Promise.all([
     db.participant.findMany({
-      where: { encounter: { startedAt: { gte: start, lt: end } }, dps: { gt: 0 } },
+      where: { encounter: { startedAt: { gte: start, lt: end }, ...difficultyFilterWhere(difficulty) }, dps: { gt: 0 } },
       orderBy: { dps: "desc" },
       take: 10,
       include: {
         player: { select: { name: true, class: true } },
-        encounter: { select: { difficulty: true, boss: { select: { name: true, slug: true } } } },
+        encounter: { select: { id: true, startedAt: true, difficulty: true, boss: { select: { name: true, slug: true } } } },
       },
     }),
     db.participant.findMany({
-      where: { encounter: { startedAt: { gte: start, lt: end } }, hps: { gt: 100 } },
+      where: { encounter: { startedAt: { gte: start, lt: end }, ...difficultyFilterWhere(difficulty) }, hps: { gt: 100 } },
       orderBy: { hps: "desc" },
       take: 10,
       include: {
         player: { select: { name: true, class: true } },
-        encounter: { select: { difficulty: true, boss: { select: { name: true, slug: true } } } },
+        encounter: { select: { id: true, startedAt: true, difficulty: true, boss: { select: { name: true, slug: true } } } },
       },
     }),
   ]);
@@ -72,6 +74,8 @@ async function getWeeklyData(includeShortPulls: boolean) {
       bossName: p.encounter.boss.name,
       bossSlug: p.encounter.boss.slug,
       difficulty: p.encounter.difficulty,
+      encounterId: p.encounter.id,
+      date: p.encounter.startedAt.toISOString(),
       dps: p.dps,
     })),
     topHps: topHpsRows.map(p => ({
@@ -80,6 +84,8 @@ async function getWeeklyData(includeShortPulls: boolean) {
       bossName: p.encounter.boss.name,
       bossSlug: p.encounter.boss.slug,
       difficulty: p.encounter.difficulty,
+      encounterId: p.encounter.id,
+      date: p.encounter.startedAt.toISOString(),
       hps: p.hps,
     })),
     bossKills,
@@ -87,15 +93,17 @@ async function getWeeklyData(includeShortPulls: boolean) {
 }
 
 export default async function WeeklyPage({ searchParams }: {
-  searchParams: Promise<{ includeShortPulls?: string | string[] }>;
+  searchParams: Promise<ReportSearchParams>;
 }) {
-  const includeShortPulls = parseIncludeShortPulls((await searchParams).includeShortPulls);
-  const querySuffix = includeShortPulls ? "?includeShortPulls=1" : "";
+  const query = await searchParams;
+  const includeShortPulls = parseIncludeShortPulls(query.includeShortPulls);
+  const difficulty = parseDifficultyFilter(query.difficulty);
+  const querySuffix = reportQueryString(query, { difficulty: difficulty === "all" ? null : difficulty });
   let databaseAvailable = true;
   let data: Awaited<ReturnType<typeof getWeeklyData>>;
 
   try {
-    data = await getWeeklyData(includeShortPulls);
+    data = await getWeeklyData(includeShortPulls, difficulty);
   } catch (error) {
     if (!isDatabaseConnectionError(error)) throw error;
     databaseAvailable = false;
@@ -121,17 +129,19 @@ export default async function WeeklyPage({ searchParams }: {
       <PageHeader
         title="Weekly Summary"
         description={<p>
-          {databaseAvailable ? weekLabel : `${weekLabel} - database offline`}
+          {databaseAvailable ? `${weekLabel} · UTC` : `${weekLabel} · temporarily unavailable`}
         </p>}
       />
 
       {!databaseAvailable && (
-        <DatabaseUnavailable description="Weekly stats need the Pizza Logs database. Start local Postgres to load this week's raids." />
+        <DatabaseUnavailable description="This week's results are temporarily unavailable. Please try again shortly." />
       )}
 
       {databaseAvailable && (
       <>
-        <ShortPullNotice shortPulls={data.shortPulls} includeShortPulls={includeShortPulls} basePath="/weekly" />
+        <DifficultyFilter action="/weekly" id="weekly" difficulty={difficulty} searchParams={query} />
+        <p className="text-sm text-text-secondary">{difficultyScopeLabel(difficulty)}. Rankings compare individual attempts across bosses.</p>
+        <ShortPullNotice shortPulls={data.shortPulls} includeShortPulls={includeShortPulls} basePath={`/weekly${querySuffix}`} />
         <div className="grid grid-cols-2 items-stretch gap-y-2 rounded-sm bg-bg-panel/40 p-2 sm:grid-cols-5">
           <StatCard label="Boss Kills" value={data.totalKills} highlight className="col-span-2" />
           <StatCard label="Wipes" value={data.totalWipes} />
@@ -145,7 +155,7 @@ export default async function WeeklyPage({ searchParams }: {
         </div>
 
         <section>
-          <SectionHeader title="Top DPS This Week" sub="Best single-encounter DPS across all recorded pulls" />
+          <SectionHeader title="Top DPS Attempts This Week" sub="Highest single-attempt DPS across recorded pulls. A player can appear more than once." />
           {data.topDps.length > 0 ? (
             <LeaderboardBar entries={data.topDps.map((e, i) => ({
               rank: i + 1,
@@ -155,16 +165,16 @@ export default async function WeeklyPage({ searchParams }: {
               bossName: e.bossName,
               bossSlug: e.bossSlug,
               difficulty: e.difficulty,
-              encounterId: "",
-              date: data.weekStart,
-            }))} metric="dps" />
+              encounterId: e.encounterId,
+              date: e.date,
+            }))} metric="dps" querySuffix={querySuffix} />
           ) : (
-            <EmptyState title="No kills recorded this week" description="Upload a combat log to start tracking." />
+            <EmptyState title="No damage attempts for this selection" description="Choose another difficulty or upload this week's combat log." />
           )}
         </section>
 
         <section>
-          <SectionHeader title="Top HPS This Week" sub="Best single-encounter HPS across all recorded pulls" />
+          <SectionHeader title="Top HPS Attempts This Week" sub="Highest single-attempt HPS across recorded pulls. A player can appear more than once." />
           {data.topHps.length > 0 ? (
             <LeaderboardBar entries={data.topHps.map((e, i) => ({
               rank: i + 1,
@@ -174,11 +184,11 @@ export default async function WeeklyPage({ searchParams }: {
               bossName: e.bossName,
               bossSlug: e.bossSlug,
               difficulty: e.difficulty,
-              encounterId: "",
-              date: data.weekStart,
-            }))} metric="hps" />
+              encounterId: e.encounterId,
+              date: e.date,
+            }))} metric="hps" querySuffix={querySuffix} />
           ) : (
-            <EmptyState title="No healing data this week" />
+            <EmptyState title="No qualifying healing attempts for this selection" />
           )}
         </section>
 

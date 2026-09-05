@@ -10,6 +10,7 @@ import { ShortPullNotice } from "@/components/reports/ShortPullNotice";
 import { countAttempts, parseIncludeShortPulls } from "@/lib/attempt-policy";
 
 import { buildPageMetadata } from "@/lib/page-metadata";
+import { buildDirectoryHref, getDirectoryPagination, parseDirectoryPage, type DirectoryQueryValue } from "@/lib/directory-pagination";
 
 export const metadata = buildPageMetadata({
   title: "Raids",
@@ -18,11 +19,17 @@ export const metadata = buildPageMetadata({
 });
 export const dynamic = "force-dynamic";
 
-async function getRaidUploads() {
-  return db.upload.findMany({
-    where: { encounters: { some: {} } },
-    orderBy: { createdAt: "desc" },
-    take: 50,
+const RAID_UPLOADS_PER_PAGE = 20;
+
+async function getRaidUploads(requestedPage: number) {
+  const where = { encounters: { some: {} } };
+  const totalUploads = await db.upload.count({ where });
+  const pagination = getDirectoryPagination(totalUploads, requestedPage, RAID_UPLOADS_PER_PAGE);
+  const uploads = await db.upload.findMany({
+    where,
+    orderBy: [{ createdAt: "desc" }, { id: "desc" }],
+    skip: pagination.startIndex,
+    take: RAID_UPLOADS_PER_PAGE,
     select: {
       publicSlug: true,
       sessionAnalytics: true,
@@ -43,22 +50,26 @@ async function getRaidUploads() {
       },
     },
   });
+  return { uploads, totalUploads, pagination };
 }
 
 export default async function RaidsPage({ searchParams }: {
-  searchParams: Promise<{ includeShortPulls?: string | string[] }>;
+  searchParams: Promise<{ page?: DirectoryQueryValue; includeShortPulls?: DirectoryQueryValue }>;
 }) {
-  const includeShortPulls = parseIncludeShortPulls((await searchParams).includeShortPulls);
+  const params = await searchParams;
+  const includeShortPulls = parseIncludeShortPulls(params.includeShortPulls);
   const querySuffix = includeShortPulls ? "?includeShortPulls=1" : "";
   let databaseAvailable = true;
-  let uploads: Awaited<ReturnType<typeof getRaidUploads>> = [];
+  let data: Awaited<ReturnType<typeof getRaidUploads>> | null = null;
 
   try {
-    uploads = await getRaidUploads();
+    data = await getRaidUploads(parseDirectoryPage(params.page));
   } catch (error) {
     if (!isDatabaseConnectionError(error)) throw error;
     databaseAvailable = false;
   }
+  const uploads = data?.uploads ?? [];
+  const pageHref = (page: number) => buildDirectoryHref("/raids", { page, includeShortPulls });
 
   type SessionCard = {
     publicReportSlug: string;
@@ -134,21 +145,28 @@ export default async function RaidsPage({ searchParams }: {
         title="Raids"
         description={<p>
           {databaseAvailable
-            ? `${sessions.length} raid session${sessions.length !== 1 ? "s" : ""} recorded`
-            : "Raid sessions are unavailable while the database is offline"}
+            ? `${sessions.length} raid session${sessions.length !== 1 ? "s" : ""} from ${uploads.length} upload${uploads.length !== 1 ? "s" : ""} on this page`
+            : "Raid reports are temporarily unavailable"}
         </p>}
       />
+
+      {data && data.totalUploads > 0 && (
+        <p className="text-sm text-text-secondary">
+          Uploads {data.pagination.firstVisible}–{data.pagination.lastVisible} of {data.totalUploads} · Newest uploads first.
+          {" "}All sessions in an upload stay together.
+        </p>
+      )}
 
       {databaseAvailable && (
         <ShortPullNotice
           shortPulls={sessions.reduce((sum, session) => sum + session.shortPulls, 0)}
           includeShortPulls={includeShortPulls}
-          basePath="/raids"
+          basePath={pageHref(data?.pagination.currentPage ?? 1)}
         />
       )}
 
       {!databaseAvailable && (
-        <DatabaseUnavailable description="Raid history needs the Pizza Logs database. Start local Postgres to load recorded sessions." />
+        <DatabaseUnavailable description="Raid reports are temporarily unavailable. Please try again shortly." />
       )}
 
       {databaseAvailable && (sessions.length === 0 ? (
@@ -212,6 +230,19 @@ export default async function RaidsPage({ searchParams }: {
           ))}
         </div>
       ))}
+      {data && data.totalUploads > 0 && (
+        <nav aria-label="Raid history pages" className="flex flex-wrap items-center justify-between gap-3 border-t border-gold-dim pt-4">
+          <p className="text-sm text-text-secondary">Page {data.pagination.currentPage} of {data.pagination.totalPages}</p>
+          <div className="flex gap-2">
+            {data.pagination.currentPage > 1 ? (
+              <Link href={pageHref(data.pagination.currentPage - 1)} className="inline-flex min-h-11 items-center rounded-sm border border-gold-dim px-4 text-sm font-semibold text-gold hover:border-gold">Previous uploads</Link>
+            ) : <button type="button" disabled className="min-h-11 rounded-sm border border-gold-dim px-4 text-sm text-text-secondary opacity-40">Previous uploads</button>}
+            {data.pagination.currentPage < data.pagination.totalPages ? (
+              <Link href={pageHref(data.pagination.currentPage + 1)} className="inline-flex min-h-11 items-center rounded-sm border border-gold-dim px-4 text-sm font-semibold text-gold hover:border-gold">Next uploads</Link>
+            ) : <button type="button" disabled className="min-h-11 rounded-sm border border-gold-dim px-4 text-sm text-text-secondary opacity-40">Next uploads</button>}
+          </div>
+        </nav>
+      )}
     </div>
   );
 }

@@ -6,6 +6,7 @@ const root = process.cwd();
 const component = readFileSync(path.join(root, "components", "intro", "FrozenLogbookIntro.tsx"), "utf8");
 const globals = readFileSync(path.join(root, "app", "globals.css"), "utf8");
 const layout = readFileSync(path.join(root, "app", "layout.tsx"), "utf8");
+const home = readFileSync(path.join(root, "app", "page.tsx"), "utf8");
 const renderPs1 = readFileSync(path.join(root, "scripts", "render-intro-videos.ps1"), "utf8");
 const renderSh = readFileSync(path.join(root, "scripts", "render-intro-videos.sh"), "utf8");
 
@@ -31,7 +32,6 @@ for (const asset of expectedAssets) {
   assert.equal(existsSync(path.join(root, asset)), true, `${asset} should exist`);
 }
 
-assert.match(component, /INTRO_DURATION_MS = 8400/);
 assert.match(component, /\/animations\/desktop\/intro-1080p\.webm/);
 assert.match(component, /\/animations\/desktop\/intro-1440p\.webm/);
 assert.match(component, /\/animations\/desktop\/intro-4k\.webm/);
@@ -46,36 +46,34 @@ assert.match(component, /\/animations\/mobile\/intro-mobile-1080x1920\.mp4/);
 assert.match(component, /\/animations\/mobile\/intro-mobile-1440x2560\.mp4/);
 assert.match(component, /\/animations\/posters\/desktop-poster\.jpg/);
 assert.match(component, /\/animations\/posters\/mobile-poster\.jpg/);
-assert.match(component, /canPlayType\("video\/webm; codecs=vp9"\)/);
 assert.match(component, /Volume2, VolumeX/);
 assert.match(component, /useRef<HTMLVideoElement>/);
 assert.match(component, /soundEnabled/);
 assert.match(component, /muted=\{!soundEnabled\}/);
 assert.match(component, /aria-label=\{soundEnabled \? "Mute intro audio" : "Play intro audio"\}/);
-assert.match(component, /className="frozen-intro-sound/);
 assert.doesNotMatch(component, /localStorage/);
-assert.match(component, /INTRO_SESSION_KEY = "pizza-logs-intro-seen"/);
-assert.match(component, /usePathname/);
-assert.match(component, /pathname !== "\/"/);
-assert.match(component, /sessionStorage\.getItem\(INTRO_SESSION_KEY\)/);
-assert.match(component, /sessionStorage\.setItem\(INTRO_SESSION_KEY, "true"\)/);
+assert.doesNotMatch(component, /sessionStorage|usePathname/);
+assert.match(component, /onClick=\{openIntro\}/);
+assert.match(component, /Watch guild intro/);
+assert.match(component, /showModal\(\)/);
+assert.match(component, /onCancel=/);
+assert.match(component, /triggerRef\.current\?\.focus\(\)/);
 assert.doesNotMatch(component, /INTRO_STORAGE_KEY/);
 assert.doesNotMatch(component, /params\.get\("intro"\)/);
 assert.match(component, /prefers-reduced-motion: reduce/);
-assert.match(component, /document\.createElement\("link"\)/);
-assert.match(component, /preload\.as = "video"/);
+assert.doesNotMatch(component, /preload\.as = "video"/);
 assert.match(component, /<video[\s\S]*className="frozen-intro-video"[\s\S]*autoPlay[\s\S]*muted[\s\S]*playsInline/);
 assert.match(component, /<source src=\{variant\.webm\} type="video\/webm" \/>/);
 assert.match(component, /<source src=\{variant\.mp4\} type="video\/mp4" \/>/);
 assert.match(component, /onEnded=\{finishIntro\}/);
-assert.match(component, /onError=\{finishIntro\}/);
-assert.match(component, />\s*Skip\s*</);
+assert.match(component, /onError=\{\(\) => setVideoFailed\(true\)\}/);
+assert.match(component, />\s*Close intro\s*</);
 assert.match(component, />\s*Pizza Logs\s*</);
 assert.doesNotMatch(component, /PARTICLES/);
 assert.doesNotMatch(component, /\/intro\/pizza-logs-cinematic/);
 
-assert.match(layout, /import \{ FrozenLogbookIntro \}/);
-assert.match(layout, /<FrozenLogbookIntro \/>/);
+assert.doesNotMatch(layout, /FrozenLogbookIntro/);
+assert.match(home, /<FrozenLogbookIntro \/>/);
 
 assert.match(globals, /@utility frozen-intro-overlay/);
 assert.match(globals, /@utility frozen-intro-overlay--showing/);

@@ -18,7 +18,7 @@
   --color-gold-dim: #7a6530;
   --color-text-primary: #e8dfc8;
   --color-text-secondary: #b3a68c;
-  --color-text-dim: #918772;
+  --color-text-dim: #9b917c;
   --color-school-physical: #c0c8d8;
   --color-school-holy: #f0c040;
   --color-school-fire: #e06030;
@@ -34,12 +34,12 @@
   --color-class-shaman: #0090f8;
   --color-class-warlock: #9482c9;
   --color-class-hunter: #aad372;
-  --color-class-dk: #c41e3a;
+  --color-class-dk: #f07188;
   --color-class-rogue: #fff468;
   --color-class-monk: #00ff98;
-  --color-class-dh: #a330c9;
+  --color-class-dh: #ce87ec;
   --color-success: #50a050;
-  --color-danger: #c84040;
+  --color-danger: #ef7777;
   --color-danger-light: #ef7777;
   --color-warning: #c89040;
 }
@@ -53,6 +53,9 @@
   color utility to any element that depends on these defaults.
 */
 @layer base {
+  html {
+    scroll-padding-top: 9rem;
+  }
   *,
   ::after,
   ::before,
@@ -78,6 +81,21 @@
   input:not([type='checkbox']):not([type='radio']) {
     min-height: 2.75rem;
   }
+}
+
+.skip-link {
+  position: fixed;
+  top: 0.5rem;
+  left: 0.5rem;
+  z-index: 100;
+  transform: translateY(-200%);
+  padding: 0.75rem 1rem;
+  background: var(--color-bg-card);
+  color: var(--color-gold-light);
+}
+
+.skip-link:focus {
+  transform: translateY(0);
 }
 
 @utility page-shell {
@@ -215,12 +233,12 @@
   &.heroic {
     background: rgba(224, 96, 48, 0.15);
     border: 1px solid rgba(224, 96, 48, 0.3);
-    color: #e06030;
+    color: #f58a60;
   }
   &.normal {
     background: rgba(154, 143, 120, 0.12);
     border: 1px solid rgba(154, 143, 120, 0.25);
-    color: #9a8f78;
+    color: var(--color-text-secondary);
   }
 }
 
@@ -228,7 +246,7 @@
   &.diff-badge {
     background: rgba(224, 96, 48, 0.15);
     border: 1px solid rgba(224, 96, 48, 0.3);
-    color: #e06030;
+    color: #f58a60;
   }
 }
 
@@ -236,7 +254,7 @@
   &.diff-badge {
     background: rgba(154, 143, 120, 0.12);
     border: 1px solid rgba(154, 143, 120, 0.25);
-    color: #9a8f78;
+    color: var(--color-text-secondary);
   }
 }
 
@@ -252,14 +270,14 @@
   @apply inline-block text-xs font-bold px-2 py-0.5 rounded-xs;
   background: rgba(200, 64, 64, 0.12);
   border: 1px solid rgba(200, 64, 64, 0.25);
-  color: #c84040;
+  color: var(--color-danger-light);
 }
 
 @utility outcome-unknown {
   @apply inline-block text-xs font-bold px-2 py-0.5 rounded-xs;
   background: rgba(90, 85, 72, 0.15);
   border: 1px solid rgba(90, 85, 72, 0.3);
-  color: #5a5548;
+  color: var(--color-text-secondary);
 }
 
 @utility milestone-banner {
@@ -441,7 +459,7 @@
     background-color: #0a0c10;
     color: #e8dfc8;
     font-family: var(--font-rajdhani), sans-serif;
-    font-weight: 400;
+    font-weight: 500;
     -webkit-font-smoothing: antialiased;
   }
 

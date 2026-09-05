@@ -15,15 +15,18 @@ export function ShortPullNotice({ shortPulls, includeShortPulls, basePath }: Pro
   const href = `${target.pathname}${target.search}${target.hash}`;
 
   return (
-    <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1 rounded-sm border border-gold-dim bg-bg-panel/40 px-4 py-2 text-sm">
-      <p className="text-text-secondary">
+    <details className="border-y border-gold-dim text-sm text-text-secondary">
+      <summary className="min-h-11 cursor-pointer py-3 marker:text-gold">
         <span className="font-semibold text-text-primary">{shortPulls} short {shortPulls === 1 ? "pull" : "pulls"}</span>
-        {includeShortPulls ? " included in counts." : " excluded from wipe and pull counts."}
-        <span className="block text-xs">Under one minute with no recorded deaths. All original attempts remain available.</span>
-      </p>
-      <Link href={href} className="inline-flex min-h-11 items-center font-semibold text-gold hover:text-gold-light">
-        {includeShortPulls ? "Exclude short pulls" : "Include short pulls"}
-      </Link>
-    </div>
+        {includeShortPulls ? " included in counts" : " excluded from counts"}
+        <span className="ml-2 text-gold">Details</span>
+      </summary>
+      <div className="pb-3 pl-4">
+        <p>Wipes under one minute with no recorded deaths are excluded from wipe and pull counts by default. Short successful kills still count. All original attempts remain available.</p>
+        <Link href={href} className="inline-flex min-h-11 items-center font-semibold text-gold hover:text-gold-light">
+          {includeShortPulls ? "Exclude short pulls" : "Include short pulls"}
+        </Link>
+      </div>
+    </details>
   );
 }

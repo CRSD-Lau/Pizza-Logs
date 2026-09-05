@@ -5,6 +5,7 @@ import { db } from "@/lib/db";
 import { DamageMeter } from "@/components/meter/DamageMeter";
 import { MobBreakdown, type MobEntry } from "@/components/meter/MobBreakdown";
 import { AccordionSection } from "@/components/ui/AccordionSection";
+import { SectionNav } from "@/components/ui/SectionNav";
 import { Badge } from "@/components/ui/Badge";
 import { StatCard } from "@/components/ui/StatCard";
 import { PlayerAvatar } from "@/components/players/PlayerAvatar";
@@ -17,10 +18,11 @@ import { formatDuration, formatNumber } from "@/lib/utils";
 import { buildPageMetadata } from "@/lib/page-metadata";
 import { ShortPullNotice } from "@/components/reports/ShortPullNotice";
 import { isShortPull, parseIncludeShortPulls } from "@/lib/attempt-policy";
+import { parseDifficultyFilter, reportQueryString } from "@/lib/difficulty-filter";
 
 interface Props {
   params: Promise<{ id: string }>;
-  searchParams: Promise<{ includeShortPulls?: string | string[] }>;
+  searchParams: Promise<{ includeShortPulls?: string | string[]; difficulty?: string | string[] }>;
 }
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
@@ -42,8 +44,14 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 
 export default async function EncounterPage({ params, searchParams }: Props) {
   const { id } = await params;
-  const includeShortPulls = parseIncludeShortPulls((await searchParams).includeShortPulls);
+  const query = await searchParams;
+  const includeShortPulls = parseIncludeShortPulls(query.includeShortPulls);
   const querySuffix = includeShortPulls ? "?includeShortPulls=1" : "";
+  const difficulty = parseDifficultyFilter(query.difficulty);
+  const comparisonQuerySuffix = reportQueryString({
+    includeShortPulls: includeShortPulls ? "1" : undefined,
+    difficulty: difficulty === "all" ? undefined : difficulty,
+  });
 
   const encounter = await db.encounter.findUnique({
     where: { id },
@@ -210,9 +218,9 @@ export default async function EncounterPage({ params, searchParams }: Props) {
           <span>Raid</span>
         )}
         <span>&gt;</span>
-        <Link href={`/bosses${querySuffix}`} className="inline-flex min-h-11 items-center hover:text-gold">Bosses</Link>
+        <Link href={`/bosses${comparisonQuerySuffix}`} className="inline-flex min-h-11 items-center hover:text-gold">Bosses</Link>
         <span>&gt;</span>
-        <Link href={`/bosses/${encounter.boss.slug}${querySuffix}`} className="inline-flex min-h-11 items-center hover:text-gold">{encounter.boss.name}</Link>
+        <Link href={`/bosses/${encounter.boss.slug}${comparisonQuerySuffix}`} className="inline-flex min-h-11 items-center hover:text-gold">{encounter.boss.name}</Link>
         <span>&gt;</span>
         <span className="text-text-secondary">Encounter</span>
       </div>
@@ -239,7 +247,15 @@ export default async function EncounterPage({ params, searchParams }: Props) {
         </div>
       </div>
 
-      <ShortPullNotice shortPulls={isShortPull(encounter) ? 1 : 0} includeShortPulls={includeShortPulls} basePath={`/encounters/${id}`} />
+      <SectionNav items={[
+        ...(dpsParts.length > 0 ? [{ id: "damage", label: "Damage" }] : []),
+        ...(healAndAbsorbParts.length > 0 ? [{ id: "healing", label: "Healing" }] : []),
+        ...(mobEntries.length > 0 ? [{ id: "targets", label: "Targets" }] : []),
+        ...(deathRows.length > 0 ? [{ id: "deaths", label: "Deaths" }] : []),
+        { id: "roster", label: "Roster" },
+      ]} />
+
+      <ShortPullNotice shortPulls={isShortPull(encounter) ? 1 : 0} includeShortPulls={includeShortPulls} basePath={`/encounters/${id}${comparisonQuerySuffix}`} />
 
       <div className="grid grid-cols-2 items-stretch gap-y-2 rounded-sm bg-bg-panel/40 p-2 sm:grid-cols-4 lg:grid-cols-8">
         <StatCard label="Duration" value={formatDuration(encounter.durationSeconds)} highlight className="col-span-2" />
@@ -254,8 +270,9 @@ export default async function EncounterPage({ params, searchParams }: Props) {
       {encounter.milestones.length > 0 && (
         <div className="space-y-2">
           <p className="text-xs font-semibold text-gold uppercase tracking-widest">
-            Milestones From This Encounter
+            Awards recorded for this encounter
           </p>
+          <p className="text-sm text-text-secondary">Historical rank when achieved, for this boss and difficulty. Current standings may differ.</p>
           {encounter.milestones.map((m) => (
             <div key={m.id} className="milestone-banner flex items-center justify-between text-sm flex-wrap gap-2">
               <span>
@@ -273,7 +290,7 @@ export default async function EncounterPage({ params, searchParams }: Props) {
       )}
 
       {dpsParts.length > 0 && (
-        <AccordionSection title="Damage Breakdown" sub="Click a row to expand spell details" count={dpsParts.length} defaultOpen>
+        <AccordionSection id="damage" title="Damage Breakdown" sub="Select a player to view spells" count={dpsParts.length} defaultOpen>
           <div className="data-panel">
             <DamageMeter participants={dpsParts} metric="dps" />
           </div>
@@ -282,6 +299,7 @@ export default async function EncounterPage({ params, searchParams }: Props) {
 
       {healAndAbsorbParts.length > 0 && (
         <AccordionSection
+          id="healing"
           title="Healing + Absorbs"
           sub={encounter.unattributedAbsorbs > 0
             ? `${formatNumber(encounter.unattributedAbsorbs)} absorbs are included in the total but not yet assigned in player ranks`
@@ -319,7 +337,7 @@ export default async function EncounterPage({ params, searchParams }: Props) {
       )}
 
       {mobEntries.length > 0 && (
-        <AccordionSection title="Target Breakdown" sub="Damage dealt to each mob - click a row to see per-player split" count={mobEntries.length} defaultOpen={false}>
+        <AccordionSection id="targets" title="Target Breakdown" sub="Select a target to see damage by player" count={mobEntries.length} defaultOpen={false}>
           <div className="data-panel">
             <MobBreakdown mobs={mobEntries} />
           </div>
@@ -381,7 +399,7 @@ export default async function EncounterPage({ params, searchParams }: Props) {
       )}
 
       {deathRows.length > 0 && (
-        <AccordionSection title="Death Timeline" count={deathRows.length} defaultOpen={false}>
+        <AccordionSection id="deaths" title="Death Timeline" count={deathRows.length} defaultOpen={false}>
           <div className="divide-y divide-gold-dim border-y border-danger/30">
             {deathRows.map((row, index) => (
               <div key={`${row.player}-${row.offsetSeconds}-${index}`} className="px-4 py-2.5 text-sm">
@@ -405,7 +423,7 @@ export default async function EncounterPage({ params, searchParams }: Props) {
         </AccordionSection>
       )}
 
-      <AccordionSection title="Full Roster" count={encounter.participants.length} defaultOpen={false}>
+      <AccordionSection id="roster" title="Full Roster" count={encounter.participants.length} defaultOpen={false}>
         <div className="divide-y divide-gold-dim border-y border-gold-dim">
           {encounter.participants.map((p) => (
             <div key={p.id} className="flex items-center justify-between px-4 py-2.5 hover:bg-bg-hover transition-colors gap-3 flex-wrap">
@@ -420,7 +438,7 @@ export default async function EncounterPage({ params, searchParams }: Props) {
                 />
                 <Link
                   href={`/players/${encodeURIComponent(p.player.name)}${querySuffix}`}
-                  className="text-sm font-semibold hover:underline text-text-primary"
+                  className="inline-flex min-h-11 items-center text-sm font-semibold hover:underline text-text-primary"
                 >
                   {p.player.name}
                 </Link>

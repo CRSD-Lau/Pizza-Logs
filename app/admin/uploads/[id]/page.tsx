@@ -143,7 +143,7 @@ export default async function AdminUploadDetailPage({ params }: Props) {
                         {route ? formatRaidSessionTitle(route) : "Raid"}
                       </span>
                       {raids.map((r) => (
-                        <span key={r} className="text-[11px] text-text-dim bg-bg-card border border-gold-dim rounded-sm px-1.5 py-0.5">
+                        <span key={r} className="text-xs text-text-dim bg-bg-card border border-gold-dim rounded-sm px-1.5 py-0.5">
                           {r}
                         </span>
                       ))}
@@ -170,7 +170,7 @@ export default async function AdminUploadDetailPage({ params }: Props) {
 
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs">
                   <div className="bg-bg-card rounded-sm p-2 text-center">
-                    <div className="text-text-dim uppercase tracking-wide text-[10px]">Pulls</div>
+                    <div className="text-text-dim uppercase tracking-wide text-xs">Pulls</div>
                     <div className="font-semibold mt-0.5">
                       <span className="text-success">{kills}K</span>
                       {" / "}
@@ -178,15 +178,15 @@ export default async function AdminUploadDetailPage({ params }: Props) {
                     </div>
                   </div>
                   <div className="bg-bg-card rounded-sm p-2 text-center">
-                    <div className="text-text-dim uppercase tracking-wide text-[10px]">Damage</div>
+                    <div className="text-text-dim uppercase tracking-wide text-xs">Damage</div>
                     <div className="font-semibold mt-0.5 text-text-primary">{formatNumber(dmg)}</div>
                   </div>
                   <div className="bg-bg-card rounded-sm p-2 text-center">
-                    <div className="text-text-dim uppercase tracking-wide text-[10px]">Active</div>
+                    <div className="text-text-dim uppercase tracking-wide text-xs">Active</div>
                     <div className="font-semibold mt-0.5 text-text-primary">{formatDuration(secs)}</div>
                   </div>
                   <div className="bg-bg-card rounded-sm p-2 text-center">
-                    <div className="text-text-dim uppercase tracking-wide text-[10px]">Bosses</div>
+                    <div className="text-text-dim uppercase tracking-wide text-xs">Bosses</div>
                     <div className="font-semibold mt-0.5 text-text-primary">{encs.length} pulls</div>
                   </div>
                 </div>
@@ -196,7 +196,7 @@ export default async function AdminUploadDetailPage({ params }: Props) {
                     <span
                       key={enc.id}
                       className={cn(
-                        "text-[11px] px-2 py-0.5 rounded-xs border",
+                        "text-xs px-2 py-0.5 rounded-xs border",
                         enc.outcome === "KILL"
                           ? "bg-success/8 border-success/25 text-success"
                           : "bg-danger/8 border-danger/20 text-danger"
