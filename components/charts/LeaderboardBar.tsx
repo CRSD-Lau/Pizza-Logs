@@ -99,7 +99,7 @@ export function LeaderboardBar({ entries, metric, className }: LeaderboardBarPro
                     View &rarr;
                   </Link>
                 ) : (
-                  <span className="text-xs text-text-dim">Week view</span>
+                  <span className="text-xs text-text-secondary">Week view</span>
                 )}
               </div>
             </div>

@@ -132,8 +132,10 @@ try {
     assert.equal(await page.locator('a[href^="/encounters/"]').count(), 2);
     await page.evaluate(axe);
     const policyViolations = await page.evaluate(async () => (await window.axe.run(document,
-      { runOnly: { type: "tag", values: ["wcag2a", "wcag2aa", "wcag21aa", "wcag22aa"] } })).violations.map(item => item.id));
-    failures.push(...policyViolations.map(id => ({ route: policyReport, width, issue: id })));
+      { runOnly: { type: "tag", values: ["wcag2a", "wcag2aa", "wcag21aa", "wcag22aa"] } })).violations.map(item => ({
+        id: item.id, impact: item.impact, nodes: item.nodes.map(node => ({ target: node.target, summary: node.failureSummary })),
+      })));
+    failures.push(...policyViolations.map(item => ({ route: policyReport, width, ...item })));
     assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth), false);
     await page.screenshot({ path: path.join(out, `${width}-short-pulls-default.png`), fullPage: true });
     await page.getByRole("link", { name: "Include short pulls", exact: true }).click();

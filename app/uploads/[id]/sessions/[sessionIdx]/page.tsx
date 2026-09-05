@@ -444,7 +444,7 @@ export default async function SessionDetailPage({ params, searchParams }: Props)
                             "text-[11px] font-bold px-1.5 py-0.5 rounded-sm",
                             shortPull ? "text-text-secondary bg-bg-hover"
                               : enc.outcome === "KILL" ? "text-success bg-success/10"
-                              : enc.outcome === "WIPE" ? "text-danger bg-danger/10"
+                              : enc.outcome === "WIPE" ? "text-danger-light bg-danger/10"
                                 : "text-text-dim bg-bg-hover"
                           )}
                         >
