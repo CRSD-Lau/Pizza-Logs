@@ -273,6 +273,11 @@ try {
     assert.match(await mobContent.innerText(), /Lord Marrowgar/);
     assert.match(await mobContent.innerText(), /Synthetic Kill Add/);
     assert.doesNotMatch(await mobContent.innerText(), /Synthetic Wipe Add|Synthetic Between-Fight Trash/);
+    // Contrast must be measured after the accordion's opening opacity transition.
+    await page.waitForFunction(id => {
+      const panel = document.getElementById(id);
+      return panel && !panel.inert && getComputedStyle(panel).opacity === "1";
+    }, await mobToggle.getAttribute("aria-controls"));
     await page.evaluate(axe);
     const policyViolations = await page.evaluate(async () => (await window.axe.run(document,
       { runOnly: { type: "tag", values: ["wcag2a", "wcag2aa", "wcag21aa", "wcag22aa"] } })).violations.map(item => ({
