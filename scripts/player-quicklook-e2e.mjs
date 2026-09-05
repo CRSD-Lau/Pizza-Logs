@@ -30,6 +30,7 @@ async function ownedRosterFixture() {
   assert.ok(url.pathname.length > 1 && url.username && !url.hash);
   assert.ok([...url.searchParams.keys()].every(key => key === "schema"));
   assert.ok(url.searchParams.getAll("schema").length <= 1);
+  assert.equal(url.searchParams.get("schema") ?? "public", "public", "Quick-look fixtures require the isolated public schema");
   const database = new Client({
     host: url.hostname.replace(/^\[|\]$/g, ""), port: Number(url.port || 5432),
     database: decodeURIComponent(url.pathname.slice(1)),
@@ -42,11 +43,11 @@ async function ownedRosterFixture() {
   const cleanup = async () => {
     try {
       if (inserted) {
-        const removed = await database.query(`DELETE FROM guild_roster_members
+        const removed = await database.query(`DELETE FROM public.guild_roster_members
           WHERE id = $1 AND normalized_character_name = $2 AND guild_name = $3 AND realm = $4`,
         [id, CHARACTER.toLowerCase(), GUILD, REALM]);
         assert.equal(removed.rowCount, 1, "Only the exact owned synthetic roster row is removed");
-        assert.equal((await database.query("SELECT id FROM guild_roster_members WHERE id = $1", [id])).rowCount, 0);
+        assert.equal((await database.query("SELECT id FROM public.guild_roster_members WHERE id = $1", [id])).rowCount, 0);
       }
     } finally {
       await database.end();
@@ -56,10 +57,10 @@ async function ownedRosterFixture() {
     const identity = (await database.query("SELECT current_database() AS database, current_user AS username")).rows[0];
     assert.equal(identity.database, decodeURIComponent(url.pathname.slice(1)));
     assert.equal(identity.username, decodeURIComponent(url.username));
-    const existing = await database.query(`SELECT id FROM guild_roster_members
+    const existing = await database.query(`SELECT id FROM public.guild_roster_members
       WHERE normalized_character_name = $1 AND guild_name = $2 AND realm = $3`, [CHARACTER.toLowerCase(), GUILD, REALM]);
     assert.equal(existing.rowCount, 0, "Refuse to replace an existing roster identity");
-    await database.query(`INSERT INTO guild_roster_members
+    await database.query(`INSERT INTO public.guild_roster_members
       (id, character_name, normalized_character_name, guild_name, realm, class_name, race_name,
        level, rank_order, armory_url, last_synced_at, updated_at)
       VALUES ($1, $2, $3, $4, $5, 'Mage', 'Human', 80, 0, $6, now(), now())`,
