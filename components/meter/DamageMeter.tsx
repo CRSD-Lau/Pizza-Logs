@@ -127,12 +127,12 @@ export function DamageMeter({ participants, metric = "dps" }: DamageMeterProps) 
                 <div className="relative z-10 min-w-0 text-left lg:text-right">
                   <span className="block text-xs text-text-secondary lg:hidden">{totalLabel}</span>
                   <div className="text-sm font-semibold tabular-nums text-text-primary">
-                    <NumericValue value={rawVal} />
+                    <NumericValue value={rawVal} kind="number" />
                   </div>
                   {/* Boss-only damage sub-label — shown when adds inflated the total */}
                   {metric === "dps" && p.bossDmg !== undefined && p.bossDmg < rawVal * 0.98 && (
                     <div className="text-xs tabular-nums leading-tight text-text-dim">
-                      <NumericValue value={p.bossDmg} /> boss damage
+                      <NumericValue value={p.bossDmg} kind="number" /> boss damage
                     </div>
                   )}
                 </div>
@@ -226,7 +226,7 @@ export function AbsorbBreakdown({ breakdown }: { breakdown: Record<string, Absor
             >
               <div className="h-full rounded-sm bg-school-holy" style={{ width: `${pct}%` }} />
             </div>
-            <span className="text-right tabular-nums text-text-secondary"><NumericValue value={stats.amount} /> absorbs</span>
+            <span className="text-right tabular-nums text-text-secondary"><NumericValue value={stats.amount} kind="number" /> absorbs</span>
             <span className="col-span-2 text-right text-xs tabular-nums text-text-secondary lg:col-span-1">
               {formatCountLabel(stats.hits, "hit")}{stats.ambiguousHits > 0 ? ` · ${formatCountLabel(stats.ambiguousHits, "mixed hit")}` : ""}
             </span>
@@ -291,7 +291,7 @@ export function SpellBreakdown({
               />
             </div>
             <span className="text-right tabular-nums text-text-secondary">
-              <NumericValue value={val} /> {outputMetric}
+              <NumericValue value={val} kind="number" /> {outputMetric}
             </span>
             <span className="col-span-2 text-right text-xs tabular-nums text-text-secondary lg:col-span-1">
               {formatCountLabel(s.hits, "total event")} · <NumericValue value={s.hits > 0 ? s.crits / s.hits * 100 : null} kind="percent" /> overall crit

@@ -51,21 +51,22 @@ async function main() {
     assert.match(leaders, /<ol[^>]+aria-label="DPS positions"/);
     assert.equal((leaders.match(/<li /g) ?? []).length, 2);
     assert.match(leaders, /Position /);
-    assert.match(leaders, /13,931\.2/);
+    assert.match(leaders, /13\.93K/);
     assert.match(leaders, /Jan 1, 2026/);
-    assert.doesNotMatch(leaders, /13\.93K/);
+    assert.doesNotMatch(leaders, /13,931\.2/);
     assert.ok(leaders.indexOf("SyntheticFirst") < leaders.indexOf("SyntheticSecond"), "Display rounding must not reorder positions or turn rounded-equal values into analytical ties");
 
     const { SessionLineChart } = require("../components/charts/SessionLineChart") as typeof import("../components/charts/SessionLineChart");
     const chart = renderToStaticMarkup(React.createElement(SessionLineChart, {
       metric: "DPS", players: [{ name: "Synthetic", isSubject: true, color: "#ffffff" }],
-      data: [{ bossName: "Large output", Synthetic: 12345678.9 }, { bossName: "Zero output", Synthetic: 0 }, { bossName: "Absent player", Synthetic: null }],
+      data: [{ bossName: "Large output", Synthetic: 12345678.9 }, { bossName: "Billion output", Synthetic: 1234567890 }, { bossName: "Zero output", Synthetic: 0 }, { bossName: "Absent player", Synthetic: null }],
     }));
     assert.match(chart, /View DPS chart values/);
-    assert.match(chart, /12,345,678\.9/);
-    assert.match(chart, />0<\/span>/);
+    assert.match(chart, /12\.35M/);
+    assert.match(chart, /1,234\.57M/);
+    assert.match(chart, />0\.00<\/span>/);
     assert.match(chart, /Unavailable/);
-    assert.equal((chart.match(/scope="row"/g) ?? []).length, 3, "Every chart point has an accessible full-value row, including zero and missing data");
+    assert.equal((chart.match(/scope="row"/g) ?? []).length, 4, "Every chart point has an accessible row using the same compact two-decimal format, including zero and missing data");
 
     const { default: PlayerPage } = require("../app/players/[playerName]/page") as typeof import("../app/players/[playerName]/page");
     const profile = () => PlayerPage({ params: Promise.resolve({ playerName: "Synthetic" }), searchParams: Promise.resolve({}) });
@@ -79,13 +80,13 @@ async function main() {
     } }];
     const zero = renderToStaticMarkup(await profile());
     assert.doesNotMatch(zero, /Unavailable|No recorded attempts|No boss kills/);
-    assert.match(zero, />0<\/span>/);
-    assert.match(textContent(zero), /Best DPS: 0 Best HPS: 0/);
-    assert.match(textContent(zero), /0 DPS 0 HPS 0 APS/);
+    assert.match(zero, />0\.00<\/span>/);
+    assert.match(textContent(zero), /Best DPS: 0\.00 Best HPS: 0\.00/);
+    assert.match(textContent(zero), /0\.00 DPS 0\.00 HPS 0\.00 APS/);
     attempts[0].hps = 50;
     const lowHealing = renderToStaticMarkup(await profile());
-    assert.match(textContent(lowHealing), /Best HPS: 50/);
-    assert.match(textContent(lowHealing), /0 DPS 50 HPS 0 APS/);
+    assert.match(textContent(lowHealing), /Best HPS: 50\.00/);
+    assert.match(textContent(lowHealing), /0\.00 DPS 50\.00 HPS 0\.00 APS/);
     attempts[0].encounter.outcome = "WIPE";
     const noKills = renderToStaticMarkup(await profile());
     assert.equal((noKills.match(/Unavailable/g) ?? []).length, 1, "Only the kill average is unavailable when a recorded zero-output wipe exists");

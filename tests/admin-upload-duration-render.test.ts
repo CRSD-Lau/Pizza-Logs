@@ -48,7 +48,7 @@ async function main() {
     };
     const precise = await render();
     assert.equal((precise.match(/>2:02</g) ?? []).length, 2, "Upload and session totals must sum milliseconds before formatting");
-    assert.match(precise, /4,000/);
+    assert.match(precise, /4\.00K/);
     assert.doesNotMatch(precise, /Unavailable/);
 
     encounters = [encounter("legacy", 0, 0, 45), encounter("legacy-null", 0, null, 30)];
@@ -60,7 +60,7 @@ async function main() {
     assert.equal((mixed.match(/>Unavailable</g) ?? []).length, 2, "An unknown pull invalidates its session and upload time, while another complete session remains available");
     assert.equal((mixed.match(/>0:45</g) ?? []).length, 1);
     assert.doesNotMatch(mixed, />0:30<|>1:15</, "Never display a partial aggregate as complete active time");
-    assert.match(mixed, /6,000/);
+    assert.match(mixed, /6\.00K/);
     assert.match(mixed, /3 kills/);
 
     encounters = [encounter("unknown-only", 0, 0, 0)];

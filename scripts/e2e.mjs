@@ -171,7 +171,7 @@ try {
     }
   }
   await page.goto(new URL(report, base).href);
-  assert.match(await page.locator("main").innerText(), /54[.,]0K|54,000/, "UI must display the same damage primitive");
+  assert.match(await page.locator("main").innerText(), /54\.00K/, "UI must display the same damage primitive in compact two-decimal form");
   const metricColumns = [
     ["name", "Player"], ["totalDamage", "Total Damage"], ["dps", "DPS"],
     ["heal", "Healing + absorbs"], ["healPerSecond", "Healing + absorbs /s"], ["damageTaken", "Damage Taken"], ["dtps", "DTPS"],
@@ -183,9 +183,9 @@ try {
   const cardValue = (scope, label) => scope.getByText(label, { exact: true }).locator("..").locator(":scope > div").nth(1).innerText();
   const assertKillCards = async () => {
     const scope = page.getByRole("region", { name: "Boss kill summary", exact: true });
-    assert.equal(await cardValue(scope, "Total Damage"), "1,500");
-    assert.equal(await cardValue(scope, "Healing + absorbs"), "900");
-    assert.equal(await cardValue(scope, "Damage Taken"), "450");
+    assert.equal(await cardValue(scope, "Total Damage"), "1.50K");
+    assert.equal(await cardValue(scope, "Healing + absorbs"), "900.00");
+    assert.equal(await cardValue(scope, "Damage Taken"), "450.00");
   };
   const assertPlayerValues = async (view, width, expected) => {
     for (const [index, values] of expected.entries()) {
@@ -236,7 +236,13 @@ try {
     damageTaken: ["SyntheticTrashOnly", "SyntheticFirst", "SyntheticThird", "SyntheticSecond"],
     dtps: ["SyntheticTrashOnly", "SyntheticFirst", "SyntheticThird", "SyntheticSecond"],
   };
-  const rate = amount => new Intl.NumberFormat("en-US", { maximumFractionDigits: 1 }).format(amount / (policyKill.durationMs / 1000));
+  // This fixture's values stay below 1,000; keep the display oracle independent of production formatters.
+  const fixtureDecimal = new Intl.NumberFormat("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  const rate = amount => {
+    const value = amount / (policyKill.durationMs / 1000);
+    assert.ok(value >= 0.01 && value < 1000, "Synthetic kill rates must stay in the unsuffixed range");
+    return fixtureDecimal.format(value);
+  };
   for (const width of [390, 1440]) {
     await page.setViewportSize({ width, height: 1000 });
     await page.goto(new URL(policyReport, base).href);
@@ -248,7 +254,7 @@ try {
     const killView = playerView("Boss kill player metrics", width);
     assert.deepEqual(await playerNames(killView, width), killPlayers.map(player => player.name));
     await assertPlayerValues(killView, width, killPlayers.map(player => [
-      String(player.damage), rate(player.damage), String(player.heal), rate(player.heal), String(player.taken), rate(player.taken),
+      fixtureDecimal.format(player.damage), rate(player.damage), fixtureDecimal.format(player.heal), rate(player.heal), fixtureDecimal.format(player.taken), rate(player.taken),
     ]));
     assert.equal(await killView.getByRole("link", { name: "View SyntheticFirst's all-attempt raid report", exact: true }).getAttribute("href"), `${policyReport}/players/SyntheticFirst`);
     await assertSorting("Boss kill player metrics", width, killAscending);
@@ -266,9 +272,9 @@ try {
     const fullView = playerView("Full session player metrics", width);
     await fullView.waitFor();
     const fullTotals = fullContent.locator('[aria-label="Full session totals"]');
-    assert.equal(await cardValue(fullTotals, "Total Damage"), "4,800");
-    assert.equal(await cardValue(fullTotals, "Healing + absorbs"), "1,900");
-    assert.equal(await cardValue(fullTotals, "Damage Taken"), "1,450");
+    assert.equal(await cardValue(fullTotals, "Total Damage"), "4.80K");
+    assert.equal(await cardValue(fullTotals, "Healing + absorbs"), "1.90K");
+    assert.equal(await cardValue(fullTotals, "Damage Taken"), "1.45K");
     assert.deepEqual(await playerNames(fullView, width), ["SyntheticFirst", "SyntheticSecond", "SyntheticTrashOnly", "SyntheticThird"]);
     assert.equal(await fullView.getByRole("link", { name: /SyntheticTrashOnly/ }).count(), 0, "A trash-only player has no boss-attempt link");
     await assertSorting("Full session player metrics", width, fullAscending);
@@ -340,7 +346,7 @@ try {
   await page.getByText("Already Parsed", { exact: true }).waitFor();
   await page.getByRole("link", { name: "View raid report", exact: true }).click();
   await page.waitForURL(new URL(report, base).href);
-  assert.match(await page.locator("main").innerText(), /54[.,]0K|54,000/);
+  assert.match(await page.locator("main").innerText(), /54\.00K/);
   observations.push({ check: "native file chooser, announced progress and duplicate report navigation", status: "pass" });
   await page.goto(base.href);
   await page.getByLabel("Character", { exact: false }).fill("Synthetic Auditor");

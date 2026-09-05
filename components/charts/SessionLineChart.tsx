@@ -87,7 +87,7 @@ export function SessionLineChart({ data, players, metric }: Props) {
 
   return (
     <div className="space-y-3">
-    <p className="text-sm text-text-secondary">{metric} by encounter. Axis labels abbreviate thousands (K) and millions (M); full values are available below.</p>
+    <p className="text-sm text-text-secondary">{metric} by encounter. Values use two decimals: K for thousands, M for millions.</p>
     <ResponsiveContainer width="100%" height={280}>
       <LineChart data={data} margin={{ top: 8, right: 8, left: 0, bottom: 8 }}>
         <CartesianGrid strokeDasharray="3 3" stroke="color-mix(in srgb, var(--color-gold) 7%, transparent)" />
@@ -111,7 +111,7 @@ export function SessionLineChart({ data, players, metric }: Props) {
           tickLine={false}
           axisLine={false}
           tickFormatter={(v: number) => formatCompactNumber(v)}
-          width={52}
+          width={80}
         />
         <Tooltip content={<CustomTooltip metric={metric} />} />
         <Legend
@@ -149,7 +149,7 @@ export function SessionLineChart({ data, players, metric }: Props) {
       <summary className="min-h-11 cursor-pointer py-3 font-semibold text-gold">View {metric} chart values</summary>
       <div role="region" aria-label={`${metric} chart values`} tabIndex={0} className="overflow-x-auto pb-3 focus-visible:outline-2 focus-visible:outline-gold">
         <table className="w-full text-sm">
-          <caption className="sr-only">Full {metric} values by encounter and player. Unavailable means no recorded value.</caption>
+          <caption className="sr-only">{metric} values by encounter and player, with two decimals and K/M units. Unavailable means no recorded value.</caption>
           <thead><tr><th scope="col" className="px-3 py-2 text-left">Encounter</th>{players.map(player => <th key={player.name} scope="col" className="px-3 py-2 text-right">{player.name}</th>)}</tr></thead>
           <tbody>{data.map((point, index) => <tr key={`${point.bossName}-${index}`} className="border-t border-gold-dim">
             <th scope="row" className="px-3 py-2 text-left font-medium">{point.bossName}</th>

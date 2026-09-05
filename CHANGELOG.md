@@ -25,7 +25,7 @@ This project follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) an
 
 ### Changed
 
-- Standardize full grouped totals, rate/percentage precision, count labels, UTC dates and missing measurements across public reports, rankings, directories, chart details, gear previews and admin pages. Mobile breakdowns retain metric labels; death counts and kill/wipe counts use explicit words.
+- Standardize report amounts and rates with exactly two decimals and K/M abbreviations (`13.93K`, `4.20M`, `1,234.57M`), matching charts, tables and tooltips. Percentages, decimal seconds and scaled binary file sizes also use two decimals; counts, ranks, levels and GearScore retain grouped whole numbers. Preserve clock-style durations, UTC dates, missing-value handling, mobile metric labels and explicit death/kill/wipe count words across public and admin pages.
 - Keep recent player history chronological, expose every spell in expanded breakdowns and paginate the complete admin upload inventory with accurate visible/total counts.
 - Remove unscoped player crowns, historical-award sorting and unreliable award-derived best figures. Add alphabetical name/class browsing, guild filtering before pagination, and complete upload-based raid history pagination.
 - Put uploading first, make the guild cinematic optional, request notifications only on explicit opt-in, and provide a primary report link after both new and duplicate uploads.

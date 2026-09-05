@@ -45,7 +45,7 @@ const detailsFull = buildItemDetailsFromTemplate({
   requiredLevel: 80,
 });
 assert.ok(detailsFull.includes("Binds when picked up"), `missing bonding: ${JSON.stringify(detailsFull)}`);
-assert.ok(detailsFull.includes("2145 Armor"), `missing armor: ${JSON.stringify(detailsFull)}`);
+assert.ok(detailsFull.includes("2,145 Armor"), `missing armor: ${JSON.stringify(detailsFull)}`);
 assert.ok(detailsFull.includes("+74 Stamina"), `missing stamina: ${JSON.stringify(detailsFull)}`);
 assert.ok(detailsFull.includes("+56 Intellect"), `missing intellect: ${JSON.stringify(detailsFull)}`);
 assert.ok(detailsFull.includes("Requires Level 80"), `missing req level: ${JSON.stringify(detailsFull)}`);
@@ -56,8 +56,11 @@ const weaponDetails = buildItemDetailsFromTemplate({
   armor: 0, dmgMin: 200, dmgMax: 300, delay: 2600,
   stats: { Strength: 50 }, description: null, bonding: 2, requiredLevel: 80,
 });
-assert.ok(weaponDetails.some((l: string) => l.includes("200") && l.includes("300")), `missing dmg range: ${JSON.stringify(weaponDetails)}`);
-assert.ok(weaponDetails.some((l: string) => l.includes("damage per second")), `missing dps: ${JSON.stringify(weaponDetails)}`);
+assert.ok(weaponDetails.includes("200.00–300.00 Damage, Speed 2.60"), `missing dmg range: ${JSON.stringify(weaponDetails)}`);
+assert.ok(weaponDetails.includes("(96.15 damage per second)"), `missing dps: ${JSON.stringify(weaponDetails)}`);
+const largeWeapon = buildItemDetailsFromTemplate({ dmgMin: 12_000, dmgMax: 16_000, delay: 2000 });
+assert.ok(largeWeapon.includes("12.00K–16.00K Damage, Speed 2.00"));
+assert.ok(largeWeapon.includes("(7.00K damage per second)"));
 
 // Empty item
 const emptyDetails = buildItemDetailsFromTemplate({

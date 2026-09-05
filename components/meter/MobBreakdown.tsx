@@ -88,7 +88,7 @@ export function MobBreakdown({ mobs, title }: MobBreakdownProps) {
                 </span>
                 <span className="relative z-10 text-sm tabular-nums text-text-primary lg:text-right">
                   <span className="block text-xs text-text-secondary lg:hidden">Damage</span>
-                  <NumericValue value={mob.totalDamage} />
+                  <NumericValue value={mob.totalDamage} kind="number" />
                 </span>
                 <span className="relative z-10 col-span-2 row-start-3 text-xs tabular-nums text-text-secondary lg:col-span-1 lg:row-start-auto lg:text-right">
                   {formatCountLabel(mob.hits, "hit")} · <NumericValue value={critPct} kind="percent" /> crit
@@ -121,7 +121,7 @@ export function MobBreakdown({ mobs, title }: MobBreakdownProps) {
                             />
                           </div>
                           <span className="text-right tabular-nums text-text-secondary">
-                            <NumericValue value={p.damage} /> damage
+                            <NumericValue value={p.damage} kind="number" /> damage
                           </span>
                           <span className="text-xs tabular-nums text-text-secondary lg:text-right">
                             {formatCountLabel(p.hits, "hit")} · <NumericValue value={playerCrit} kind="percent" /> crit

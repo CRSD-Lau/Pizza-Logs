@@ -33,6 +33,37 @@ async function poll(check, message, timeout = 12_000) {
   } while (Date.now() < end);
   throw new Error(message);
 }
+async function readDuplicateIds(targetPage) {
+  return targetPage.locator("[id]").evaluateAll(elements => {
+    const ids = elements.map(element => element.id);
+    return [...new Set(ids)].filter(id => ids.filter(candidate => candidate === id).length > 1);
+  });
+}
+async function settledDuplicateIds(targetPage, timeout = 12_000) {
+  const end = Date.now() + timeout;
+  let duplicates = await readDuplicateIds(targetPage);
+  // React's streamed Suspense HTML temporarily contains both the fallback and a
+  // hidden completed segment until its scheduled swap runs. Keep hidden IDs in
+  // the audit and return any duplicates that persist beyond the settling window.
+  while (duplicates.length > 0 && Date.now() < end) {
+    await new Promise(resolve => setTimeout(resolve, Math.min(50, Math.max(0, end - Date.now()))));
+    duplicates = await readDuplicateIds(targetPage);
+  }
+  return duplicates;
+}
+async function verifyDuplicateIdSettling(context) {
+  const probe = await context.newPage();
+  try {
+    await probe.setContent('<div id="transient-probe"></div><div hidden id="transient-probe" data-completed></div>');
+    assert.deepEqual(await readDuplicateIds(probe), ["transient-probe"]);
+    await probe.evaluate(() => { setTimeout(() => document.querySelector("[data-completed]").remove(), 150); });
+    assert.deepEqual(await settledDuplicateIds(probe, 2_000), [], "A temporary streamed duplicate must settle");
+    await probe.setContent('<div id="persistent-probe"></div><div hidden id="persistent-probe"></div>');
+    assert.deepEqual(await settledDuplicateIds(probe, 150), ["persistent-probe"], "Persistent hidden duplicates must still fail the audit");
+  } finally {
+    await probe.close();
+  }
+}
 async function visit(route, expectedStatus = 200) {
   const previousUrl = new URL(page.url());
   const response = await page.goto(new URL(route, base).href, { waitUntil: "domcontentloaded", timeout: 60_000 });
@@ -95,10 +126,7 @@ async function audit(route, width, screenshotName) {
     };
   });
   failures.push(...accessibility.violations.map(item => ({ route, width, ...item })));
-  const duplicateIds = await page.locator("[id]").evaluateAll(elements => {
-    const ids = elements.map(element => element.id);
-    return [...new Set(ids)].filter(id => ids.filter(candidate => candidate === id).length > 1);
-  });
+  const duplicateIds = await settledDuplicateIds(page);
   if (duplicateIds.length > 0) failures.push({ route, width, issue: "duplicate element IDs", duplicateIds });
   await page.screenshot({ path: path.join(out, screenshotName), fullPage: true, animations: "disabled" });
   observations.push({ check: "public page accessibility and overflow", route, width, status: accessibility.violations.length === 0 && overflow.documentWidth <= width && clippedNames.length === 0 && duplicateIds.length === 0 ? "pass" : "fail", accessibility, clippedNames, duplicateIds, screenshot: screenshotName });
@@ -106,6 +134,7 @@ async function audit(route, width, screenshotName) {
 }
 
 try {
+  await check("duplicate-ID audit tolerates streamed swaps and catches persistent hidden duplicates", () => verifyDuplicateIdSettling(context));
   const response = await fetch(new URL("/api/encounters?take=200", base), { signal: AbortSignal.timeout(15_000) });
   assert.equal(response.status, 200, "Synthetic fixture discovery API");
   const encounters = await response.json();

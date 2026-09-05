@@ -46,7 +46,10 @@ assert.ok(encounter);
 assert.equal(encounter.totalDamage, 36_000_019);
 const subject = encounter.participants.find(value => value.player.name === "Numbermage");
 assert.ok(subject);
-const expectedRate = new Intl.NumberFormat("en-US", { maximumFractionDigits: 1 }).format(subject.dps);
+// The synthetic rate is in thousands. Derive only this fixture's expected presentation,
+// independently of production helpers, while keeping the API's raw DPS intact.
+assert.ok(subject.dps >= 1000 && subject.dps < 1_000_000);
+const expectedRate = `${new Intl.NumberFormat("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(subject.dps / 1000)}K`;
 const report = `/raids/${upload.publicReportSlug}/sessions/${upload.firstSessionSlug}`;
 const browser = await chromium.launch({ headless: true });
 const context = await browser.newContext({ reducedMotion: "reduce", locale: "de-DE", timezoneId: "America/Halifax" });
@@ -68,10 +71,10 @@ try {
         const meter = page.locator("#damage");
         const row = meter.getByRole("button").filter({ hasText: "Numbermage" });
         await row.waitFor();
-        assert.ok((await row.innerText()).includes("36,000,018"));
+        assert.ok((await row.innerText()).includes("36.00M"));
         assert.ok((await row.innerText()).includes(expectedRate));
         assert.match(await row.innerText(), /1 death\s*·/);
-        assert.match(await meter.getByRole("button").filter({ hasText: "Tinypriest" }).innerText(), /<0\.1%/);
+        assert.match(await meter.getByRole("button").filter({ hasText: "Tinypriest" }).innerText(), /<0\.01%/);
         if (width < 1024) {
           assert.equal(await row.getByText("Damage", { exact: true }).isVisible(), true);
           assert.equal(await row.getByText("DPS", { exact: true }).isVisible(), true);
@@ -85,7 +88,7 @@ try {
         await meter.getByText("Synthetic spell 18", { exact: true }).waitFor();
         assert.equal(await more.count(), 0);
         assert.match(await page.locator("main").innerText(), /UTC/);
-        observations.push({ check: "full rates, tiny share, separated death count and all 18 spells", width, expectedRate });
+        observations.push({ check: "compact two-decimal rates, tiny share, separated death count and all 18 spells", width, expectedRate });
       }
       if (route === `${report}/players/Numbermage`) {
         const values = page.getByText("View DPS chart values", { exact: true });
@@ -93,7 +96,7 @@ try {
         const table = page.getByRole("region", { name: "DPS chart values", exact: true }).getByRole("table");
         await table.waitFor();
         assert.ok((await table.innerText()).includes(expectedRate));
-        observations.push({ check: "chart exact values are reachable without hover", width, expectedRate });
+        observations.push({ check: "chart values use the same compact two-decimal format and are reachable without hover", width, expectedRate });
       }
       const geometry = await page.evaluate(() => ({
         width: innerWidth, documentWidth: document.documentElement.scrollWidth,
@@ -107,7 +110,7 @@ try {
       await page.evaluate(() => window.scrollTo(0, 0));
       await page.screenshot({ path: path.join(out, screenshot), fullPage: true, animations: "disabled" });
       await page.screenshot({ path: path.join(out, `viewport-${screenshot}`), animations: "disabled" });
-      observations.push({ check: "full-value geometry in comparison surfaces", route, width, screenshot, ...geometry });
+      observations.push({ check: "compact two-decimal metric geometry in comparison surfaces", route, width, screenshot, ...geometry });
     }
   }
 } catch (error) {

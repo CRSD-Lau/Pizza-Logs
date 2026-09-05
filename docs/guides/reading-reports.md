@@ -6,16 +6,28 @@ Last modified by: Neil Mitchell
 
 ## Reading Numbers and Lists
 
-Comparison rows and summary cards show full numbers with thousands separators. Rates
-have up to one decimal; percentages below 0.1% display `<0.1%` instead of implying
-zero contribution. An em dash means the measurement is unavailable; a displayed zero
-is an actual recorded value. Dates include the year and timestamps use labelled UTC.
+Damage, healing, absorbs, power amounts and rates use exactly two decimal places,
+with K for thousands and M for millions: `58.00`, `13.93K`, `4.20M`. Larger amounts
+keep M with comma grouping, such as `1,234.57M`; the display does not switch to B.
+Percentages use two decimals too, such as `7.30%` or `0.00%`. A positive percentage
+below 0.01% displays `<0.01%` instead of implying zero contribution; tiny positive
+amounts and rates likewise display `<0.01`. An em dash means the measurement is
+unavailable; `0.00` is an actual recorded zero. Sorting uses the original values,
+so two values rounded to the same text may occupy different list positions.
+
+Counts, ranks, character/item levels and GearScore remain whole numbers with comma
+grouping. File sizes use binary units with two decimals after scaling, such as
+`1.50 KiB` or `2.00 MiB`; byte counts remain whole. Dates include the year and
+timestamps use labelled UTC. Decimal seconds use two places, such as `1.25 s` or
+`0.00 s`. Clock-style durations such as `4:27`, `2:05:03` and precise
+`1:04:29.712` retain their existing formats.
 
 Current comparison lists show numbered positions within the stated metric and scope.
 Alphabetical directories have no performance position. Recent player history is newest
 first. Expanded spell breakdowns start with 15 spells and expose the remainder through
-**Show more**; chart details provide a **View chart values** table for precise numbers
-without hovering. The [frontend contract](../../DESIGN.md#numbers-units-time-and-lists)
+**Show more**; chart details provide a **View chart values** table without hovering.
+Chart axes, tooltips and tables use the same compact metric format.
+The [frontend contract](../../DESIGN.md#numbers-units-time-and-lists)
 defines the same rules for public pages, previews and admin history.
 
 ## Raid Session
