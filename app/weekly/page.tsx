@@ -145,7 +145,7 @@ export default async function WeeklyPage({ searchParams }: {
         </div>
 
         <section>
-          <SectionHeader title="Top DPS This Week" sub="Best single-encounter DPS, kills only" />
+          <SectionHeader title="Top DPS This Week" sub="Best single-encounter DPS across all recorded pulls" />
           {data.topDps.length > 0 ? (
             <LeaderboardBar entries={data.topDps.map((e, i) => ({
               rank: i + 1,
@@ -164,7 +164,7 @@ export default async function WeeklyPage({ searchParams }: {
         </section>
 
         <section>
-          <SectionHeader title="Top HPS This Week" sub="Best single-encounter HPS, kills only" />
+          <SectionHeader title="Top HPS This Week" sub="Best single-encounter HPS across all recorded pulls" />
           {data.topHps.length > 0 ? (
             <LeaderboardBar entries={data.topHps.map((e, i) => ({
               rank: i + 1,
