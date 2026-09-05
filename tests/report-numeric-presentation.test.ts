@@ -60,11 +60,11 @@ async function main() {
   try {
     const { DamageMeter, AbsorbBreakdown, SpellBreakdown } = require("../components/meter/DamageMeter") as typeof import("../components/meter/DamageMeter");
     const meter = renderToStaticMarkup(React.createElement(DamageMeter, { participants: [participant, { ...participant, player: { ...player, name: "Tinyplayer" }, dps: 0.01, totalDamage: 1, deaths: 0 }], metric: "dps" }));
-    contains(meter, "1,393,100"); contains(meter, "13,931.2"); contains(meter, "1 death · 1% overall crit");
+    contains(meter, "1.39M"); contains(meter, "13.93K"); contains(meter, "1 death · 1.00% overall crit");
     contains(meter, "Damage"); contains(meter, "DPS"); contains(meter, "Share of total");
-    assert.ok(meter.includes("&lt;0.1%"), "A positive tiny share must not be displayed as zero");
+    assert.ok(meter.includes("&lt;0.01%"), "A positive tiny share must not be displayed as zero");
     assert.match(meter, /Position <\/span><span aria-hidden="true">#<\/span>1/);
-    assert.ok(!meter.includes("13.93K") && !meter.includes("☠"));
+    assert.ok(!meter.includes("13,931.2") && !meter.includes("☠"));
 
     const shieldMeters = renderToStaticMarkup(React.createElement(AbsorbBreakdown, { breakdown: {
       "Large shield": { amount: 100_000, hits: 1, ambiguousHits: 0 },
@@ -85,7 +85,7 @@ async function main() {
       const spokenMeter = [...markup.matchAll(/<div[^>]*role="meter"[^>]*>/g)].find(([tag]) => tag.includes(`aria-label="${label}"`))?.[0];
       assert.ok(spokenMeter, `Rendered ${scope} breakdown must expose its tiny-contribution meter`);
       assert.match(spokenMeter, /aria-valuenow="0\.001"/, "Assistive technology must receive the measured positive percentage, not a rounded zero");
-      assert.ok(spokenMeter.includes(`aria-valuetext="&lt;0.1% of the largest ${scope} ability"`), "Spoken percentage must state the comparison scope");
+      assert.ok(spokenMeter.includes(`aria-valuetext="&lt;0.01% of the largest ${scope} ability"`), "Spoken percentage must state the comparison scope");
     }
 
     const { MobBreakdown } = require("../components/meter/MobBreakdown") as typeof import("../components/meter/MobBreakdown");
@@ -94,34 +94,34 @@ async function main() {
       { name: "Tiny target", totalDamage: 1, hits: 1, crits: 0, byPlayer: [] },
     ] }));
     contains(targets, "1 hit ·"); contains(targets, "1,000 hits ·");
-    assert.ok(targets.includes("&lt;0.1%"));
+    assert.ok(targets.includes("&lt;0.01%"));
 
     const { SessionPlayerTable } = require("../components/reports/SessionPlayerTable") as typeof import("../components/reports/SessionPlayerTable");
     const table = renderToStaticMarkup(React.createElement(SessionPlayerTable, { label: "Synthetic player metrics", rows: [
       { name: player.name, href: null, color: "var(--color-text-primary)", totalDamage: 1_393_100, dps: 13_931.2, heal: 0, healPerSecond: null, damageTaken: 0, dtps: 0 },
     ] }));
-    contains(table, "1,393,100"); contains(table, "13,931.2"); contains(table, "Healing + absorbs /s");
+    contains(table, "1.39M"); contains(table, "13.93K"); contains(table, "Healing + absorbs /s");
     assert.ok(table.includes('<span class="sr-only">Unavailable</span>'));
-    assert.ok(table.includes('<span class="tabular-nums">0</span>'), "Actual zero remains a measured value");
+    assert.ok(table.includes('<span class="tabular-nums">0.00</span>'), "Actual zero remains a measured value");
 
     const { default: EncounterPage } = require("../app/encounters/[id]/page") as typeof import("../app/encounters/[id]/page");
     const encounterProps = { params: Promise.resolve({ id: encounter.id }), searchParams: Promise.resolve({}) };
     const missing = renderToStaticMarkup(await EncounterPage(encounterProps));
     contains(missing, "Raid rates are unavailable because the recorded fight duration is missing or invalid");
-    contains(missing, "13,931.2 DPS"); contains(missing, "1 application"); contains(missing, "1 event");
+    contains(missing, "13.93K DPS"); contains(missing, "1 application"); contains(missing, "1 event");
     contains(missing, "Sep 4, 2026, 23:04:10 UTC");
     assert.ok(!missing.includes("1 applications") && !missing.includes("1 events"));
 
     encounter.durationMs = 50_000;
     const precise = renderToStaticMarkup(await EncounterPage(encounterProps));
-    contains(precise, "Raid DPS 27,862 damage per second");
+    contains(precise, "Raid DPS 27.86K damage per second");
     assert.ok(!precise.includes("Raid rates are unavailable"), "Positive precise milliseconds work even when legacy seconds are zero");
     encounter.durationMs = -1; encounter.durationSeconds = 100;
     const invalid = renderToStaticMarkup(await EncounterPage(encounterProps));
     contains(invalid, "Raid rates are unavailable");
     encounter.durationMs = null;
     const legacy = renderToStaticMarkup(await EncounterPage(encounterProps));
-    contains(legacy, "Raid DPS 13,931 damage per second");
+    contains(legacy, "Raid DPS 13.93K damage per second");
     assert.equal(participant.dps, 13_931.2, "Display-derived rates must not rewrite stored participant rates");
 
     encounter.durationMs = 0; encounter.durationSeconds = 0;
@@ -135,8 +135,8 @@ async function main() {
     const { default: SessionPlayerPage } = require("../app/uploads/[id]/sessions/[sessionIdx]/players/[playerName]/page") as typeof import("../app/uploads/[id]/sessions/[sessionIdx]/players/[playerName]/page");
     const detail = renderToStaticMarkup(await SessionPlayerPage({ ...sessionProps, params: Promise.resolve({ id: "synthetic-report", sessionIdx: route.slug, playerName: player.name }) }));
     contains(detail, "The average on kills is unavailable"); contains(detail, "Avg DPS — Unavailable on kills");
-    contains(detail, "Best DPS 13,931.2 single pull");
-    contains(detail, "15.5 HPS"); contains(detail, "0 APS"); contains(detail, "1 death");
+    contains(detail, "Best DPS 13.93K single pull");
+    contains(detail, "15.50 HPS"); contains(detail, "0.00 APS"); contains(detail, "1 death");
   } finally {
     global.fetch = originalFetch;
     loader._resolveFilename = originalResolve;

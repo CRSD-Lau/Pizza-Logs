@@ -26,7 +26,7 @@ const focusClasses = "rounded-sm focus:outline-hidden focus-visible:ring-2 focus
 function metricValue(row: SessionPlayerRow, key: SessionPlayerSortKey, rate?: boolean) {
   const value = row[key];
   if (typeof value === "string") return value;
-  return <NumericValue value={value} kind={rate ? "rate" : "integer"} />;
+  return <NumericValue value={value} kind={rate ? "rate" : "number"} />;
 }
 
 function PlayerName({ row }: { row: SessionPlayerRow }) {

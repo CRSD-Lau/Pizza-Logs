@@ -1,6 +1,7 @@
 import { db } from "./db";
 import type { ArmoryGearItem } from "./warmane-armory";
 import type { GearScoreEquipLoc } from "./gearscore";
+import { formatDecimal, formatInteger, formatNumber, formatRate } from "./utils";
 
 export const QUALITY_MAP: Record<number, string> = {
   0: "poor",
@@ -142,15 +143,15 @@ export function buildItemDetailsFromTemplate(item: {
   if (item.bonding != null && bondingLabels[item.bonding]) {
     lines.push(bondingLabels[item.bonding]);
   }
-  if (item.armor && item.armor > 0) lines.push(`${item.armor} Armor`);
+  if (item.armor && item.armor > 0) lines.push(`${formatInteger(item.armor)} Armor`);
   if (item.dmgMin && item.dmgMax && item.delay) {
-    const dps = ((item.dmgMin + item.dmgMax) / 2 / (item.delay / 1000)).toFixed(1);
-    lines.push(`${item.dmgMin}–${item.dmgMax} Damage, Speed ${(item.delay / 1000).toFixed(2)}`);
+    const dps = formatRate((item.dmgMin + item.dmgMax) / 2 / (item.delay / 1000));
+    lines.push(`${formatNumber(item.dmgMin)}–${formatNumber(item.dmgMax)} Damage, Speed ${formatDecimal(item.delay / 1000)}`);
     lines.push(`(${dps} damage per second)`);
   }
   if (item.stats && typeof item.stats === "object") {
     for (const [stat, value] of Object.entries(item.stats as Record<string, number>)) {
-      if (value > 0) lines.push(`+${value} ${stat}`);
+      if (value > 0) lines.push(`+${formatInteger(value)} ${stat}`);
     }
   }
   if (item.requiredLevel && item.requiredLevel > 0) {

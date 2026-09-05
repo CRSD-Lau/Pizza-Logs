@@ -24,8 +24,7 @@ type DisplayDate = string | Date | null | undefined;
 
 export const UNAVAILABLE_VALUE = "—";
 const integerFormat = new Intl.NumberFormat("en-US", { maximumFractionDigits: 0 });
-const decimalFormat = new Intl.NumberFormat("en-US", { maximumFractionDigits: 1 });
-const compactFormat = new Intl.NumberFormat("en-US", { notation: "compact", maximumFractionDigits: 1 });
+const decimalFormat = new Intl.NumberFormat("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 const dateFormat = new Intl.DateTimeFormat("en-US", { year: "numeric", month: "short", day: "numeric", timeZone: "UTC" });
 const timeFormat = new Intl.DateTimeFormat("en-US", { hour: "2-digit", minute: "2-digit", hourCycle: "h23", timeZone: "UTC" });
 const timestampFormat = new Intl.DateTimeFormat("en-US", {
@@ -36,35 +35,44 @@ export function isDisplayNumber(value: DisplayNumber): value is number {
   return typeof value === "number" && Number.isFinite(value);
 }
 
-/** Counts and accumulated totals. Never abbreviate comparison values. */
+/** Discrete counts, positions and gear identifiers retain whole grouped digits. */
 export function formatInteger(value: DisplayNumber): string {
   return isDisplayNumber(value) ? integerFormat.format(value === 0 ? 0 : value) : UNAVAILABLE_VALUE;
 }
 
-/** Rates retain one decimal; a small measured contribution must not look like zero. */
-export function formatRate(value: DisplayNumber): string {
+/** Fixed two-decimal measurements without magnitude suffixes (percentages and seconds). */
+export function formatDecimal(value: DisplayNumber): string {
   if (!isDisplayNumber(value)) return UNAVAILABLE_VALUE;
-  if (value > 0 && value < 0.1) return "<0.1";
-  if (value < 0 && value > -0.1) return ">-0.1";
+  if (value > 0 && value < 0.01) return "<0.01";
+  if (value < 0 && value > -0.01) return ">-0.01";
   return decimalFormat.format(value === 0 ? 0 : value);
 }
 
 /** Input is a percentage (25), not a fraction (0.25). */
 export function formatPercent(value: DisplayNumber): string {
-  return isDisplayNumber(value) ? `${formatRate(value)}%` : UNAVAILABLE_VALUE;
+  return isDisplayNumber(value) ? `${formatDecimal(value)}%` : UNAVAILABLE_VALUE;
 }
 
-/** Compact notation is reserved for chart axes, with exact values in the tooltip/table. */
+/** One metric format across cards, rows, charts and previews; K/M are the only suffixes. */
 export function formatCompactNumber(value: DisplayNumber): string {
-  return isDisplayNumber(value) ? compactFormat.format(value === 0 ? 0 : value) : UNAVAILABLE_VALUE;
+  if (!isDisplayNumber(value)) return UNAVAILABLE_VALUE;
+  const magnitude = Math.abs(value);
+  let divisor = magnitude >= 1_000_000 ? 1_000_000 : magnitude >= 1_000 ? 1_000 : 1;
+  // Choose the unit after decimal rounding so a boundary never renders as 1,000.00K.
+  const roundedMagnitude = Number(decimalFormat.format(magnitude / divisor).replaceAll(",", ""));
+  if (divisor < 1_000_000 && roundedMagnitude >= 1_000) divisor *= 1_000;
+  const suffix = divisor === 1_000_000 ? "M" : divisor === 1_000 ? "K" : "";
+  return `${formatDecimal(value / divisor)}${suffix}`;
 }
+
+export const formatRate = formatCompactNumber;
 
 export function formatCountLabel(value: number, singular: string, plural = `${singular}s`): string {
   return `${formatInteger(value)} ${value === 1 ? singular : plural}`;
 }
 
 export function formatSeconds(value: DisplayNumber): string {
-  return isDisplayNumber(value) && value >= 0 ? `${formatRate(value)} s` : UNAVAILABLE_VALUE;
+  return isDisplayNumber(value) && value >= 0 ? `${formatDecimal(value)} s` : UNAVAILABLE_VALUE;
 }
 
 export function formatBytes(bytes: DisplayNumber): string {
@@ -77,7 +85,7 @@ export function formatBytes(bytes: DisplayNumber): string {
     unit++;
   }
   // Promote when rounding would otherwise display 1,024 of the smaller unit.
-  if (Math.round(amount * 10) / 10 >= 1024 && unit < units.length - 1) {
+  if (Number(decimalFormat.format(amount).replaceAll(",", "")) >= 1024 && unit < units.length - 1) {
     amount /= 1024;
     unit++;
   }
@@ -143,6 +151,6 @@ export function getRecordedDurationSeconds(value: { durationMs?: DisplayNumber; 
 }
 
 // Retained names keep existing imports compatible with the shared presentation contract.
-export const formatNumber = formatInteger;
+export const formatNumber = formatCompactNumber;
 export const formatDps = formatRate;
 export const formatShortDateUtc = formatDateUtc;

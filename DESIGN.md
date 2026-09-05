@@ -45,16 +45,19 @@ Use the display helpers in `lib/utils.ts` on public pages, admin pages, previews
 
 | Value | Standard | Example |
 |---|---|---|
-| Counts and damage/healing totals | Grouped whole numbers using `en-US`; no K/M abbreviations in comparison rows or cards | `40,960,709` damage; `1,234` hits |
-| Rates | Grouped numbers with at most one decimal; visible metric in a column header or beside the value on mobile | `13,931.3 DPS` |
-| Percentages | At most one decimal; show `<0.1%` for a positive value below 0.1; reserve `0%` for a measured zero | `7.3%`, `<0.1%` |
-| Missing measurements | An em dash with accessible `Unavailable` text via `NumericValue`; explain missing qualifying attempts in the surrounding copy | No boss kills: unavailable average; measured zero: `0` |
-| Chart axes | Compact notation with at most one decimal and correct threshold rollover; exact values remain in tooltip and data table | `999,999` becomes `1M` on the axis only |
-| File size | Binary units, matching the 1,024 divisor | `1.5 KiB`, `2 MiB` |
+| Counts, list positions and gear | Grouped whole numbers using `en-US`; counts, ranks, character/item levels and GearScore do not use K/M | `1,234` hits; GearScore `4,250` |
+| Damage, healing, absorbs and power amounts | Exactly two decimals; use K for thousands and M for millions, with comma grouping within the displayed value. Keep M for larger amounts; never switch to B | `58.00`, `13.93K`, `4.20M`, `1,234.57M` |
+| Rates | The same two-decimal K/M format; a visible metric appears in a column header or beside the value on mobile | `13.93K DPS`, `58.00 HPS` |
+| Percentages | Exactly two decimals; show `<0.01%` for a positive value below 0.01; reserve `0.00%` for a measured zero | `7.30%`, `0.00%`, `<0.01%` |
+| Missing measurements | An em dash with accessible `Unavailable` text via `NumericValue`; explain missing qualifying attempts in the surrounding copy | No boss kills: unavailable average; measured zero amount or rate: `0.00` |
+| Charts, tables and tooltips | Use the same two-decimal metric format on every surface, with correct K/M threshold rollover | `999,999` becomes `1.00M` |
+| File size | Binary units, matching the 1,024 divisor; scaled units have exactly two decimals and byte counts remain whole | `1.50 KiB`, `2.00 MiB`, `512 B` |
 | Recorded date/time | Month name, day, year; 24-hour time explicitly labelled UTC; ranges crossing midnight include both dates | `Sep 4, 2026, 23:04:10 UTC` |
+| Decimal seconds | Exactly two decimals with an explicit seconds unit; never use K/M for time | `1.25 s`, `0.00 s` |
 | Elapsed time | `M:SS`, adding hours when needed; retain `H:MM:SS.mmm` in precise analysis | `4:27`, `2:05:03`, `1:04:29.712` |
 
-- Comparison columns align numbers to the right and use tabular digits. Responsive layouts must retain complete numbers and visible units, not rely on desktop-only headings or hover titles.
+- Comparison columns align numbers to the right and use tabular digits. Responsive layouts must retain complete formatted values and visible units, not rely on desktop-only headings or hover titles.
+- Formatting affects display only. Sort by the original numeric values before rounding; values that display alike do not become analytical ties. A positive amount or rate below `0.01` displays `<0.01` instead of appearing to be zero.
 - Name totals consistently: **Damage**, **Effective healing**, **Absorbs**, **Healing + absorbs**, and **Damage taken**. DPS/HPS/APS remain distinct; HPS means effective healing per second. Spell out **Healing + absorbs /s** where that combined rate appears.
 - Kill/wipe counts use words (`12 kills / 5 wipes`). Never use K for kills alongside K meaning thousands. Death counts use `1 death` or `2 deaths` with a visible separator from the next statistic.
 - Count labels use correct singular/plural forms. Numeric count badges and pagination totals use the same grouping rules.

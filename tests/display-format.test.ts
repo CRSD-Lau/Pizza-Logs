@@ -2,49 +2,61 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 import {
   formatBytes, formatCompactNumber, formatCountLabel, formatDateTimeRangeUtc,
-  formatDateTimeUtc, formatDateUtc, formatDps, formatDuration, formatDurationPrecise,
+  formatDateTimeUtc, formatDateUtc, formatDecimal, formatDps, formatDuration, formatDurationPrecise,
   formatInteger, formatNumber, formatPercent, formatRate, formatSeconds, formatTimeUtc,
   getRecordedDurationSeconds,
 } from "../lib/utils";
 
-test("comparison numbers use the same precision regardless of magnitude", () => {
+test("metrics consistently use two decimals and K/M while discrete counts stay whole", () => {
   assert.equal(formatInteger(40_960_709), "40,960,709");
-  assert.equal(formatNumber(999_999), "999,999");
-  assert.equal(formatRate(13_931.25), "13,931.3");
-  assert.equal(formatDps(13_931.25), "13,931.3");
-  assert.equal(formatRate(58), "58");
-  assert.equal(formatRate(999.96), "1,000");
-  assert.equal(formatRate(-1240.75), "-1,240.8");
+  for (const format of [formatNumber, formatDps, formatRate, formatCompactNumber]) {
+    assert.equal(format(13_931.25), "13.93K");
+    assert.equal(format(4_200_000), "4.20M");
+    assert.equal(format(1_234_567_890), "1,234.57M");
+    assert.equal(format(58), "58.00");
+    assert.equal(format(999.96), "999.96");
+    assert.equal(format(-1240.75), "-1.24K");
+    assert.equal(format(-0), "0.00");
+  }
   assert.equal(formatInteger(-0), "0");
-  assert.equal(formatRate(-0), "0");
+  assert.equal(formatDecimal(1234.5), "1,234.50");
 });
 
 test("zero, small contributions and unavailable evidence remain distinct", () => {
-  for (const format of [formatInteger, formatRate, formatPercent, formatCompactNumber]) {
+  for (const format of [formatInteger, formatDecimal, formatNumber, formatRate, formatPercent, formatCompactNumber]) {
     for (const invalid of [null, undefined, NaN, Infinity, -Infinity]) assert.equal(format(invalid), "—");
   }
-  assert.equal(formatPercent(0), "0%");
-  assert.equal(formatPercent(0.0001), "<0.1%");
-  assert.equal(formatPercent(0.099), "<0.1%");
-  assert.equal(formatPercent(0.1), "0.1%");
-  assert.equal(formatPercent(7.26), "7.3%");
-  assert.equal(formatPercent(100), "100%");
-  assert.equal(formatRate(0.003), "<0.1");
-  assert.equal(formatRate(-0.003), ">-0.1");
-  assert.equal(formatSeconds(0), "0 s");
+  assert.equal(formatPercent(0), "0.00%");
+  assert.equal(formatPercent(0.0001), "<0.01%");
+  assert.equal(formatPercent(0.009), "<0.01%");
+  assert.equal(formatPercent(0.01), "0.01%");
+  assert.equal(formatPercent(0.099), "0.10%");
+  assert.equal(formatPercent(7.26), "7.26%");
+  assert.equal(formatPercent(100), "100.00%");
+  assert.equal(formatPercent(1234.5), "1,234.50%");
+  assert.equal(formatRate(0.003), "<0.01");
+  assert.equal(formatRate(-0.003), ">-0.01");
+  assert.equal(formatSeconds(0), "0.00 s");
+  assert.equal(formatSeconds(1234.5), "1,234.50 s");
   assert.equal(formatSeconds(null), "—");
 });
 
-test("compact axes and binary file sizes roll over without misleading suffixes", () => {
-  assert.equal(formatCompactNumber(999_999), "1M");
-  assert.equal(formatCompactNumber(1_000_000_000), "1B");
-  assert.equal(formatCompactNumber(-999_999), "-1M");
+test("rounding promotes K/M boundaries and preserves grouped millions", () => {
+  assert.equal(formatCompactNumber(999.994), "999.99");
+  assert.equal(formatCompactNumber(999.995), "1.00K");
+  assert.equal(formatCompactNumber(1000), "1.00K");
+  assert.equal(formatCompactNumber(999_994), "999.99K");
+  assert.equal(formatCompactNumber(999_995), "1.00M");
+  assert.equal(formatCompactNumber(999_999), "1.00M");
+  assert.equal(formatCompactNumber(1_000_000), "1.00M");
+  assert.equal(formatCompactNumber(1_000_000_000), "1,000.00M");
+  assert.equal(formatCompactNumber(-999_999), "-1.00M");
   assert.equal(formatBytes(0), "0 B");
   assert.equal(formatBytes(1023), "1,023 B");
-  assert.equal(formatBytes(1024), "1 KiB");
-  assert.equal(formatBytes(1536), "1.5 KiB");
-  assert.equal(formatBytes(1024 ** 2 - 1), "1 MiB");
-  assert.equal(formatBytes(1024 ** 3), "1 GiB");
+  assert.equal(formatBytes(1024), "1.00 KiB");
+  assert.equal(formatBytes(1536), "1.50 KiB");
+  assert.equal(formatBytes(1024 ** 2 - 1), "1.00 MiB");
+  assert.equal(formatBytes(1024 ** 3), "1.00 GiB");
   assert.equal(formatBytes(-1), "—");
   assert.equal(formatCountLabel(1, "application"), "1 application");
   assert.equal(formatCountLabel(1234, "application"), "1,234 applications");

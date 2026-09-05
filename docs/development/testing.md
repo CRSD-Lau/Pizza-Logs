@@ -117,8 +117,15 @@ The same command then runs `scripts/upload-journey-e2e.mjs` and `scripts/ux-navi
 
 The display-consistency browser suite also runs in `test:e2e`. It uploads an isolated
 synthetic report with eight-digit totals, a tiny nonzero contribution, a death,
-18 spells and a midnight crossing. At 375, 768, 1024 and 1440 pixels it checks full
-number visibility, mobile metric labels, spell disclosure and exact chart values.
+18 spells and a midnight crossing. At 375, 768, 1024 and 1440 pixels it checks compact
+metric visibility, mobile metric labels, spell disclosure and matching two-decimal
+formatting across report rows, chart axes, tooltips and chart-value tables. Formatter
+and render coverage must include `13.93K`, `4.20M`, `1,234.57M` without a B suffix,
+unscaled `58.00`, measured `0.00%`, tiny positive `<0.01%`, scaled `1.50 KiB`,
+and decimal seconds such as `1.25 s` and `0.00 s`. Clock-style durations and UTC
+timestamps retain their existing formats.
+Counts, ranks, levels and GearScore retain grouped whole numbers. Display rounding
+must not change raw sort order, stored analytics or the unavailable-value distinction.
 The browser deliberately uses a German locale and Halifax timezone to catch
 server/client presentation drift; recorded times must still display labelled UTC.
 Evidence is saved under `.test-artifacts/display-consistency`. Authenticated layout
