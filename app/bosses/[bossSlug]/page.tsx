@@ -6,7 +6,8 @@ import { SectionHeader } from "@/components/ui/SectionHeader";
 import { StatCard } from "@/components/ui/StatCard";
 import { LeaderboardBar } from "@/components/charts/LeaderboardBar";
 import { EmptyState } from "@/components/ui/EmptyState";
-import { formatDps, formatDuration } from "@/lib/utils";
+import { formatDps, formatDuration, formatInteger, formatDateTimeUtc, getRecordedDurationSeconds } from "@/lib/utils";
+import { NumericValue } from "@/components/ui/NumericValue";
 import { buildPageMetadata } from "@/lib/page-metadata";
 import { ShortPullNotice } from "@/components/reports/ShortPullNotice";
 import { countAttempts, isShortPull, parseIncludeShortPulls } from "@/lib/attempt-policy";
@@ -114,9 +115,10 @@ export default async function BossPage({ params, searchParams }: Props) {
   const { boss, dpsLeaders, hpsLeaders, counts, visibleEncounters } = data;
 
   const kills = boss.encounters.filter(e => e.outcome === "KILL");
-  const fastestKill = kills.reduce<number | null>(
-    (m, e) => m === null ? e.durationSeconds : Math.min(m, e.durationSeconds), null
-  );
+  const fastestKill = kills.reduce<number | null>((fastest, encounter) => {
+    const seconds = getRecordedDurationSeconds(encounter);
+    return seconds === null ? fastest : fastest === null ? seconds : Math.min(fastest, seconds);
+  }, null);
 
   const DIFFICULTIES = ["10N", "25N", "10H", "25H", "UNKNOWN"];
   const killsByDiff = DIFFICULTIES.reduce<Record<string, number>>((acc, d) => {
@@ -149,10 +151,10 @@ export default async function BossPage({ params, searchParams }: Props) {
 
       {/* Stats */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-        <StatCard label="Total Kills"    value={kills.length} highlight />
-        <StatCard label="Total Wipes"    value={counts.wipes} />
-        <StatCard label="Fastest Kill"   value={fastestKill !== null ? formatDuration(fastestKill) : "—"} />
-        <StatCard label="Total Pulls"    value={counts.totalPulls} />
+        <StatCard label="Total Kills" value={formatInteger(kills.length)} highlight />
+        <StatCard label="Total Wipes" value={formatInteger(counts.wipes)} />
+        <StatCard label="Fastest Kill" value={fastestKill !== null ? formatDuration(fastestKill) : <NumericValue value={null} />} sub={kills.length === 0 ? "No boss kills" : fastestKill === null ? "Kill duration unavailable" : "From known kill durations"} />
+        <StatCard label="Total Pulls" value={formatInteger(counts.totalPulls)} />
       </div>
 
       {/* Kill counts by difficulty */}
@@ -161,8 +163,8 @@ export default async function BossPage({ params, searchParams }: Props) {
           {DIFFICULTIES.filter(d => killsByDiff[d] > 0 || visibleEncounters.some(e => e.difficulty === d)).map(d => (
             <div key={d} className="bg-bg-card border border-gold-dim rounded-sm px-4 py-2 text-center">
               <div className={`diff-badge mb-1 ${d.endsWith("H") ? "heroic" : "normal"}`}>{d}</div>
-              <div className="text-xl font-bold text-text-primary tabular-nums">{killsByDiff[d] ?? 0}</div>
-              <div className="text-sm text-text-secondary">kills</div>
+              <div className="text-xl font-bold text-text-primary tabular-nums">{formatInteger(killsByDiff[d] ?? 0)}</div>
+              <div className="text-sm text-text-secondary">{killsByDiff[d] === 1 ? "kill" : "kills"}</div>
             </div>
           ))}
         </div>
@@ -216,12 +218,13 @@ export default async function BossPage({ params, searchParams }: Props) {
       <section id="boss-history" className="scroll-mt-40">
         <SectionHeader
           title="Fight history"
-          sub={`Latest ${Math.min(visibleEncounters.length, 20)} of ${counts.totalPulls} counted attempts · Dates in UTC`}
+          sub={`Latest ${formatInteger(Math.min(visibleEncounters.length, 20))} of ${formatInteger(counts.totalPulls)} counted ${counts.totalPulls === 1 ? "attempt" : "attempts"} · Dates in UTC`}
         />
         {visibleEncounters.length > 0 ? (
           <div className="bg-bg-panel border border-gold-dim rounded-sm divide-y divide-gold-dim">
             {visibleEncounters.slice(0, 20).map(enc => {
               const top = enc.participants[0];
+              const duration = getRecordedDurationSeconds(enc);
               return (
                 <Link
                   key={enc.id}
@@ -236,17 +239,17 @@ export default async function BossPage({ params, searchParams }: Props) {
                       {enc.difficulty}
                     </span>
                     <span className="text-sm text-text-secondary">
-                      {formatDuration(enc.durationSeconds)}
+                      {duration === null ? <NumericValue value={null} /> : formatDuration(duration)} duration
                     </span>
                   </div>
                   <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 text-sm text-text-secondary">
                     {top && (
                       <span className="text-text-secondary">
                         Top: <span className="text-text-primary font-medium">{top.player.name}</span>{" "}
-                        <span className="tabular-nums">{formatDps(top.dps)} dps</span>
+                        <span className="tabular-nums">{formatDps(top.dps)} DPS</span>
                       </span>
                     )}
-                    <span>{new Date(enc.startedAt).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric", timeZone: "UTC" })}</span>
+                    <time dateTime={enc.startedAt.toISOString()}>{formatDateTimeUtc(enc.startedAt)}</time>
                   </div>
                 </Link>
               );

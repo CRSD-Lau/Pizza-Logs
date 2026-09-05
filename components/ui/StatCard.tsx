@@ -1,4 +1,5 @@
 import { cn } from "@/lib/utils";
+import { NumericValue } from "./NumericValue";
 
 interface StatCardProps {
   label:      string;
@@ -23,10 +24,10 @@ export function StatCard({ label, value, sub, highlight, className }: StatCardPr
         {label}
       </div>
       <div className={cn(
-        "mb-1 text-2xl font-bold leading-none tabular-nums",
+        "mb-1 break-words text-xl font-bold leading-tight tabular-nums sm:text-2xl",
         highlight ? "text-gold-light text-glow-gold" : "text-text-primary"
       )}>
-        {value}
+        {typeof value === "number" ? <NumericValue value={value} /> : value === "—" || value === null || value === undefined ? <NumericValue value={null} /> : value}
       </div>
       {sub && <div className="text-xs text-text-secondary">{sub}</div>}
     </div>

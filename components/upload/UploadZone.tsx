@@ -6,7 +6,7 @@ import { useDropzone } from "react-dropzone";
 import { Button } from "@/components/ui/Button";
 import type { UploadResponse } from "@/lib/schema";
 import { MAX_UPLOAD_BYTES } from "@/lib/upload-security";
-import { cn } from "@/lib/utils";
+import { cn, formatCountLabel, formatInteger, formatPercent, formatRate, formatSeconds } from "@/lib/utils";
 import { requestUploadNotifications, sendUploadNotification } from "./notifications";
 
 interface UploadZoneProps {
@@ -150,7 +150,7 @@ export function UploadZone({ onComplete }: UploadZoneProps) {
                     ...current,
                     progress: event.pct ?? 45,
                     message: quickMs !== undefined
-                      ? `${event.msg ?? "Quick classification ready"} (${(quickMs / 1000).toFixed(2)}s after upload)`
+                      ? `${event.msg ?? "Quick classification ready"} (${formatSeconds(quickMs / 1000)} after upload)`
                       : (event.msg ?? "Quick classification ready"),
                     elapsed,
                     stalled: false,
@@ -166,7 +166,7 @@ export function UploadZone({ onComplete }: UploadZoneProps) {
               sendUploadNotification(
                 "Upload complete",
                 stored > 0
-                  ? `${stored} encounter${stored !== 1 ? "s" : ""} stored`
+                  ? `${formatCountLabel(stored, "encounter")} stored`
                   : "No new encounters were found",
               );
             } else if (event.type === "error") {
@@ -321,11 +321,9 @@ export function UploadZone({ onComplete }: UploadZoneProps) {
 
           <div className="max-w-sm mx-auto space-y-1.5">
             <div className="flex justify-between text-xs text-text-dim tabular-nums">
-              <span>{state.progress}%</span>
+              <span>{formatPercent(state.progress)}</span>
               <span>
-                {state.elapsed < 60
-                  ? `${state.elapsed}s elapsed`
-                  : `${Math.floor(state.elapsed / 60)}m ${state.elapsed % 60}s elapsed`}
+                {formatSeconds(state.elapsed)} elapsed
               </span>
             </div>
             <div className="h-2 rounded-full bg-bg-hover overflow-hidden">
@@ -364,7 +362,7 @@ export function UploadResult({
 
   return (
     <div className="border border-gold-dim rounded-sm bg-bg-panel divide-y divide-gold-dim">
-      <div className="px-5 py-4 flex items-center justify-between gap-4">
+      <div className="px-5 py-4 flex flex-wrap items-center justify-between gap-4">
         <div>
           <p className="heading-cinzel text-sm text-gold-light">
             {isDuplicate ? "Already Parsed" : "Upload Complete"}
@@ -372,7 +370,7 @@ export function UploadResult({
           <p className="text-xs text-text-secondary mt-0.5">
             {isDuplicate
               ? "This log was already parsed and the raid data is ready"
-              : `${result.encountersInserted} encounter${result.encountersInserted !== 1 ? "s" : ""} stored`}
+              : `${formatCountLabel(result.encountersInserted, "encounter")} stored`}
           </p>
         </div>
         <button type="button" onClick={onReset} className="inline-flex min-h-11 shrink-0 items-center rounded-sm px-3 text-sm text-text-secondary hover:text-text-primary focus-visible:outline-2 focus-visible:outline-gold">
@@ -394,9 +392,9 @@ export function UploadResult({
 
       {!isDuplicate && (
         <div className="px-5 py-3 flex flex-wrap gap-6 text-sm">
-          <Stat label="Found" value={result.encountersFound} />
-          <Stat label="Stored" value={result.encountersInserted} highlight />
-          <Stat label="Duplicate" value={result.encountersDuplicate} />
+          <Stat label="Encounters found" value={result.encountersFound} />
+          <Stat label="Encounters stored" value={result.encountersInserted} highlight />
+          <Stat label="Duplicate encounters" value={result.encountersDuplicate} />
         </div>
       )}
 
@@ -408,13 +406,13 @@ export function UploadResult({
           {result.milestones.map((m, index) => (
             <div key={index} className="milestone-banner flex items-center justify-between text-sm flex-wrap gap-2">
               <span>
-                <span className="text-gold font-bold">#{m.rank} when achieved</span>{" "}
+                <span className="text-gold font-bold">#{formatInteger(m.rank)} when achieved</span>{" "}
                 <span className="text-text-secondary">{m.type === "WEEKLY_BEST" ? "weekly best" : "all-time"}</span>{" "}
                 <span className="text-text-primary font-semibold">{m.playerName}</span>
                 <span className="text-text-secondary"> - {m.bossName} {m.difficulty}</span>
               </span>
               <span className="font-bold tabular-nums text-gold-light">
-                {m.value.toLocaleString(undefined, { maximumFractionDigits: 0 })} {m.metric}
+                {formatRate(m.value)} {m.metric.toUpperCase()}
               </span>
             </div>
           ))}
@@ -437,7 +435,7 @@ function Stat({ label, value, highlight }: { label: string; value: number; highl
     <div>
       <div className="text-xs text-text-dim uppercase tracking-widest">{label}</div>
       <div className={cn("text-xl font-bold tabular-nums", highlight ? "text-gold-light" : "text-text-primary")}>
-        {value}
+        {formatInteger(value)}
       </div>
     </div>
   );

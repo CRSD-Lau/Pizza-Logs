@@ -23,7 +23,8 @@ import { getRaidSessionRoutes, resolveRaidSession } from "@/lib/raid-session-rou
 import { PIZZA_LOGS_ORIGIN } from "@/lib/site";
 import { buildPageMetadata } from "@/lib/page-metadata";
 import { getRevealClassName, getRevealStyle, orderBossDisplayEntries } from "@/lib/ui-animation";
-import { cn, formatDuration, formatDurationPrecise, formatNumber } from "@/lib/utils";
+import { cn, formatCountLabel, formatDateTimeRangeUtc, formatDateTimeUtc, formatDuration, formatDurationPrecise, formatNumber, getRecordedDurationSeconds } from "@/lib/utils";
+import { NumericValue } from "@/components/ui/NumericValue";
 
 interface Props {
   params: Promise<{ id: string; sessionIdx: string }>;
@@ -81,7 +82,7 @@ export async function generateMetadata({ params, searchParams }: Props): Promise
   const raidLabel = raidNames.length > 0 ? raidNames.join(" + ") : "Raid";
   const guildLabel = upload?.guild?.name ? ` for ${upload.guild.name}` : "";
   const { kills, wipes, totalPulls } = countAttempts(encounters, { includeShortPulls });
-  const description = `${raidLabel} raid report${guildLabel} on ${dateLabel}. ${kills} kills, ${wipes} wipes, ${totalPulls} pulls.`;
+  const description = `${raidLabel} raid report${guildLabel} on ${dateLabel}. ${formatCountLabel(kills, "kill")}, ${formatCountLabel(wipes, "wipe")}, ${formatCountLabel(totalPulls, "pull")}.`;
   const canonical = `${PIZZA_LOGS_ORIGIN}${getRaidSessionPath(publicSlug, route)}`;
 
   return buildPageMetadata({ title, description, path: canonical, type: "article" });
@@ -293,11 +294,7 @@ export default async function SessionDetailPage({ params, searchParams }: Props)
             {upload.realm?.host && <span>- {upload.realm.host}</span>}
             <span>-</span>
             <span>
-              {new Date(startedAt).toLocaleString("en-US", {
-                weekday: "short", month: "short", day: "numeric", hour: "2-digit", minute: "2-digit", timeZone: "UTC",
-              })}
-              {" -> "}
-              {new Date(endedAt).toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit", timeZone: "UTC" })}
+              {formatDateTimeRangeUtc(startedAt, endedAt)}
             </span>
           </div>
         </div>
@@ -316,12 +313,12 @@ export default async function SessionDetailPage({ params, searchParams }: Props)
         <p className="text-sm text-text-secondary">
           Totals cover winning boss fights and their adds. Wipes and between-fight trash are excluded.
         </p>
-        <div className="grid grid-cols-2 items-stretch gap-y-2 rounded-sm bg-bg-panel/40 p-2 sm:grid-cols-3 lg:grid-cols-6">
-          <StatCard label="Kills / Wipes" value={`${kills}K / ${wipes}W`} sub="recorded attempts" highlight className="col-span-2" />
+        <div className="grid grid-cols-2 items-stretch gap-y-2 rounded-sm bg-bg-panel/40 p-2 lg:grid-cols-4">
+          <StatCard label="Fight results" value={`${formatCountLabel(kills, "kill")} / ${formatCountLabel(wipes, "wipe")}`} sub="counted attempts" highlight className="col-span-2" />
           <StatCard label="Total Damage" value={formatNumber(killSummary.totalDamage)} sub="boss kills only" />
-          <StatCard label="Heal" value={formatNumber(killSummary.heal)} sub="effective healing + absorbs" />
+          <StatCard label="Healing + absorbs" value={formatNumber(killSummary.heal)} sub="effective healing + absorbs" />
           <StatCard label="Damage Taken" value={formatNumber(killSummary.totalDamageTaken)} sub="boss kills only" />
-          <StatCard label="Kill Time" value={killSummary.durationMs === null ? "Unavailable" : formatDurationPrecise(killSummary.durationMs)} sub="combined boss kill duration" className="col-span-2 sm:col-span-1" />
+          <StatCard label="Kill Time" value={formatDurationPrecise(killSummary.durationMs)} sub="combined boss kill duration" className="col-span-2 lg:col-span-1" />
         </div>
       </section>
 
@@ -333,7 +330,7 @@ export default async function SessionDetailPage({ params, searchParams }: Props)
             <details className="mb-3 text-sm text-text-secondary">
               <summary className="min-h-11 cursor-pointer py-3 text-gold">How totals and rates are calculated</summary>
               <p className="pb-3">
-              Heal includes effective healing and attributed absorbs; H+A PS is their combined rate.
+              Healing + absorbs includes effective healing and attributed shields; Healing + absorbs /s is their combined rate.
               Every player uses the same combined kill time, including fights they sat out.
               Player links open their report across all attempts.
               </p>
@@ -351,7 +348,7 @@ export default async function SessionDetailPage({ params, searchParams }: Props)
         )}
       </AccordionSection>
 
-      <AccordionSection id="encounters" title="Encounters" count={totalPulls} defaultOpen>
+      <AccordionSection id="encounters" title="Encounters" sub="Grouped by raid · Earliest fight first within each raid · Times in UTC" count={totalPulls} defaultOpen>
         {visibleEncounters.length === 0 && (
           <p className="text-sm text-text-secondary">Only short pulls were recorded. Include short pulls to inspect them.</p>
         )}
@@ -362,12 +359,8 @@ export default async function SessionDetailPage({ params, searchParams }: Props)
               <div className="data-panel divide-y divide-gold-dim">
                 {encs.map((enc) => {
                   const shortPull = isShortPull(enc);
-                  const durationSec = (enc.durationMs ?? 0) > 0
-                    ? enc.durationMs / 1000
-                    : Math.max(1, enc.durationSeconds);
-                  const rdps = enc.durationSeconds > 0
-                    ? Math.round(enc.totalDamage / durationSec)
-                    : 0;
+                  const durationSec = getRecordedDurationSeconds(enc);
+                  const rdps = durationSec === null ? null : enc.totalDamage / durationSec;
 
                   return (
                     <Link
@@ -400,11 +393,11 @@ export default async function SessionDetailPage({ params, searchParams }: Props)
                         </span>
                       </div>
                       <div className="flex items-center gap-4 text-xs tabular-nums text-text-secondary flex-wrap justify-end">
-                        <span>{formatDuration(enc.durationSeconds)}</span>
-                        <span>{formatNumber(enc.totalDamage)} dmg</span>
-                        <span>{rdps.toLocaleString()} rdps</span>
+                        <span>{formatDuration(durationSec)} duration</span>
+                        <span>{formatNumber(enc.totalDamage)} damage</span>
+                        <span><NumericValue value={rdps} kind="rate" /> raid DPS</span>
                         <span className="text-text-dim">
-                          {new Date(enc.startedAt).toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit", timeZone: "UTC" })}
+                          {formatDateTimeUtc(enc.startedAt)}
                         </span>
                       </div>
                     </Link>
@@ -441,7 +434,7 @@ export default async function SessionDetailPage({ params, searchParams }: Props)
           <div className="space-y-4">
             <div className="grid grid-cols-2 gap-2 sm:grid-cols-4" aria-label="Full session totals">
               <StatCard label="Total Damage" value={formatNumber(sessionAnalytics.totalDamage)} sub="full raid session" />
-              <StatCard label="Heal" value={formatNumber(sessionAnalytics.heal)} sub="effective healing + absorbs" />
+              <StatCard label="Healing + absorbs" value={formatNumber(sessionAnalytics.heal)} sub="effective healing + absorbs" />
               <StatCard label="Damage Taken" value={formatNumber(sessionAnalytics.totalDamageTaken)} sub="full raid session" />
               <StatCard label="Duration" value={formatDurationPrecise(sessionAnalytics.durationMs)} sub="first to last log event" />
             </div>
@@ -469,9 +462,9 @@ export default async function SessionDetailPage({ params, searchParams }: Props)
       </AccordionSection>
 
       {playerSet.size > 0 && (
-        <AccordionSection id="roster" title="Raid Roster" count={playerSet.size} defaultOpen={false}>
+        <AccordionSection id="roster" title="Raid Roster" sub="Player names A–Z" count={playerSet.size} defaultOpen={false}>
           <div className="flex flex-wrap gap-2 border-y border-gold-dim px-2 py-4">
-            {Array.from(playerSet.entries()).map(([name, cls], index) => {
+            {Array.from(playerSet.entries()).sort(([left], [right]) => left.localeCompare(right, "en", { sensitivity: "base" })).map(([name, cls], index) => {
               const rosterMember = rosterMemberMap.get(name.toLowerCase());
               const characterClass = cls ?? rosterMember?.className ?? null;
               const classColor = getClassColor(characterClass ?? name);

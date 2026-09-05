@@ -17,7 +17,7 @@ import {
   PAPER_DOLL_RIGHT_SLOTS,
   PAPER_DOLL_WEAPON_SLOTS,
 } from "@/lib/gear-layout";
-import { cn } from "@/lib/utils";
+import { cn, formatDateTimeUtc, formatInteger } from "@/lib/utils";
 import { WarmaneCharacterModel } from "./WarmaneCharacterModel";
 
 type PlayerAvatarSize = "xs" | "sm" | "lg";
@@ -219,7 +219,7 @@ function GearPreviewPanel({
             {preview?.ok && preview.gearScore && (
               <div className="shrink-0 text-right">
                 <p className="text-base font-bold tabular-nums text-gold-light">
-                  {preview.gearScore.score.toLocaleString()}
+                  {formatInteger(preview.gearScore.score)}
                 </p>
                 <p className="text-xs uppercase tracking-wider text-text-dim">GearScore</p>
               </div>
@@ -300,7 +300,7 @@ function GearPreviewPanel({
                 {preview.gearScore && (
                   <div className="relative z-20 mt-4 border-y border-gold-dim/45 bg-bg-deep/65 px-4 py-2 text-center backdrop-blur-[1px]">
                     <p className="text-xl font-bold tabular-nums text-gold-light">
-                      {preview.gearScore.score.toLocaleString()}
+                      {formatInteger(preview.gearScore.score)}
                     </p>
                     <p className="text-xs uppercase tracking-[0.18em] text-text-dim">GearScore</p>
                   </div>
@@ -322,10 +322,10 @@ function GearPreviewPanel({
           </div>
           <div className="flex items-center justify-between gap-3 border-t border-gold-dim bg-bg-panel px-3 py-2 text-xs text-text-dim">
             <span>
-              {preview.stale ? "Cached fallback" : "Live Armory"} · {new Date(preview.gear.fetchedAt).toLocaleString()}
+              {preview.stale ? "Cached fallback" : "Live Armory"} · {formatDateTimeUtc(preview.gear.fetchedAt)}
               {preview.gear.appearanceStale && <span className="hidden sm:inline"> · Cached appearance</span>}
             </span>
-            {preview.gearScore && <span>avg ilvl {preview.gearScore.averageItemLevel}</span>}
+            {preview.gearScore && <span>Average item level {formatInteger(preview.gearScore.averageItemLevel)}</span>}
           </div>
         </>
       )}

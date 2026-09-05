@@ -6,6 +6,7 @@ import { StatCard } from "@/components/ui/StatCard";
 import { PageHeader, PageSection, PageShell } from "@/components/ui/PageLayout";
 import { DatabaseUnavailable } from "@/components/ui/DatabaseUnavailable";
 import { getWeekBounds } from "@/lib/utils";
+import { NumericValue } from "@/components/ui/NumericValue";
 import { isDatabaseConnectionError } from "@/lib/database-errors";
 import { buildPageMetadata } from "@/lib/page-metadata";
 import { ShortPullNotice } from "@/components/reports/ShortPullNotice";
@@ -64,9 +65,9 @@ export default async function HomePage({ searchParams }: {
 
       <PageSection title="Raid activity" action={<FrozenLogbookIntro />}>
         <div className="grid grid-cols-2 items-stretch gap-y-2 rounded-sm bg-bg-panel/40 p-2 sm:grid-cols-4">
-          <StatCard label="Boss Kills" value={stats.databaseAvailable ? stats.totalKills.toLocaleString() : "—"} highlight className="col-span-2" />
-          <StatCard label="Kills This Week" value={stats.databaseAvailable ? stats.weekKills.toLocaleString() : "—"} />
-          <StatCard label="Encounters" value={stats.databaseAvailable ? stats.totalEncounters.toLocaleString() : "—"} />
+          <StatCard label="Boss Kills" value={<NumericValue value={stats.databaseAvailable ? stats.totalKills : null} />} highlight className="col-span-2" />
+          <StatCard label="Kills This Week" value={<NumericValue value={stats.databaseAvailable ? stats.weekKills : null} />} />
+          <StatCard label="Encounters" value={<NumericValue value={stats.databaseAvailable ? stats.totalEncounters : null} />} />
         </div>
         {stats.databaseAvailable && (
           <ShortPullNotice shortPulls={stats.shortPulls} includeShortPulls={includeShortPulls} basePath="/" />

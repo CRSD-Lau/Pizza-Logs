@@ -10,27 +10,23 @@ import {
   type SessionPlayerSortKey,
 } from "@/lib/session-player-sort";
 import { cn } from "@/lib/utils";
+import { NumericValue } from "@/components/ui/NumericValue";
 
 const columns: readonly { key: SessionPlayerSortKey; label: string; rate?: boolean }[] = [
   { key: "name", label: "Player" },
   { key: "totalDamage", label: "Total Damage" },
   { key: "dps", label: "DPS", rate: true },
-  { key: "heal", label: "Heal" },
-  { key: "healPerSecond", label: "H+A PS", rate: true },
+  { key: "heal", label: "Healing + absorbs" },
+  { key: "healPerSecond", label: "Healing + absorbs /s", rate: true },
   { key: "damageTaken", label: "Damage Taken" },
   { key: "dtps", label: "DTPS", rate: true },
 ];
-const totalFormat = new Intl.NumberFormat("en-US", { maximumFractionDigits: 0 });
-const rateFormat = new Intl.NumberFormat("en-US", { maximumFractionDigits: 1 });
 const focusClasses = "rounded-sm focus:outline-hidden focus-visible:ring-2 focus-visible:ring-gold focus-visible:ring-offset-2 focus-visible:ring-offset-bg-deep";
 
 function metricValue(row: SessionPlayerRow, key: SessionPlayerSortKey, rate?: boolean) {
   const value = row[key];
-  if (value === null) {
-    return <><span aria-hidden="true">—</span><span className="sr-only">Unavailable</span></>;
-  }
   if (typeof value === "string") return value;
-  return (rate ? rateFormat : totalFormat).format(value);
+  return <NumericValue value={value} kind={rate ? "rate" : "integer"} />;
 }
 
 function PlayerName({ row }: { row: SessionPlayerRow }) {
@@ -65,7 +61,7 @@ export function SessionPlayerTable({ rows, label }: { rows: SessionPlayerRow[]; 
 
   return (
     <div className="space-y-2">
-      <div className="flex flex-wrap items-end gap-2 px-4 md:hidden">
+      <div className="flex flex-wrap items-end gap-2 px-4 xl:hidden">
         <label htmlFor={selectId} className="min-w-0 flex-1 text-xs font-semibold text-text-secondary">
           Sort by
           <select
@@ -93,7 +89,7 @@ export function SessionPlayerTable({ rows, label }: { rows: SessionPlayerRow[]; 
         {label}: sorted by {sortLabel}, {directionLabel}.
       </p>
 
-      <div className="data-panel md:hidden">
+      <div className="data-panel xl:hidden">
         <ul aria-label={label} aria-describedby={statusId} className="divide-y divide-gold-dim">
           {sortedRows.map(row => (
             <li key={row.name} className="px-4 py-3">
@@ -113,7 +109,7 @@ export function SessionPlayerTable({ rows, label }: { rows: SessionPlayerRow[]; 
         </ul>
       </div>
 
-      <div className="data-panel hidden md:block">
+      <div className="data-panel hidden xl:block">
         <table aria-label={label} aria-describedby={statusId} className="w-full text-xs tabular-nums">
           <thead className="bg-bg-card text-text-dim uppercase tracking-wider">
             <tr>

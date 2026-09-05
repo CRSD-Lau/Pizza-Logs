@@ -127,6 +127,7 @@ const recentEncounters = buildPlayerRecentEncounters(
       dps: 5940,
       hps: 0,
       encounter: {
+        startedAt: new Date("2026-09-04T20:05:00Z"),
         outcome: "KILL",
         boss: { name: "The Lich King", slug: "the-lich-king" },
       },
@@ -136,6 +137,7 @@ const recentEncounters = buildPlayerRecentEncounters(
       dps: 8140,
       hps: 0,
       encounter: {
+        startedAt: new Date("2026-09-04T20:04:00Z"),
         outcome: "KILL",
         boss: { name: "Sindragosa", slug: "sindragosa" },
       },
@@ -145,6 +147,7 @@ const recentEncounters = buildPlayerRecentEncounters(
       dps: 5500,
       hps: 0,
       encounter: {
+        startedAt: new Date("2026-09-04T20:02:00Z"),
         outcome: "KILL",
         boss: { name: "Gunship Battle", slug: "gunship-battle" },
       },
@@ -154,6 +157,7 @@ const recentEncounters = buildPlayerRecentEncounters(
       dps: 12980,
       hps: 0,
       encounter: {
+        startedAt: new Date("2026-09-04T20:03:00Z"),
         outcome: "KILL",
         boss: { name: "Deathbringer Saurfang", slug: "deathbringer-saurfang" },
       },
@@ -163,6 +167,7 @@ const recentEncounters = buildPlayerRecentEncounters(
       dps: 1000,
       hps: 0,
       encounter: {
+        startedAt: new Date("2026-09-04T20:01:00Z"),
         outcome: "KILL",
         boss: { name: "Lord Marrowgar", slug: "lord-marrowgar" },
       },
@@ -173,7 +178,19 @@ const recentEncounters = buildPlayerRecentEncounters(
 
 assert.deepEqual(
   recentEncounters.map((encounter) => encounter.id),
-  ["gunship-recent", "saurfang-recent", "sindragosa-recent", "lich-king-recent"],
+  ["lich-king-recent", "sindragosa-recent", "saurfang-recent", "gunship-recent"],
 );
+
+const shuffledHistory = Array.from({ length: 55 }, (_, index) => ({
+  id: String(index), dps: 0, hps: 0,
+  encounter: { startedAt: new Date(Date.UTC(2026, 8, 4, 20, index)), outcome: "KILL", boss: { name: "Lord Marrowgar", slug: "lord-marrowgar" } },
+}));
+const latestFifty = buildPlayerRecentEncounters(shuffledHistory);
+assert.equal(latestFifty.length, 50);
+assert.equal(latestFifty[0].id, "54", "Sort by recorded time before selecting the latest window");
+assert.equal(latestFifty[49].id, "5");
+assert.equal(shuffledHistory[0].id, "0", "Do not mutate caller order");
+const sameTime = shuffledHistory.slice(0, 2).map(row => ({ ...row, encounter: { ...row.encounter, startedAt: "2026-09-04T20:00:00Z" } }));
+assert.deepEqual(buildPlayerRecentEncounters(sameTime).map(row => row.id), ["0", "1"], "Preserve source order for simultaneous attempts");
 
 console.log("player-profile tests passed");

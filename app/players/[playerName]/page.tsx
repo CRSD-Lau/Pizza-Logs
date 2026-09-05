@@ -12,7 +12,8 @@ import { getWarmaneCharacterGear } from "@/lib/warmane-armory";
 import { DEFAULT_GUILD_NAME, DEFAULT_GUILD_REALM } from "@/lib/warmane-guild-roster";
 import { buildPlayerPerBossSummary, buildPlayerRecentEncounters, resolvePlayerProfile } from "@/lib/player-profile";
 import { getClassIconUrl } from "@/lib/class-icons";
-import { formatDps } from "@/lib/utils";
+import { formatDps, formatCountLabel, formatDateUtc, formatDateTimeUtc, formatInteger } from "@/lib/utils";
+import { NumericValue } from "@/components/ui/NumericValue";
 import { getClassColor } from "@/lib/constants/classes";
 import { getRevealClassName, getRevealStyle } from "@/lib/ui-animation";
 import { cn } from "@/lib/utils";
@@ -105,9 +106,9 @@ export default async function PlayerPage({ params, searchParams }: Props) {
 
   const kills       = participants.filter(p => p.encounter.outcome === "KILL");
   const avgDps      = kills.length > 0
-    ? kills.reduce((a, p) => a + p.dps, 0) / kills.length : 0;
-  const bestDps     = Math.max(0, ...participants.map(p => p.dps));
-  const bestAps     = Math.max(0, ...participants.map(p => p.aps));
+    ? kills.reduce((a, p) => a + p.dps, 0) / kills.length : null;
+  const bestDps     = participants.length > 0 ? Math.max(0, ...participants.map(p => p.dps)) : null;
+  const bestAps     = participants.length > 0 ? Math.max(0, ...participants.map(p => p.aps)) : null;
   const latestSpec  = participants.find((participant) => participant.spec)?.spec ?? null;
 
   const milestones = player?.milestones ?? [];
@@ -164,11 +165,11 @@ export default async function PlayerPage({ params, searchParams }: Props) {
       {/* Stats */}
       <p className="text-sm text-text-secondary">Performance summary and per-boss bests use the latest 50 recorded encounters. Ranked achievements below are historical records.</p>
       <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
-        <StatCard label="Encounters" value={counts.totalPulls} sub="latest 50 recorded" />
-        <StatCard label="Kills"      value={kills.length} highlight />
-        <StatCard label="Best DPS"   value={formatDps(bestDps)} sub="single encounter" />
-        <StatCard label="Avg DPS"    value={formatDps(avgDps)} sub="on kills" />
-        <StatCard label="Best APS"   value={formatDps(bestAps)} sub="single encounter" />
+        <StatCard label="Encounters" value={formatInteger(counts.totalPulls)} sub="latest 50 recorded" />
+        <StatCard label="Kills" value={formatInteger(kills.length)} highlight />
+        <StatCard label="Best DPS" value={<NumericValue value={bestDps} kind="rate" />} sub={participants.length ? "single encounter" : "No recorded attempts"} />
+        <StatCard label="Avg DPS" value={<NumericValue value={avgDps} kind="rate" />} sub={kills.length ? "on kills" : "No boss kills"} />
+        <StatCard label="Best APS" value={<NumericValue value={bestAps} kind="rate" />} sub={participants.length ? "single encounter" : "No recorded attempts"} />
       </div>
 
       {/* Gear */}
@@ -189,9 +190,9 @@ export default async function PlayerPage({ params, searchParams }: Props) {
                 style={getRevealStyle(index)}
               >
                 <div className="flex flex-wrap items-center justify-between gap-2">
-                  <p className="text-text-secondary">Rank when achieved: <strong className="text-gold-light">#{m.rank}</strong></p>
+                  <p className="text-text-secondary">Rank when achieved: <strong className="text-gold-light">#{formatInteger(m.rank)}</strong></p>
                   <span className="tabular-nums font-bold text-text-primary">
-                    {m.value.toLocaleString(undefined, { maximumFractionDigits: 0 })} {m.metric}
+                    {formatDps(m.value)} {m.metric}
                   </span>
                 </div>
                 <div>
@@ -206,7 +207,7 @@ export default async function PlayerPage({ params, searchParams }: Props) {
                       {m.difficulty}
                     </span>
                   </div>
-                  <p className="text-text-secondary">Recorded <time dateTime={m.achievedAt.toISOString()}>{m.achievedAt.toLocaleDateString("en-US", { year: "numeric", month: "short", day: "numeric", timeZone: "UTC" })}</time></p>
+                  <p className="text-text-secondary">Recorded <time dateTime={m.achievedAt.toISOString()}>{formatDateUtc(m.achievedAt)}</time></p>
                   <Link href={`/bosses/${m.encounter.boss.slug}${reportQueryString({ difficulty: m.difficulty ?? "UNKNOWN", includeShortPulls: includeShortPulls ? "1" : undefined })}#boss-${m.metric === "HPS" ? "hps" : "dps"}`} className="mt-1 inline-flex min-h-11 items-center text-gold hover:text-gold-light">View current rankings →</Link>
                 </div>
               </div>
@@ -231,18 +232,14 @@ export default async function PlayerPage({ params, searchParams }: Props) {
               >
                 <div className="flex items-center justify-between mb-1">
                   <span className="text-sm font-semibold text-text-primary">{b.bossName}</span>
-                  <span className="text-xs text-success font-bold">{b.kills} kills</span>
+                  <span className="text-xs text-success font-bold">{formatCountLabel(b.kills, "kill")}</span>
                 </div>
-                {b.bestDps > 0 && (
-                  <div className="text-xs text-text-secondary">
-                    Best DPS: <span className="font-bold text-text-primary tabular-nums">{formatDps(b.bestDps)}</span>
-                  </div>
-                )}
-                {b.bestHps > 100 && (
-                  <div className="text-xs text-text-secondary">
-                    Best HPS: <span className="font-bold text-text-primary tabular-nums">{formatDps(b.bestHps)}</span>
-                  </div>
-                )}
+                <div className="text-xs text-text-secondary">
+                  Best DPS: <NumericValue value={b.bestDps} kind="rate" className="font-bold text-text-primary" />
+                </div>
+                <div className="text-xs text-text-secondary">
+                  Best HPS: <NumericValue value={b.bestHps} kind="rate" className="font-bold text-text-primary" />
+                </div>
               </Link>
             ))}
           </div>
@@ -250,20 +247,20 @@ export default async function PlayerPage({ params, searchParams }: Props) {
       )}
 
       {/* Recent encounters */}
-      <AccordionSection id="recent-encounters" title="Recent Encounters" sub="From the latest 50 recorded encounters, grouped by boss" count={recentEncounters.length} defaultOpen={false}>
+      <AccordionSection id="recent-encounters" title="Recent Encounters" sub="Latest 50 recorded encounters, newest first · UTC" count={recentEncounters.length} defaultOpen={false}>
         {visibleParticipants.length > 0 ? (
-          <div className="bg-bg-panel border border-gold-dim rounded-sm divide-y divide-gold-dim">
+          <ul aria-label="Recent encounters, newest first" className="list-none bg-bg-panel border border-gold-dim rounded-sm divide-y divide-gold-dim">
             {recentEncounters.map((p, index) => (
+              <li key={p.id}>
               <Link
-                key={p.id}
                 href={`/encounters/${p.encounter.id}${querySuffix}`}
                 className={getRevealClassName({
                   boss: true,
-                  className: "flex items-center justify-between px-4 py-2.5 hover:bg-bg-hover transition-colors",
+                  className: "flex flex-col gap-3 px-4 py-3 hover:bg-bg-hover transition-colors lg:flex-row lg:items-center lg:justify-between",
                 })}
                 style={getRevealStyle(index)}
               >
-                <div className="flex items-center gap-3">
+                <div className="flex flex-wrap items-center gap-3">
                   <span className={p.encounter.outcome === "KILL" ? "outcome-kill" : p.encounter.outcome === "WIPE" ? "outcome-wipe" : "outcome-unknown"}>
                     {p.encounter.outcome}
                   </span>
@@ -272,15 +269,17 @@ export default async function PlayerPage({ params, searchParams }: Props) {
                     {p.encounter.difficulty}
                   </span>
                 </div>
-                <div className="flex items-center gap-4 text-sm tabular-nums text-text-secondary">
-                  {p.dps > 0 && <span>{formatDps(p.dps)} dps</span>}
-                  {p.hps > 100 && <span>{formatDps(p.hps)} hps</span>}
-                  {p.aps > 0 && <span>{formatDps(p.aps)} aps</span>}
-                  {p.deaths > 0 && <span className="text-danger">☠{p.deaths}</span>}
+                <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-sm tabular-nums text-text-secondary">
+                  <span><NumericValue value={p.dps} kind="rate" /> DPS</span>
+                  <span><NumericValue value={p.hps} kind="rate" /> HPS</span>
+                  <span><NumericValue value={p.aps} kind="rate" /> APS</span>
+                  {p.deaths > 0 && <span className="text-danger">{formatCountLabel(p.deaths, "death")}</span>}
+                  <time dateTime={p.encounter.startedAt.toISOString()}>{formatDateTimeUtc(p.encounter.startedAt)}</time>
                 </div>
               </Link>
+              </li>
             ))}
-          </div>
+          </ul>
         ) : (
           <EmptyState title={counts.shortPulls > 0 ? "No counted encounters" : "No encounters recorded"} />
         )}

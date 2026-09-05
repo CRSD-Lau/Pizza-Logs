@@ -97,9 +97,11 @@ export function buildPlayerPerBossSummary(
   return sortByICCOrder(Object.values(perBoss), boss => boss.bossName);
 }
 
-export function buildPlayerRecentEncounters<T extends PlayerPerBossParticipant>(
+export function buildPlayerRecentEncounters<T extends PlayerPerBossParticipant & { encounter: { startedAt: Date | string } }>(
   participants: readonly T[],
-  limit = 20,
+  limit = 50,
 ): T[] {
-  return sortByICCOrder(participants.slice(0, limit), participant => participant.encounter.boss.name);
+  return [...participants]
+    .sort((left, right) => new Date(right.encounter.startedAt).getTime() - new Date(left.encounter.startedAt).getTime())
+    .slice(0, limit);
 }

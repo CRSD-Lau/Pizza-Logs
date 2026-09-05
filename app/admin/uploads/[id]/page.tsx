@@ -6,15 +6,26 @@ import { requireAdmin } from "@/lib/require-admin";
 import { Badge } from "@/components/ui/Badge";
 import { SectionHeader } from "@/components/ui/SectionHeader";
 import { StatCard } from "@/components/ui/StatCard";
+import { NumericValue } from "@/components/ui/NumericValue";
 import {
   buildRaidSessionRoutesWithAnalytics,
   formatRaidSessionTitle,
   getRaidSessionPath,
 } from "@/lib/raid-session-slug";
-import { cn, formatBytes, formatDuration, formatNumber } from "@/lib/utils";
+import { cn, formatBytes, formatCountLabel, formatDateTimeRangeUtc, formatDateTimeUtc, formatDuration, formatInteger, formatNumber, getRecordedDurationSeconds } from "@/lib/utils";
 
 interface Props {
   params: Promise<{ id: string }>;
+}
+
+function sumRecordedDurationSeconds(encounters: readonly Parameters<typeof getRecordedDurationSeconds>[0][]): number | null {
+  let total = 0;
+  for (const encounter of encounters) {
+    const duration = getRecordedDurationSeconds(encounter);
+    if (duration === null) return null;
+    total += duration;
+  }
+  return total;
 }
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
@@ -41,6 +52,7 @@ export default async function AdminUploadDetailPage({ params }: Props) {
           outcome: true,
           difficulty: true,
           durationSeconds: true,
+          durationMs: true,
           totalDamage: true,
           startedAt: true,
           endedAt: true,
@@ -73,20 +85,20 @@ export default async function AdminUploadDetailPage({ params }: Props) {
   const totalKills = upload.encounters.filter(e => e.outcome === "KILL").length;
   const totalWipes = upload.encounters.filter(e => e.outcome === "WIPE").length;
   const totalDmg = upload.encounters.reduce((sum, e) => sum + e.totalDamage, 0);
-  const totalSecs = upload.encounters.reduce((sum, e) => sum + e.durationSeconds, 0);
+  const totalSecs = sumRecordedDurationSeconds(upload.encounters);
 
   return (
     <div className="page-shell">
       <div className="text-xs text-text-dim flex items-center gap-2 flex-wrap">
-        <Link href="/admin" className="hover:text-gold">Admin</Link>
+        <Link href="/admin" className="inline-flex min-h-11 items-center hover:text-gold">Admin</Link>
         <span>&gt;</span>
-        <Link href="/admin/uploads" className="hover:text-gold">Upload History</Link>
+        <Link href="/admin/uploads" className="inline-flex min-h-11 items-center hover:text-gold">Upload History</Link>
         <span>&gt;</span>
         <span className="text-text-secondary break-all">{upload.filename}</span>
       </div>
 
       <div className="flex items-start justify-between flex-wrap gap-4">
-        <div className="space-y-2">
+        <div className="min-w-0 space-y-2">
           <h1 className="heading-cinzel text-2xl font-bold text-gold-light text-glow-gold break-all">
             {upload.filename}
           </h1>
@@ -95,25 +107,23 @@ export default async function AdminUploadDetailPage({ params }: Props) {
             {upload.realm?.host && <span>- {upload.realm.host}</span>}
             {upload.guild?.name && <span>- {upload.guild.name}</span>}
             <span>- {formatBytes(upload.fileSize)}</span>
-            {upload.rawLineCount && <span>- {upload.rawLineCount.toLocaleString()} lines</span>}
+            {upload.rawLineCount != null && <span>- {formatCountLabel(upload.rawLineCount, "line")}</span>}
             <Badge variant={upload.status === "DONE" ? "kill" : upload.status === "FAILED" ? "wipe" : "gold"}>
               {upload.status}
             </Badge>
           </div>
         </div>
 
-        <div className="text-xs text-text-dim text-right">
-          {new Date(upload.createdAt).toLocaleString("en-US", {
-            month: "short", day: "numeric", year: "numeric", hour: "2-digit", minute: "2-digit",
-          })}
+        <div className="text-sm text-text-dim sm:text-right">
+          {formatDateTimeUtc(upload.createdAt)}
         </div>
       </div>
 
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-        <StatCard label="Raids" value={String(sessions.length)} highlight />
-        <StatCard label="Kills / Wipes" value={`${totalKills} / ${totalWipes}`} />
+        <StatCard label="Raids" value={formatInteger(sessions.length)} highlight />
+        <StatCard label="Outcomes" value={`${formatCountLabel(totalKills, "kill")} / ${formatCountLabel(totalWipes, "wipe")}`} sub="all recorded attempts" />
         <StatCard label="Total Damage" value={formatNumber(totalDmg)} />
-        <StatCard label="Active Time" value={formatDuration(totalSecs)} sub="sum of all pulls" />
+        <StatCard label="Active Time" value={totalSecs === null ? <NumericValue value={null} /> : formatDuration(totalSecs)} sub={totalSecs === null ? "One or more pull durations unavailable" : "sum of all recorded pulls"} />
       </div>
 
       {sessions.length === 0 ? (
@@ -122,14 +132,14 @@ export default async function AdminUploadDetailPage({ params }: Props) {
         <section className="space-y-4">
           <SectionHeader
             title={sessions.length === 1 ? "Raid" : "Raids"}
-            sub={`${sessions.length} raid${sessions.length !== 1 ? "s" : ""} detected in this log`}
+            sub={`${formatCountLabel(sessions.length, "raid")} detected in this log`}
           />
           {sessions.map(([sessionIdx, encs]) => {
             const route = routeBySessionIndex.get(sessionIdx);
             const kills = encs.filter(e => e.outcome === "KILL").length;
             const wipes = encs.filter(e => e.outcome === "WIPE").length;
             const dmg = encs.reduce((sum, e) => sum + e.totalDamage, 0);
-            const secs = encs.reduce((sum, e) => sum + e.durationSeconds, 0);
+            const secs = sumRecordedDurationSeconds(encs);
             const start = encs[0]?.startedAt;
             const end = encs[encs.length - 1]?.endedAt;
             const raids = [...new Set(encs.map(e => e.boss.raid))];
@@ -149,11 +159,8 @@ export default async function AdminUploadDetailPage({ params }: Props) {
                       ))}
                     </div>
                     {start && (
-                      <div className="text-xs text-text-dim mt-1">
-                        {new Date(start).toLocaleString("en-US", {
-                          weekday: "short", month: "short", day: "numeric", hour: "2-digit", minute: "2-digit", timeZone: "UTC",
-                        })}
-                        {end && ` -> ${new Date(end).toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit", timeZone: "UTC" })}`}
+                      <div className="text-sm text-text-dim mt-1">
+                        {end ? formatDateTimeRangeUtc(start, end) : formatDateTimeUtc(start)}
                       </div>
                     )}
                   </div>
@@ -161,33 +168,34 @@ export default async function AdminUploadDetailPage({ params }: Props) {
                   {route && (
                     <Link
                       href={getRaidSessionPath(upload.publicSlug, route)}
-                      className="text-xs text-gold hover:text-gold-light transition-colors"
+                      className="inline-flex min-h-11 items-center text-sm text-gold hover:text-gold-light transition-colors"
                     >
                       Open public raid view &rarr;
                     </Link>
                   )}
                 </div>
 
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs">
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-sm">
                   <div className="bg-bg-card rounded-sm p-2 text-center">
-                    <div className="text-text-dim uppercase tracking-wide text-xs">Pulls</div>
+                    <div className="text-text-dim uppercase tracking-wide text-xs">Outcomes</div>
                     <div className="font-semibold mt-0.5">
-                      <span className="text-success">{kills}K</span>
+                      <span className="text-success">{formatCountLabel(kills, "kill")}</span>
                       {" / "}
-                      <span className="text-danger">{wipes}W</span>
+                      <span className="text-danger">{formatCountLabel(wipes, "wipe")}</span>
                     </div>
                   </div>
                   <div className="bg-bg-card rounded-sm p-2 text-center">
                     <div className="text-text-dim uppercase tracking-wide text-xs">Damage</div>
-                    <div className="font-semibold mt-0.5 text-text-primary">{formatNumber(dmg)}</div>
+                    <div className="break-words font-semibold mt-0.5 text-text-primary tabular-nums">{formatNumber(dmg)}</div>
                   </div>
                   <div className="bg-bg-card rounded-sm p-2 text-center">
-                    <div className="text-text-dim uppercase tracking-wide text-xs">Active</div>
-                    <div className="font-semibold mt-0.5 text-text-primary">{formatDuration(secs)}</div>
+                    <div className="text-text-dim uppercase tracking-wide text-xs">Active Time</div>
+                    <div className="font-semibold mt-0.5 text-text-primary">{secs === null ? <NumericValue value={null} /> : formatDuration(secs)}</div>
+                    <p className="mt-1 text-xs text-text-dim">{secs === null ? "One or more pull durations unavailable" : "sum of all recorded pulls"}</p>
                   </div>
                   <div className="bg-bg-card rounded-sm p-2 text-center">
-                    <div className="text-text-dim uppercase tracking-wide text-xs">Bosses</div>
-                    <div className="font-semibold mt-0.5 text-text-primary">{encs.length} pulls</div>
+                    <div className="text-text-dim uppercase tracking-wide text-xs">Pulls</div>
+                    <div className="font-semibold mt-0.5 text-text-primary">{formatInteger(encs.length)}</div>
                   </div>
                 </div>
 
@@ -202,7 +210,7 @@ export default async function AdminUploadDetailPage({ params }: Props) {
                           : "bg-danger/8 border-danger/20 text-danger"
                       )}
                     >
-                      {enc.boss.name.split(" ").slice(-1)[0]} {enc.difficulty}
+                      {enc.boss.name} · {enc.difficulty} · {enc.outcome}
                     </span>
                   ))}
                 </div>

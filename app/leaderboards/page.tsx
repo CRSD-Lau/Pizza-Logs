@@ -11,6 +11,7 @@ import { DifficultyFilter } from "@/components/reports/DifficultyFilter";
 import { difficultyFilterWhere, difficultyScopeLabel, parseDifficultyFilter, reportQueryString, type DifficultyFilterValue, type ReportSearchParams } from "@/lib/difficulty-filter";
 
 import { buildPageMetadata } from "@/lib/page-metadata";
+import { formatCountLabel } from "@/lib/utils";
 
 export const metadata = buildPageMetadata({
   title: "Leaderboards",
@@ -136,7 +137,7 @@ export default async function LeaderboardsPage({ searchParams }: { searchParams:
               key={boss.id}
               id={`boss-${boss.slug}`}
               title={boss.name}
-              sub={`${boss.raid} · ${dpsEntries.length} DPS entries · ${hpsEntries.length} HPS entries`}
+              sub={`${boss.raid} · ${formatCountLabel(dpsEntries.length, "DPS entry", "DPS entries")} · ${formatCountLabel(hpsEntries.length, "HPS entry", "HPS entries")}`}
               defaultOpen={index === 0}
             >
               <div className={`grid gap-8 px-2 pb-8 pt-3 sm:px-4 ${dpsEntries.length > 0 && hpsEntries.length > 0 ? "md:grid-cols-2" : ""}`}>

@@ -1,7 +1,8 @@
 "use client";
 
 import { useId, useState } from "react";
-import { cn, formatNumber } from "@/lib/utils";
+import { cn, formatCountLabel } from "@/lib/utils";
+import { NumericValue } from "@/components/ui/NumericValue";
 import { getClassColor } from "@/lib/constants/classes";
 import { getRevealClassName, getRevealStyle } from "@/lib/ui-animation";
 
@@ -37,28 +38,29 @@ export function MobBreakdown({ mobs, title }: MobBreakdownProps) {
 
   return (
     <div>
+      <p className="px-3 py-2 text-xs text-text-secondary">{formatCountLabel(mobs.length, "target")} · Highest damage first</p>
       {title && (
-        <div className="hidden grid-cols-[minmax(0,2fr)_repeat(3,minmax(0,1fr))] gap-2 border-b border-gold-dim px-3 py-2 text-xs font-semibold uppercase tracking-widest text-text-dim sm:grid">
+        <div className="hidden grid-cols-[minmax(0,2fr)_repeat(3,minmax(0,1fr))] gap-2 border-b border-gold-dim px-3 py-2 text-xs font-semibold uppercase tracking-widest text-text-dim lg:grid">
           <span>Target</span>
           <span className="text-right">Damage</span>
           <span className="text-right">Hits / Crit%</span>
-          <span className="text-right">% total</span>
+          <span className="text-right">Share of total</span>
         </div>
       )}
       {!title && (
-        <div className="hidden grid-cols-[minmax(0,2fr)_repeat(3,minmax(0,1fr))] gap-2 px-3 py-2 text-xs font-semibold uppercase tracking-widest text-text-dim sm:grid">
+        <div className="hidden grid-cols-[minmax(0,2fr)_repeat(3,minmax(0,1fr))] gap-2 px-3 py-2 text-xs font-semibold uppercase tracking-widest text-text-dim lg:grid">
           <span>Target</span>
           <span className="text-right">Damage</span>
           <span className="text-right">Hits / Crit%</span>
-          <span className="text-right">% total</span>
+          <span className="text-right">Share of total</span>
         </div>
       )}
 
       <div className="space-y-0.5">
         {mobs.map((mob, index) => {
-          const pct     = totalDamage > 0 ? Math.round((mob.totalDamage / totalDamage) * 100) : 0;
+          const pct     = totalDamage > 0 ? (mob.totalDamage / totalDamage) * 100 : null;
           const fillPct = maxDamage   > 0 ? (mob.totalDamage / maxDamage) * 100 : 0;
-          const critPct = mob.hits    > 0 ? Math.round(mob.crits / mob.hits * 100) : 0;
+          const critPct = mob.hits    > 0 ? mob.crits / mob.hits * 100 : null;
           const isOpen  = selected === mob.name;
 
           return (
@@ -67,7 +69,7 @@ export function MobBreakdown({ mobs, title }: MobBreakdownProps) {
                 type="button"
                 className={cn(
                   getRevealClassName(),
-                  "meter-row grid w-full grid-cols-[minmax(0,1fr)_auto] items-center gap-x-3 gap-y-1 bg-bg-card px-3 py-3 text-left sm:grid-cols-[minmax(0,2fr)_repeat(3,minmax(0,1fr))] sm:gap-2 sm:py-2.5",
+                  "meter-row grid w-full grid-cols-2 items-center gap-x-3 gap-y-2 bg-bg-card px-3 py-3 text-left lg:grid-cols-[minmax(0,2fr)_repeat(3,minmax(0,1fr))] lg:gap-2 lg:py-2.5",
                   isOpen && "active"
                 )}
                 style={getRevealStyle(index)}
@@ -81,17 +83,19 @@ export function MobBreakdown({ mobs, title }: MobBreakdownProps) {
                   style={{ width: `${fillPct}%` }}
                 />
 
-                <span className="relative z-10 text-sm font-semibold text-text-primary truncate">
+                <span className="relative z-10 col-span-2 break-words text-sm font-semibold text-text-primary lg:col-span-1">
                   {mob.name}
                 </span>
-                <span className="relative z-10 row-start-2 text-sm tabular-nums text-text-primary sm:row-start-auto sm:text-right">
-                  {formatNumber(mob.totalDamage)}
+                <span className="relative z-10 text-sm tabular-nums text-text-primary lg:text-right">
+                  <span className="block text-xs text-text-secondary lg:hidden">Damage</span>
+                  <NumericValue value={mob.totalDamage} />
                 </span>
-                <span className="relative z-10 hidden text-right text-xs tabular-nums text-text-secondary sm:block">
-                  {mob.hits.toLocaleString()} hits · {critPct}% crit
+                <span className="relative z-10 col-span-2 row-start-3 text-xs tabular-nums text-text-secondary lg:col-span-1 lg:row-start-auto lg:text-right">
+                  {formatCountLabel(mob.hits, "hit")} · <NumericValue value={critPct} kind="percent" /> crit
                 </span>
-                <span className="relative z-10 col-start-2 row-start-1 text-right text-sm tabular-nums text-text-secondary sm:col-start-auto sm:row-start-auto">
-                  {pct}%
+                <span className="relative z-10 text-right text-sm tabular-nums text-text-secondary">
+                  <span className="block text-xs lg:hidden">Share of total</span>
+                  <NumericValue value={pct} kind="percent" />
                 </span>
               </button>
 
@@ -99,29 +103,30 @@ export function MobBreakdown({ mobs, title }: MobBreakdownProps) {
               <div id={`${breakdownId}-${index}`} hidden={!isOpen}>
               {isOpen && (
                 <div className="mb-1 space-y-1 rounded-b border border-t-0 border-gold-dim bg-bg-panel px-3 py-2 animate-fade-in-up">
-                  {mob.byPlayer
+                  <p className="py-1 text-xs text-text-secondary">{formatCountLabel(mob.byPlayer.length, "player")} · Highest damage to this target first</p>
+                  {[...mob.byPlayer]
                     .sort((a, b) => b.damage - a.damage)
                     .map(p => {
                       const color      = getClassColor(p.playerClass ?? p.name);
-                      const playerPct  = mob.totalDamage > 0 ? Math.round(p.damage / mob.totalDamage * 100) : 0;
-                      const playerCrit = p.hits > 0 ? Math.round(p.crits / p.hits * 100) : 0;
+                      const playerPct  = mob.totalDamage > 0 ? p.damage / mob.totalDamage * 100 : null;
+                      const playerCrit = p.hits > 0 ? p.crits / p.hits * 100 : null;
 
                       return (
-                        <div key={p.name} className="flex items-center gap-2 text-xs">
-                          <span className="w-28 font-medium truncate" style={{ color }}>{p.name}</span>
-                          <div className="flex-1 h-3 bg-bg-hover rounded-sm overflow-hidden">
+                        <div key={p.name} className="grid grid-cols-2 items-center gap-x-3 gap-y-1 py-1 text-sm lg:grid-cols-[minmax(0,2fr)_minmax(0,1fr)_auto_auto_auto]">
+                          <span className="min-w-0 break-words font-medium" style={{ color }}>{p.name}</span>
+                          <div className="col-span-2 row-start-3 h-3 bg-bg-hover rounded-sm overflow-hidden lg:col-span-1 lg:row-start-auto">
                             <div
                               className="h-full rounded-sm"
-                              style={{ width: `${playerPct}%`, background: color, opacity: 0.65 }}
+                              style={{ width: `${playerPct ?? 0}%`, background: color, opacity: 0.65 }}
                             />
                           </div>
-                          <span className="w-14 text-right tabular-nums text-text-secondary">
-                            {formatNumber(p.damage)}
+                          <span className="text-right tabular-nums text-text-secondary">
+                            <NumericValue value={p.damage} /> damage
                           </span>
-                          <span className="hidden w-28 shrink-0 text-right tabular-nums text-text-dim sm:block">
-                            {p.hits.toLocaleString()} hits · {playerCrit}% crit
+                          <span className="text-xs tabular-nums text-text-secondary lg:text-right">
+                            {formatCountLabel(p.hits, "hit")} · <NumericValue value={playerCrit} kind="percent" /> crit
                           </span>
-                          <span className="w-8 shrink-0 text-right tabular-nums text-text-dim">{playerPct}%</span>
+                          <span className="text-right text-xs tabular-nums text-text-secondary"><NumericValue value={playerPct} kind="percent" /> of target</span>
                         </div>
                       );
                     })}

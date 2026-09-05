@@ -6,6 +6,8 @@ import { getClassColor } from "../../lib/constants/classes";
 import { getRevealClassName, getRevealStyle } from "../../lib/ui-animation";
 import { getClassIconUrl } from "../../lib/class-icons";
 import { buildDirectoryHref, directoryNameMatches, getDirectoryPagination } from "../../lib/directory-pagination";
+import { formatCountLabel, formatDateTimeUtc, formatInteger } from "../../lib/utils";
+import { NumericValue } from "../ui/NumericValue";
 
 const GUILD_ROSTER_PAGE_SIZE = 20;
 
@@ -37,12 +39,7 @@ type GuildRosterTableProps = {
 };
 
 function formatSyncedAt(value: Date): string {
-  return new Intl.DateTimeFormat("en-US", {
-    month: "short",
-    day: "numeric",
-    hour: "numeric",
-    minute: "2-digit",
-  }).format(value);
+  return formatDateTimeUtc(value);
 }
 
 function formatProfession(value: unknown): string | null {
@@ -52,7 +49,7 @@ function formatProfession(value: unknown): string | null {
   const name = typeof profession.name === "string" ? profession.name : null;
   const skill = typeof profession.skill === "number" ? profession.skill : Number(profession.skill);
   if (!name) return null;
-  return Number.isFinite(skill) && skill > 0 ? `${name} ${skill}` : name;
+  return Number.isFinite(skill) && skill > 0 ? `${name} ${formatInteger(skill)}` : name;
 }
 
 function formatProfessions(value: unknown): string {
@@ -165,7 +162,7 @@ export function GuildRosterTable({ members, currentPage = 1, query = "", classFi
                   </Link>
                   <p className="text-sm text-text-secondary">
                     {member.className ?? "Unknown"} · {member.raceName ?? "Unknown"}
-                    {member.level ? ` · Level ${member.level}` : ""}
+                    {member.level != null ? ` · Level ${formatInteger(member.level)}` : ""}
                   </p>
                 </div>
               </div>
@@ -178,7 +175,7 @@ export function GuildRosterTable({ members, currentPage = 1, query = "", classFi
                 <div>
                   <dt className="text-xs uppercase tracking-wide text-text-dim">Gear Score</dt>
                   <dd className="mt-1 text-sm text-text-primary tabular-nums">
-                    {member.gearScore ? member.gearScore.toLocaleString() : "-"}
+                    <NumericValue value={member.gearScore} />
                   </dd>
                 </div>
                 <div className="col-span-2">
@@ -258,10 +255,10 @@ export function GuildRosterTable({ members, currentPage = 1, query = "", classFi
                   </td>
                   <td className="px-4 py-3 text-text-secondary">{member.className ?? "Unknown"}</td>
                   <td className="px-4 py-3 text-text-secondary">{member.raceName ?? "Unknown"}</td>
-                  <td className="px-4 py-3 text-text-secondary tabular-nums">{member.level ?? "-"}</td>
+                  <td className="px-4 py-3 text-text-secondary tabular-nums"><NumericValue value={member.level} /></td>
                   <td className="px-4 py-3 text-text-secondary">{member.rankName ?? "-"}</td>
                   <td className="px-4 py-3 text-text-secondary tabular-nums">
-                    {member.gearScore ? member.gearScore.toLocaleString() : "-"}
+                    <NumericValue value={member.gearScore} />
                   </td>
                   <td className="px-4 py-3 text-text-secondary whitespace-nowrap">{formatProfessions(member.professionsJson)}</td>
                   <td className="px-4 py-3 text-text-secondary">{member.guildName}</td>
@@ -284,7 +281,7 @@ export function GuildRosterTable({ members, currentPage = 1, query = "", classFi
 
       <div className="flex flex-col gap-3 border-t border-gold-dim bg-bg-card/60 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
         <p className="text-xs text-text-dim tabular-nums">
-          {firstVisible}-{lastVisible} of {filteredMembers.length} members{query || classFilter ? " matching these filters" : ""}
+          {formatInteger(firstVisible)}–{formatInteger(lastVisible)} of {formatCountLabel(filteredMembers.length, "member")}{query || classFilter ? " matching these filters" : ""}
         </p>
         <nav className="flex items-center justify-end gap-2" aria-label="Guild roster pages">
           <PageNavButton
@@ -296,7 +293,7 @@ export function GuildRosterTable({ members, currentPage = 1, query = "", classFi
             <span className="sr-only">Previous</span>
           </PageNavButton>
           <span className="min-w-20 text-center text-xs text-text-secondary tabular-nums">
-            Page {page} / {totalPages}
+            Page {formatInteger(page)} of {formatInteger(totalPages)}
           </span>
           <PageNavButton
             href={getPageHref(nextPage)}

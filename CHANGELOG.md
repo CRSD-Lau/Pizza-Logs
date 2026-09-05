@@ -25,6 +25,8 @@ This project follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) an
 
 ### Changed
 
+- Standardize full grouped totals, rate/percentage precision, count labels, UTC dates and missing measurements across public reports, rankings, directories, chart details, gear previews and admin pages. Mobile breakdowns retain metric labels; death counts and kill/wipe counts use explicit words.
+- Keep recent player history chronological, expose every spell in expanded breakdowns and paginate the complete admin upload inventory with accurate visible/total counts.
 - Remove unscoped player crowns, historical-award sorting and unreliable award-derived best figures. Add alphabetical name/class browsing, guild filtering before pagination, and complete upload-based raid history pagination.
 - Put uploading first, make the guild cinematic optional, request notifications only on explicit opt-in, and provide a primary report link after both new and duplicate uploads.
 - Add difficulty filters, real weekly attempt dates and fight links, report section shortcuts, accessible search announcements and keyboard navigation, a tablet-safe header, compact short-pull details, readable status colors and visitor-facing recovery pages. Historical awards explicitly show rank when achieved.

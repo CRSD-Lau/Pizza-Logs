@@ -11,6 +11,7 @@ import { countAttempts, parseIncludeShortPulls } from "@/lib/attempt-policy";
 
 import { buildPageMetadata } from "@/lib/page-metadata";
 import { buildDirectoryHref, getDirectoryPagination, parseDirectoryPage, type DirectoryQueryValue } from "@/lib/directory-pagination";
+import { formatCountLabel, formatDateUtc, formatDateTimeRangeUtc, formatInteger } from "@/lib/utils";
 
 export const metadata = buildPageMetadata({
   title: "Raids",
@@ -131,9 +132,7 @@ export default async function RaidsPage({ searchParams }: {
 
   const byDay = new Map<string, SessionCard[]>();
   for (const s of sessions) {
-    const day = new Date(s.startedAt).toLocaleDateString("en-US", {
-      weekday: "long", year: "numeric", month: "long", day: "numeric", timeZone: "UTC",
-    });
+    const day = formatDateUtc(s.startedAt);
     const arr = byDay.get(day) ?? [];
     arr.push(s);
     byDay.set(day, arr);
@@ -145,14 +144,14 @@ export default async function RaidsPage({ searchParams }: {
         title="Raids"
         description={<p>
           {databaseAvailable
-            ? `${sessions.length} raid session${sessions.length !== 1 ? "s" : ""} from ${uploads.length} upload${uploads.length !== 1 ? "s" : ""} on this page`
+            ? `${formatCountLabel(sessions.length, "raid session")} from ${formatCountLabel(uploads.length, "upload")} on this page`
             : "Raid reports are temporarily unavailable"}
         </p>}
       />
 
       {data && data.totalUploads > 0 && (
         <p className="text-sm text-text-secondary">
-          Uploads {data.pagination.firstVisible}–{data.pagination.lastVisible} of {data.totalUploads} · Newest uploads first.
+          Uploads {formatInteger(data.pagination.firstVisible)}–{formatInteger(data.pagination.lastVisible)} of {formatInteger(data.totalUploads)} · Newest uploads first.
           {" "}All sessions in an upload stay together.
         </p>
       )}
@@ -206,13 +205,11 @@ export default async function RaidsPage({ searchParams }: {
                         </div>
                         <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-text-dim">
                           <span>
-                            {new Date(s.startedAt).toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit", timeZone: "UTC" })}
-                            {" - "}
-                            {new Date(s.endedAt).toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit", timeZone: "UTC" })}
+                            {formatDateTimeRangeUtc(s.startedAt, s.endedAt)}
                           </span>
                           {s.realmName && <span>{s.realmName}</span>}
                           {s.shortPulls > 0 && (
-                            <span>{s.shortPulls} short pull{s.shortPulls === 1 ? "" : "s"} {includeShortPulls ? "included" : "excluded"}</span>
+                            <span>{formatCountLabel(s.shortPulls, "short pull")} {includeShortPulls ? "included" : "excluded"}</span>
                           )}
                         </div>
                       </div>
@@ -232,7 +229,7 @@ export default async function RaidsPage({ searchParams }: {
       ))}
       {data && data.totalUploads > 0 && (
         <nav aria-label="Raid history pages" className="flex flex-wrap items-center justify-between gap-3 border-t border-gold-dim pt-4">
-          <p className="text-sm text-text-secondary">Page {data.pagination.currentPage} of {data.pagination.totalPages}</p>
+          <p className="text-sm text-text-secondary">Page {formatInteger(data.pagination.currentPage)} of {formatInteger(data.pagination.totalPages)}</p>
           <div className="flex gap-2">
             {data.pagination.currentPage > 1 ? (
               <Link href={pageHref(data.pagination.currentPage - 1)} className="inline-flex min-h-11 items-center rounded-sm border border-gold-dim px-4 text-sm font-semibold text-gold hover:border-gold">Previous uploads</Link>
@@ -258,7 +255,7 @@ function Metric({
 }) {
   return (
     <div className="rounded-sm border border-gold-dim bg-bg-card px-3 py-2 text-center min-w-[74px]">
-      <div className={`font-bold tabular-nums ${valueClassName}`}>{value}</div>
+      <div className={`font-bold tabular-nums ${valueClassName}`}>{formatInteger(value)}</div>
       <div className="text-xs text-text-dim uppercase tracking-wide">{label}</div>
     </div>
   );

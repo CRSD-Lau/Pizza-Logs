@@ -1,5 +1,23 @@
 # Reading a Pizza Logs Report
 
+Author: Neil Mitchell
+
+Last modified by: Neil Mitchell
+
+## Reading Numbers and Lists
+
+Comparison rows and summary cards show full numbers with thousands separators. Rates
+have up to one decimal; percentages below 0.1% display `<0.1%` instead of implying
+zero contribution. An em dash means the measurement is unavailable; a displayed zero
+is an actual recorded value. Dates include the year and timestamps use labelled UTC.
+
+Current comparison lists show numbered positions within the stated metric and scope.
+Alphabetical directories have no performance position. Recent player history is newest
+first. Expanded spell breakdowns start with 15 spells and expose the remainder through
+**Show more**; chart details provide a **View chart values** table for precise numbers
+without hovering. The [frontend contract](../../DESIGN.md#numbers-units-time-and-lists)
+defines the same rules for public pages, previews and admin history.
+
 ## Raid Session
 
 A canonical report URL identifies the public report and raid date. One uploaded file can contain multiple dated sessions; a second session on the same date receives a numeric suffix.
@@ -7,11 +25,11 @@ A canonical report URL identifies the public report and raid date. One uploaded 
 Use **On this page** to jump to player totals, boss fights, targets, the full session or the roster. Shortcuts open collapsed sections and support keyboard navigation. Similar shortcuts appear on encounter, boss and player reports.
 
 The main session summary and **Boss Kill Breakdown** include successful boss fights
-only. Total Damage, Heal, Damage Taken and the mob breakdown use stored `KILL`
+only. Total Damage, Healing + absorbs, Damage Taken and the mob breakdown use stored `KILL`
 encounters. Adds and mechanics within those fights still count; wipes, unknown
 outcomes and between-fight trash do not contribute to the summary.
 
-Player DPS, H+A PS (effective healing plus attributed absorbs per second) and DTPS
+Player DPS, Healing + absorbs /s (effective healing plus attributed absorbs per second) and DTPS
 use each player's summed output divided by the combined duration of all successful
 fights. Every player uses this same duration, including fights they sat out; these
 are raid-wide contribution rates, not averages of individual fight rates. Precise
@@ -60,7 +78,7 @@ Public boss, weekly and player statistics include `shortPullCount`; use
 - **Total Damage / DPS:** raw outgoing damage-event amount divided by the encounter duration.
 - **Effective Healing / HPS:** gross healing minus overheal; shield absorbs are not silently folded into this primitive.
 - **Absorbs / APS:** attributed numeric absorbed damage from supported shield evidence.
-- **Heal / H+A PS:** explicitly labeled comparison view equal to effective healing plus attributed absorbs.
+- **Healing + absorbs:** the combined total of effective healing and attributed absorbs. **Healing + absorbs /s** is its per-second rate.
 - **Damage Taken:** raw incoming damage-event amount.
 - **Boss/target damage:** supplemental breakdown by destination; it does not replace the headline total.
 
@@ -82,7 +100,7 @@ Leaderboards and boss views default to all difficulties combined. Select a diffi
 
 Player pages and report detail can show per-spell/target output, role/spec evidence, aura uptime, consumables, power gains, deaths with the preceding incoming-damage window, class peers, records, and cached Warmane gear.
 
-Spell-detail bars compare each ability's damage or healing volume with the largest ability in that expanded row. DPS rows use damage volume; HPS and H+A rows use healing volume, with absorbs shown separately. **Overall crit** is the participant's critical-hit percentage across recorded output events. Spell rows label their combined stored damage/healing event count and critical percentage as total events and overall crit rather than using the older `%c` abbreviation.
+Spell-detail bars compare each ability's damage or healing volume with the largest ability in that expanded row. DPS rows use damage volume; effective-healing and combined-healing rows use healing volume, with absorbs shown separately. **Overall crit** is the participant's critical-hit percentage across recorded output events. Spell rows label their combined stored damage/healing event count and critical percentage as total events and overall crit rather than using the older `%c` abbreviation.
 
 Aura Uptime and Power Gains can be filtered by player and ability using partial text or the provided suggestions. Long result sets show 50 rows at a time with an explicit show-more control. Aura rows name the raid member the aura was observed on, which is not necessarily the caster. Power rows name the raid member who received the resource. Invalid entries and player/ability combinations with no matching row are reported inline.
 

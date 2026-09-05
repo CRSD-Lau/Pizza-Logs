@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { cn, formatDps, formatShortDateUtc } from "@/lib/utils";
+import { cn, formatDps, formatInteger, formatShortDateUtc } from "@/lib/utils";
 import { getClassColor } from "@/lib/constants/classes";
 import { getRevealClassName, getRevealStyle } from "@/lib/ui-animation";
 
@@ -28,13 +28,13 @@ export function LeaderboardBar({ entries, metric, className, querySuffix = "" }:
   const maxVal = entries[0]?.value ?? 1;
 
   return (
-    <div className={cn("@container space-y-2", className)}>
+    <ol aria-label={`${metric.toUpperCase()} positions`} className={cn("@container list-none space-y-2", className)}>
       {entries.map((e, index) => {
         const fillPct = maxVal > 0 ? (e.value / maxVal) * 100 : 0;
         const color = getClassColor(e.class ?? e.playerName);
 
         return (
-          <div
+          <li
             key={`${e.rank}-${e.playerName}`}
             className={cn(
               getRevealClassName(),
@@ -47,16 +47,16 @@ export function LeaderboardBar({ entries, metric, className, querySuffix = "" }:
               style={{ background: color, opacity: 0.1, width: `${fillPct}%` }}
             />
 
-            <div className="relative z-10 grid grid-cols-[auto_minmax(0,1fr)_auto] gap-x-3 gap-y-2 px-3 py-3 @lg:grid-cols-[28px_minmax(0,1fr)_80px_80px_56px] @lg:items-center">
+            <div className="relative z-10 grid grid-cols-[auto_minmax(0,1fr)_auto] gap-x-3 gap-y-2 px-3 py-3 @2xl:grid-cols-[40px_minmax(0,1fr)_max-content_104px_56px] @2xl:items-center">
               <span
                 className={cn(
-                  "rank-badge text-center row-span-2 @lg:row-span-1",
+                  "rank-badge whitespace-nowrap text-center row-span-2 @2xl:row-span-1",
                   e.rank === 1 && "rank-1",
                   e.rank === 2 && "rank-2",
                   e.rank === 3 && "rank-3",
                 )}
               >
-                {e.rank}
+                <span className="sr-only">Position </span><span aria-hidden="true">#</span>{formatInteger(e.rank)}
               </span>
 
               <div className="min-w-0">
@@ -65,7 +65,7 @@ export function LeaderboardBar({ entries, metric, className, querySuffix = "" }:
                   className="flex min-h-11 items-center text-sm font-semibold hover:underline"
                   style={{ color }}
                 >
-                  <span className="truncate">{e.playerName}</span>
+                  <span className="break-words">{e.playerName}</span>
                 </Link>
                 <div className="mt-1 flex flex-wrap items-center gap-x-2 text-sm text-text-secondary">
                   <Link href={`/bosses/${e.bossSlug}${querySuffix}`} className="inline-flex min-h-11 items-center hover:text-text-primary">
@@ -74,7 +74,7 @@ export function LeaderboardBar({ entries, metric, className, querySuffix = "" }:
                   <span className={cn("diff-badge", e.difficulty.endsWith("H") ? "heroic" : "normal")} style={{ color: "var(--color-text-secondary)" }}>
                     {e.difficulty}
                   </span>
-                  <span className="@lg:hidden">
+                  <span className="@2xl:hidden">
                     {formatShortDateUtc(e.date)}
                   </span>
                 </div>
@@ -84,14 +84,14 @@ export function LeaderboardBar({ entries, metric, className, querySuffix = "" }:
                 <span className="text-base font-bold tabular-nums text-text-primary">
                   {formatDps(e.value)}
                 </span>
-                <span className="block text-sm text-text-secondary uppercase">{metric}</span>
+                <span className="block text-sm text-text-secondary">{metric.toUpperCase()}</span>
               </div>
 
-              <div className="hidden text-right text-sm tabular-nums text-text-secondary @lg:block">
+              <div className="hidden text-right text-sm tabular-nums text-text-secondary @2xl:block">
                 {formatShortDateUtc(e.date)}
               </div>
 
-              <div className="col-start-3 row-start-2 text-right @lg:col-start-5 @lg:row-start-1">
+              <div className="col-start-3 row-start-2 text-right @2xl:col-start-5 @2xl:row-start-1">
                 {e.encounterId ? (
                   <Link
                     href={`/encounters/${e.encounterId}${querySuffix}`}
@@ -105,9 +105,9 @@ export function LeaderboardBar({ entries, metric, className, querySuffix = "" }:
                 )}
               </div>
             </div>
-          </div>
+          </li>
         );
       })}
-    </div>
+    </ol>
   );
 }

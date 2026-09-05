@@ -4,7 +4,8 @@ import { StatCard } from "@/components/ui/StatCard";
 import { LeaderboardBar } from "@/components/charts/LeaderboardBar";
 import { DatabaseUnavailable } from "@/components/ui/DatabaseUnavailable";
 import { EmptyState } from "@/components/ui/EmptyState";
-import { getWeekBounds } from "@/lib/utils";
+import { getWeekBounds, formatCountLabel, formatDateUtc, formatInteger } from "@/lib/utils";
+import { NumericValue } from "@/components/ui/NumericValue";
 import { db } from "@/lib/db";
 import { isDatabaseConnectionError } from "@/lib/database-errors";
 import { buildWeeklyBossKills } from "@/lib/weekly-stats";
@@ -122,7 +123,7 @@ export default async function WeeklyPage({ searchParams }: {
   }
   const { start, end } = getWeekBounds();
 
-  const weekLabel = `${start.toLocaleDateString("en-US", { month: "short", day: "numeric" })} - ${end.toLocaleDateString("en-US", { month: "short", day: "numeric" })}`;
+  const weekLabel = `${formatDateUtc(start)} – ${formatDateUtc(end)}`;
 
   return (
     <div className="page-shell">
@@ -143,14 +144,14 @@ export default async function WeeklyPage({ searchParams }: {
         <p className="text-sm text-text-secondary">{difficultyScopeLabel(difficulty)}. Rankings compare individual attempts across bosses.</p>
         <ShortPullNotice shortPulls={data.shortPulls} includeShortPulls={includeShortPulls} basePath={`/weekly${querySuffix}`} />
         <div className="grid grid-cols-2 items-stretch gap-y-2 rounded-sm bg-bg-panel/40 p-2 sm:grid-cols-5">
-          <StatCard label="Boss Kills" value={data.totalKills} highlight className="col-span-2" />
-          <StatCard label="Wipes" value={data.totalWipes} />
-          <StatCard label="Bosses Cleared" value={data.bossesCleared} />
+          <StatCard label="Boss Kills" value={formatInteger(data.totalKills)} highlight className="col-span-2" />
+          <StatCard label="Wipes" value={formatInteger(data.totalWipes)} />
+          <StatCard label="Bosses Cleared" value={formatInteger(data.bossesCleared)} />
           <StatCard
             label="Kill Rate"
-            value={data.totalKills + data.totalWipes > 0
-              ? `${Math.round(data.totalKills / (data.totalKills + data.totalWipes) * 100)}%`
-              : "-"}
+            value={<NumericValue value={data.totalKills + data.totalWipes > 0
+              ? data.totalKills / (data.totalKills + data.totalWipes) * 100 : null} kind="percent" />}
+            sub={data.totalKills + data.totalWipes > 0 ? "kills / counted kills and wipes" : "No kills or wipes"}
           />
         </div>
 
@@ -206,7 +207,7 @@ export default async function WeeklyPage({ searchParams }: {
                     <p className="text-sm font-semibold text-text-primary">{b.name}</p>
                     <p className="text-xs text-text-dim">{b.raid}</p>
                   </div>
-                  <span className="text-xl font-bold text-gold tabular-nums">{b.kills}</span>
+                  <span className="text-sm font-bold text-gold tabular-nums">{formatCountLabel(b.kills, "kill")}</span>
                 </Link>
               ))}
             </div>

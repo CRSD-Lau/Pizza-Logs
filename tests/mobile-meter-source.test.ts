@@ -28,8 +28,8 @@ assert.match(encounterPage, /<MobBreakdown mobs=\{mobEntries\}/);
 assert.match(sessionPage, /<MobBreakdown mobs=\{mobEntries\}/);
 
 // Meter rows stay mobile-native and must never reintroduce a forced table width.
-assert.match(damageMeter, /grid-cols-\[minmax\(0,1fr\)_auto\]/);
-assert.match(mobBreakdown, /grid-cols-\[minmax\(0,1fr\)_auto\]/);
+// Actual column geometry, visible mobile units and expanded rows are exercised
+// by the display-consistency browser suite; do not freeze one grid template.
 assert.doesNotMatch(damageMeter, /min-w-\[/);
 assert.doesNotMatch(mobBreakdown, /min-w-\[/);
 

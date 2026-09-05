@@ -10,7 +10,8 @@ import {
   Legend,
   ResponsiveContainer,
 } from "recharts";
-import { formatNumber } from "@/lib/utils";
+import { formatCompactNumber, formatRate } from "@/lib/utils";
+import { NumericValue } from "@/components/ui/NumericValue";
 
 export interface ChartPoint {
   bossName: string;
@@ -73,7 +74,7 @@ function CustomTooltip({
           <p key={e.name} style={{ color: e.color, margin: "2px 0" }}>
             <span style={{ fontWeight: 600 }}>{e.name}</span>
             {" — "}
-            {e.value.toLocaleString(undefined, { maximumFractionDigits: 0 })} {metric}
+            {formatRate(e.value)} {metric}
           </p>
         ))
       }
@@ -85,6 +86,8 @@ export function SessionLineChart({ data, players, metric }: Props) {
   if (data.length === 0) return null;
 
   return (
+    <div className="space-y-3">
+    <p className="text-sm text-text-secondary">{metric} by encounter. Axis labels abbreviate thousands (K) and millions (M); full values are available below.</p>
     <ResponsiveContainer width="100%" height={280}>
       <LineChart data={data} margin={{ top: 8, right: 8, left: 0, bottom: 8 }}>
         <CartesianGrid strokeDasharray="3 3" stroke="color-mix(in srgb, var(--color-gold) 7%, transparent)" />
@@ -107,7 +110,7 @@ export function SessionLineChart({ data, players, metric }: Props) {
           tick={{ fill: "var(--color-text-secondary)", fontSize: 12, fontWeight: 600 }}
           tickLine={false}
           axisLine={false}
-          tickFormatter={(v: number) => formatNumber(v)}
+          tickFormatter={(v: number) => formatCompactNumber(v)}
           width={52}
         />
         <Tooltip content={<CustomTooltip metric={metric} />} />
@@ -142,5 +145,19 @@ export function SessionLineChart({ data, players, metric }: Props) {
         ))}
       </LineChart>
     </ResponsiveContainer>
+    <details className="border-y border-gold-dim text-sm">
+      <summary className="min-h-11 cursor-pointer py-3 font-semibold text-gold">View {metric} chart values</summary>
+      <div role="region" aria-label={`${metric} chart values`} tabIndex={0} className="overflow-x-auto pb-3 focus-visible:outline-2 focus-visible:outline-gold">
+        <table className="w-full text-sm">
+          <caption className="sr-only">Full {metric} values by encounter and player. Unavailable means no recorded value.</caption>
+          <thead><tr><th scope="col" className="px-3 py-2 text-left">Encounter</th>{players.map(player => <th key={player.name} scope="col" className="px-3 py-2 text-right">{player.name}</th>)}</tr></thead>
+          <tbody>{data.map((point, index) => <tr key={`${point.bossName}-${index}`} className="border-t border-gold-dim">
+            <th scope="row" className="px-3 py-2 text-left font-medium">{point.bossName}</th>
+            {players.map(player => <td key={player.name} className="whitespace-nowrap px-3 py-2 text-right tabular-nums"><NumericValue value={typeof point[player.name] === "number" ? point[player.name] as number : null} kind="rate" /></td>)}
+          </tr>)}</tbody>
+        </table>
+      </div>
+    </details>
+    </div>
   );
 }
