@@ -2,6 +2,7 @@
 
 import { useEffect, useId, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { Loader2, Search, X } from "lucide-react";
 import {
   getPlayerSearchKeyboardAction,
@@ -25,6 +26,8 @@ const DEBOUNCE_MS = 220;
 export function PlayerSearch({ className, onNavigate }: PlayerSearchProps) {
   const router = useRouter();
   const resultListId = useId();
+  const inputRef = useRef<HTMLInputElement>(null);
+  const dropdownRef = useRef<HTMLDivElement>(null);
   const containerRef = useRef<HTMLDivElement | null>(null);
   const cacheRef = useRef<Record<string, PlayerSearchResult[]>>({});
   const [query, setQuery] = useState("");
@@ -83,12 +86,13 @@ export function PlayerSearch({ className, onNavigate }: PlayerSearchProps) {
     })
       .then(async (response) => {
         const payload = await response.json() as PlayerSearchResponse;
+        if (controller.signal.aborted) return;
         if (!response.ok || !payload.ok) throw new Error(payload.ok ? "Player search failed" : payload.error);
         cacheRef.current[normalized] = payload.results;
         setResults(payload.results);
       })
       .catch((fetchError: unknown) => {
-        if (fetchError instanceof DOMException && fetchError.name === "AbortError") return;
+        if (controller.signal.aborted || (fetchError instanceof DOMException && fetchError.name === "AbortError")) return;
         setResults([]);
         setError("Search unavailable");
       })
@@ -100,6 +104,23 @@ export function PlayerSearch({ className, onNavigate }: PlayerSearchProps) {
   }, [debouncedQuery]);
 
   const showDropdown = open && sanitizePlayerSearchQuery(query).length > 0;
+  const pendingQuery = sanitizePlayerSearchQuery(query) !== debouncedQuery;
+  const searching = pendingQuery || loading;
+  const visibleResults = searching || error ? [] : results;
+  const status = !showDropdown ? "" : searching ? "Searching for players…"
+    : error ? "Search unavailable. Try again or browse the player directory."
+      : visibleResults.length ? `${visibleResults.length} ${visibleResults.length === 1 ? "player found" : "players found"}. Use the arrow keys to choose a player.`
+        : "No players found. Check the name or browse the player directory.";
+
+  useEffect(() => {
+    const option = document.getElementById(`${resultListId}-option-${activeIndex}`);
+    const dropdown = dropdownRef.current;
+    if (!showDropdown || !option || !dropdown) return;
+    const row = option.getBoundingClientRect();
+    const panel = dropdown.getBoundingClientRect();
+    if (row.top < panel.top) dropdown.scrollTop -= panel.top - row.top;
+    else if (row.bottom > panel.bottom) dropdown.scrollTop += row.bottom - panel.bottom;
+  }, [activeIndex, resultListId, showDropdown, visibleResults.length]);
 
   const navigateToResult = (result: PlayerSearchResult) => {
     router.push(result.profilePath);
@@ -117,10 +138,13 @@ export function PlayerSearch({ className, onNavigate }: PlayerSearchProps) {
     setError(null);
     setActiveIndex(-1);
     setOpen(false);
+    inputRef.current?.focus();
   };
 
   return (
-    <div ref={containerRef} className={cn("relative w-full", className)}>
+    <div ref={containerRef} onBlur={(event) => {
+      if (!event.currentTarget.contains(event.relatedTarget as Node | null)) setOpen(false);
+    }} className={cn("relative w-full", className)}>
       <div className="relative">
         <Search
           aria-hidden="true"
@@ -128,24 +152,28 @@ export function PlayerSearch({ className, onNavigate }: PlayerSearchProps) {
           className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-text-dim"
         />
         <input
+          ref={inputRef}
           type="search"
           value={query}
           placeholder="Search players..."
           role="combobox"
+          aria-label="Search players"
           aria-autocomplete="list"
           aria-expanded={showDropdown}
-          aria-controls={resultListId}
+          aria-controls={showDropdown && visibleResults.length > 0 ? resultListId : undefined}
+          aria-activedescendant={showDropdown && visibleResults[activeIndex] ? `${resultListId}-option-${activeIndex}` : undefined}
           autoComplete="off"
           spellCheck={false}
           onFocus={() => setOpen(true)}
           onChange={(event) => {
             setQuery(event.target.value);
+            setActiveIndex(-1);
             setOpen(true);
           }}
           onKeyDown={(event) => {
             const action = getPlayerSearchKeyboardAction({
               key: event.key,
-              resultCount: results.length,
+              resultCount: visibleResults.length,
               activeIndex,
             });
 
@@ -158,16 +186,18 @@ export function PlayerSearch({ className, onNavigate }: PlayerSearchProps) {
             }
 
             if (action.type === "highlight") {
+              setOpen(true);
               setActiveIndex(action.activeIndex);
               return;
             }
 
-            const result = results[action.navigateIndex];
+            if (!showDropdown) return;
+            const result = visibleResults[action.navigateIndex];
             if (result) navigateToResult(result);
           }}
-          className="h-11 w-full rounded-sm border border-gold-dim bg-bg-card/85 pl-10 pr-11 text-sm font-medium text-text-primary placeholder:text-text-dim outline-hidden transition-colors focus:border-gold/70 focus:bg-bg-card focus:ring-1 focus:ring-gold/30"
+          className="h-11 w-full rounded-sm border border-gold-dim bg-bg-card/85 pl-10 pr-11 text-base font-medium text-text-primary placeholder:text-text-dim outline-hidden transition-colors focus:border-gold/70 focus:bg-bg-card focus:ring-1 focus:ring-gold/30"
         />
-        {loading ? (
+        {searching ? (
           <Loader2
             aria-label="Searching"
             size={15}
@@ -184,26 +214,19 @@ export function PlayerSearch({ className, onNavigate }: PlayerSearchProps) {
           </button>
         ) : null}
       </div>
+      <p role="status" aria-live="polite" aria-atomic="true" className="sr-only">{status}</p>
 
       {showDropdown && (
         <div
-          id={resultListId}
-          role="listbox"
+          ref={dropdownRef}
           className="absolute left-0 right-0 top-full z-50 mt-2 max-h-80 overflow-y-auto rounded-sm border border-gold-dim bg-bg-panel shadow-card"
         >
-          {loading && results.length === 0 && (
-            <div className="px-3 py-3 text-sm text-text-secondary">Searching...</div>
+          {visibleResults.length === 0 && (
+            <div className="px-3 py-3 text-sm text-text-secondary">{status}</div>
           )}
 
-          {error && (
-            <div className="px-3 py-3 text-sm text-warning">{error}</div>
-          )}
-
-          {!loading && !error && results.length === 0 && (
-            <div className="px-3 py-3 text-sm text-text-secondary">No players found</div>
-          )}
-
-          {results.map((result, index) => {
+          {visibleResults.length > 0 && <div id={resultListId} role="listbox" aria-label="Player search results">
+          {visibleResults.map((result, index) => {
             const color = getClassColor(result.className ?? result.name);
             const metadata = [
               result.className,
@@ -222,6 +245,8 @@ export function PlayerSearch({ className, onNavigate }: PlayerSearchProps) {
               <button
                 key={`${result.realmName}:${result.name}`}
                 type="button"
+                id={`${resultListId}-option-${index}`}
+                tabIndex={-1}
                 role="option"
                 aria-selected={activeIndex === index}
                 onMouseDown={(event) => event.preventDefault()}
@@ -247,6 +272,10 @@ export function PlayerSearch({ className, onNavigate }: PlayerSearchProps) {
               </button>
             );
           })}
+          </div>}
+          {!searching && visibleResults.length === 0 && (
+            <Link href="/players" className="inline-flex min-h-11 items-center px-3 text-sm font-semibold text-gold hover:text-gold-light">Browse all players</Link>
+          )}
         </div>
       )}
     </div>

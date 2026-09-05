@@ -5,6 +5,7 @@ import { PlayerAvatar } from "../players/PlayerAvatar";
 import { getClassColor } from "../../lib/constants/classes";
 import { getRevealClassName, getRevealStyle } from "../../lib/ui-animation";
 import { getClassIconUrl } from "../../lib/class-icons";
+import { buildDirectoryHref, directoryNameMatches, getDirectoryPagination } from "../../lib/directory-pagination";
 
 const GUILD_ROSTER_PAGE_SIZE = 20;
 
@@ -31,6 +32,8 @@ export type GuildRosterTableMember = {
 type GuildRosterTableProps = {
   members: GuildRosterTableMember[];
   currentPage?: number;
+  query?: string;
+  classFilter?: string;
 };
 
 function formatSyncedAt(value: Date): string {
@@ -58,15 +61,6 @@ function formatProfessions(value: unknown): string {
   return professions.length > 0 ? professions.join(", ") : "-";
 }
 
-function getPageHref(page: number): string {
-  return page <= 1 ? "/guild-roster" : `/guild-roster?page=${page}`;
-}
-
-function clampPage(page: number, totalPages: number): number {
-  if (!Number.isFinite(page)) return 1;
-  return Math.min(Math.max(Math.trunc(page), 1), totalPages);
-}
-
 function PageNavButton({
   href,
   label,
@@ -83,13 +77,15 @@ function PageNavButton({
 
   if (disabled) {
     return (
-      <span
-        aria-disabled="true"
+      <button
+        type="button"
+        disabled
+        aria-label={label}
         className={`${className} cursor-not-allowed opacity-40`}
         title={label}
       >
         {children}
-      </span>
+      </button>
     );
   }
 
@@ -105,22 +101,32 @@ function PageNavButton({
   );
 }
 
-export function GuildRosterTable({ members, currentPage = 1 }: GuildRosterTableProps) {
+export function GuildRosterTable({ members, currentPage = 1, query = "", classFilter }: GuildRosterTableProps) {
   if (members.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center py-16 px-6 text-center">
         <p className="heading-cinzel text-base text-text-secondary mb-2">No guild roster data yet</p>
         <p className="text-sm text-text-dim max-w-xs">
-          Use Admin Guild Roster Sync to import PizzaWarriors members from Warmane.
+          Guild members will appear after the next roster update. Please check back shortly.
         </p>
       </div>
     );
   }
 
-  const totalPages = Math.max(1, Math.ceil(members.length / GUILD_ROSTER_PAGE_SIZE));
-  const page = clampPage(currentPage, totalPages);
-  const startIndex = (page - 1) * GUILD_ROSTER_PAGE_SIZE;
-  const visibleMembers = members.slice(startIndex, startIndex + GUILD_ROSTER_PAGE_SIZE);
+  const filteredMembers = members.filter(member => directoryNameMatches(member.characterName, query)
+    && (!classFilter || member.className === classFilter));
+  if (filteredMembers.length === 0) {
+    return (
+      <div className="py-12 text-center">
+        <p className="text-base font-semibold text-text-primary">No guild members match these filters</p>
+        <p className="mt-2 text-sm text-text-secondary">Try another name or class.</p>
+        <Link href="/guild-roster" className="mt-3 inline-flex min-h-11 items-center px-3 text-sm font-semibold text-gold hover:text-gold-light">Clear filters</Link>
+      </div>
+    );
+  }
+  const { currentPage: page, totalPages, startIndex } = getDirectoryPagination(filteredMembers.length, currentPage, GUILD_ROSTER_PAGE_SIZE);
+  const visibleMembers = filteredMembers.slice(startIndex, startIndex + GUILD_ROSTER_PAGE_SIZE);
+  const getPageHref = (nextPage: number) => buildDirectoryHref("/guild-roster", { query, classFilter, page: nextPage });
   const firstVisible = startIndex + 1;
   const lastVisible = startIndex + visibleMembers.length;
   const previousPage = page - 1;
@@ -201,7 +207,7 @@ export function GuildRosterTable({ members, currentPage = 1 }: GuildRosterTableP
       </ul>
 
       <div className="hidden overflow-x-auto xl:block">
-        <table className="min-w-full text-sm">
+        <table aria-label="Guild roster members" className="min-w-full text-sm">
           <thead className="bg-bg-card text-text-dim">
             <tr className="text-left text-xs uppercase tracking-widest">
               <th className="px-4 py-3 font-semibold">Character</th>
@@ -243,7 +249,7 @@ export function GuildRosterTable({ members, currentPage = 1 }: GuildRosterTableP
                       />
                       <Link
                         href={`/players/${encodeURIComponent(member.characterName)}`}
-                        className="font-semibold hover:text-gold-light transition-colors"
+                        className="inline-flex min-h-11 items-center font-semibold hover:text-gold-light transition-colors"
                         style={{ color: classColor }}
                       >
                         {member.characterName}
@@ -264,7 +270,7 @@ export function GuildRosterTable({ members, currentPage = 1 }: GuildRosterTableP
                   <td className="px-4 py-3 text-right">
                     <Link
                       href={`/players/${encodeURIComponent(member.characterName)}`}
-                      className="text-xs font-semibold uppercase tracking-wide text-gold hover:text-gold-light"
+                      className="inline-flex min-h-11 items-center text-xs font-semibold uppercase tracking-wide text-gold hover:text-gold-light"
                     >
                       View
                     </Link>
@@ -278,7 +284,7 @@ export function GuildRosterTable({ members, currentPage = 1 }: GuildRosterTableP
 
       <div className="flex flex-col gap-3 border-t border-gold-dim bg-bg-card/60 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
         <p className="text-xs text-text-dim tabular-nums">
-          {firstVisible}-{lastVisible} of {members.length} members
+          {firstVisible}-{lastVisible} of {filteredMembers.length} members{query || classFilter ? " matching these filters" : ""}
         </p>
         <nav className="flex items-center justify-end gap-2" aria-label="Guild roster pages">
           <PageNavButton

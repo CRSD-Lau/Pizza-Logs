@@ -1,22 +1,19 @@
 import Link from "next/link";
+import { ChevronLeft, ChevronRight } from "lucide-react";
 import { db } from "@/lib/db";
 import { DatabaseUnavailable } from "@/components/ui/DatabaseUnavailable";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { PlayerAvatar } from "@/components/players/PlayerAvatar";
-import { WOW_CLASSES } from "@/lib/constants/classes";
-import { getClassColor } from "@/lib/constants/classes";
+import { PageHeader, PageShell } from "@/components/ui/PageLayout";
+import { ShortPullNotice } from "@/components/reports/ShortPullNotice";
+import { WOW_CLASSES, getClassColor } from "@/lib/constants/classes";
 import { getClassIconUrl } from "@/lib/class-icons";
-import { formatDps } from "@/lib/utils";
-import { cn } from "@/lib/utils";
 import { isDatabaseConnectionError } from "@/lib/database-errors";
 import { getRevealClassName, getRevealStyle } from "@/lib/ui-animation";
-import { PageHeader, PageShell } from "@/components/ui/PageLayout";
-import { ChevronLeft, ChevronRight } from "lucide-react";
-
 import { buildPageMetadata } from "@/lib/page-metadata";
-import { ShortPullNotice } from "@/components/reports/ShortPullNotice";
 import { parseIncludeShortPulls } from "@/lib/attempt-policy";
 import { countedAttemptWhere, shortPullWhere } from "@/lib/attempt-policy.server";
+import { buildDirectoryHref, getDirectoryPagination, parseDirectoryFilters, parseDirectoryPage, type DirectoryQueryValue } from "@/lib/directory-pagination";
 
 export const metadata = buildPageMetadata({
   title: "Players",
@@ -26,386 +23,143 @@ export const metadata = buildPageMetadata({
 export const dynamic = "force-dynamic";
 
 interface Props {
-  searchParams: Promise<{ class?: string; page?: string; includeShortPulls?: string | string[] }>;
+  searchParams: Promise<{ q?: DirectoryQueryValue; class?: DirectoryQueryValue; page?: DirectoryQueryValue; includeShortPulls?: DirectoryQueryValue }>;
 }
 
 const PLAYERS_PER_PAGE = 30;
+const fieldClass = "min-h-11 w-full rounded-sm border border-gold-dim bg-bg-card px-3 py-2 text-sm text-text-primary";
+const actionClass = "inline-flex min-h-11 items-center justify-center gap-1 rounded-sm border border-gold-dim px-4 py-2 text-sm font-semibold text-text-secondary hover:border-gold hover:text-gold-light";
 
-type PlayerStatsRow = {
-  class: string | null;
-  milestones: Array<{ value: number }>;
-};
-
-type PlayerListRow = {
-  id: string;
-  name: string;
-  class: string | null;
-  realm: { name: string } | null;
-  _count: { participants: number };
-  milestones: Array<{
-    value: number;
-    metric: string;
-    rank: number;
-    difficulty: string;
-  }>;
-};
-
-type PlayersPageData = {
-  databaseAvailable: boolean;
-  allPlayersForStats: PlayerStatsRow[];
-  players: PlayerListRow[];
-  totalCount: number;
-  shortPulls: number;
-};
-
-async function getPlayersPageData(classFilter: string | undefined, includeShortPulls: boolean): Promise<PlayersPageData> {
-  try {
-    const [allPlayersForStats, players, totalCount, shortPulls] = await Promise.all([
-      db.player.findMany({
-        select: {
-          class:     true,
-          milestones: {
-            where:   { supersededAt: null, metric: "DPS" },
-            orderBy: { value: "desc" },
-            take:    1,
-            select:  { value: true },
-          },
-        },
-      }),
-      db.player.findMany({
-        where:   classFilter ? { class: classFilter } : undefined,
-        orderBy: { name: "asc" },
-        include: {
-          realm:  { select: { name: true } },
-          _count: { select: { participants: { where: { encounter: countedAttemptWhere({ includeShortPulls }) } } } },
-          milestones: {
-            where:   { supersededAt: null },
-            orderBy: { value: "desc" },
-            take:    3,
-            select:  { value: true, metric: true, rank: true, difficulty: true },
-          },
-        },
-      }),
-      db.player.count(),
-      db.encounter.count({
-        where: classFilter ? {
-          AND: [shortPullWhere(), { participants: { some: { player: { class: classFilter } } } }],
-        } : shortPullWhere(),
-      }),
-    ]);
-
-    return { databaseAvailable: true, allPlayersForStats, players, totalCount, shortPulls };
-  } catch (error) {
-    if (!isDatabaseConnectionError(error)) throw error;
-    return { databaseAvailable: false, allPlayersForStats: [], players: [], totalCount: 0, shortPulls: 0 };
-  }
+async function getPlayersPageData(query: string, classFilter: string | undefined, requestedPage: number, includeShortPulls: boolean) {
+  const where = {
+    ...(classFilter ? { class: classFilter } : {}),
+    ...(query ? { name: { contains: query, mode: "insensitive" as const } } : {}),
+  };
+  const [allPlayersForStats, totalCount, shortPulls] = await Promise.all([
+    db.player.findMany({ select: { class: true } }),
+    db.player.count({ where }),
+    db.encounter.count({ where: { AND: [shortPullWhere(), { participants: { some: { player: where } } }] } }),
+  ]);
+  const pagination = getDirectoryPagination(totalCount, requestedPage, PLAYERS_PER_PAGE);
+  const players = await db.player.findMany({
+    where,
+    orderBy: [{ name: "asc" }, { id: "asc" }],
+    skip: pagination.startIndex,
+    take: PLAYERS_PER_PAGE,
+    include: {
+      realm: { select: { name: true } },
+      _count: { select: { participants: { where: { encounter: countedAttemptWhere({ includeShortPulls }) } } } },
+    },
+  });
+  return { players, allPlayersForStats, totalCount, shortPulls, pagination };
 }
 
 export default async function PlayersPage({ searchParams }: Props) {
-  const { class: classFilter, page: requestedPage, includeShortPulls: requestedShortPulls } = await searchParams;
-  const includeShortPulls = parseIncludeShortPulls(requestedShortPulls);
-  const querySuffix = includeShortPulls ? "?includeShortPulls=1" : "";
-
-  // Class stats — always unfiltered, used for the visualization panel
-  const { databaseAvailable, allPlayersForStats, players, totalCount, shortPulls } = await getPlayersPageData(classFilter, includeShortPulls);
-
-  // Aggregate per class: player count + sum of best DPS (for avg)
-  const classMap = new Map<string, { count: number; dpsTotal: number; dpsCount: number }>();
-  for (const p of allPlayersForStats) {
-    const cls = p.class ?? "Unknown";
-    const entry = classMap.get(cls) ?? { count: 0, dpsTotal: 0, dpsCount: 0 };
-    entry.count++;
-    if (p.milestones[0]) {
-      entry.dpsTotal += p.milestones[0].value;
-      entry.dpsCount++;
-    }
-    classMap.set(cls, entry);
+  const params = await searchParams;
+  const { query, classFilter } = parseDirectoryFilters(params);
+  const includeShortPulls = parseIncludeShortPulls(params.includeShortPulls);
+  let data: Awaited<ReturnType<typeof getPlayersPageData>> | null = null;
+  try {
+    data = await getPlayersPageData(query, classFilter, parseDirectoryPage(params.page), includeShortPulls);
+  } catch (error) {
+    if (!isDatabaseConnectionError(error)) throw error;
   }
-
-  // Sort by player count desc for distribution bar
-  const classStats = Array.from(classMap.entries())
-    .filter(([cls]) => cls !== "Unknown")
-    .sort((a, b) => b[1].count - a[1].count);
-
-  const totalPlayersWithClass = classStats.reduce((s, [, v]) => s + v.count, 0);
-
-  // Sort by avg DPS desc for the bar chart
-  const classAvgDps = classStats
-    .filter(([, v]) => v.dpsCount > 0)
-    .map(([cls, v]) => ({ cls, avg: v.dpsTotal / v.dpsCount }))
-    .sort((a, b) => b.avg - a.avg);
-
-  const maxAvgDps = classAvgDps[0]?.avg ?? 1;
-
-  // Derive quick stats per player
-  const enriched = players.map(p => {
-    const dpsMilestone = p.milestones.find(m => m.metric === "DPS");
-    const hpsMilestone = p.milestones.find(m => m.metric === "HPS");
-    return {
-      ...p,
-      bestDps: dpsMilestone?.value ?? null,
-      bestHps: hpsMilestone?.value ?? null,
-      topRank: p.milestones.length > 0 ? Math.min(...p.milestones.map(m => m.rank)) : null,
-    };
-  });
-
-  // Sort: milestones holders first, then by encounter count
-  enriched.sort((a, b) => {
-    if (a.topRank !== null && b.topRank === null) return -1;
-    if (a.topRank === null && b.topRank !== null) return 1;
-    if (a.topRank !== null && b.topRank !== null) return a.topRank - b.topRank;
-    return b._count.participants - a._count.participants;
-  });
-
-  const totalPages = Math.max(1, Math.ceil(enriched.length / PLAYERS_PER_PAGE));
-  const parsedPage = Number.parseInt(requestedPage ?? "1", 10);
-  const currentPage = Math.min(Math.max(Number.isFinite(parsedPage) ? parsedPage : 1, 1), totalPages);
-  const pageStart = (currentPage - 1) * PLAYERS_PER_PAGE;
-  const visiblePlayers = enriched.slice(pageStart, pageStart + PLAYERS_PER_PAGE);
-  const pageHref = (page: number) => {
-    const params = new URLSearchParams();
-    if (classFilter) params.set("class", classFilter);
-    if (page > 1) params.set("page", String(page));
-    if (includeShortPulls) params.set("includeShortPulls", "1");
-    const query = params.toString();
-    return query ? `/players?${query}` : "/players";
-  };
+  const pageHref = (page: number, selectedClass = classFilter) => buildDirectoryHref("/players", { query, classFilter: selectedClass, page, includeShortPulls });
+  const resetHref = buildDirectoryHref("/players", { includeShortPulls });
+  const visiblePlayers = data?.players ?? [];
+  const classCounts = new Map<string, number>();
+  for (const player of data?.allPlayersForStats ?? []) {
+    const className = player.class ?? "Unknown";
+    classCounts.set(className, (classCounts.get(className) ?? 0) + 1);
+  }
+  const classStats = [...classCounts].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]));
+  const maxClassCount = classStats[0]?.[1] ?? 1;
 
   return (
     <PageShell>
-      <PageHeader
-        title="Players"
-        description={
-          <p>
-          {!databaseAvailable
-            ? "Player data is unavailable while the database is offline"
-            : classFilter
-            ? `${players.length} ${classFilter}${players.length !== 1 ? "s" : ""} · ${totalCount} total`
-            : `${totalCount} players tracked across logs and the guild roster`}
+      <PageHeader title="Players" description={<p>Find a player and open their raid history. Listed alphabetically, A–Z.</p>} />
+      {!data ? (
+        <DatabaseUnavailable description="Player profiles are temporarily unavailable. Please try again shortly." />
+      ) : (
+        <>
+          <form key={`${query}:${classFilter ?? ""}`} action="/players" method="get" role="search" aria-label="Filter player directory" className="grid grid-cols-[minmax(0,1fr)_auto] items-end gap-3 sm:flex">
+            <div className="col-span-2 min-w-0 flex-1">
+              <label htmlFor="directory-player-name" className="mb-1.5 block text-sm font-semibold text-text-secondary">Player name</label>
+              <input id="directory-player-name" name="q" type="search" defaultValue={query} maxLength={64} placeholder="Find a player by name" className={fieldClass} />
+            </div>
+            <div className="sm:hidden">
+              <label htmlFor="directory-player-class" className="mb-1.5 block text-sm font-semibold text-text-secondary">Class</label>
+              <select id="directory-player-class" name="class" defaultValue={classFilter ?? ""} className={fieldClass}>
+                <option value="">All classes</option>
+                {WOW_CLASSES.map(className => <option key={className} value={className}>{className}</option>)}
+              </select>
+            </div>
+            {includeShortPulls && <input type="hidden" name="includeShortPulls" value="1" />}
+            <button type="submit" className={`${actionClass} border-gold text-gold-light`}>Find players</button>
+            {(query || classFilter) && <Link href={resetHref} className={`${actionClass} col-span-2`}>Clear filters</Link>}
+          </form>
+          <nav aria-label="Filter players by class" className="hidden flex-wrap gap-1.5 sm:flex">
+            <Link href={pageHref(1, "")} aria-current={!classFilter ? "page" : undefined} className={`${actionClass} ${!classFilter ? "border-gold text-gold-light" : ""}`}>All classes</Link>
+            {WOW_CLASSES.map(className => (
+              <Link key={className} href={pageHref(1, className)} aria-current={classFilter === className ? "page" : undefined} className={`${actionClass} ${classFilter === className ? "border-gold text-gold-light" : ""}`}>
+                {className}
+              </Link>
+            ))}
+          </nav>
+          <p className="text-sm text-text-secondary">
+            {data.totalCount} {data.totalCount === 1 ? "player" : "players"}{query || classFilter ? " match these filters" : " tracked"} · A–Z
           </p>
-        }
-      />
-
-      {databaseAvailable && (
-        <ShortPullNotice shortPulls={shortPulls} includeShortPulls={includeShortPulls} basePath={pageHref(currentPage)} />
-      )}
-
-      {!databaseAvailable && (
-        <DatabaseUnavailable description="The player list and profile search need the Pizza Logs database. Start local Postgres to load players." />
-      )}
-
-      {/* Class stats */}
-      {databaseAvailable && classStats.length > 0 && (
-        <details className="group border-y border-gold-dim">
-          <summary className="flex min-h-14 cursor-pointer list-none items-center justify-between gap-4 rounded-sm px-2 py-3 text-sm font-semibold uppercase tracking-widest text-gold hover:bg-bg-panel/45 [&::-webkit-details-marker]:hidden">
-            Class overview
-            <span className="text-text-dim transition-transform group-open:rotate-180" aria-hidden="true">⌄</span>
-          </summary>
-          <div className="space-y-5 px-2 pb-5 pt-2">
-          {/* Distribution bar */}
-          <div>
-            <p className="mb-2 text-sm font-semibold uppercase tracking-widest text-text-dim">
-              Class Distribution
-            </p>
-            <div className="flex h-5 rounded-sm overflow-hidden gap-px">
-              {classStats.map(([cls, { count }]) => (
-                <div
-                  key={cls}
-                  style={{
-                    width:      `${(count / totalPlayersWithClass) * 100}%`,
-                    background: getClassColor(cls),
-                    opacity:    0.8,
-                    minWidth:   count > 0 ? 2 : 0,
-                  }}
-                  title={`${cls}: ${count} player${count !== 1 ? "s" : ""}`}
-                />
-              ))}
+          <ShortPullNotice shortPulls={data.shortPulls} includeShortPulls={includeShortPulls} basePath={pageHref(data.pagination.currentPage)} />
+          {visiblePlayers.length === 0 ? (
+            <EmptyState title="No players found" description={query || classFilter ? "Try another name or class, or clear the filters." : "Player profiles appear after a combat log is uploaded."}
+              action={<Link href={query || classFilter ? resetHref : "/"} className={actionClass}>{query || classFilter ? "Clear filters" : "Upload a log"}</Link>} />
+          ) : (
+            <div className="space-y-5">
+              <div className="grid border-y border-gold-dim sm:grid-cols-2 lg:grid-cols-3">
+                {visiblePlayers.map((player, index) => {
+                  const color = getClassColor(player.class ?? player.name);
+                  return (
+                    <article key={player.id} className={getRevealClassName({ className: "flex min-h-20 items-center gap-3 border-b border-gold-dim px-3 py-3 hover:bg-bg-panel/55 sm:border-r" })} style={getRevealStyle(index)}>
+                      <PlayerAvatar name={player.name} realmName={player.realm?.name} characterClass={player.class} color={color} fallbackIconUrl={getClassIconUrl(player.class)} size="sm" />
+                      <div className="min-w-0 flex-1">
+                        <Link href={`/players/${encodeURIComponent(player.name)}${includeShortPulls ? "?includeShortPulls=1" : ""}`} className="flex min-h-11 items-center text-base font-semibold hover:underline" style={{ color }}>
+                          <span className="truncate">{player.name}</span>
+                        </Link>
+                        <p className="flex flex-wrap gap-x-2 gap-y-1 text-sm text-text-secondary">
+                          {player.class && <span>{player.class}</span>}
+                          {player.realm && <span>{player.realm.name}</span>}
+                          <span>{player._count.participants} {player._count.participants === 1 ? "pull" : "pulls"}</span>
+                        </p>
+                      </div>
+                    </article>
+                  );
+                })}
+              </div>
+              <nav aria-label="Player directory pages" className="flex flex-wrap items-center justify-between gap-3">
+                <p className="text-sm text-text-secondary">{data.pagination.firstVisible}–{data.pagination.lastVisible} of {data.totalCount} players · Page {data.pagination.currentPage} of {data.pagination.totalPages}</p>
+                <div className="flex gap-2">
+                  {data.pagination.currentPage > 1 ? <Link href={pageHref(data.pagination.currentPage - 1)} className={actionClass}><ChevronLeft aria-hidden="true" size={16} />Previous</Link> : <button type="button" disabled className={`${actionClass} opacity-40`}><ChevronLeft aria-hidden="true" size={16} />Previous</button>}
+                  {data.pagination.currentPage < data.pagination.totalPages ? <Link href={pageHref(data.pagination.currentPage + 1)} className={actionClass}>Next<ChevronRight aria-hidden="true" size={16} /></Link> : <button type="button" disabled className={`${actionClass} opacity-40`}>Next<ChevronRight aria-hidden="true" size={16} /></button>}
+                </div>
+              </nav>
             </div>
-            <div className="flex flex-wrap gap-x-4 gap-y-1 mt-2">
-              {classStats.map(([cls, { count }]) => (
-                <span key={cls} className="flex items-center gap-1 text-sm text-text-dim">
-                  <span
-                    className="inline-block w-2 h-2 rounded-xs"
-                    style={{ background: getClassColor(cls) }}
-                  />
-                  {cls} <span className="text-text-secondary">{count}</span>
-                </span>
-              ))}
-            </div>
-          </div>
-
-          {/* Avg best DPS by class */}
-          {classAvgDps.length > 0 && (
-            <div>
-              <p className="mb-2 text-sm font-semibold uppercase tracking-widest text-text-dim">
-                Avg Best DPS by Class
-              </p>
-              <div className="space-y-1.5">
-                {classAvgDps.map(({ cls, avg }) => (
-                  <div key={cls} className="flex items-center gap-2">
-                    <span
-                      className="w-24 shrink-0 truncate text-sm font-semibold"
-                      style={{ color: getClassColor(cls) }}
-                    >
-                      {cls}
-                    </span>
-                    <div className="flex-1 h-3 bg-bg-card rounded-sm overflow-hidden">
-                      <div
-                        style={{
-                          width:      `${(avg / maxAvgDps) * 100}%`,
-                          background: getClassColor(cls),
-                          opacity:    0.75,
-                        }}
-                        className="h-full rounded-sm"
-                      />
-                    </div>
-                    <span className="w-16 shrink-0 text-right text-sm tabular-nums text-text-secondary">
-                      {formatDps(avg)}
-                    </span>
+          )}
+          {classStats.length > 0 && (
+            <details className="border-y border-gold-dim">
+              <summary className="flex min-h-14 cursor-pointer items-center text-sm font-semibold text-gold">Class overview · all {data.allPlayersForStats.length} players</summary>
+              <div className="space-y-3 pb-5">
+                {classStats.map(([className, count]) => (
+                  <div key={className} className="flex items-center gap-3 text-sm">
+                    <span className="w-28 shrink-0 text-text-secondary">{className}</span>
+                    <div className="flex-1 h-3 bg-bg-card rounded-sm overflow-hidden"><div className="h-full" style={{ width: `${count / maxClassCount * 100}%`, background: getClassColor(className) }} /></div>
+                    <span className="w-8 text-right tabular-nums text-text-primary">{count}</span>
                   </div>
                 ))}
               </div>
-            </div>
+            </details>
           )}
-          </div>
-        </details>
+        </>
       )}
-
-      {/* Class filter */}
-      {databaseAvailable && (
-      <div className="flex flex-wrap gap-1.5">
-        <Link
-          href={`/players${querySuffix}`}
-          className={cn(
-            "inline-flex min-h-11 items-center rounded-sm border px-3 py-2 text-xs font-semibold uppercase tracking-wide transition-colors",
-            !classFilter
-              ? "border-gold bg-gold/10 text-gold-light"
-              : "border-gold-dim text-text-dim hover:border-gold/40 hover:text-text-secondary"
-          )}
-        >
-          All
-        </Link>
-        {WOW_CLASSES.map(cls => {
-          const color = getClassColor(cls);
-          const active = classFilter === cls;
-          return (
-            <Link
-              key={cls}
-              href={`/players?class=${encodeURIComponent(cls)}${includeShortPulls ? "&includeShortPulls=1" : ""}`}
-              className={cn(
-                "inline-flex min-h-11 items-center rounded-sm border px-3 py-2 text-xs font-semibold uppercase tracking-wide transition-colors",
-                "hover:bg-bg-panel"
-              )}
-              style={{
-                color: active ? "var(--color-text-primary)" : "var(--color-text-secondary)",
-                borderColor: active ? color : `${color}44`,
-                background:  active ? `${color}18` : "transparent",
-              }}
-            >
-              {cls}
-            </Link>
-          );
-        })}
-      </div>
-      )}
-
-      {/* Player grid */}
-      {databaseAvailable && (enriched.length === 0 ? (
-        <EmptyState
-          title="No players found"
-          description={classFilter ? `No ${classFilter}s recorded yet.` : "Upload a combat log to get started."}
-          action={<Link href="/" className="text-gold hover:text-gold-light text-sm">Upload a log →</Link>}
-        />
-      ) : (
-        <div className="space-y-5">
-          <div className="grid border-y border-gold-dim sm:grid-cols-2 lg:grid-cols-3">
-          {visiblePlayers.map((p, index) => {
-            const color = getClassColor(p.class ?? p.name);
-            return (
-              <article
-                key={p.id}
-                className={getRevealClassName({
-                  className:
-                    "group flex min-h-20 items-center gap-3 border-b border-gold-dim px-3 py-3 transition-colors hover:bg-bg-panel/55 sm:border-r",
-                })}
-                style={getRevealStyle(index)}
-              >
-                {/* Avatar */}
-                <PlayerAvatar
-                  name={p.name}
-                  realmName={p.realm?.name}
-                  characterClass={p.class}
-                  color={color}
-                  fallbackIconUrl={getClassIconUrl(p.class)}
-                  size="sm"
-                />
-
-                {/* Info */}
-                <div className="min-w-0 flex-1">
-                  <div className="flex items-center gap-2">
-                    <Link
-                      href={`/players/${encodeURIComponent(p.name)}${querySuffix}`}
-                      className="text-sm font-semibold truncate group-hover:text-gold-light transition-colors"
-                      style={{ color }}
-                    >
-                      {p.name}
-                    </Link>
-                    {p.topRank === 1 && (
-                      <span className="text-[10px] text-gold font-bold shrink-0">👑 #1</span>
-                    )}
-                  </div>
-                  <div className="mt-1 flex items-center gap-2 text-sm text-text-dim">
-                    {p.class && <span>{p.class}</span>}
-                    {p.realm && <span>· {p.realm.name}</span>}
-                    <span>· {p._count.participants} pulls</span>
-                  </div>
-                  {/* Best DPS/HPS */}
-                  {(p.bestDps !== null || p.bestHps !== null) && (
-                    <div className="mt-1 flex items-center gap-3 text-xs tabular-nums">
-                      {p.bestDps !== null && (
-                        <span className="text-text-secondary">
-                          <span className="text-text-dim">Best </span>
-                          <span className="font-semibold text-text-primary">{formatDps(p.bestDps)}</span>
-                          <span className="text-text-dim"> dps</span>
-                        </span>
-                      )}
-                      {p.bestHps !== null && p.bestHps > 200 && (
-                        <span className="text-text-secondary">
-                          <span className="text-text-dim">Best </span>
-                          <span className="font-semibold text-text-primary">{formatDps(p.bestHps)}</span>
-                          <span className="text-text-dim"> hps</span>
-                        </span>
-                      )}
-                    </div>
-                  )}
-                </div>
-              </article>
-            );
-          })}
-          </div>
-          {totalPages > 1 && (
-            <nav className="flex items-center justify-between gap-3" aria-label="Player directory pages">
-              <Link
-                href={pageHref(currentPage - 1)}
-                aria-disabled={currentPage === 1}
-                className={cn("inline-flex min-h-11 min-w-11 items-center justify-center rounded-sm border border-gold-dim px-3 text-sm text-text-secondary", currentPage === 1 && "pointer-events-none opacity-40")}
-              >
-                <ChevronLeft className="h-4 w-4" aria-hidden="true" /> <span className="ml-1 hidden sm:inline">Previous</span>
-              </Link>
-              <p className="text-sm tabular-nums text-text-dim">
-                {pageStart + 1}–{Math.min(pageStart + PLAYERS_PER_PAGE, enriched.length)} of {enriched.length}
-              </p>
-              <Link
-                href={pageHref(currentPage + 1)}
-                aria-disabled={currentPage === totalPages}
-                className={cn("inline-flex min-h-11 min-w-11 items-center justify-center rounded-sm border border-gold-dim px-3 text-sm text-text-secondary", currentPage === totalPages && "pointer-events-none opacity-40")}
-              >
-                <span className="mr-1 hidden sm:inline">Next</span> <ChevronRight className="h-4 w-4" aria-hidden="true" />
-              </Link>
-            </nav>
-          )}
-        </div>
-      ))}
     </PageShell>
   );
 }

@@ -19,6 +19,8 @@ import { cn } from "@/lib/utils";
 import { buildPageMetadata } from "@/lib/page-metadata";
 import { ShortPullNotice } from "@/components/reports/ShortPullNotice";
 import { countAttempts, isShortPull, parseIncludeShortPulls } from "@/lib/attempt-policy";
+import { SectionNav } from "@/components/ui/SectionNav";
+import { reportQueryString } from "@/lib/difficulty-filter";
 
 interface Props {
   params: Promise<{ playerName: string }>;
@@ -112,7 +114,7 @@ export default async function PlayerPage({ params, searchParams }: Props) {
   const color = getClassColor(profile.className ?? name);
 
   const perBoss = buildPlayerPerBossSummary(participants);
-  const recentEncounters = buildPlayerRecentEncounters(visibleParticipants);
+  const recentEncounters = buildPlayerRecentEncounters(visibleParticipants, 50);
 
   return (
     <div className="page-shell">
@@ -150,9 +152,17 @@ export default async function PlayerPage({ params, searchParams }: Props) {
         </div>
       </div>
 
+      <SectionNav items={[
+        { id: "gear", label: "Gear" },
+        ...(milestones.length > 0 ? [{ id: "achievements", label: "Achievements" }] : []),
+        ...(perBoss.length > 0 ? [{ id: "boss-summary", label: "Boss summary" }] : []),
+        { id: "recent-encounters", label: "Recent encounters" },
+      ]} />
+
       <ShortPullNotice shortPulls={counts.shortPulls} includeShortPulls={includeShortPulls} basePath={`/players/${encodeURIComponent(name)}`} />
 
       {/* Stats */}
+      <p className="text-sm text-text-secondary">Performance summary and per-boss bests use the latest 50 recorded encounters. Ranked achievements below are historical records.</p>
       <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
         <StatCard label="Encounters" value={counts.totalPulls} sub="latest 50 recorded" />
         <StatCard label="Kills"      value={kills.length} highlight />
@@ -168,27 +178,25 @@ export default async function PlayerPage({ params, searchParams }: Props) {
 
       {/* Milestones */}
       {milestones.length > 0 && (
-        <AccordionSection title="All-Time Records" sub="Recorded achievements, kills only" count={milestones.length} defaultOpen>
+        <AccordionSection id="achievements" title="Ranked Achievements" sub="Historical all-time ranks when achieved, not current standings. Boss kills only." count={milestones.length} defaultOpen>
           <div className="grid sm:grid-cols-2 gap-2">
             {milestones.map((m, index) => (
               <div
                 key={m.id}
                 className={getRevealClassName({
-                  className: "milestone-banner flex items-center justify-between text-sm",
+                  className: "milestone-banner flex flex-col gap-3 text-sm",
                 })}
                 style={getRevealStyle(index)}
               >
-                <div className="flex items-center gap-2">
-                  <span className={cn(
-                    "rank-badge",
-                    m.rank === 1 && "rank-1",
-                    m.rank === 2 && "rank-2",
-                    m.rank === 3 && "rank-3",
-                  )}>
-                    #{m.rank}
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <p className="text-text-secondary">Rank when achieved: <strong className="text-gold-light">#{m.rank}</strong></p>
+                  <span className="tabular-nums font-bold text-text-primary">
+                    {m.value.toLocaleString(undefined, { maximumFractionDigits: 0 })} {m.metric}
                   </span>
-                  <div>
-                    <Link href={`/bosses/${m.encounter.boss.slug}${querySuffix}`} className="hover:text-gold">
+                </div>
+                <div>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <Link href={`/bosses/${m.encounter.boss.slug}${querySuffix}`} className="inline-flex min-h-11 items-center font-semibold text-text-primary hover:text-gold">
                       {m.encounter.boss.name}
                     </Link>
                     <span className={cn(
@@ -198,10 +206,9 @@ export default async function PlayerPage({ params, searchParams }: Props) {
                       {m.difficulty}
                     </span>
                   </div>
+                  <p className="text-text-secondary">Recorded <time dateTime={m.achievedAt.toISOString()}>{m.achievedAt.toLocaleDateString("en-US", { year: "numeric", month: "short", day: "numeric", timeZone: "UTC" })}</time></p>
+                  <Link href={`/bosses/${m.encounter.boss.slug}${reportQueryString({ difficulty: m.difficulty ?? "UNKNOWN", includeShortPulls: includeShortPulls ? "1" : undefined })}#boss-${m.metric === "HPS" ? "hps" : "dps"}`} className="mt-1 inline-flex min-h-11 items-center text-gold hover:text-gold-light">View current rankings →</Link>
                 </div>
-                <span className="tabular-nums font-bold text-gold-light">
-                  {m.value.toLocaleString(undefined, { maximumFractionDigits: 0 })} {m.metric}
-                </span>
               </div>
             ))}
           </div>
@@ -210,7 +217,7 @@ export default async function PlayerPage({ params, searchParams }: Props) {
 
       {/* Per-boss bests */}
       {perBoss.length > 0 && (
-        <AccordionSection title="Per-Boss Summary" count={perBoss.length} defaultOpen>
+        <AccordionSection id="boss-summary" title="Per-Boss Summary" sub="Best values within the latest 50 recorded encounters" count={perBoss.length} defaultOpen>
           <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-2">
             {perBoss.map((b, index) => (
               <Link
@@ -243,7 +250,7 @@ export default async function PlayerPage({ params, searchParams }: Props) {
       )}
 
       {/* Recent encounters */}
-      <AccordionSection title="Recent Encounters" sub="From the latest 50 recorded encounters" count={visibleParticipants.length} defaultOpen={false}>
+      <AccordionSection id="recent-encounters" title="Recent Encounters" sub="From the latest 50 recorded encounters, grouped by boss" count={recentEncounters.length} defaultOpen={false}>
         {visibleParticipants.length > 0 ? (
           <div className="bg-bg-panel border border-gold-dim rounded-sm divide-y divide-gold-dim">
             {recentEncounters.map((p, index) => (

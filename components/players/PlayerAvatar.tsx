@@ -95,15 +95,15 @@ function GearSlotRailItem({
         // eslint-disable-next-line @next/next/no-img-element -- Item icon URLs are normalized and supplied by the Armory/item cache.
         <img src={item.iconUrl} alt="" className="h-full w-full object-cover" />
       ) : (
-        <span className="text-[9px] font-bold text-text-dim">—</span>
+        <span className="text-xs font-bold text-text-dim">—</span>
       )}
     </div>
   );
 
   const label = (
     <div className={cn("min-w-0", side === "left" ? "text-right" : "text-left")}>
-      <p className="truncate text-[9px] uppercase tracking-[0.12em] text-text-dim">{slot}</p>
-      <p className={cn("truncate text-[11px] font-semibold", item ? "text-text-primary" : "text-text-dim")}>
+      <p className="truncate text-xs uppercase tracking-[0.12em] text-text-dim">{slot}</p>
+      <p className={cn("truncate text-xs font-semibold", item ? "text-text-primary" : "text-text-dim")}>
         {item?.name ?? "Empty"}
       </p>
     </div>
@@ -133,12 +133,12 @@ function WeaponSlotItem({
           // eslint-disable-next-line @next/next/no-img-element -- Item icon URLs are normalized and supplied by the Armory/item cache.
           <img src={item.iconUrl} alt="" className="h-full w-full object-cover" />
         ) : (
-          <span className="text-[9px] font-bold text-text-dim">—</span>
+          <span className="text-xs font-bold text-text-dim">—</span>
         )}
       </div>
       <div className="min-w-0">
-        <p className="truncate text-[9px] uppercase tracking-[0.12em] text-text-dim">{slot}</p>
-        <p className={cn("truncate text-[11px] font-semibold", item ? "text-text-primary" : "text-text-dim")}>
+        <p className="truncate text-xs uppercase tracking-[0.12em] text-text-dim">{slot}</p>
+        <p className={cn("truncate text-xs font-semibold", item ? "text-text-primary" : "text-text-dim")}>
           {item?.name ?? "Empty"}
         </p>
       </div>
@@ -221,7 +221,7 @@ function GearPreviewPanel({
                 <p className="text-base font-bold tabular-nums text-gold-light">
                   {preview.gearScore.score.toLocaleString()}
                 </p>
-                <p className="text-[11px] uppercase tracking-wider text-text-dim">GearScore</p>
+                <p className="text-xs uppercase tracking-wider text-text-dim">GearScore</p>
               </div>
             )}
           </div>
@@ -255,11 +255,11 @@ function GearPreviewPanel({
                     // eslint-disable-next-line @next/next/no-img-element -- Item icon URLs are normalized and supplied by the Armory/item cache.
                     <img src={item.iconUrl} alt="" className="h-full w-full object-cover" />
                   ) : (
-                    <span className="text-[9px] font-bold text-text-dim">{item.slot.slice(0, 2).toUpperCase()}</span>
+                    <span className="text-xs font-bold text-text-dim">{item.slot.slice(0, 2).toUpperCase()}</span>
                   )}
                 </div>
                 <div className="min-w-0">
-                  <p className="truncate text-[11px] uppercase tracking-wide text-text-dim">{item.slot}</p>
+                  <p className="truncate text-xs uppercase tracking-wide text-text-dim">{item.slot}</p>
                   <p className="truncate text-xs font-semibold text-text-primary">{item.name}</p>
                 </div>
               </div>
@@ -279,7 +279,7 @@ function GearPreviewPanel({
                 {preview.gear.appearance ? (
                   <WarmaneCharacterModel appearance={preview.gear.appearance} characterName={name} />
                 ) : (
-                  <p className="absolute inset-x-2 top-3 z-20 rounded-xs bg-bg-deep/90 px-2 py-1.5 text-center text-[11px] text-text-secondary">
+                  <p className="absolute inset-x-2 top-3 z-20 rounded-xs bg-bg-deep/90 px-2 py-1.5 text-center text-xs text-text-secondary">
                     Appearance unavailable from Armory
                   </p>
                 )}
@@ -294,7 +294,7 @@ function GearPreviewPanel({
                   <span className="text-3xl font-bold text-gold/60">{getInitials(name)}</span>
                 )}
                 <p className="relative z-20 mt-4 text-sm font-bold text-gold-light drop-shadow-[0_1px_2px_rgba(0,0,0,0.95)]">{name}</p>
-                <p className="relative z-20 mt-1 text-[10px] uppercase tracking-[0.18em] text-text-secondary drop-shadow-[0_1px_2px_rgba(0,0,0,0.95)]">
+                <p className="relative z-20 mt-1 text-xs uppercase tracking-[0.18em] text-text-secondary drop-shadow-[0_1px_2px_rgba(0,0,0,0.95)]">
                   {[raceName, className].filter(Boolean).join(" · ") || "Warmane character"}
                 </p>
                 {preview.gearScore && (
@@ -302,7 +302,7 @@ function GearPreviewPanel({
                     <p className="text-xl font-bold tabular-nums text-gold-light">
                       {preview.gearScore.score.toLocaleString()}
                     </p>
-                    <p className="text-[9px] uppercase tracking-[0.18em] text-text-dim">GearScore</p>
+                    <p className="text-xs uppercase tracking-[0.18em] text-text-dim">GearScore</p>
                   </div>
                 )}
               </div>
@@ -320,7 +320,7 @@ function GearPreviewPanel({
               ))}
             </div>
           </div>
-          <div className="flex items-center justify-between gap-3 border-t border-gold-dim bg-bg-panel px-3 py-2 text-[11px] text-text-dim">
+          <div className="flex items-center justify-between gap-3 border-t border-gold-dim bg-bg-panel px-3 py-2 text-xs text-text-dim">
             <span>
               {preview.stale ? "Cached fallback" : "Live Armory"} · {new Date(preview.gear.fetchedAt).toLocaleString()}
               {preview.gear.appearanceStale && <span className="hidden sm:inline"> · Cached appearance</span>}

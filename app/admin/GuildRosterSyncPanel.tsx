@@ -12,11 +12,11 @@ export function GuildRosterSyncPanel({
     <div className="bg-bg-panel border border-gold-dim rounded-sm p-4 space-y-4">
       <div className="grid grid-cols-2 gap-3">
         <div className="bg-bg-card border border-gold-dim rounded-sm px-4 py-3">
-          <p className="text-[11px] font-bold uppercase tracking-widest text-text-dim">Roster Members</p>
+          <p className="text-xs font-bold uppercase tracking-widest text-text-dim">Roster Members</p>
           <p className="mt-1 text-2xl font-bold text-text-primary tabular-nums">{rosterCount.toLocaleString()}</p>
         </div>
         <div className="bg-bg-card border border-gold-dim rounded-sm px-4 py-3">
-          <p className="text-[11px] font-bold uppercase tracking-widest text-text-dim">Last Sync</p>
+          <p className="text-xs font-bold uppercase tracking-widest text-text-dim">Last Sync</p>
           <p className="mt-1 text-sm font-semibold text-text-secondary">
             {latestSync ? latestSync.toLocaleString() : "Never"}
           </p>

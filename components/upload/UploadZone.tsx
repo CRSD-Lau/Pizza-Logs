@@ -1,12 +1,13 @@
 "use client";
 
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useDropzone } from "react-dropzone";
 import { Button } from "@/components/ui/Button";
 import type { UploadResponse } from "@/lib/schema";
 import { MAX_UPLOAD_BYTES } from "@/lib/upload-security";
 import { cn } from "@/lib/utils";
+import { requestUploadNotifications, sendUploadNotification } from "./notifications";
 
 interface UploadZoneProps {
   onComplete?: (result: UploadResponse & { filename: string }) => void;
@@ -36,21 +37,13 @@ export function UploadZone({ onComplete }: UploadZoneProps) {
 
   const [characterName, setCharacterName] = useState("");
   const [realmName, setRealmName] = useState("Lordaeron");
-  const [realmHost, setRealmHost] = useState("warmane");
+  const realmHost = "warmane";
   const [guildName, setGuildName] = useState("");
+  const [notificationPermission, setNotificationPermission] = useState<NotificationPermission | null>(null);
+  const [notificationUnavailable, setNotificationUnavailable] = useState(false);
 
-  const requestNotificationPermission = useCallback(async () => {
-    if (typeof Notification === "undefined") return;
-    if (Notification.permission === "default") {
-      await Notification.requestPermission();
-    }
-  }, []);
-
-  const sendNotification = useCallback((title: string, body: string) => {
-    if (typeof Notification === "undefined") return;
-    if (Notification.permission !== "granted") return;
-    const notification = new Notification(title, { body, icon: "/favicon.ico" });
-    setTimeout(() => notification.close(), 8000);
+  useEffect(() => {
+    if (typeof Notification !== "undefined") setNotificationPermission(Notification.permission);
   }, []);
 
   const processFile = useCallback(async (file: File) => {
@@ -65,7 +58,6 @@ export function UploadZone({ onComplete }: UploadZoneProps) {
       });
       return;
     }
-    void requestNotificationPermission();
     const startTime = Date.now();
 
     lastEventAt.current = Date.now();
@@ -171,7 +163,7 @@ export function UploadZone({ onComplete }: UploadZoneProps) {
               setState({ stage: "done", progress: 100, message: "Done", elapsed, stalled: false, result });
               onComplete?.(result);
               const stored = result.encountersInserted;
-              sendNotification(
+              sendUploadNotification(
                 "Upload complete",
                 stored > 0
                   ? `${stored} encounter${stored !== 1 ? "s" : ""} stored`
@@ -188,12 +180,12 @@ export function UploadZone({ onComplete }: UploadZoneProps) {
       clearInterval(ticker);
       const msg = String(err instanceof Error ? err.message : err);
       setState({ stage: "error", progress: 0, message: "", elapsed: 0, stalled: false, error: msg });
-      sendNotification("Upload failed", msg);
+      sendUploadNotification("Upload failed", msg);
     } finally {
       clearInterval(ticker);
       window.removeEventListener("beforeunload", onBeforeUnload);
     }
-  }, [characterName, guildName, onComplete, realmHost, realmName, requestNotificationPermission, sendNotification]);
+  }, [characterName, guildName, onComplete, realmName]);
 
   const isLocked = !characterName.trim();
 
@@ -223,27 +215,28 @@ export function UploadZone({ onComplete }: UploadZoneProps) {
   return (
     <div className="space-y-4">
       {state.stage === "idle" && (
-        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-[1.2fr_0.8fr_0.8fr_1.2fr]">
+        <div className="grid grid-cols-[minmax(0,1.2fr)_minmax(0,1fr)] gap-3">
           <div className="grid gap-1.5">
             <label htmlFor="upload-character" className="text-xs text-text-secondary uppercase tracking-wide">
-              Character <span className="text-danger">*</span>
+              Character <span className="text-text-secondary">(required)</span>
             </label>
             <input
               id="upload-character"
+              required
               value={characterName}
               onChange={(event) => setCharacterName(event.target.value)}
               placeholder="Your character name"
-              className="w-full rounded-sm border border-gold-dim bg-bg-card px-3 py-2 text-sm text-text-primary outline-hidden transition-colors focus:border-gold"
+              className="min-h-11 w-full rounded-sm border border-gold-dim bg-bg-card px-3 py-2 text-sm text-text-primary outline-hidden transition-colors focus:border-gold"
             />
           </div>
 
           <div className="grid gap-1.5">
-            <label htmlFor="upload-realm" className="text-xs text-text-secondary uppercase tracking-wide">Realm</label>
+            <label htmlFor="upload-realm" className="text-xs text-text-secondary uppercase tracking-wide">Warmane realm</label>
             <select
               id="upload-realm"
               value={realmName}
               onChange={(event) => setRealmName(event.target.value)}
-              className="w-full rounded-sm border border-gold-dim bg-bg-card px-3 py-2 text-sm text-text-primary outline-hidden transition-colors focus:border-gold"
+              className="min-h-11 w-full rounded-sm border border-gold-dim bg-bg-card px-3 py-2 text-sm text-text-primary outline-hidden transition-colors focus:border-gold"
             >
               <option value="Icecrown">Icecrown</option>
               <option value="Lordaeron">Lordaeron</option>
@@ -252,28 +245,6 @@ export function UploadZone({ onComplete }: UploadZoneProps) {
             </select>
           </div>
 
-          <div className="grid gap-1.5">
-            <label htmlFor="upload-server" className="text-xs text-text-secondary uppercase tracking-wide">Server</label>
-            <select
-              id="upload-server"
-              value={realmHost}
-              onChange={(event) => setRealmHost(event.target.value)}
-              className="w-full rounded-sm border border-gold-dim bg-bg-card px-3 py-2 text-sm text-text-primary outline-hidden transition-colors focus:border-gold"
-            >
-              <option value="warmane">Warmane</option>
-            </select>
-          </div>
-
-          <div className="grid gap-1.5">
-            <label htmlFor="upload-guild" className="text-xs text-text-secondary uppercase tracking-wide">Guild</label>
-            <input
-              id="upload-guild"
-              value={guildName}
-              onChange={(event) => setGuildName(event.target.value)}
-              placeholder="PizzaWarriors (optional)"
-              className="w-full rounded-sm border border-gold-dim bg-bg-card px-3 py-2 text-sm text-text-primary outline-hidden transition-colors focus:border-gold"
-            />
-          </div>
         </div>
       )}
 
@@ -281,9 +252,9 @@ export function UploadZone({ onComplete }: UploadZoneProps) {
         <div
           {...(isLocked ? lockedProps : getRootProps())}
           className={cn(
-            "relative overflow-hidden rounded-sm border border-dashed px-4 py-12 text-center transition-[background-color,border-color,box-shadow] duration-200 sm:px-10 sm:py-16",
+            "relative overflow-hidden rounded-sm border border-dashed px-4 py-5 text-center transition-[background-color,border-color,box-shadow] duration-200 sm:px-10 sm:py-8",
             isLocked
-              ? "cursor-not-allowed border-gold/20 bg-gold/[0.01] opacity-40"
+              ? "cursor-not-allowed border-gold/20 bg-gold/[0.01]"
               : isDragActive
                 ? "cursor-pointer border-gold bg-gold/[0.06] shadow-gold-glow"
                 : "cursor-pointer border-gold/40 bg-gold/[0.02] hover:border-gold hover:bg-gold/[0.04]"
@@ -292,22 +263,44 @@ export function UploadZone({ onComplete }: UploadZoneProps) {
           {!isLocked && <input {...getInputProps()} />}
           <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_60%_40%_at_50%_50%,rgba(180,140,60,0.05)_0%,transparent_70%)]" />
           <div className="relative">
-            <UploadIcon className="mx-auto mb-4 text-gold/60" />
-            <p className="heading-cinzel text-lg text-gold-light mb-2">
+            <UploadIcon className="mx-auto mb-3 hidden text-gold/60 sm:block" />
+            <p className="heading-cinzel text-base text-gold-light mb-2 sm:text-lg">
               {!characterName.trim()
                 ? "Enter your character name above to upload"
                 : isDragActive ? "Release to upload" : "Drop your WoWCombatLog.txt"}
             </p>
-            <p className="text-sm text-text-secondary mb-6">
-              WotLK - Naxxramas through Ruby Sanctum - All processing server-side
-            </p>
             <Button variant="gold" size="md" onClick={(event) => { event.stopPropagation(); open(); }} disabled={!characterName.trim()}>
               Choose File
             </Button>
-            <p className="text-xs text-text-dim mt-3">TXT, LOG, or ZIP up to 100 MiB compressed</p>
+            <p className="text-xs text-text-secondary mt-3">TXT, LOG, or ZIP · up to 100 MiB compressed</p>
           </div>
         </div>
       )}
+
+      {state.stage === "idle" && <>
+        <p className="text-sm text-text-secondary">Your character names and raid report will be public.</p>
+        <details className="border-y border-gold-dim">
+          <summary className="flex min-h-11 cursor-pointer items-center text-sm font-semibold text-text-secondary">Upload options and file help</summary>
+          <div className="space-y-4 pb-4">
+            <div className="grid gap-1.5">
+              <label htmlFor="upload-guild" className="text-sm text-text-secondary">Guild (optional)</label>
+              <input id="upload-guild" value={guildName} onChange={event => setGuildName(event.target.value)}
+                placeholder="PizzaWarriors" className="min-h-11 w-full rounded-sm border border-gold-dim bg-bg-card px-3 py-2 text-sm text-text-primary outline-hidden transition-colors focus:border-gold" />
+            </div>
+            <p className="text-sm text-text-secondary">Start logging in WoW with <code>/combatlog</code>. After your raid, choose <code>Logs/WoWCombatLog.txt</code> from your game folder.</p>
+            {notificationPermission === "default" && <Button type="button" variant="ghost" size="sm" onClick={async () => {
+              const permission = await requestUploadNotifications();
+              setNotificationPermission(permission);
+              setNotificationUnavailable(permission === null);
+            }}>Notify me when finished</Button>}
+            <p role="status" className="text-sm text-text-secondary">
+              {notificationPermission === "granted" ? "Browser notifications are enabled for upload results."
+                : notificationPermission === "denied" ? "Notifications are blocked in this browser. Upload results will still appear here."
+                  : notificationUnavailable ? "This browser could not enable notifications. Upload results will still appear here." : ""}
+            </p>
+          </div>
+        </details>
+      </>}
 
       {state.stage === "uploading" && (
         <div className="border border-gold/40 rounded-sm bg-bg-panel px-8 py-16 text-center space-y-6" role="progressbar" aria-label="Combat log upload" aria-valuemin={0} aria-valuemax={100} aria-valuenow={state.progress} aria-valuetext={state.message}>
@@ -360,7 +353,7 @@ export function UploadZone({ onComplete }: UploadZoneProps) {
   );
 }
 
-function UploadResult({
+export function UploadResult({
   result,
   onReset,
 }: {
@@ -382,18 +375,18 @@ function UploadResult({
               : `${result.encountersInserted} encounter${result.encountersInserted !== 1 ? "s" : ""} stored`}
           </p>
         </div>
-        <button onClick={onReset} className="text-xs text-text-dim hover:text-text-secondary uppercase tracking-wide">
+        <button type="button" onClick={onReset} className="inline-flex min-h-11 shrink-0 items-center rounded-sm px-3 text-sm text-text-secondary hover:text-text-primary focus-visible:outline-2 focus-visible:outline-gold">
           Upload Another
         </button>
       </div>
 
-      {isDuplicate && result.publicReportSlug && result.firstSessionSlug && (
+      {result.publicReportSlug && result.firstSessionSlug && (
         <div className="px-5 py-4 flex items-center gap-3 flex-wrap">
           <Link
             href={`/raids/${result.publicReportSlug}/sessions/${result.firstSessionSlug}`}
-            className="inline-flex items-center gap-1.5 px-4 py-2 rounded-sm border border-gold/60 bg-gold/5 text-sm text-gold-light hover:border-gold hover:bg-gold/10 transition-colors"
+            className="inline-flex min-h-11 items-center gap-1.5 px-4 py-2 rounded-sm border border-gold bg-gold/10 text-sm font-semibold text-gold-light hover:bg-gold/20 transition-colors focus-visible:outline-2 focus-visible:outline-gold"
           >
-            View your raid report &rarr;
+            View raid report <span aria-hidden="true">&rarr;</span>
           </Link>
           <span className="text-xs text-text-dim">Opens the first raid in this log</span>
         </div>
@@ -410,12 +403,12 @@ function UploadResult({
       {result.milestones && result.milestones.length > 0 && (
         <div className="px-5 py-4 space-y-2">
           <p className="text-xs font-semibold text-gold uppercase tracking-widest mb-3">
-            Milestones Achieved
+            Achievements recorded
           </p>
           {result.milestones.map((m, index) => (
             <div key={index} className="milestone-banner flex items-center justify-between text-sm flex-wrap gap-2">
               <span>
-                <span className="text-gold font-bold">#{m.rank}</span>{" "}
+                <span className="text-gold font-bold">#{m.rank} when achieved</span>{" "}
                 <span className="text-text-secondary">{m.type === "WEEKLY_BEST" ? "weekly best" : "all-time"}</span>{" "}
                 <span className="text-text-primary font-semibold">{m.playerName}</span>
                 <span className="text-text-secondary"> - {m.bossName} {m.difficulty}</span>

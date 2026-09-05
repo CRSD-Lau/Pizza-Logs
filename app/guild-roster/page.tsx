@@ -3,6 +3,11 @@ import { DEFAULT_GUILD_NAME, DEFAULT_GUILD_REALM, readGuildRosterMembers } from 
 import { PageHeader } from "@/components/ui/PageLayout";
 
 import { buildPageMetadata } from "@/lib/page-metadata";
+import Link from "next/link";
+import { WOW_CLASSES } from "@/lib/constants/classes";
+import { DatabaseUnavailable } from "@/components/ui/DatabaseUnavailable";
+import { isDatabaseConnectionError } from "@/lib/database-errors";
+import { parseDirectoryFilters, parseDirectoryPage, type DirectoryQueryValue } from "@/lib/directory-pagination";
 
 export const metadata = buildPageMetadata({
   title: "Guild Roster",
@@ -12,19 +17,21 @@ export const metadata = buildPageMetadata({
 export const dynamic = "force-dynamic";
 
 interface Props {
-  searchParams: Promise<{ page?: string | string[] }>;
-}
-
-function parseRosterPage(value: string | string[] | undefined): number {
-  const rawValue = Array.isArray(value) ? value[0] : value;
-  const parsed = Number(rawValue);
-  return Number.isInteger(parsed) && parsed > 0 ? parsed : 1;
+  searchParams: Promise<{ page?: DirectoryQueryValue; q?: DirectoryQueryValue; class?: DirectoryQueryValue }>;
 }
 
 export default async function GuildRosterPage({ searchParams }: Props) {
-  const { page } = await searchParams;
-  const currentPage = parseRosterPage(page);
-  const members = await readGuildRosterMembers(DEFAULT_GUILD_NAME, DEFAULT_GUILD_REALM);
+  const params = await searchParams;
+  const currentPage = parseDirectoryPage(params.page);
+  const { query, classFilter } = parseDirectoryFilters(params);
+  let members: Awaited<ReturnType<typeof readGuildRosterMembers>> = [];
+  let databaseAvailable = true;
+  try {
+    members = await readGuildRosterMembers(DEFAULT_GUILD_NAME, DEFAULT_GUILD_REALM);
+  } catch (error) {
+    if (!isDatabaseConnectionError(error)) throw error;
+    databaseAvailable = false;
+  }
   const latestSync = members.reduce<Date | null>((latest, member) => {
     if (!latest || member.lastSyncedAt > latest) return member.lastSyncedAt;
     return latest;
@@ -46,7 +53,28 @@ export default async function GuildRosterPage({ searchParams }: Props) {
         </p>}
       />
 
-      <GuildRosterTable members={members} currentPage={currentPage} />
+      {databaseAvailable ? (
+        <>
+          <form key={`${query}:${classFilter ?? ""}`} action="/guild-roster" method="get" role="search" aria-label="Filter guild roster" className="flex flex-col gap-3 sm:flex-row sm:items-end">
+            <div className="min-w-0 flex-1">
+              <label htmlFor="guild-member-name" className="mb-1.5 block text-sm font-semibold text-text-secondary">Member name</label>
+              <input id="guild-member-name" name="q" type="search" defaultValue={query} maxLength={64} placeholder="Find a guild member" className="min-h-11 w-full rounded-sm border border-gold-dim bg-bg-card px-3 py-2 text-sm text-text-primary" />
+            </div>
+            <div>
+              <label htmlFor="guild-member-class" className="mb-1.5 block text-sm font-semibold text-text-secondary">Class</label>
+              <select id="guild-member-class" name="class" defaultValue={classFilter ?? ""} className="min-h-11 w-full rounded-sm border border-gold-dim bg-bg-card px-3 py-2 text-sm text-text-primary">
+                <option value="">All classes</option>
+                {WOW_CLASSES.map(className => <option key={className} value={className}>{className}</option>)}
+              </select>
+            </div>
+            <div className="flex gap-2">
+              <button type="submit" className="inline-flex min-h-11 items-center justify-center rounded-sm border border-gold px-4 py-2 text-sm font-semibold text-gold-light">Find members</button>
+              {(query || classFilter) && <Link href="/guild-roster" className="inline-flex min-h-11 items-center px-3 text-sm font-semibold text-text-secondary hover:text-gold-light">Clear filters</Link>}
+            </div>
+          </form>
+          <GuildRosterTable members={members} currentPage={currentPage} query={query} classFilter={classFilter} />
+        </>
+      ) : <DatabaseUnavailable description="The guild roster is temporarily unavailable. Please try again shortly." />}
     </div>
   );
 }

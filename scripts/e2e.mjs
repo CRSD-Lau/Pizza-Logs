@@ -15,6 +15,12 @@ if (!["localhost", "127.0.0.1", "[::1]"].includes(base.hostname)) {
 const out = path.resolve(process.env.PIZZA_TEST_ARTIFACTS ?? ".test-artifacts/e2e");
 await fs.mkdir(out, { recursive: true });
 const observations = [];
+async function toggleShortPulls(page, label) {
+  const link = page.getByRole("link", { name: label, exact: true, includeHidden: true });
+  const notice = page.locator("details").filter({ has: link });
+  if (await notice.getAttribute("open") === null) await notice.locator("summary").click();
+  await page.getByRole("link", { name: label, exact: true }).click();
+}
 function authenticatorCode(secret) {
   const alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZ234567";
   const bits = [...secret.replace(/=+$/, "").toUpperCase()].map(character => {
@@ -288,7 +294,7 @@ try {
     failures.push(...policyViolations.map(item => ({ route: policyReport, width, ...item })));
     assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth), false);
     await page.screenshot({ path: path.join(out, `${width}-short-pulls-default.png`), fullPage: true });
-    await page.getByRole("link", { name: "Include short pulls", exact: true }).click();
+    await toggleShortPulls(page, "Include short pulls");
     await page.waitForURL(new URL(`${policyReport}?includeShortPulls=1`, base).href);
     const includedText = await page.locator("main").innerText();
     assert.match(includedText, /1K \/ 2W/);
@@ -299,7 +305,7 @@ try {
     assert.equal(await includedKillView.getByRole("link", { name: "View SyntheticFirst's all-attempt raid report", exact: true }).getAttribute("href"), `${policyReport}/players/SyntheticFirst?includeShortPulls=1`);
     assert.equal(await page.locator('a[href^="/encounters/"]').count(), 3);
     await page.screenshot({ path: path.join(out, `${width}-short-pulls-included.png`), fullPage: true });
-    await page.getByRole("link", { name: "Exclude short pulls", exact: true }).click();
+    await toggleShortPulls(page, "Exclude short pulls");
     await page.waitForURL(new URL(policyReport, base).href);
     assert.match(await page.locator("main").innerText(), /1K \/ 1W/);
   }
@@ -309,10 +315,10 @@ try {
   for (const route of ["/", "/raids", "/bosses", "/bosses/lord-marrowgar", "/weekly", "/players?class=Rogue", "/players/SyntheticFirst", `${policyReport}/players/SyntheticFirst`]) {
     const original = new URL(route, base);
     await page.goto(original.href);
-    await page.getByRole("link", { name: "Include short pulls", exact: true }).click();
+    await toggleShortPulls(page, "Include short pulls");
     await page.waitForURL(url => url.pathname === original.pathname && url.searchParams.get("includeShortPulls") === "1");
     if (original.searchParams.has("class")) assert.equal(new URL(page.url()).searchParams.get("class"), original.searchParams.get("class"));
-    await page.getByRole("link", { name: "Exclude short pulls", exact: true }).click();
+    await toggleShortPulls(page, "Exclude short pulls");
     await page.waitForURL(url => url.pathname === original.pathname && !url.searchParams.has("includeShortPulls"));
   }
   observations.push({ check: "kill-only totals and targets, retained full-session trash/wipes, all-column sorting in both directions at 390/1440px, independent scopes and collapsed-control focus exclusion", status: "pass" });
@@ -332,7 +338,7 @@ try {
   await page.getByRole("progressbar", { name: "Combat log upload" }).waitFor();
   await page.screenshot({ path: path.join(out, "1920-upload-progress.png"), fullPage: true });
   await page.getByText("Already Parsed", { exact: true }).waitFor();
-  await page.getByRole("link", { name: /View your raid report/ }).click();
+  await page.getByRole("link", { name: "View raid report", exact: true }).click();
   await page.waitForURL(new URL(report, base).href);
   assert.match(await page.locator("main").innerText(), /54[.,]0K|54,000/);
   observations.push({ check: "native file chooser, announced progress and duplicate report navigation", status: "pass" });

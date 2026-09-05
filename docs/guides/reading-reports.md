@@ -4,6 +4,8 @@
 
 A canonical report URL identifies the public report and raid date. One uploaded file can contain multiple dated sessions; a second session on the same date receives a numeric suffix.
 
+Use **On this page** to jump to player totals, boss fights, targets, the full session or the roster. Shortcuts open collapsed sections and support keyboard navigation. Similar shortcuts appear on encounter, boss and player reports.
+
 The main session summary and **Boss Kill Breakdown** include successful boss fights
 only. Total Damage, Heal, Damage Taken and the mob breakdown use stored `KILL`
 encounters. Adds and mechanics within those fights still count; wipes, unknown
@@ -33,7 +35,7 @@ encounters. Full-session trash spell and target breakdowns are not stored.
 
 By default, public wipe and pull counts exclude a recorded **WIPE lasting less than
 one minute with zero recorded participant deaths**. Reports show the number of
-short pulls separately. Choose **Include short pulls** to restore them to the
+short pulls separately. Expand the short-pull **Details**, then choose **Include short pulls** to restore them to the
 counts and encounter list; their individual reports remain accessible throughout.
 
 Confirmed kills, wipes with any recorded death, and unknown outcomes remain
@@ -71,6 +73,12 @@ Difficulty is determined per attempt from boss-specific spell ranks, explicit en
 Pet and absorb ownership are conservative. Summon or owner-exclusive spell evidence is required for pets; overlapping shields are marked ambiguous or unattributed where the log cannot prove ownership.
 
 ## Player Detail
+
+The player directory is alphabetical, with name and class filters. Guild roster search filters all members before pagination. Neither directory assigns an overall performance rank. Raid history has pagination by upload, keeping every session from an upload together and stating the visible window.
+
+Profile and encounter awards describe the rank **when achieved**, for the named boss, difficulty, metric and period. They are historical awards, not continuously recalculated current standings. Use the linked leaderboards for current comparisons.
+
+Leaderboards and boss views default to all difficulties combined. Select a difficulty to compare one mode; unknown difficulty remains explicitly separate. Weekly tables rank individual attempts, can contain the same player more than once, and link to each fight using its actual recorded date. Effective HPS remains separate from attributed absorbs.
 
 Player pages and report detail can show per-spell/target output, role/spec evidence, aura uptime, consumables, power gains, deaths with the preceding incoming-damage window, class peers, records, and cached Warmane gear.
 

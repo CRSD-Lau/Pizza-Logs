@@ -31,12 +31,14 @@ export function PageHeader({
 }
 
 export function PageSection({
+  id,
   title,
   description,
   action,
   children,
   className,
 }: {
+  id?: string;
   title?: ReactNode;
   description?: ReactNode;
   action?: ReactNode;
@@ -44,7 +46,7 @@ export function PageSection({
   className?: string;
 }) {
   return (
-    <section className={cn("page-section", className)}>
+    <section id={id} className={cn("page-section scroll-mt-36", className)}>
       {(title || description || action) && (
         <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
           <div>

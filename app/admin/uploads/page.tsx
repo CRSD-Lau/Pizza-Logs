@@ -109,7 +109,7 @@ export default async function AdminUploadsPage() {
                             key={enc.id}
                             href={`/encounters/${enc.id}`}
                             className={cn(
-                              "text-[11px] px-2 py-0.5 rounded-xs border transition-colors",
+                              "text-xs px-2 py-0.5 rounded-xs border transition-colors",
                               enc.outcome === "KILL"
                                 ? "bg-success/8 border-success/25 text-success hover:border-success/50"
                                 : "bg-danger/8 border-danger/20 text-danger hover:border-danger/40"

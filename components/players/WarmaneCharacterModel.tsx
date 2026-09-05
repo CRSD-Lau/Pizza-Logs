@@ -148,7 +148,7 @@ export function WarmaneCharacterModel({
   return (
     <>
       {status !== "ready" && (
-        <div role="status" className="absolute inset-x-2 top-3 z-20 rounded-xs bg-bg-deep/90 px-2 py-1.5 text-center text-[11px] text-text-secondary">
+        <div role="status" className="absolute inset-x-2 top-3 z-20 rounded-xs bg-bg-deep/90 px-2 py-1.5 text-center text-xs text-text-secondary">
           <p>{status === "loading" ? "Loading 3D model…" : "3D model unavailable"}</p>
           {status === "failed" && failureReason && <p className="mt-1">{failureReason}</p>}
         </div>

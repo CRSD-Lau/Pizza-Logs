@@ -73,7 +73,7 @@ function GearGrid({ gear, stale = false, playerClass }: { gear: ArmoryCharacterG
 
 export function PlayerGearSectionSkeleton() {
   return (
-    <AccordionSection title="Gear" sub="Current Warmane Armory equipment" defaultOpen>
+    <AccordionSection id="gear" title="Gear" sub="Current Warmane Armory equipment" defaultOpen>
       <div className="grid gap-2 sm:grid-cols-2">
         {Array.from({ length: 8 }).map((_, index) => (
           <div key={index} className="h-[76px] animate-pulse rounded-sm border border-gold-dim bg-bg-card" />
@@ -86,7 +86,7 @@ export function PlayerGearSectionSkeleton() {
 export function PlayerGearSection({ result, playerClass }: { result: ArmoryGearResult; playerClass?: string | null }) {
   if (!result.ok) {
     return (
-      <AccordionSection title="Gear" sub="Current Warmane Armory equipment" defaultOpen>
+      <AccordionSection id="gear" title="Gear" sub="Current Warmane Armory equipment" defaultOpen>
         <div className="rounded-sm border border-gold-dim bg-bg-panel p-4">
           <p className="text-sm text-text-secondary">{result.message}</p>
           <a href={result.sourceUrl} target="_blank" rel="noreferrer" className="mt-2 inline-block text-xs text-gold hover:text-gold-light">
@@ -99,6 +99,7 @@ export function PlayerGearSection({ result, playerClass }: { result: ArmoryGearR
 
   return (
     <AccordionSection
+      id="gear"
       title="Gear"
       sub={`${result.gear.realm} Armory equipment`}
       count={result.gear.items.length}

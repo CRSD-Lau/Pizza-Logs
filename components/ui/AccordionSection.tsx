@@ -1,9 +1,10 @@
 "use client";
 
-import { useId, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 import { cn } from "@/lib/utils";
 
 interface Props {
+  id?: string;
   title:       string;
   sub?:        string;
   children:    React.ReactNode;
@@ -12,6 +13,7 @@ interface Props {
 }
 
 export function AccordionSection({
+  id,
   title,
   sub,
   children,
@@ -20,10 +22,41 @@ export function AccordionSection({
 }: Props) {
   const [open, setOpen] = useState(defaultOpen);
   const contentId = useId();
+  const headingId = useId();
+  const buttonRef = useRef<HTMLButtonElement>(null);
+
+  useEffect(() => {
+    if (!id) return;
+    const reveal = () => {
+      setOpen(true);
+      requestAnimationFrame(() => {
+        document.getElementById(id)?.scrollIntoView({ block: "start" });
+        buttonRef.current?.focus({ preventScroll: true });
+      });
+    };
+    const onHashChange = () => {
+      if (window.location.hash === `#${id}`) reveal();
+    };
+    const onClick = (event: MouseEvent) => {
+      if (event.defaultPrevented || event.ctrlKey || event.metaKey || event.shiftKey || event.altKey) return;
+      const anchor = event.target instanceof Element ? event.target.closest("a") : null;
+      if (anchor?.getAttribute("href") === `#${id}`) reveal();
+    };
+    onHashChange();
+    window.addEventListener("hashchange", onHashChange);
+    document.addEventListener("click", onClick);
+    return () => {
+      window.removeEventListener("hashchange", onHashChange);
+      document.removeEventListener("click", onClick);
+    };
+  }, [id]);
 
   return (
-    <section>
+    <section id={id} aria-labelledby={headingId} className="scroll-mt-36">
+      <h2>
       <button
+        ref={buttonRef}
+        id={headingId}
         type="button"
         onClick={() => setOpen(o => !o)}
         aria-expanded={open}
@@ -52,6 +85,7 @@ export function AccordionSection({
           ▾
         </span>
       </button>
+      </h2>
 
       {/* Grid-rows collapse trick — animates height without JS measurement */}
       <div

@@ -5,8 +5,10 @@ import { EmptyState } from "@/components/ui/EmptyState";
 import Link from "next/link";
 import { isDatabaseConnectionError } from "@/lib/database-errors";
 import { sortBossesByICCOrder } from "@/lib/constants/bosses";
-import { getRevealClassName, getRevealStyle } from "@/lib/ui-animation";
 import { PageHeader, PageShell } from "@/components/ui/PageLayout";
+import { AccordionSection } from "@/components/ui/AccordionSection";
+import { DifficultyFilter } from "@/components/reports/DifficultyFilter";
+import { difficultyFilterWhere, difficultyScopeLabel, parseDifficultyFilter, reportQueryString, type DifficultyFilterValue, type ReportSearchParams } from "@/lib/difficulty-filter";
 
 import { buildPageMetadata } from "@/lib/page-metadata";
 
@@ -17,19 +19,21 @@ export const metadata = buildPageMetadata({
 });
 export const dynamic = "force-dynamic";
 
-async function getLeaderboardBoards() {
+async function getLeaderboardBoards(difficulty: DifficultyFilterValue, requestedBoss: string | undefined) {
   const bossesWithKills = await db.boss.findMany({
     where:   { encounters: { some: { outcome: "KILL" } } },
     orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
     select:  { id: true, name: true, slug: true, raid: true },
   });
   const orderedBosses = sortBossesByICCOrder(bossesWithKills);
+  const selectedBoss = orderedBosses.some(boss => boss.slug === requestedBoss) ? requestedBoss! : "";
+  const visibleBosses = selectedBoss ? orderedBosses.filter(boss => boss.slug === selectedBoss) : orderedBosses;
 
   const boards = await Promise.all(
-    orderedBosses.map(async boss => {
+    visibleBosses.map(async boss => {
       const [dpsRows, hpsRows] = await Promise.all([
         db.participant.findMany({
-          where:    { encounter: { bossId: boss.id, outcome: "KILL" }, dps: { gt: 0 } },
+          where:    { encounter: { bossId: boss.id, outcome: "KILL", ...difficultyFilterWhere(difficulty) }, dps: { gt: 0 } },
           orderBy:  { dps: "desc" },
           take:     10,
           distinct: ["playerId"],
@@ -39,7 +43,7 @@ async function getLeaderboardBoards() {
           },
         }),
         db.participant.findMany({
-          where:    { encounter: { bossId: boss.id, outcome: "KILL" }, hps: { gt: 100 } },
+          where:    { encounter: { bossId: boss.id, outcome: "KILL", ...difficultyFilterWhere(difficulty) }, hps: { gt: 100 } },
           orderBy:  { hps: "desc" },
           take:     10,
           distinct: ["playerId"],
@@ -78,19 +82,24 @@ async function getLeaderboardBoards() {
     })
   );
 
-  return boards.filter(b => b.dpsEntries.length > 0 || b.hpsEntries.length > 0);
+  return { bosses: orderedBosses, selectedBoss, boards: boards.filter(b => b.dpsEntries.length > 0 || b.hpsEntries.length > 0) };
 }
 
-export default async function LeaderboardsPage() {
+export default async function LeaderboardsPage({ searchParams }: { searchParams: Promise<ReportSearchParams> }) {
+  const query = await searchParams;
+  const difficulty = parseDifficultyFilter(query.difficulty);
+  const requestedBoss = Array.isArray(query.boss) ? query.boss[0] : query.boss;
+  const querySuffix = reportQueryString(query, { difficulty: difficulty === "all" ? null : difficulty, boss: null });
   let databaseAvailable = true;
-  let boards: Awaited<ReturnType<typeof getLeaderboardBoards>> = [];
+  let data: Awaited<ReturnType<typeof getLeaderboardBoards>> = { boards: [], bosses: [], selectedBoss: "" };
 
   try {
-    boards = await getLeaderboardBoards();
+    data = await getLeaderboardBoards(difficulty, requestedBoss);
   } catch (error) {
     if (!isDatabaseConnectionError(error)) throw error;
     databaseAvailable = false;
   }
+  const { boards, bosses, selectedBoss } = data;
 
   return (
     <PageShell>
@@ -104,42 +113,40 @@ export default async function LeaderboardsPage() {
       />
 
       {!databaseAvailable && (
-        <DatabaseUnavailable description="Leaderboards need the Pizza Logs database. Start local Postgres to load rankings." />
+        <DatabaseUnavailable description="Rankings are temporarily unavailable. Please try again shortly." />
+      )}
+
+      {databaseAvailable && (
+        <>
+          <DifficultyFilter action="/leaderboards" id="leaderboards" difficulty={difficulty} searchParams={query} bosses={bosses} boss={selectedBoss} />
+          <p className="text-sm text-text-secondary">{difficultyScopeLabel(difficulty)}. Choose one difficulty to compare the same raid size and mode.</p>
+        </>
       )}
 
       {databaseAvailable && (boards.length === 0 ? (
         <EmptyState
-          title="No leaderboard data yet"
-          description="Upload a combat log to populate the leaderboards."
+          title="No rankings for this selection"
+          description="Choose another boss or difficulty, or upload a log containing a boss kill."
           action={<Link href="/" className="text-gold hover:text-gold-light text-sm">Upload a log →</Link>}
         />
       ) : (
         <div className="divide-y divide-gold-dim border-y border-gold-dim">
           {boards.map(({ boss, dpsEntries, hpsEntries }, index) => (
-            <details
+            <AccordionSection
               key={boss.id}
-              open={index === 0}
-              className={getRevealClassName({ boss: true, className: "group" })}
-              style={getRevealStyle(index)}
+              id={`boss-${boss.slug}`}
+              title={boss.name}
+              sub={`${boss.raid} · ${dpsEntries.length} DPS entries · ${hpsEntries.length} HPS entries`}
+              defaultOpen={index === 0}
             >
-              <summary className="flex min-h-16 cursor-pointer list-none items-center justify-between gap-4 rounded-sm px-2 py-3 transition-colors hover:bg-bg-panel/50 focus-visible:bg-bg-panel/50 sm:px-4 [&::-webkit-details-marker]:hidden">
-                <span className="min-w-0">
-                  <span className="heading-cinzel block truncate text-base font-bold text-gold transition-colors group-open:text-gold-light sm:text-lg">
-                  {boss.name}
-                  </span>
-                  <span className="mt-1 block text-sm text-text-dim">{boss.raid} · {dpsEntries.length} DPS · {hpsEntries.length} HPS</span>
-                </span>
-                <span className="text-xl text-text-dim transition-transform group-open:rotate-180" aria-hidden="true">⌄</span>
-              </summary>
-
-              <div className="grid gap-8 px-2 pb-8 pt-3 md:grid-cols-2 sm:px-4">
+              <div className={`grid gap-8 px-2 pb-8 pt-3 sm:px-4 ${dpsEntries.length > 0 && hpsEntries.length > 0 ? "md:grid-cols-2" : ""}`}>
                 {/* DPS */}
                 {dpsEntries.length > 0 && (
                   <div className="space-y-2">
                     <p className="text-xs font-semibold text-text-dim uppercase tracking-widest">
                       Top DPS
                     </p>
-                    <LeaderboardBar entries={dpsEntries} metric="dps" />
+                    <LeaderboardBar entries={dpsEntries} metric="dps" querySuffix={querySuffix} />
                   </div>
                 )}
 
@@ -149,14 +156,14 @@ export default async function LeaderboardsPage() {
                     <p className="text-xs font-semibold text-text-dim uppercase tracking-widest">
                       Top HPS
                     </p>
-                    <LeaderboardBar entries={hpsEntries} metric="hps" />
+                    <LeaderboardBar entries={hpsEntries} metric="hps" querySuffix={querySuffix} />
                   </div>
                 )}
               </div>
-              <Link href={`/bosses/${boss.slug}`} className="mx-2 mb-6 inline-flex min-h-11 items-center text-sm font-semibold text-gold hover:text-gold-light sm:mx-4">
+              <Link href={`/bosses/${boss.slug}${querySuffix}#boss-history`} className="mx-2 mb-6 inline-flex min-h-11 items-center text-sm font-semibold text-gold hover:text-gold-light sm:mx-4">
                 View {boss.name} history &rarr;
               </Link>
-            </details>
+            </AccordionSection>
           ))}
         </div>
       ))}
