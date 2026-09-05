@@ -56,6 +56,8 @@ export function AccordionSection({
       {/* Grid-rows collapse trick — animates height without JS measurement */}
       <div
         id={contentId}
+        inert={!open}
+        aria-hidden={!open}
         className={cn(
           "grid transition-[grid-template-rows,opacity] duration-200 ease-in-out",
           open ? "grid-rows-[1fr] opacity-100" : "grid-rows-[0fr] opacity-0"

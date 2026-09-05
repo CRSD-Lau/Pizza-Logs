@@ -7,6 +7,9 @@ import { PlayerAvatar } from "@/components/players/PlayerAvatar";
 import { AccordionSection } from "@/components/ui/AccordionSection";
 import { StatCard } from "@/components/ui/StatCard";
 import { ShortPullNotice } from "@/components/reports/ShortPullNotice";
+import { SessionPlayerTable } from "@/components/reports/SessionPlayerTable";
+import type { SessionPlayerRow } from "@/lib/session-player-sort";
+import { buildRaidKillSummary, raidMetricRate } from "@/lib/raid-kill-summary";
 import { countAttempts, isShortPull, parseIncludeShortPulls } from "@/lib/attempt-policy";
 import { getClassColor } from "@/lib/constants/classes";
 import { getClassIconUrl } from "@/lib/class-icons";
@@ -136,27 +139,13 @@ export default async function SessionDetailPage({ params, searchParams }: Props)
 
   const { kills, wipes, shortPulls, totalPulls } = countAttempts(orderedEncounters, { includeShortPulls });
   const visibleEncounters = includeShortPulls ? orderedEncounters : orderedEncounters.filter(enc => !isShortPull(enc));
-  const sessionDmgMap = (upload.sessionDamage ?? {}) as Record<string, number>;
   const sessionAnalyticsMap = (upload.sessionAnalytics ?? {}) as unknown as Record<string, SessionAnalytics>;
   const sessionAnalytics = sessionAnalyticsMap[String(sessionIndex)];
-  const encounterDmg = orderedEncounters.reduce((sum, e) => sum + e.totalDamage, 0);
-  const fallbackHealing = orderedEncounters.reduce((sum, e) => sum + e.totalHealing, 0);
-  const fallbackAbsorbs = orderedEncounters.reduce((sum, e) => sum + e.totalAbsorbs, 0);
-  const fallbackDamageTaken = orderedEncounters.reduce((sum, e) => sum + e.totalDamageTaken, 0);
+  const legacySessionDamage = ((upload.sessionDamage ?? {}) as Record<string, number>)[String(sessionIndex)];
+  const killSummary = buildRaidKillSummary(orderedEncounters);
   const startedAt = sessionAnalytics?.startedAt ?? encounters[0].startedAt;
   const endedAt = sessionAnalytics?.endedAt ?? encounters[encounters.length - 1].endedAt;
-  const fallbackDurationMs = Math.max(0, new Date(endedAt).getTime() - new Date(startedAt).getTime());
-  const durationMs = sessionAnalytics?.durationMs ?? fallbackDurationMs;
-  const durationSeconds = Math.max(0.001, durationMs / 1000);
-  const fullSessionDmg = sessionAnalytics?.totalDamage ?? sessionDmgMap[String(sessionIndex)] ?? encounterDmg;
-  const fullSessionHeal = sessionAnalytics?.heal ?? fallbackHealing + fallbackAbsorbs;
-  const fullSessionDamageTaken = sessionAnalytics?.totalDamageTaken ?? fallbackDamageTaken;
-  const sessionPlayers = Object.entries(sessionAnalytics?.players ?? {})
-    .sort(([, left], [, right]) =>
-      right.totalDamage - left.totalDamage
-      || right.heal - left.heal
-      || right.damageTaken - left.damageTaken
-    );
+  const sessionPlayers = Object.entries(sessionAnalytics?.players ?? {});
 
   const sessionCount = sessionRoutes.length;
   const sessionTitle = formatRaidSessionTitle(sessionRoute);
@@ -171,18 +160,29 @@ export default async function SessionDetailPage({ params, searchParams }: Props)
   for (const [name] of sessionPlayers) {
     if (!playerSet.has(name)) playerSet.set(name, null);
   }
-  const sessionBreakdownRows = sessionPlayers.map(([name, metrics]) => ({
+  const sessionBreakdownRows: SessionPlayerRow[] = sessionPlayers.map(([name, metrics]) => ({
     name,
     href: encounterPlayerNames.has(name)
       ? `${sessionPath}/players/${encodeURIComponent(name)}${querySuffix}`
       : null,
     color: getClassColor(playerSet.get(name) ?? name),
-    totalDamage: Math.round(metrics.totalDamage).toLocaleString(),
-    dps: (metrics.totalDamage / durationSeconds).toLocaleString(undefined, { maximumFractionDigits: 1 }),
-    heal: Math.round(metrics.heal).toLocaleString(),
-    hps: (metrics.heal / durationSeconds).toLocaleString(undefined, { maximumFractionDigits: 1 }),
-    damageTaken: Math.round(metrics.damageTaken).toLocaleString(),
-    dtps: (metrics.damageTaken / durationSeconds).toLocaleString(undefined, { maximumFractionDigits: 1 }),
+    totalDamage: metrics.totalDamage,
+    dps: raidMetricRate(metrics.totalDamage, sessionAnalytics?.durationMs ?? null),
+    heal: metrics.heal,
+    healPerSecond: raidMetricRate(metrics.heal, sessionAnalytics?.durationMs ?? null),
+    damageTaken: metrics.damageTaken,
+    dtps: raidMetricRate(metrics.damageTaken, sessionAnalytics?.durationMs ?? null),
+  }));
+  const killBreakdownRows: SessionPlayerRow[] = killSummary.players.map(player => ({
+    name: player.name,
+    href: `${sessionPath}/players/${encodeURIComponent(player.name)}${querySuffix}`,
+    color: getClassColor(player.playerClass ?? player.name),
+    totalDamage: player.totalDamage,
+    dps: raidMetricRate(player.totalDamage, killSummary.durationMs),
+    heal: player.heal,
+    healPerSecond: raidMetricRate(player.heal, killSummary.durationMs),
+    damageTaken: player.damageTaken,
+    dtps: raidMetricRate(player.damageTaken, killSummary.durationMs),
   }));
   const realmName = upload.realm?.name ?? "Lordaeron";
   const guildName = upload.guild?.name ?? null;
@@ -209,7 +209,7 @@ export default async function SessionDetailPage({ params, searchParams }: Props)
     byPlayer: Map<string, { damage: number; hits: number; crits: number; playerClass: string | null }>;
   }>();
 
-  for (const enc of orderedEncounters) {
+  for (const enc of killSummary.encounters) {
     for (const p of enc.participants) {
       if (!p.targetBreakdown) continue;
       const td = p.targetBreakdown as Record<string, { damage: number; hits: number; crits: number }>;
@@ -302,112 +302,43 @@ export default async function SessionDetailPage({ params, searchParams }: Props)
         </div>
       </div>
 
-      <div className="grid grid-cols-2 items-stretch gap-y-2 rounded-sm bg-bg-panel/40 p-2 sm:grid-cols-3 lg:grid-cols-6">
-        <StatCard label="Kills / Wipes" value={`${kills}K / ${wipes}W`} highlight className="col-span-2" />
-        <StatCard label="Total Damage" value={formatNumber(fullSessionDmg)} sub="full raid session" />
-        <StatCard label="Heal" value={formatNumber(fullSessionHeal)} sub="effective healing + absorbs" />
-        <StatCard label="Damage Taken" value={formatNumber(fullSessionDamageTaken)} sub="full raid session" />
-        <StatCard label="Duration" value={formatDurationPrecise(durationMs)} sub="first to last log event" className="col-span-2 sm:col-span-1" />
-      </div>
+      <section aria-label="Boss kill summary" className="space-y-2">
+        <h2 className="heading-cinzel text-sm font-bold uppercase tracking-widest text-gold">Successful Boss Fights</h2>
+        <p className="text-sm text-text-secondary">
+          Damage, healing and damage taken during boss kills only, including encounter adds.
+          Wipes and between-fight trash are excluded. Rates use the combined duration of every boss kill.
+        </p>
+        <div className="grid grid-cols-2 items-stretch gap-y-2 rounded-sm bg-bg-panel/40 p-2 sm:grid-cols-3 lg:grid-cols-6">
+          <StatCard label="Kills / Wipes" value={`${kills}K / ${wipes}W`} sub="recorded attempts" highlight className="col-span-2" />
+          <StatCard label="Total Damage" value={formatNumber(killSummary.totalDamage)} sub="boss kills only" />
+          <StatCard label="Heal" value={formatNumber(killSummary.heal)} sub="effective healing + absorbs" />
+          <StatCard label="Damage Taken" value={formatNumber(killSummary.totalDamageTaken)} sub="boss kills only" />
+          <StatCard label="Kill Time" value={killSummary.durationMs === null ? "Unavailable" : formatDurationPrecise(killSummary.durationMs)} sub="combined boss kill duration" className="col-span-2 sm:col-span-1" />
+        </div>
+      </section>
 
       <ShortPullNotice shortPulls={shortPulls} includeShortPulls={includeShortPulls} basePath={sessionPath} />
 
-      {sessionPlayers.length > 0 && (
-        <AccordionSection title="Full Session Breakdown" count={sessionPlayers.length} defaultOpen={false}>
-          <div className="data-panel md:hidden">
-            <ul aria-label="Full session player metrics" className="divide-y divide-gold-dim">
-              {sessionBreakdownRows.map(row => (
-                <li key={row.name} className="px-4 py-3">
-                  {row.href ? (
-                    <Link
-                      href={row.href}
-                      className="inline-flex min-h-11 items-center text-sm font-semibold transition-colors hover:text-gold"
-                      style={{ color: row.color }}
-                    >
-                      {row.name}
-                    </Link>
-                  ) : (
-                    <span
-                      className="flex min-h-11 items-center text-sm font-semibold"
-                      style={{ color: row.color }}
-                    >
-                      {row.name}
-                    </span>
-                  )}
-
-                  <dl className="grid grid-cols-2 gap-x-4 gap-y-3 pb-1">
-                    <div>
-                      <dt className="text-xs uppercase tracking-wide text-text-dim">Total Damage</dt>
-                      <dd className="mt-1 text-sm text-text-primary tabular-nums">{row.totalDamage}</dd>
-                    </div>
-                    <div>
-                      <dt className="text-xs uppercase tracking-wide text-text-dim">DPS</dt>
-                      <dd className="mt-1 text-sm text-text-secondary tabular-nums">{row.dps}</dd>
-                    </div>
-                    <div>
-                      <dt className="text-xs uppercase tracking-wide text-text-dim">Heal</dt>
-                      <dd className="mt-1 text-sm text-text-primary tabular-nums">{row.heal}</dd>
-                    </div>
-                    <div>
-                      <dt className="text-xs uppercase tracking-wide text-text-dim">HPS</dt>
-                      <dd className="mt-1 text-sm text-text-secondary tabular-nums">{row.hps}</dd>
-                    </div>
-                    <div>
-                      <dt className="text-xs uppercase tracking-wide text-text-dim">Damage Taken</dt>
-                      <dd className="mt-1 text-sm text-text-primary tabular-nums">{row.damageTaken}</dd>
-                    </div>
-                    <div>
-                      <dt className="text-xs uppercase tracking-wide text-text-dim">DTPS</dt>
-                      <dd className="mt-1 text-sm text-text-secondary tabular-nums">{row.dtps}</dd>
-                    </div>
-                  </dl>
-                </li>
-              ))}
-            </ul>
-          </div>
-
-          <div className="data-panel hidden md:block">
-            <table className="w-full text-xs tabular-nums">
-              <thead className="bg-bg-card text-text-dim uppercase tracking-wider">
-                <tr>
-                  <th className="px-3 py-3 text-left">Player</th>
-                  <th className="px-3 py-3 text-right">Total Damage</th>
-                  <th className="px-3 py-3 text-right">DPS</th>
-                  <th className="px-3 py-3 text-right">Heal</th>
-                  <th className="px-3 py-3 text-right">HPS</th>
-                  <th className="px-3 py-3 text-right">Damage Taken</th>
-                  <th className="px-3 py-3 text-right">DTPS</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gold-dim">
-                {sessionBreakdownRows.map(row => (
-                  <tr key={row.name} className="hover:bg-bg-hover transition-colors">
-                    <td className="px-3 py-2.5 text-left">
-                      {row.href ? (
-                        <Link
-                          href={row.href}
-                          className="font-semibold hover:text-gold transition-colors"
-                          style={{ color: row.color }}
-                        >
-                          {row.name}
-                        </Link>
-                      ) : (
-                        <span className="font-semibold" style={{ color: row.color }}>{row.name}</span>
-                      )}
-                    </td>
-                    <td className="whitespace-nowrap px-3 py-2.5 text-right text-text-primary">{row.totalDamage}</td>
-                    <td className="whitespace-nowrap px-3 py-2.5 text-right text-text-secondary">{row.dps}</td>
-                    <td className="whitespace-nowrap px-3 py-2.5 text-right text-text-primary">{row.heal}</td>
-                    <td className="whitespace-nowrap px-3 py-2.5 text-right text-text-secondary">{row.hps}</td>
-                    <td className="whitespace-nowrap px-3 py-2.5 text-right text-text-primary">{row.damageTaken}</td>
-                    <td className="whitespace-nowrap px-3 py-2.5 text-right text-text-secondary">{row.dtps}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </AccordionSection>
-      )}
+      <AccordionSection title="Boss Kill Breakdown" count={killBreakdownRows.length} defaultOpen>
+        {killBreakdownRows.length > 0 ? (
+          <>
+            <p className="mb-3 text-sm text-text-secondary">
+              Heal includes effective healing and attributed absorbs; H+A PS is their combined rate.
+              Every player uses the same combined kill time, including fights they sat out.
+              Player links open their report across all attempts.
+            </p>
+            {killSummary.durationMs === null && (
+              <p className="mb-3 text-sm text-text-secondary">Some kill durations are missing. Totals remain available; rates are unavailable.</p>
+            )}
+            <SessionPlayerTable rows={killBreakdownRows} label="Boss kill player metrics" />
+          </>
+        ) : (
+          <p className="text-sm text-text-secondary">
+            {kills === 0 ? "No successful boss kills were recorded in this session." : "No player metrics were recorded for these boss kills."}
+            {" "}Recorded attempts and any full-session data remain available below.
+          </p>
+        )}
+      </AccordionSection>
 
       <AccordionSection title="Encounters" count={totalPulls} defaultOpen>
         {visibleEncounters.length === 0 && (
@@ -476,8 +407,8 @@ export default async function SessionDetailPage({ params, searchParams }: Props)
 
       {mobEntries.length > 0 && (
         <AccordionSection
-          title="Mob Damage - Boss Pulls"
-          sub="Aggregate damage to every target inside detected pulls - click to drill down by player"
+          title="Mob Damage - Boss Kills"
+          sub="Damage to targets during successful boss fights, including encounter adds - click to drill down by player"
           count={mobEntries.length}
           defaultOpen={false}
         >
@@ -486,6 +417,43 @@ export default async function SessionDetailPage({ params, searchParams }: Props)
           </div>
         </AccordionSection>
       )}
+
+      <AccordionSection
+        title="Full Session Breakdown"
+        sub="Optional totals including wipes, trash and downtime"
+        count={sessionPlayers.length}
+        defaultOpen={false}
+      >
+        {sessionAnalytics ? (
+          <div className="space-y-4">
+            <div className="grid grid-cols-2 gap-2 sm:grid-cols-4" aria-label="Full session totals">
+              <StatCard label="Total Damage" value={formatNumber(sessionAnalytics.totalDamage)} sub="full raid session" />
+              <StatCard label="Heal" value={formatNumber(sessionAnalytics.heal)} sub="effective healing + absorbs" />
+              <StatCard label="Damage Taken" value={formatNumber(sessionAnalytics.totalDamageTaken)} sub="full raid session" />
+              <StatCard label="Duration" value={formatDurationPrecise(sessionAnalytics.durationMs)} sub="first to last log event" />
+            </div>
+            <p className="text-sm text-text-secondary">
+              These rates use the entire session duration, including downtime. Player links open their recorded boss attempts;
+              separate trash spell and target breakdowns are not stored.
+            </p>
+            {sessionBreakdownRows.length > 0 ? (
+              <SessionPlayerTable rows={sessionBreakdownRows} label="Full session player metrics" />
+            ) : (
+              <p className="text-sm text-text-secondary">Full-session player metrics are unavailable for this report.</p>
+            )}
+          </div>
+        ) : (
+          <div className="space-y-3">
+            {Number.isFinite(legacySessionDamage) && legacySessionDamage >= 0 && (
+              <StatCard label="Total Damage" value={formatNumber(legacySessionDamage)} sub="stored full raid session total" />
+            )}
+            <p className="text-sm text-text-secondary">
+              Detailed full-session analytics were not stored for this older report. The boss-kill summary uses its recorded encounters;
+              full-session healing, damage taken and player rates are unavailable.
+            </p>
+          </div>
+        )}
+      </AccordionSection>
 
       {playerSet.size > 0 && (
         <AccordionSection title="Raid Roster" count={playerSet.size} defaultOpen={false}>

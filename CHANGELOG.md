@@ -25,6 +25,8 @@ This project follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) an
 
 ### Changed
 
+- Focus raid summaries, player totals/rates and target breakdowns on successful boss fights, excluding wipes and between-fight trash while retaining encounter adds. Add ascending/descending player-table sorting on desktop and mobile, and keep complete session totals in a separate collapsed section. Existing reports use stored encounters without reprocessing.
+- Keep collapsed breakdown controls out of keyboard navigation and brighten two fallback player-name colors so players with an unknown class remain readable on dark report surfaces.
 - Exclude recorded wipes under one minute with no recorded deaths from default public wipe/pull counts. Show a short-pull count and an Include short pulls control; preserve every stored attempt, short kill, death-bearing wipe, unknown outcome and combat metric. The policy also applies to existing reports without reprocessing.
 - Keep unknown outcomes separate from wipe totals on the boss index.
 - Parser 1.1.1 counts effective player and owned-pet healing to NPCs, pets and totems in encounter totals and HPS, correcting omitted Valithria healing. Existing stored reports are not automatically recalculated.

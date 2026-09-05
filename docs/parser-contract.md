@@ -179,6 +179,14 @@ Each parsed raid session stores one first-to-last-log-event Custom Slice includi
 
 Session `Heal` is explicitly effective healing plus attributed absorbs. Encounter primitives remain separate.
 
+The report's main summary is a presentation rollup of stored `KILL` encounters,
+including encounter adds and mechanics. Its player rates divide summed primitives
+by the summed duration of all kills, with valid legacy seconds used when precise
+milliseconds are absent. Missing duration leaves rates unavailable. No kills means
+an empty kill summary, not a fallback to wipes or full-session totals. Original
+first-to-last-event analytics remain available in a separate full-session section;
+this reporting choice does not change parsing or stored data.
+
 ## Deduplication
 
 - File duplicate: SHA-256 of the complete received bytes.
