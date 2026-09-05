@@ -54,11 +54,38 @@ assert.equal((await fetch(new URL("/api/guild-roster/sync", base), { method: "PO
 assert.equal((await fetch(new URL("/admin", base), { redirect: "manual" })).status, 307);
 assert.equal((await fetch(new URL("/api/health/ready", base))).status, 200);
 const report = `/raids/${first.publicReportSlug}/sessions/${first.firstSessionSlug}`;
+// Original synthetic attempts: one brief deathless wipe, one brief wipe with a
+// recorded death, and one brief kill. No private combat log is used in CI.
+const policyLines = [];
+const policyDay = new Date();
+const policyDate = `${policyDay.getUTCMonth() + 1}/${policyDay.getUTCDate()}`;
+const unit = (id, name) => `0x06000000000000${id},"${name}",0x514`;
+const policyBoss = '0xF130008F98000001,"Lord Marrowgar",0xa48';
+for (let pull = 0; pull < 3; pull += 1) {
+  const timestamp = seconds => `${policyDate} 16:${String(pull * 2).padStart(2, "0")}:${seconds.toFixed(3).padStart(6, "0")}`;
+  policyLines.push(`${timestamp(0)}  ENCOUNTER_START,1084,"Lord Marrowgar",4,25`);
+  for (let hit = 1; hit <= 12; hit += 1) {
+    const source = pull === 1 && hit > 4 ? unit("B2", "SyntheticSecond") : unit("B1", "SyntheticFirst");
+    policyLines.push(`${timestamp(hit * (pull === 0 ? 0.5 : 2))}  SPELL_DAMAGE,${source},${policyBoss},48638,"Sinister Strike",0x1,100,0,1,0,0,0,nil,nil,nil`);
+    if (pull === 1 && hit === 4) {
+      policyLines.push(`${timestamp(8.1)}  UNIT_DIED,0x0000000000000000,nil,0x80000000,${unit("B1", "SyntheticFirst")},0`);
+    }
+  }
+  if (pull === 2) policyLines.push(`${timestamp(30)}  UNIT_DIED,0x0000000000000000,nil,0x80000000,${policyBoss},0`);
+  policyLines.push(`${timestamp(31)}  ENCOUNTER_END,1084,"Lord Marrowgar",4,25,${pull === 2 ? 1 : 0}`);
+}
+const policyUpload = await upload(Buffer.from(`${policyLines.join("\n")}\n`), "synthetic-short-pulls.txt");
+const policyReport = `/raids/${policyUpload.publicReportSlug}/sessions/${policyUpload.firstSessionSlug}`;
 const encounters = await (await fetch(new URL("/api/encounters", base))).json();
 const encounter = encounters.find(value => value.uploadId === first.uploadId);
 assert.ok(encounter);
 assert.equal(encounter.totalDamage, 54000, "Rendered report input uses the frozen synthetic damage primitive");
 assert.equal(encounter.durationMs, 26000);
+const policyEncounters = encounters.filter(value => value.uploadId === policyUpload.uploadId);
+assert.equal(policyEncounters.length, 3, "Raw encounter inventory preserves all three attempts");
+assert.equal(policyEncounters.filter(value => value.outcome === "WIPE").length, 2);
+assert.equal(policyEncounters.filter(value => value.outcome === "KILL").length, 1);
+assert.equal(policyEncounters.reduce((sum, value) => sum + value.totalDamage, 0), 3600);
 const routes = ["/", "/raids", "/bosses", "/leaderboards", "/players", "/weekly", "/guild-roster", "/admin/login", report, `/encounters/${encounter.id}`, "/players/Phyre"];
 const browser = await chromium.launch({ headless: true });
 const failures = [];
@@ -95,6 +122,48 @@ try {
   }
   await page.goto(new URL(report, base).href);
   assert.match(await page.locator("main").innerText(), /54[.,]0K|54,000/, "UI must display the same damage primitive");
+  for (const width of [390, 1440]) {
+    await page.setViewportSize({ width, height: 1000 });
+    await page.goto(new URL(policyReport, base).href);
+    const defaultText = await page.locator("main").innerText();
+    assert.match(defaultText, /1K \/ 1W/);
+    assert.match(defaultText, /1 short pull excluded/);
+    assert.match(defaultText, /3[.,]6K|3,600/);
+    assert.equal(await page.locator('a[href^="/encounters/"]').count(), 2);
+    await page.evaluate(axe);
+    const policyViolations = await page.evaluate(async () => (await window.axe.run(document,
+      { runOnly: { type: "tag", values: ["wcag2a", "wcag2aa", "wcag21aa", "wcag22aa"] } })).violations.map(item => ({
+        id: item.id, impact: item.impact, nodes: item.nodes.map(node => ({ target: node.target, summary: node.failureSummary })),
+      })));
+    failures.push(...policyViolations.map(item => ({ route: policyReport, width, ...item })));
+    assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth), false);
+    await page.screenshot({ path: path.join(out, `${width}-short-pulls-default.png`), fullPage: true });
+    await page.getByRole("link", { name: "Include short pulls", exact: true }).click();
+    await page.waitForURL(new URL(`${policyReport}?includeShortPulls=1`, base).href);
+    const includedText = await page.locator("main").innerText();
+    assert.match(includedText, /1K \/ 2W/);
+    assert.match(includedText, /1 short pull included/);
+    assert.match(includedText, /3[.,]6K|3,600/);
+    assert.equal(await page.locator('a[href^="/encounters/"]').count(), 3);
+    await page.screenshot({ path: path.join(out, `${width}-short-pulls-included.png`), fullPage: true });
+    await page.getByRole("link", { name: "Exclude short pulls", exact: true }).click();
+    await page.waitForURL(new URL(policyReport, base).href);
+    assert.match(await page.locator("main").innerText(), /1K \/ 1W/);
+  }
+  const briefAttempt = policyEncounters.find(value => value.outcome === "WIPE" && value.durationMs < 10000);
+  assert.ok(briefAttempt);
+  assert.equal((await page.goto(new URL(`/encounters/${briefAttempt.id}`, base).href)).status(), 200);
+  for (const route of ["/", "/raids", "/bosses", "/bosses/lord-marrowgar", "/weekly", "/players?class=Rogue", "/players/SyntheticFirst", `${policyReport}/players/SyntheticFirst`]) {
+    const original = new URL(route, base);
+    await page.goto(original.href);
+    await page.getByRole("link", { name: "Include short pulls", exact: true }).click();
+    await page.waitForURL(url => url.pathname === original.pathname && url.searchParams.get("includeShortPulls") === "1");
+    if (original.searchParams.has("class")) assert.equal(new URL(page.url()).searchParams.get("class"), original.searchParams.get("class"));
+    await page.getByRole("link", { name: "Exclude short pulls", exact: true }).click();
+    await page.waitForURL(url => url.pathname === original.pathname && !url.searchParams.has("includeShortPulls"));
+  }
+  observations.push({ check: "short-pull counting, include-all, short kill and death-bearing wipe retention, unchanged damage and direct access", status: "pass" });
+  await page.goto(new URL(report, base).href);
   await page.keyboard.press("Tab");
   assert.notEqual(await page.evaluate(() => document.activeElement?.tagName), "BODY");
   await page.goto(base.href);

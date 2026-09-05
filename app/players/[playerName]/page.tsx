@@ -17,8 +17,13 @@ import { getClassColor } from "@/lib/constants/classes";
 import { getRevealClassName, getRevealStyle } from "@/lib/ui-animation";
 import { cn } from "@/lib/utils";
 import { buildPageMetadata } from "@/lib/page-metadata";
+import { ShortPullNotice } from "@/components/reports/ShortPullNotice";
+import { countAttempts, isShortPull, parseIncludeShortPulls } from "@/lib/attempt-policy";
 
-interface Props { params: Promise<{ playerName: string }> }
+interface Props {
+  params: Promise<{ playerName: string }>;
+  searchParams: Promise<{ includeShortPulls?: string | string[] }>;
+}
 
 async function PlayerGear({ name, realm, playerClass }: { name: string; realm?: string; playerClass?: string | null }) {
   const result = await getWarmaneCharacterGear(name, realm ?? "Lordaeron");
@@ -35,9 +40,11 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   });
 }
 
-export default async function PlayerPage({ params }: Props) {
+export default async function PlayerPage({ params, searchParams }: Props) {
   const { playerName } = await params;
   const name = playerName;
+  const includeShortPulls = parseIncludeShortPulls((await searchParams).includeShortPulls);
+  const querySuffix = includeShortPulls ? "?includeShortPulls=1" : "";
 
   const player = await db.player.findFirst({
     where: { name },
@@ -80,11 +87,19 @@ export default async function PlayerPage({ params }: Props) {
       take: 50,
       include: {
         encounter: {
-          include: { boss: { select: { name: true, slug: true, raid: true } } },
+          include: {
+            boss: { select: { name: true, slug: true, raid: true } },
+            participants: { select: { deaths: true } },
+          },
         },
       },
     })
     : [];
+
+  // Retain the original latest-50 window for performance calculations. The
+  // count/list policy uses every raid participant's death evidence.
+  const counts = countAttempts(participants.map(p => p.encounter), { includeShortPulls });
+  const visibleParticipants = participants.filter(p => includeShortPulls || !isShortPull(p.encounter));
 
   const kills       = participants.filter(p => p.encounter.outcome === "KILL");
   const avgDps      = kills.length > 0
@@ -97,10 +112,13 @@ export default async function PlayerPage({ params }: Props) {
   const color = getClassColor(profile.className ?? name);
 
   const perBoss = buildPlayerPerBossSummary(participants);
-  const recentEncounters = buildPlayerRecentEncounters(participants);
+  const recentEncounters = buildPlayerRecentEncounters(visibleParticipants);
 
   return (
     <div className="page-shell">
+      <Link href={`/players${querySuffix}`} className="inline-flex min-h-11 items-center text-sm text-text-dim hover:text-gold">
+        Players
+      </Link>
       {/* Header */}
       <div className="flex items-center gap-4">
         <PlayerAvatar
@@ -132,9 +150,11 @@ export default async function PlayerPage({ params }: Props) {
         </div>
       </div>
 
+      <ShortPullNotice shortPulls={counts.shortPulls} includeShortPulls={includeShortPulls} basePath={`/players/${encodeURIComponent(name)}`} />
+
       {/* Stats */}
       <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
-        <StatCard label="Encounters" value={participants.length} />
+        <StatCard label="Encounters" value={counts.totalPulls} sub="latest 50 recorded" />
         <StatCard label="Kills"      value={kills.length} highlight />
         <StatCard label="Best DPS"   value={formatDps(bestDps)} sub="single encounter" />
         <StatCard label="Avg DPS"    value={formatDps(avgDps)} sub="on kills" />
@@ -168,7 +188,7 @@ export default async function PlayerPage({ params }: Props) {
                     #{m.rank}
                   </span>
                   <div>
-                    <Link href={`/bosses/${m.encounter.boss.slug}`} className="hover:text-gold">
+                    <Link href={`/bosses/${m.encounter.boss.slug}${querySuffix}`} className="hover:text-gold">
                       {m.encounter.boss.name}
                     </Link>
                     <span className={cn(
@@ -195,7 +215,7 @@ export default async function PlayerPage({ params }: Props) {
             {perBoss.map((b, index) => (
               <Link
                 key={b.bossSlug}
-                href={`/bosses/${b.bossSlug}`}
+                href={`/bosses/${b.bossSlug}${querySuffix}`}
                 className={getRevealClassName({
                   boss: true,
                   className: "bg-bg-card border border-gold-dim rounded-sm px-4 py-3 hover:border-gold/40 transition-colors block",
@@ -223,13 +243,13 @@ export default async function PlayerPage({ params }: Props) {
       )}
 
       {/* Recent encounters */}
-      <AccordionSection title="Recent Encounters" count={participants.length} defaultOpen={false}>
-        {participants.length > 0 ? (
+      <AccordionSection title="Recent Encounters" sub="From the latest 50 recorded encounters" count={visibleParticipants.length} defaultOpen={false}>
+        {visibleParticipants.length > 0 ? (
           <div className="bg-bg-panel border border-gold-dim rounded-sm divide-y divide-gold-dim">
             {recentEncounters.map((p, index) => (
               <Link
                 key={p.id}
-                href={`/encounters/${p.encounter.id}`}
+                href={`/encounters/${p.encounter.id}${querySuffix}`}
                 className={getRevealClassName({
                   boss: true,
                   className: "flex items-center justify-between px-4 py-2.5 hover:bg-bg-hover transition-colors",
@@ -237,7 +257,7 @@ export default async function PlayerPage({ params }: Props) {
                 style={getRevealStyle(index)}
               >
                 <div className="flex items-center gap-3">
-                  <span className={p.encounter.outcome === "KILL" ? "outcome-kill" : "outcome-wipe"}>
+                  <span className={p.encounter.outcome === "KILL" ? "outcome-kill" : p.encounter.outcome === "WIPE" ? "outcome-wipe" : "outcome-unknown"}>
                     {p.encounter.outcome}
                   </span>
                   <span className="text-sm font-medium text-text-primary">{p.encounter.boss.name}</span>
@@ -255,7 +275,7 @@ export default async function PlayerPage({ params }: Props) {
             ))}
           </div>
         ) : (
-          <EmptyState title="No encounters recorded" />
+          <EmptyState title={counts.shortPulls > 0 ? "No counted encounters" : "No encounters recorded"} />
         )}
       </AccordionSection>
     </div>

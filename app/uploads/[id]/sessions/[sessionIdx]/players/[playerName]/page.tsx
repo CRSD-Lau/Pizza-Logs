@@ -20,9 +20,13 @@ import { buildPageMetadata } from "@/lib/page-metadata";
 import { getRevealClassName, getRevealStyle, orderBossDisplayEntries } from "@/lib/ui-animation";
 import { buildSessionPlayerMetricChart } from "@/lib/session-player-chart";
 import { cn, formatDps, formatDuration } from "@/lib/utils";
+import { ShortPullNotice } from "@/components/reports/ShortPullNotice";
+import { EmptyState } from "@/components/ui/EmptyState";
+import { countAttempts, isShortPull, parseIncludeShortPulls } from "@/lib/attempt-policy";
 
 interface Props {
   params: Promise<{ id: string; sessionIdx: string; playerName: string }>;
+  searchParams: Promise<{ includeShortPulls?: string | string[] }>;
 }
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
@@ -40,8 +44,10 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   return buildPageMetadata({ title, description, path: canonical, type: "article" });
 }
 
-export default async function SessionPlayerPage({ params }: Props) {
+export default async function SessionPlayerPage({ params, searchParams }: Props) {
   const { id, sessionIdx, playerName } = await params;
+  const includeShortPulls = parseIncludeShortPulls((await searchParams).includeShortPulls);
+  const querySuffix = includeShortPulls ? "?includeShortPulls=1" : "";
   const name = playerName;
   const resolution = await resolveRaidSession(id, sessionIdx);
 
@@ -50,7 +56,7 @@ export default async function SessionPlayerPage({ params }: Props) {
   const { route: sessionRoute, uploadId, publicSlug } = resolution;
   const sessionPath = getRaidSessionPath(publicSlug, sessionRoute);
   if (resolution.isLegacyUploadId || resolution.isLegacyIndex) {
-    permanentRedirect(`${sessionPath}/players/${encodeURIComponent(name)}`);
+    permanentRedirect(`${sessionPath}/players/${encodeURIComponent(name)}${querySuffix}`);
   }
 
   const sessionIndex = sessionRoute.sessionIndex;
@@ -127,6 +133,11 @@ export default async function SessionPlayerPage({ params }: Props) {
 
   if (myStats.length === 0) notFound();
 
+  const playerEncounters = orderedEncounters.filter(encounter => encounter.participants.some(p => p.player.name === name));
+  const counts = countAttempts(playerEncounters, { includeShortPulls });
+  const shortPullIds = new Set(playerEncounters.filter(isShortPull).map(encounter => encounter.id));
+  const visibleStats = myStats.filter(entry => includeShortPulls || !shortPullIds.has(entry.encounterId));
+
   const kills = myStats.filter(e => e.outcome === "KILL");
   const bestDps = Math.max(0, ...myStats.map(e => e.dps));
   const bestHps = Math.max(0, ...myStats.map(e => e.hps));
@@ -172,9 +183,9 @@ export default async function SessionPlayerPage({ params }: Props) {
   return (
     <div className="page-shell">
       <div className="text-xs text-text-dim flex items-center gap-1 flex-wrap">
-        <Link href="/raids" className="hover:text-gold">Raids</Link>
+        <Link href={`/raids${querySuffix}`} className="hover:text-gold">Raids</Link>
         <span>&gt;</span>
-        <Link href={sessionPath} className="hover:text-gold">
+        <Link href={`${sessionPath}${querySuffix}`} className="hover:text-gold">
           {sessionLabel}
         </Link>
         <span>&gt;</span>
@@ -205,8 +216,10 @@ export default async function SessionPlayerPage({ params }: Props) {
         </div>
       </div>
 
+      <ShortPullNotice shortPulls={counts.shortPulls} includeShortPulls={includeShortPulls} basePath={`${sessionPath}/players/${encodeURIComponent(name)}`} />
+
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
-        <StatCard label="Pulls" value={myStats.length} />
+        <StatCard label="Pulls" value={counts.totalPulls} />
         <StatCard label="Kills" value={kills.length} highlight />
         <StatCard label={`Best ${metric}`} value={formatDps(bestMetric)} sub="single pull" />
         <StatCard label={`Avg ${metric}`} value={formatDps(avgKillMetric)} sub="on kills" />
@@ -225,17 +238,21 @@ export default async function SessionPlayerPage({ params }: Props) {
           defaultOpen
         >
           <div className="bg-bg-panel border border-gold-dim rounded-sm p-4">
+            {counts.shortPulls > 0 && (
+              <p className="mb-3 text-xs text-text-dim">Performance includes all recorded encounters, including short pulls.</p>
+            )}
             <SessionLineChart data={chartData} players={chartPlayers} metric={metric} />
           </div>
         </AccordionSection>
       )}
 
-      <AccordionSection title="Encounter Breakdown" count={myStats.length} defaultOpen>
+      <AccordionSection title="Encounter Breakdown" count={visibleStats.length} defaultOpen>
+        {visibleStats.length === 0 && <EmptyState title="No counted encounters" />}
         <div className="bg-bg-panel border border-gold-dim rounded-sm divide-y divide-gold-dim overflow-hidden">
-          {myStats.map((e, index) => (
+          {visibleStats.map((e, index) => (
             <Link
               key={e.encounterId}
-              href={`/encounters/${e.encounterId}`}
+              href={`/encounters/${e.encounterId}${querySuffix}`}
               className={getRevealClassName({
                 boss: true,
                 className:
@@ -305,7 +322,7 @@ export default async function SessionPlayerPage({ params }: Props) {
 
       <div className="pt-2 border-t border-gold-dim">
         <Link
-          href={`/players/${encodeURIComponent(name)}`}
+          href={`/players/${encodeURIComponent(name)}${querySuffix}`}
           className="text-xs text-gold hover:text-gold-light transition-colors"
         >
           View {name}&apos;s all-time profile &rarr;

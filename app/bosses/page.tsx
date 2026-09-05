@@ -9,6 +9,8 @@ import { cn } from "@/lib/utils";
 import { isDatabaseConnectionError } from "@/lib/database-errors";
 import { getRevealClassName, getRevealStyle } from "@/lib/ui-animation";
 import { PageHeader, PageShell } from "@/components/ui/PageLayout";
+import { ShortPullNotice } from "@/components/reports/ShortPullNotice";
+import { countAttempts, parseIncludeShortPulls } from "@/lib/attempt-policy";
 
 import { buildPageMetadata } from "@/lib/page-metadata";
 
@@ -22,7 +24,7 @@ export const dynamic = "force-dynamic";
 const BOSS_GRID_COLUMNS = "2fr 60px 60px 60px 120px 100px";
 const EMPTY_VALUE = "\u2014";
 
-async function getBossStats() {
+async function getBossStats(includeShortPulls: boolean) {
   const bosses = await db.boss.findMany({
     orderBy: { sortOrder: "asc" },
     include: {
@@ -32,6 +34,7 @@ async function getBossStats() {
           outcome:         true,
           difficulty:      true,
           durationSeconds: true,
+          durationMs:      true,
           participants: {
             orderBy: { dps: "desc" },
             take:    1,
@@ -42,7 +45,19 @@ async function getBossStats() {
     },
   });
 
+  // The ranking query deliberately keeps just the top DPS actor. Classifying
+  // an attempt requires death evidence from every participant instead.
+  const wipeEvidence = await db.encounter.findMany({
+    where: { outcome: "WIPE" },
+    select: { id: true, participants: { select: { deaths: true } } },
+  });
+  const deathsByEncounter = new Map(wipeEvidence.map(encounter => [encounter.id, encounter.participants]));
+
   return bosses.map(b => {
+    const counts = countAttempts(b.encounters.map(encounter => ({
+      ...encounter,
+      participants: deathsByEncounter.get(encounter.id),
+    })), { includeShortPulls });
     const kills = b.encounters.filter(e => e.outcome === "KILL");
     const bestKill = kills.reduce<{ dps: number; playerName: string } | null>((best, enc) => {
       const top = enc.participants[0];
@@ -60,21 +75,27 @@ async function getBossStats() {
       slug:       b.slug,
       raid:       b.raid,
       raidSlug:   b.raidSlug,
-      killCount:  kills.length,
-      wipeCount:  b.encounters.length - kills.length,
-      totalPulls: b.encounters.length,
+      killCount:  counts.kills,
+      wipeCount:  counts.wipes,
+      unknownCount: counts.unknown,
+      totalPulls: counts.totalPulls,
+      shortPulls: counts.shortPulls,
       bestKill,
       fastestKill,
     };
   });
 }
 
-export default async function BossesPage() {
+export default async function BossesPage({ searchParams }: {
+  searchParams: Promise<{ includeShortPulls?: string | string[] }>;
+}) {
+  const includeShortPulls = parseIncludeShortPulls((await searchParams).includeShortPulls);
+  const querySuffix = includeShortPulls ? "?includeShortPulls=1" : "";
   let databaseAvailable = true;
   let bosses: Awaited<ReturnType<typeof getBossStats>> = [];
 
   try {
-    bosses = await getBossStats();
+    bosses = await getBossStats(includeShortPulls);
   } catch (error) {
     if (!isDatabaseConnectionError(error)) throw error;
     databaseAvailable = false;
@@ -106,6 +127,14 @@ export default async function BossesPage() {
         }
       />
 
+      {databaseAvailable && (
+        <ShortPullNotice
+          shortPulls={bosses.reduce((sum, boss) => sum + boss.shortPulls, 0)}
+          includeShortPulls={includeShortPulls}
+          basePath="/bosses"
+        />
+      )}
+
       {!databaseAvailable && (
         <DatabaseUnavailable description="Boss rankings need the Pizza Logs database. Start local Postgres to load encounters and records." />
       )}
@@ -134,14 +163,10 @@ export default async function BossesPage() {
                 <span className="text-right">Fastest Kill</span>
               </div>
               {raid.bosses.map((b, index) => {
-                const statusLabel = b.totalPulls > 0
-                  ? b.killCount > 0 ? "Kill" : "Wipe"
-                  : EMPTY_VALUE;
+                const statusLabel = b.killCount > 0 ? "Kill" : b.wipeCount > 0 ? "Wipe" : b.unknownCount > 0 ? "Unknown" : EMPTY_VALUE;
                 const statusClassName = cn(
                   "text-xs font-semibold",
-                  b.totalPulls > 0
-                    ? b.killCount > 0 ? "text-success" : "text-danger"
-                    : "text-text-dim"
+                  b.killCount > 0 ? "text-success" : b.wipeCount > 0 ? "text-danger" : "text-text-dim"
                 );
                 const topDps = b.bestKill
                   ? `${formatDps(b.bestKill.dps)} ${b.bestKill.playerName}`
@@ -150,7 +175,7 @@ export default async function BossesPage() {
                 return (
                   <Link
                     key={b.slug}
-                    href={`/bosses/${b.slug}`}
+                    href={`/bosses/${b.slug}${querySuffix}`}
                     aria-label={`${b.name} boss summary`}
                     className={getRevealClassName({
                       boss: true,
@@ -220,7 +245,7 @@ export default async function BossesPage() {
           <details className="group border-y border-gold-dim">
             <summary className="flex min-h-14 cursor-pointer list-none items-center justify-between gap-4 rounded-sm px-2 py-3 transition-colors hover:bg-bg-panel/45 [&::-webkit-details-marker]:hidden">
               <span>
-                <span className="heading-cinzel block font-semibold text-gold-light">Raids without recorded activity</span>
+                <span className="heading-cinzel block font-semibold text-gold-light">Bosses without counted attempts</span>
                 <span className="mt-1 block text-sm text-text-dim">{inactiveBossCount} bosses hidden until needed</span>
               </span>
               <span className="text-xl text-text-dim transition-transform group-open:rotate-180" aria-hidden="true">⌄</span>
@@ -231,7 +256,7 @@ export default async function BossesPage() {
                   <h2 className="heading-cinzel mb-2 text-sm font-semibold text-gold">{raid.name}</h2>
                   <div className="divide-y divide-gold-dim/70 border-y border-gold-dim/70">
                     {raid.bosses.map(boss => (
-                      <Link key={boss.slug} href={`/bosses/${boss.slug}`} className="flex min-h-11 items-center justify-between gap-3 px-1 text-sm text-text-secondary hover:text-gold-light">
+                      <Link key={boss.slug} href={`/bosses/${boss.slug}${querySuffix}`} className="flex min-h-11 items-center justify-between gap-3 px-1 text-sm text-text-secondary hover:text-gold-light">
                         <span>{boss.name}</span>
                         <span className="text-text-dim" aria-hidden="true">&rarr;</span>
                       </Link>

@@ -7,6 +7,9 @@ import { DatabaseUnavailable } from "@/components/ui/DatabaseUnavailable";
 import { getWeekBounds } from "@/lib/utils";
 import { isDatabaseConnectionError } from "@/lib/database-errors";
 import { buildPageMetadata } from "@/lib/page-metadata";
+import { ShortPullNotice } from "@/components/reports/ShortPullNotice";
+import { parseIncludeShortPulls } from "@/lib/attempt-policy";
+import { countedAttemptWhere, shortPullWhere } from "@/lib/attempt-policy.server";
 
 export const metadata = buildPageMetadata({
   title: "Pizza Logs — WotLK Raid Analytics",
@@ -17,24 +20,28 @@ export const metadata = buildPageMetadata({
 
 export const dynamic = "force-dynamic";
 
-async function getHomeStats() {
+async function getHomeStats(includeShortPulls: boolean) {
   const { start } = getWeekBounds();
   try {
-    const [totalEncounters, totalKills, weekKills] = await Promise.all([
-      db.encounter.count(),
+    const [totalEncounters, totalKills, weekKills, shortPulls] = await Promise.all([
+      db.encounter.count({ where: countedAttemptWhere({ includeShortPulls }) }),
       db.encounter.count({ where: { outcome: "KILL" } }),
       db.encounter.count({ where: { outcome: "KILL", startedAt: { gte: start } } }),
+      db.encounter.count({ where: shortPullWhere() }),
     ]);
 
-    return { databaseAvailable: true, totalEncounters, totalKills, weekKills };
+    return { databaseAvailable: true, totalEncounters, totalKills, weekKills, shortPulls };
   } catch (error) {
     if (!isDatabaseConnectionError(error)) throw error;
-    return { databaseAvailable: false, totalEncounters: 0, totalKills: 0, weekKills: 0 };
+    return { databaseAvailable: false, totalEncounters: 0, totalKills: 0, weekKills: 0, shortPulls: 0 };
   }
 }
 
-export default async function HomePage() {
-  const stats = await getHomeStats();
+export default async function HomePage({ searchParams }: {
+  searchParams: Promise<{ includeShortPulls?: string | string[] }>;
+}) {
+  const includeShortPulls = parseIncludeShortPulls((await searchParams).includeShortPulls);
+  const stats = await getHomeStats(includeShortPulls);
 
   return (
     <PageShell>
@@ -55,6 +62,10 @@ export default async function HomePage() {
         <StatCard label="Encounters" value={stats.totalEncounters.toLocaleString()} className="sm:col-span-1" />
         <StatCard label="Tracked Bosses" value="56" sub="WotLK content" className="col-span-2 sm:col-span-2" />
       </div>
+
+      {stats.databaseAvailable && (
+        <ShortPullNotice shortPulls={stats.shortPulls} includeShortPulls={includeShortPulls} basePath="/" />
+      )}
 
       {!stats.databaseAvailable && (
         <DatabaseUnavailable description="Live stats, uploads, and leaderboard data need the Pizza Logs database. The header and navigation remain available while Postgres is offline." />

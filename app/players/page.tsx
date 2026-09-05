@@ -14,6 +14,9 @@ import { PageHeader, PageShell } from "@/components/ui/PageLayout";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 
 import { buildPageMetadata } from "@/lib/page-metadata";
+import { ShortPullNotice } from "@/components/reports/ShortPullNotice";
+import { parseIncludeShortPulls } from "@/lib/attempt-policy";
+import { countedAttemptWhere, shortPullWhere } from "@/lib/attempt-policy.server";
 
 export const metadata = buildPageMetadata({
   title: "Players",
@@ -23,7 +26,7 @@ export const metadata = buildPageMetadata({
 export const dynamic = "force-dynamic";
 
 interface Props {
-  searchParams: Promise<{ class?: string; page?: string }>;
+  searchParams: Promise<{ class?: string; page?: string; includeShortPulls?: string | string[] }>;
 }
 
 const PLAYERS_PER_PAGE = 30;
@@ -52,11 +55,12 @@ type PlayersPageData = {
   allPlayersForStats: PlayerStatsRow[];
   players: PlayerListRow[];
   totalCount: number;
+  shortPulls: number;
 };
 
-async function getPlayersPageData(classFilter?: string): Promise<PlayersPageData> {
+async function getPlayersPageData(classFilter: string | undefined, includeShortPulls: boolean): Promise<PlayersPageData> {
   try {
-    const [allPlayersForStats, players, totalCount] = await Promise.all([
+    const [allPlayersForStats, players, totalCount, shortPulls] = await Promise.all([
       db.player.findMany({
         select: {
           class:     true,
@@ -73,7 +77,7 @@ async function getPlayersPageData(classFilter?: string): Promise<PlayersPageData
         orderBy: { name: "asc" },
         include: {
           realm:  { select: { name: true } },
-          _count: { select: { participants: true } },
+          _count: { select: { participants: { where: { encounter: countedAttemptWhere({ includeShortPulls }) } } } },
           milestones: {
             where:   { supersededAt: null },
             orderBy: { value: "desc" },
@@ -83,20 +87,27 @@ async function getPlayersPageData(classFilter?: string): Promise<PlayersPageData
         },
       }),
       db.player.count(),
+      db.encounter.count({
+        where: classFilter ? {
+          AND: [shortPullWhere(), { participants: { some: { player: { class: classFilter } } } }],
+        } : shortPullWhere(),
+      }),
     ]);
 
-    return { databaseAvailable: true, allPlayersForStats, players, totalCount };
+    return { databaseAvailable: true, allPlayersForStats, players, totalCount, shortPulls };
   } catch (error) {
     if (!isDatabaseConnectionError(error)) throw error;
-    return { databaseAvailable: false, allPlayersForStats: [], players: [], totalCount: 0 };
+    return { databaseAvailable: false, allPlayersForStats: [], players: [], totalCount: 0, shortPulls: 0 };
   }
 }
 
 export default async function PlayersPage({ searchParams }: Props) {
-  const { class: classFilter, page: requestedPage } = await searchParams;
+  const { class: classFilter, page: requestedPage, includeShortPulls: requestedShortPulls } = await searchParams;
+  const includeShortPulls = parseIncludeShortPulls(requestedShortPulls);
+  const querySuffix = includeShortPulls ? "?includeShortPulls=1" : "";
 
   // Class stats — always unfiltered, used for the visualization panel
-  const { databaseAvailable, allPlayersForStats, players, totalCount } = await getPlayersPageData(classFilter);
+  const { databaseAvailable, allPlayersForStats, players, totalCount, shortPulls } = await getPlayersPageData(classFilter, includeShortPulls);
 
   // Aggregate per class: player count + sum of best DPS (for avg)
   const classMap = new Map<string, { count: number; dpsTotal: number; dpsCount: number }>();
@@ -155,6 +166,7 @@ export default async function PlayersPage({ searchParams }: Props) {
     const params = new URLSearchParams();
     if (classFilter) params.set("class", classFilter);
     if (page > 1) params.set("page", String(page));
+    if (includeShortPulls) params.set("includeShortPulls", "1");
     const query = params.toString();
     return query ? `/players?${query}` : "/players";
   };
@@ -173,6 +185,10 @@ export default async function PlayersPage({ searchParams }: Props) {
           </p>
         }
       />
+
+      {databaseAvailable && (
+        <ShortPullNotice shortPulls={shortPulls} includeShortPulls={includeShortPulls} basePath={pageHref(currentPage)} />
+      )}
 
       {!databaseAvailable && (
         <DatabaseUnavailable description="The player list and profile search need the Pizza Logs database. Start local Postgres to load players." />
@@ -259,7 +275,7 @@ export default async function PlayersPage({ searchParams }: Props) {
       {databaseAvailable && (
       <div className="flex flex-wrap gap-1.5">
         <Link
-          href="/players"
+          href={`/players${querySuffix}`}
           className={cn(
             "inline-flex min-h-11 items-center rounded-sm border px-3 py-2 text-xs font-semibold uppercase tracking-wide transition-colors",
             !classFilter
@@ -275,7 +291,7 @@ export default async function PlayersPage({ searchParams }: Props) {
           return (
             <Link
               key={cls}
-              href={`/players?class=${encodeURIComponent(cls)}`}
+              href={`/players?class=${encodeURIComponent(cls)}${includeShortPulls ? "&includeShortPulls=1" : ""}`}
               className={cn(
                 "inline-flex min-h-11 items-center rounded-sm border px-3 py-2 text-xs font-semibold uppercase tracking-wide transition-colors",
                 "hover:bg-bg-panel"
@@ -328,7 +344,7 @@ export default async function PlayersPage({ searchParams }: Props) {
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center gap-2">
                     <Link
-                      href={`/players/${encodeURIComponent(p.name)}`}
+                      href={`/players/${encodeURIComponent(p.name)}${querySuffix}`}
                       className="text-sm font-semibold truncate group-hover:text-gold-light transition-colors"
                       style={{ color }}
                     >

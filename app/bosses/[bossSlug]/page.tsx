@@ -8,8 +8,13 @@ import { LeaderboardBar } from "@/components/charts/LeaderboardBar";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { formatDps, formatDuration } from "@/lib/utils";
 import { buildPageMetadata } from "@/lib/page-metadata";
+import { ShortPullNotice } from "@/components/reports/ShortPullNotice";
+import { countAttempts, isShortPull, parseIncludeShortPulls } from "@/lib/attempt-policy";
 
-interface Props { params: Promise<{ bossSlug: string }> }
+interface Props {
+  params: Promise<{ bossSlug: string }>;
+  searchParams: Promise<{ includeShortPulls?: string | string[] }>;
+}
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { bossSlug } = await params;
@@ -27,7 +32,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   });
 }
 
-async function getBossData(slug: string) {
+async function getBossData(slug: string, includeShortPulls: boolean) {
   const boss = await db.boss.findUnique({
     where: { slug },
     include: {
@@ -37,13 +42,26 @@ async function getBossData(slug: string) {
           participants: {
             orderBy: { dps: "desc" },
             take: 1,
-            include: { player: { select: { name: true, class: true } } },
+            select: { dps: true, player: { select: { name: true, class: true } } },
           },
         },
       },
     },
   });
   if (!boss) return null;
+
+  const wipeEvidence = await db.encounter.findMany({
+    where: { bossId: boss.id, outcome: "WIPE" },
+    select: { id: true, participants: { select: { deaths: true } } },
+  });
+  const deathsByEncounter = new Map(wipeEvidence.map(encounter => [encounter.id, encounter.participants]));
+  const attempts = boss.encounters.map(encounter => ({
+    ...encounter,
+    participants: deathsByEncounter.get(encounter.id),
+  }));
+  const counts = countAttempts(attempts, { includeShortPulls });
+  const shortPullIds = new Set(attempts.filter(isShortPull).map(encounter => encounter.id));
+  const visibleEncounters = boss.encounters.filter(encounter => includeShortPulls || !shortPullIds.has(encounter.id));
 
   // All-time DPS leaderboard (kills only)
   const dpsLeaders = await db.participant.findMany({
@@ -75,18 +93,19 @@ async function getBossData(slug: string) {
     },
   });
 
-  return { boss, dpsLeaders, hpsLeaders };
+  return { boss, dpsLeaders, hpsLeaders, counts, visibleEncounters };
 }
 
-export default async function BossPage({ params }: Props) {
+export default async function BossPage({ params, searchParams }: Props) {
   const { bossSlug } = await params;
-  const data = await getBossData(bossSlug);
+  const includeShortPulls = parseIncludeShortPulls((await searchParams).includeShortPulls);
+  const querySuffix = includeShortPulls ? "?includeShortPulls=1" : "";
+  const data = await getBossData(bossSlug, includeShortPulls);
   if (!data) notFound();
 
-  const { boss, dpsLeaders, hpsLeaders } = data;
+  const { boss, dpsLeaders, hpsLeaders, counts, visibleEncounters } = data;
 
   const kills = boss.encounters.filter(e => e.outcome === "KILL");
-  const wipes = boss.encounters.filter(e => e.outcome === "WIPE");
   const fastestKill = kills.reduce<number | null>(
     (m, e) => m === null ? e.durationSeconds : Math.min(m, e.durationSeconds), null
   );
@@ -101,7 +120,7 @@ export default async function BossPage({ params }: Props) {
     <div className="page-shell">
       {/* Breadcrumb */}
       <div className="text-xs text-text-dim">
-        <Link href="/bosses" className="hover:text-gold">Bosses</Link>
+        <Link href={`/bosses${querySuffix}`} className="hover:text-gold">Bosses</Link>
         <span className="mx-2">›</span>
         <span>{boss.raid}</span>
         <span className="mx-2">›</span>
@@ -114,18 +133,20 @@ export default async function BossPage({ params }: Props) {
         <p className="text-text-secondary text-sm mt-1">{boss.raid}</p>
       </div>
 
+      <ShortPullNotice shortPulls={counts.shortPulls} includeShortPulls={includeShortPulls} basePath={`/bosses/${bossSlug}`} />
+
       {/* Stats */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
         <StatCard label="Total Kills"    value={kills.length} highlight />
-        <StatCard label="Total Wipes"    value={wipes.length} />
+        <StatCard label="Total Wipes"    value={counts.wipes} />
         <StatCard label="Fastest Kill"   value={fastestKill !== null ? formatDuration(fastestKill) : "—"} />
-        <StatCard label="Total Pulls"    value={boss.encounters.length} />
+        <StatCard label="Total Pulls"    value={counts.totalPulls} />
       </div>
 
       {/* Kill counts by difficulty */}
-      {boss.encounters.length > 0 && (
+      {visibleEncounters.length > 0 && (
         <div className="flex flex-wrap gap-2">
-          {DIFFICULTIES.filter(d => killsByDiff[d] > 0 || boss.encounters.some(e => e.difficulty === d)).map(d => (
+          {DIFFICULTIES.filter(d => killsByDiff[d] > 0 || visibleEncounters.some(e => e.difficulty === d)).map(d => (
             <div key={d} className="bg-bg-card border border-gold-dim rounded-sm px-4 py-2 text-center">
               <div className={`diff-badge mb-1 ${d.endsWith("H") ? "heroic" : "normal"}`}>{d}</div>
               <div className="text-xl font-bold text-text-primary tabular-nums">{killsByDiff[d] ?? 0}</div>
@@ -183,16 +204,16 @@ export default async function BossPage({ params }: Props) {
       <section>
         <SectionHeader
           title="Recent Encounters"
-          sub={`${boss.encounters.length} total pulls`}
+          sub={`${counts.totalPulls} total pulls`}
         />
-        {boss.encounters.length > 0 ? (
+        {visibleEncounters.length > 0 ? (
           <div className="bg-bg-panel border border-gold-dim rounded-sm divide-y divide-gold-dim">
-            {boss.encounters.slice(0, 20).map(enc => {
+            {visibleEncounters.slice(0, 20).map(enc => {
               const top = enc.participants[0];
               return (
                 <Link
                   key={enc.id}
-                  href={`/encounters/${enc.id}`}
+                  href={`/encounters/${enc.id}${querySuffix}`}
                   className="flex items-center justify-between px-4 py-3 hover:bg-bg-hover transition-colors"
                 >
                   <div className="flex items-center gap-3">
@@ -220,7 +241,7 @@ export default async function BossPage({ params }: Props) {
             })}
           </div>
         ) : (
-          <EmptyState title="No encounters recorded" />
+          <EmptyState title={counts.shortPulls > 0 ? "No counted encounters" : "No encounters recorded"} />
         )}
       </section>
     </div>

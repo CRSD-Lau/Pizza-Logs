@@ -39,6 +39,14 @@ Useful `ENCOUNTER_START`/`ENCOUNTER_END` markers are consumed when present, but 
 - Lich King scripted finale/roleplay remains part of the same successful attempt.
 - Gunship uses the fixture-protected Warmane crew-death success override.
 
+Public reporting applies a separate, reversible short-pull counting policy to
+stored encounters: a `WIPE` strictly under 60,000 ms with zero recorded participant
+deaths is excluded by default. Kills, death-bearing wipes and `UNKNOWN` outcomes
+remain included. Missing evidence is not assumed to be zero. The include-all view
+restores the original attempts. This policy does not change parser segmentation,
+stored outcomes, fingerprints, encounter primitives or full-session analytics; see
+[reading reports](guides/reading-reports.md#short-pulls-and-wipe-counts).
+
 ## Damage
 
 Tracked events match Skada `Damage.lua`:

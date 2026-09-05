@@ -16,7 +16,7 @@ assert.match(source, /overflow-hidden/);
 assert.match(source, /min-w-0/);
 assert.match(source, /aria-label=\{`\$\{b\.name\} boss summary`\}/);
 assert.match(source, /group-hover:text-gold-light/);
-assert.match(source, /Raids without recorded activity/);
+assert.match(source, /Bosses without counted attempts/);
 assert.match(source, /inactiveBossCount/);
 
 console.log("bosses mobile source tests passed");

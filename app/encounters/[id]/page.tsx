@@ -15,9 +15,12 @@ import { getRaidSessionRouteByIndex } from "@/lib/raid-session-routing.server";
 import { formatRaidSessionTitle, getRaidSessionPath } from "@/lib/raid-session-slug";
 import { formatDuration, formatNumber } from "@/lib/utils";
 import { buildPageMetadata } from "@/lib/page-metadata";
+import { ShortPullNotice } from "@/components/reports/ShortPullNotice";
+import { isShortPull, parseIncludeShortPulls } from "@/lib/attempt-policy";
 
 interface Props {
   params: Promise<{ id: string }>;
+  searchParams: Promise<{ includeShortPulls?: string | string[] }>;
 }
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
@@ -37,8 +40,10 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   });
 }
 
-export default async function EncounterPage({ params }: Props) {
+export default async function EncounterPage({ params, searchParams }: Props) {
   const { id } = await params;
+  const includeShortPulls = parseIncludeShortPulls((await searchParams).includeShortPulls);
+  const querySuffix = includeShortPulls ? "?includeShortPulls=1" : "";
 
   const encounter = await db.encounter.findUnique({
     where: { id },
@@ -192,11 +197,11 @@ export default async function EncounterPage({ params }: Props) {
   return (
     <div className="page-shell">
       <div className="flex flex-wrap items-center gap-1 text-sm text-text-dim">
-        <Link href="/raids" className="inline-flex min-h-11 items-center hover:text-gold">Raids</Link>
+        <Link href={`/raids${querySuffix}`} className="inline-flex min-h-11 items-center hover:text-gold">Raids</Link>
         <span>&gt;</span>
         {raidSessionRoute ? (
           <Link
-            href={getRaidSessionPath(encounter.upload.publicSlug, raidSessionRoute)}
+            href={`${getRaidSessionPath(encounter.upload.publicSlug, raidSessionRoute)}${querySuffix}`}
             className="inline-flex min-h-11 items-center hover:text-gold"
           >
             {formatRaidSessionTitle(raidSessionRoute)}
@@ -205,9 +210,9 @@ export default async function EncounterPage({ params }: Props) {
           <span>Raid</span>
         )}
         <span>&gt;</span>
-        <Link href="/bosses" className="inline-flex min-h-11 items-center hover:text-gold">Bosses</Link>
+        <Link href={`/bosses${querySuffix}`} className="inline-flex min-h-11 items-center hover:text-gold">Bosses</Link>
         <span>&gt;</span>
-        <Link href={`/bosses/${encounter.boss.slug}`} className="inline-flex min-h-11 items-center hover:text-gold">{encounter.boss.name}</Link>
+        <Link href={`/bosses/${encounter.boss.slug}${querySuffix}`} className="inline-flex min-h-11 items-center hover:text-gold">{encounter.boss.name}</Link>
         <span>&gt;</span>
         <span className="text-text-secondary">Encounter</span>
       </div>
@@ -233,6 +238,8 @@ export default async function EncounterPage({ params }: Props) {
           <div>{new Date(encounter.startedAt).toLocaleString()}</div>
         </div>
       </div>
+
+      <ShortPullNotice shortPulls={isShortPull(encounter) ? 1 : 0} includeShortPulls={includeShortPulls} basePath={`/encounters/${id}`} />
 
       <div className="grid grid-cols-2 items-stretch gap-y-2 rounded-sm bg-bg-panel/40 p-2 sm:grid-cols-4 lg:grid-cols-8">
         <StatCard label="Duration" value={formatDuration(encounter.durationSeconds)} highlight className="col-span-2" />
@@ -412,7 +419,7 @@ export default async function EncounterPage({ params }: Props) {
                   size="xs"
                 />
                 <Link
-                  href={`/players/${encodeURIComponent(p.player.name)}`}
+                  href={`/players/${encodeURIComponent(p.player.name)}${querySuffix}`}
                   className="text-sm font-semibold hover:underline text-text-primary"
                 >
                   {p.player.name}
