@@ -19,12 +19,16 @@ Pizza Logs uses a dark raid-log workspace with a restrained gold accent. The int
 - Use `PageShell` for the shared responsive top padding and section cadence.
 - Use `PageHeader` for page titles, descriptions, and actions.
 - Use `PageSection` for major open-surface groups. Sections are separated by spacing and a divider, not another card.
+- Keep filters and their comparison scope together. Use the page cadence between sections, with smaller gaps inside each group. The shared shell keeps the footer below the workspace on short pages.
 
 ## Surfaces and hierarchy
 
 - Use `DataPanel` only for interactive tables, meters, or dense data that benefits from a bounded workspace.
 - Supporting information belongs on the page surface with dividers.
-- Metric summaries need one highlighted outcome. Secondary metrics remain quiet and must not all compete as equal cards.
+- Use `StatGroup` for related metrics: equal cells within one quiet surface, with consistent dividers and no forced double-width highlights. Choose a balanced count at mobile and desktop widths; move contextual counts outside the metric grid when needed.
+- Emphasis is optional and uses value color, never a different card border, glow, or width. Pair amounts with their labelled rates; keep fight duration, outcomes, and scope close to the heading or summary context. Retain every measurement and unavailable explanation.
+- `gold-dim` is the translucent border/divider token, defined once in the Tailwind theme. Use solid gold for meaningful emphasis and active/focus states.
+- Leaderboard rows align rank, name and value. Metadata and the report action share the next row, with all links retaining their interaction box. Avoid repeating a boss name when the containing section already establishes that scope.
 - Long directories and cross-boss reports must paginate or use accessible disclosure.
 
 ## Interaction and responsive behavior

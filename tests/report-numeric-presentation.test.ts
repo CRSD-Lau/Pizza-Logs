@@ -114,14 +114,14 @@ async function main() {
 
     encounter.durationMs = 50_000;
     const precise = renderToStaticMarkup(await EncounterPage(encounterProps));
-    contains(precise, "Raid DPS 27.86K damage per second");
+    contains(precise, "Damage 1.39M 27.86K raid DPS");
     assert.ok(!precise.includes("Raid rates are unavailable"), "Positive precise milliseconds work even when legacy seconds are zero");
     encounter.durationMs = -1; encounter.durationSeconds = 100;
     const invalid = renderToStaticMarkup(await EncounterPage(encounterProps));
     contains(invalid, "Raid rates are unavailable");
     encounter.durationMs = null;
     const legacy = renderToStaticMarkup(await EncounterPage(encounterProps));
-    contains(legacy, "Raid DPS 13.93K damage per second");
+    contains(legacy, "Damage 1.39M 13.93K raid DPS");
     assert.equal(participant.dps, 13_931.2, "Display-derived rates must not rewrite stored participant rates");
 
     encounter.durationMs = 0; encounter.durationSeconds = 0;

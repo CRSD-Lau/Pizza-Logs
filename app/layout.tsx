@@ -58,12 +58,12 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     <html lang="en">
       <body className="min-h-screen bg-bg-deep text-text-primary antialiased">
         <a href="#main-content" className="skip-link">Skip to content</a>
-        <div className="page-glow">
+        <div className="page-glow flex min-h-dvh flex-col">
           <Nav />
-          <main id="main-content" tabIndex={-1} className="relative z-10 mx-auto max-w-7xl px-4 pb-20 sm:px-6 lg:px-8">
+          <main id="main-content" tabIndex={-1} className="relative z-10 mx-auto w-full max-w-7xl flex-1 px-4 pb-12 sm:px-6 sm:pb-16 lg:px-8">
             {children}
           </main>
-          <footer className="relative z-10 mt-12 border-t border-gold-dim py-6 text-center sm:mt-16">
+          <footer className="relative z-10 border-t border-gold-dim px-4 py-6 text-center">
             <p className="text-sm text-text-dim">
               Pizza Logs &mdash; WotLK raid analytics &nbsp;·&nbsp;
               <span className="text-gold">PizzaWarriors</span>
