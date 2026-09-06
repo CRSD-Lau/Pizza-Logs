@@ -165,7 +165,7 @@ Parser correctness is the product. The detailed contract lives in [docs/parser-c
 | `/raids` | Public raid history |
 | `/raids/[report]/sessions/[date]` | Canonical dated raid session |
 | `/encounters/[id]` | Boss-pull breakdown |
-| `/leaderboards` | Aggregate DPS/HPS records |
+| `/leaderboards` | Top-three all-time average DPS/HPS across logged boss attempts and per-boss personal-best kill records |
 | `/players` and `/players/[name]` | Player directory and profiles |
 | `/guild-roster` | Cached PizzaWarriors roster |
 | `/weekly` | Weekly kills and performance |

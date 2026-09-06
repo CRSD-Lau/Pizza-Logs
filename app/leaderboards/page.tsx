@@ -1,5 +1,7 @@
 import { db } from "@/lib/db";
 import { LeaderboardBar } from "@/components/charts/LeaderboardBar";
+import { AverageLeaderboards } from "@/components/charts/AverageLeaderboards";
+import { getAverageLeaderboards } from "@/lib/average-leaderboards";
 import { DatabaseUnavailable } from "@/components/ui/DatabaseUnavailable";
 import { EmptyState } from "@/components/ui/EmptyState";
 import Link from "next/link";
@@ -15,22 +17,24 @@ import { formatCountLabel } from "@/lib/utils";
 
 export const metadata = buildPageMetadata({
   title: "Leaderboards",
-  description: "Compare all-time WotLK boss DPS and HPS records from parsed raid kills.",
+  description: "Compare all-time average DPS and HPS across logged boss attempts, plus personal-best kill records per boss.",
   path: "/leaderboards",
 });
 export const dynamic = "force-dynamic";
 
 async function getLeaderboardBoards(difficulty: DifficultyFilterValue, requestedBoss: string | undefined) {
-  const bossesWithKills = await db.boss.findMany({
-    where:   { encounters: { some: { outcome: "KILL" } } },
+  const bossesWithAttempts = await db.boss.findMany({
+    where:   { encounters: { some: {} } },
     orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
     select:  { id: true, name: true, slug: true, raid: true },
   });
-  const orderedBosses = sortBossesByICCOrder(bossesWithKills);
+  const orderedBosses = sortBossesByICCOrder(bossesWithAttempts);
   const selectedBoss = orderedBosses.some(boss => boss.slug === requestedBoss) ? requestedBoss! : "";
   const visibleBosses = selectedBoss ? orderedBosses.filter(boss => boss.slug === selectedBoss) : orderedBosses;
 
-  const boards = await Promise.all(
+  const [averages, boards] = await Promise.all([
+    getAverageLeaderboards(db, difficulty, selectedBoss ? visibleBosses[0].id : undefined),
+    Promise.all(
     visibleBosses.map(async boss => {
       const [dpsRows, hpsRows] = await Promise.all([
         db.participant.findMany({
@@ -81,9 +85,10 @@ async function getLeaderboardBoards(difficulty: DifficultyFilterValue, requested
 
       return { boss, dpsEntries, hpsEntries };
     })
-  );
+    ),
+  ]);
 
-  return { bosses: orderedBosses, selectedBoss, boards: boards.filter(b => b.dpsEntries.length > 0 || b.hpsEntries.length > 0) };
+  return { averages, bosses: orderedBosses, selectedBoss, boards: boards.filter(b => b.dpsEntries.length > 0 || b.hpsEntries.length > 0) };
 }
 
 export default async function LeaderboardsPage({ searchParams }: { searchParams: Promise<ReportSearchParams> }) {
@@ -92,7 +97,7 @@ export default async function LeaderboardsPage({ searchParams }: { searchParams:
   const requestedBoss = Array.isArray(query.boss) ? query.boss[0] : query.boss;
   const querySuffix = reportQueryString(query, { difficulty: difficulty === "all" ? null : difficulty, boss: null });
   let databaseAvailable = true;
-  let data: Awaited<ReturnType<typeof getLeaderboardBoards>> = { boards: [], bosses: [], selectedBoss: "" };
+  let data: Awaited<ReturnType<typeof getLeaderboardBoards>> = { averages: { dps: [], hps: [] }, boards: [], bosses: [], selectedBoss: "" };
 
   try {
     data = await getLeaderboardBoards(difficulty, requestedBoss);
@@ -108,7 +113,7 @@ export default async function LeaderboardsPage({ searchParams }: { searchParams:
         title="Leaderboards"
         description={
           <p>
-          All-time top 10 DPS and HPS per boss — kills only, one entry per player
+          All-time average leaders and top 10 personal-best DPS and HPS kill records per boss.
           </p>
         }
       />
@@ -124,9 +129,11 @@ export default async function LeaderboardsPage({ searchParams }: { searchParams:
         </div>
       )}
 
+      {databaseAvailable && <AverageLeaderboards {...data.averages} />}
+
       {databaseAvailable && (boards.length === 0 ? (
         <EmptyState
-          title="No rankings for this selection"
+          title="No kill records for this selection"
           description="Choose another boss or difficulty, or upload a log containing a boss kill."
           action={<Link href="/" className="text-gold hover:text-gold-light text-sm">Upload a log →</Link>}
         />
