@@ -1,5 +1,5 @@
 import { db } from "./db";
-import { countedAttemptWhere, shortPullWhere } from "./attempt-policy.server";
+import { countedAttemptWhere } from "./attempt-policy.server";
 import { directoryNameMatches, getDirectoryPagination } from "./directory-pagination";
 import { normalizePlayerClass } from "./player-class";
 import { DEFAULT_PLAYER_REALM, playerIdentityKey, resolvePlayerIdentity, type PlayerIdentityObservation } from "./player-identity";
@@ -80,17 +80,14 @@ export async function getPlayersPageData(query: string, classFilter: string | un
   const totalCount = filtered.length;
   const pagination = getDirectoryPagination(totalCount, requestedPage, PLAYERS_PER_PAGE);
   const pagePlayers = filtered.slice(pagination.startIndex, pagination.startIndex + PLAYERS_PER_PAGE);
-  const [pullCounts, shortPulls] = await Promise.all([
-    pagePlayers.length ? db.player.findMany({
-      where: { id: { in: pagePlayers.map(player => player.id) } },
-      select: { id: true, _count: { select: { participants: { where: { encounter: countedAttemptWhere({ includeShortPulls }) } } } } },
-    }) : [],
-    filtered.length ? db.encounter.count({ where: { AND: [shortPullWhere(), { participants: { some: { playerId: { in: filtered.map(player => player.id) } } } }] } }) : 0,
-  ]);
+  const pullCounts = pagePlayers.length ? await db.player.findMany({
+    where: { id: { in: pagePlayers.map(player => player.id) } },
+    select: { id: true, _count: { select: { participants: { where: { encounter: countedAttemptWhere({ includeShortPulls }) } } } } },
+  }) : [];
   const countsById = new Map(pullCounts.map(player => [player.id, player._count.participants]));
   return {
     players: pagePlayers.map(player => ({ ...player, _count: { participants: countsById.get(player.id) ?? 0 } })),
     allPlayersForStats: allPlayers.map(player => ({ class: player.class })),
-    totalCount, shortPulls, pagination,
+    totalCount, pagination,
   };
 }

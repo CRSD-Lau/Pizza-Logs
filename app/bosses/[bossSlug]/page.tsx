@@ -9,7 +9,6 @@ import { EmptyState } from "@/components/ui/EmptyState";
 import { formatDps, formatDuration, formatInteger, formatDateTimeUtc, getRecordedDurationSeconds } from "@/lib/utils";
 import { NumericValue } from "@/components/ui/NumericValue";
 import { buildPageMetadata } from "@/lib/page-metadata";
-import { ShortPullNotice } from "@/components/reports/ShortPullNotice";
 import { countAttempts, isShortPull, parseIncludeShortPulls } from "@/lib/attempt-policy";
 import { AccordionSection } from "@/components/ui/AccordionSection";
 import { PageHeader } from "@/components/ui/PageLayout";
@@ -149,7 +148,6 @@ export default async function BossPage({ params, searchParams }: Props) {
         { id: "boss-dps", label: "DPS rankings" },
         { id: "boss-hps", label: "HPS rankings" },
       ]} />
-      <ShortPullNotice shortPulls={counts.shortPulls} includeShortPulls={includeShortPulls} basePath={`/bosses/${bossSlug}${querySuffix}`} />
 
       {/* Stats */}
       <StatGroup columns={4}>

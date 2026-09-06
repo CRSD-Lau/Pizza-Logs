@@ -9,9 +9,8 @@ import { getWeekBounds } from "@/lib/utils";
 import { NumericValue } from "@/components/ui/NumericValue";
 import { isDatabaseConnectionError } from "@/lib/database-errors";
 import { buildPageMetadata } from "@/lib/page-metadata";
-import { ShortPullNotice } from "@/components/reports/ShortPullNotice";
 import { parseIncludeShortPulls } from "@/lib/attempt-policy";
-import { countedAttemptWhere, shortPullWhere } from "@/lib/attempt-policy.server";
+import { countedAttemptWhere } from "@/lib/attempt-policy.server";
 
 export const metadata = buildPageMetadata({
   title: "Pizza Logs | WotLK Raid Analytics",
@@ -25,17 +24,16 @@ export const dynamic = "force-dynamic";
 async function getHomeStats(includeShortPulls: boolean) {
   const { start } = getWeekBounds();
   try {
-    const [totalEncounters, totalKills, weekKills, shortPulls] = await Promise.all([
+    const [totalEncounters, totalKills, weekKills] = await Promise.all([
       db.encounter.count({ where: countedAttemptWhere({ includeShortPulls }) }),
       db.encounter.count({ where: { outcome: "KILL" } }),
       db.encounter.count({ where: { outcome: "KILL", startedAt: { gte: start } } }),
-      db.encounter.count({ where: shortPullWhere() }),
     ]);
 
-    return { databaseAvailable: true, totalEncounters, totalKills, weekKills, shortPulls };
+    return { databaseAvailable: true, totalEncounters, totalKills, weekKills };
   } catch (error) {
     if (!isDatabaseConnectionError(error)) throw error;
-    return { databaseAvailable: false, totalEncounters: 0, totalKills: 0, weekKills: 0, shortPulls: 0 };
+    return { databaseAvailable: false, totalEncounters: 0, totalKills: 0, weekKills: 0 };
   }
 }
 
@@ -69,9 +67,6 @@ export default async function HomePage({ searchParams }: {
           <StatCard label="Kills This Week" value={<NumericValue value={stats.databaseAvailable ? stats.weekKills : null} />} />
           <StatCard label="Encounters" value={<NumericValue value={stats.databaseAvailable ? stats.totalEncounters : null} />} />
         </StatGroup>
-        {stats.databaseAvailable && (
-          <ShortPullNotice shortPulls={stats.shortPulls} includeShortPulls={includeShortPulls} basePath="/" />
-        )}
       </PageSection>
 
       <PageSection

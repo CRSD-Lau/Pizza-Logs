@@ -5,7 +5,6 @@ import { EmptyState } from "@/components/ui/EmptyState";
 import { PlayerDirectory, PlayerDirectoryClassIcon } from "@/components/players/PlayerDirectory";
 import { PlayerDirectoryFilters, playerDirectoryActionClass } from "@/components/players/PlayerDirectoryFilters";
 import { PageHeader, PageShell } from "@/components/ui/PageLayout";
-import { ShortPullNotice } from "@/components/reports/ShortPullNotice";
 import { getPlayerClassMeta } from "@/lib/player-class";
 import { getPlayersPageData } from "@/lib/player-directory";
 import { isDatabaseConnectionError } from "@/lib/database-errors";
@@ -67,7 +66,6 @@ export default async function PlayersPage({ searchParams }: Props) {
               </div>
               <p className="text-sm text-text-secondary">A–Z</p>
             </div>
-            <ShortPullNotice shortPulls={data.shortPulls} includeShortPulls={includeShortPulls} basePath={pageHref(data.pagination.currentPage)} />
             {data.players.length === 0 ? (
               <EmptyState
                 title="No players found"

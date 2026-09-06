@@ -433,17 +433,19 @@ try {
   const briefAttempt = policyEncounters.find(value => value.outcome === "WIPE" && value.durationMs < 10000);
   assert.ok(briefAttempt);
   assert.equal((await page.goto(new URL(`/encounters/${briefAttempt.id}`, base).href)).status(), 200);
-  for (const route of ["/", "/raids", "/bosses", "/bosses/lord-marrowgar", "/weekly", "/players?class=Rogue", "/players/SyntheticFirst", `${policyReport}/players/SyntheticFirst`]) {
+  for (const route of ["/", "/raids", "/bosses", "/bosses/lord-marrowgar", "/weekly", "/players?class=Rogue", "/players/SyntheticFirst", `${policyReport}/players/SyntheticFirst`, `/encounters/${briefAttempt.id}`]) {
     const original = new URL(route, base);
-    await page.goto(original.href);
-    await toggleShortPulls(page, "Include short pulls");
-    await page.waitForURL(url => url.pathname === original.pathname && url.searchParams.get("includeShortPulls") === "1");
-    if (original.searchParams.has("class")) assert.equal(new URL(page.url()).searchParams.get("class"), original.searchParams.get("class"));
-    await toggleShortPulls(page, "Exclude short pulls");
-    await page.waitForURL(url => url.pathname === original.pathname && !url.searchParams.has("includeShortPulls"));
+    for (const included of [false, true]) {
+      if (included) original.searchParams.set("includeShortPulls", "1");
+      else original.searchParams.delete("includeShortPulls");
+      await page.goto(original.href);
+      assert.equal(await page.getByRole("link", { name: /^(Include|Exclude) short pulls$/, includeHidden: true }).count(), 0, `Short-pull controls belong only on the raid session page: ${original.pathname}`);
+      assert.doesNotMatch(await page.locator("main").innerText(), /\d+ short pulls? (included|excluded)/, `Short-pull disclaimers belong only on the raid session page: ${original.pathname}`);
+    }
   }
   observations.push({ check: "all-attempt and kill-only totals, duration denominators, player contributions and targets; retained full-session trash/wipes; sorting, keyboard scope selection, axe and overflow at 390/1440px", status: "pass" });
   observations.push({ check: "short-pull list toggles preserve both aggregate scopes; scope selection preserves short-pull preferences; player/encounter return links and legacy redirects retain scope", status: "pass" });
+  observations.push({ check: "short-pull controls and exclusion disclaimers appear only on individual raid session pages, with either query preference", status: "pass" });
   await page.goto(new URL(report, base).href);
   await page.keyboard.press("Tab");
   assert.notEqual(await page.evaluate(() => document.activeElement?.tagName), "BODY");

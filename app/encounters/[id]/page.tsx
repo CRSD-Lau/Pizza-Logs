@@ -17,8 +17,7 @@ import { formatRaidSessionTitle, getRaidSessionPath } from "@/lib/raid-session-s
 import { formatCountLabel, formatDateTimeUtc, formatDuration, formatInteger, formatNumber, formatPercent, formatRate, formatSeconds, getRecordedDurationSeconds } from "@/lib/utils";
 import { NumericValue } from "@/components/ui/NumericValue";
 import { buildPageMetadata } from "@/lib/page-metadata";
-import { ShortPullNotice } from "@/components/reports/ShortPullNotice";
-import { isShortPull, parseIncludeShortPulls } from "@/lib/attempt-policy";
+import { parseIncludeShortPulls } from "@/lib/attempt-policy";
 import { parseDifficultyFilter, reportQueryString } from "@/lib/difficulty-filter";
 import { buildRaidSummaryQuery, parseRaidSummaryScope } from "@/lib/raid-summary-scope";
 
@@ -258,8 +257,6 @@ export default async function EncounterPage({ params, searchParams }: Props) {
         ...(deathRows.length > 0 ? [{ id: "deaths", label: "Deaths" }] : []),
         { id: "roster", label: "Roster" },
       ]} />
-
-      <ShortPullNotice shortPulls={isShortPull(encounter) ? 1 : 0} includeShortPulls={includeShortPulls} basePath={`/encounters/${id}${comparisonQuerySuffix}`} />
 
       <StatGroup columns={4}>
         <StatCard label="Damage" value={formatNumber(encounter.totalDamage)} sub={<><NumericValue value={totalDps} kind="rate" /> raid DPS</>} />

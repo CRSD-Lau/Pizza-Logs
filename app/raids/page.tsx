@@ -6,7 +6,6 @@ import { isDatabaseConnectionError } from "@/lib/database-errors";
 import { buildRaidSessionRoutesWithAnalytics } from "@/lib/raid-session-slug";
 import { getRevealClassName, getRevealStyle } from "@/lib/ui-animation";
 import { PageHeader } from "@/components/ui/PageLayout";
-import { ShortPullNotice } from "@/components/reports/ShortPullNotice";
 import { countAttempts, parseIncludeShortPulls } from "@/lib/attempt-policy";
 
 import { buildPageMetadata } from "@/lib/page-metadata";
@@ -82,7 +81,6 @@ export default async function RaidsPage({ searchParams }: {
     kills: number;
     wipes: number;
     encounterCount: number;
-    shortPulls: number;
     realmName: string | null;
     guildName: string | null;
   };
@@ -121,7 +119,6 @@ export default async function RaidsPage({ searchParams }: {
         kills: counts.kills,
         wipes: counts.wipes,
         encounterCount: counts.totalPulls,
-        shortPulls: counts.shortPulls,
         realmName: upload.realm?.name ?? null,
         guildName: upload.guild?.name ?? null,
       });
@@ -154,14 +151,6 @@ export default async function RaidsPage({ searchParams }: {
           Uploads {formatInteger(data.pagination.firstVisible)}–{formatInteger(data.pagination.lastVisible)} of {formatInteger(data.totalUploads)} · Newest uploads first.
           {" "}All sessions in an upload stay together.
         </p>
-      )}
-
-      {databaseAvailable && (
-        <ShortPullNotice
-          shortPulls={sessions.reduce((sum, session) => sum + session.shortPulls, 0)}
-          includeShortPulls={includeShortPulls}
-          basePath={pageHref(data?.pagination.currentPage ?? 1)}
-        />
       )}
 
       {!databaseAvailable && (
@@ -208,9 +197,6 @@ export default async function RaidsPage({ searchParams }: {
                             {formatDateTimeRangeUtc(s.startedAt, s.endedAt)}
                           </span>
                           {s.realmName && <span>{s.realmName}</span>}
-                          {s.shortPulls > 0 && (
-                            <span>{formatCountLabel(s.shortPulls, "short pull")} {includeShortPulls ? "included" : "excluded"}</span>
-                          )}
                         </div>
                       </div>
 

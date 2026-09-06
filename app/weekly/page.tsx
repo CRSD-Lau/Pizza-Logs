@@ -10,7 +10,6 @@ import { db } from "@/lib/db";
 import { isDatabaseConnectionError } from "@/lib/database-errors";
 import { buildWeeklyBossKills } from "@/lib/weekly-stats";
 import { PageHeader } from "@/components/ui/PageLayout";
-import { ShortPullNotice } from "@/components/reports/ShortPullNotice";
 import { countAttempts, parseIncludeShortPulls } from "@/lib/attempt-policy";
 import { DifficultyFilter } from "@/components/reports/DifficultyFilter";
 import { difficultyFilterWhere, difficultyScopeLabel, parseDifficultyFilter, reportQueryString, type DifficultyFilterValue, type ReportSearchParams } from "@/lib/difficulty-filter";
@@ -144,7 +143,6 @@ export default async function WeeklyPage({ searchParams }: {
           <DifficultyFilter action="/weekly" id="weekly" difficulty={difficulty} searchParams={query} />
           <p className="text-sm text-text-secondary">{difficultyScopeLabel(difficulty)}. Rankings compare individual attempts across bosses.</p>
         </div>
-        <ShortPullNotice shortPulls={data.shortPulls} includeShortPulls={includeShortPulls} basePath={`/weekly${querySuffix}`} />
         <StatGroup columns={4}>
           <StatCard label="Boss Kills" value={formatInteger(data.totalKills)} highlight />
           <StatCard label="Wipes" value={formatInteger(data.totalWipes)} />

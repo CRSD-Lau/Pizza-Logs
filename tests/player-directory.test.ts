@@ -9,7 +9,6 @@ async function main() {
   const dbMockPath = path.join(process.cwd(), "tests", "__mocks__", "player-directory-db.js");
   const players = Array.from({ length: 35 }, (_, index) => ({ id: `p${index}`, name: `Player${String(index + 1).padStart(2, "0")}`, class: "Mage", realm: { name: "Lordaeron" } }));
   let pageIds: string[] = [];
-  let countIds: string[] = [];
   let countInclude: unknown;
   const evidence = (index: number, className: string, date: string) => ({
     characterName: players[index].name, payloadName: players[index].name, realm: "Lordaeron", payloadRealm: "Lordaeron", className,
@@ -30,10 +29,6 @@ async function main() {
       countInclude = query.select._count;
       return pageIds.map(id => ({ id, _count: { participants: 7 } }));
     } },
-    encounter: { count: async (query: { where: { AND: [unknown, { participants: { some: { playerId: { in: string[] } } } }] } }) => {
-      countIds = query.where.AND[1].participants.some.playerId.in;
-      return 2;
-    } },
   };
   moduleLoader._resolveFilename = function resolve(request, parent, isMain, options) {
     if (request === "./db" && parent?.filename === path.join(process.cwd(), "lib", "player-directory.ts")) return dbMockPath;
@@ -51,8 +46,7 @@ async function main() {
     assert.equal(mages.allPlayersForStats.filter(player => player.class === "Mage").length, 34);
     assert.equal(mages.allPlayersForStats.filter(player => player.class === "Druid").length, 1);
     assert.deepEqual(pageIds, ["p31", "p32", "p33", "p34"]);
-    assert.equal(countIds.includes("p0"), false, "Short-pull count uses the resolved class filter too");
-    assert.equal(countIds.includes("p1"), true, "Mismatched cached realm cannot change class");
+    assert.equal(mages.allPlayersForStats[1].class, "Mage", "Mismatched cached realm cannot change class");
     assert.match(JSON.stringify(countInclude), /NOT/);
     const druids = await getPlayersPageData("", "Druid", 99, true);
     assert.equal(druids.totalCount, 1);
@@ -62,7 +56,7 @@ async function main() {
     assert.equal(druids.pagination.currentPage, 1);
     assert.doesNotMatch(JSON.stringify(countInclude), /NOT/);
     const missing = await getPlayersPageData("missing", undefined, 1, false);
-    assert.equal(missing.totalCount, 0); assert.equal(missing.shortPulls, 0);
+    assert.equal(missing.totalCount, 0); assert.equal(missing.players.length, 0);
     assert.equal((await getStoredPlayerIdentity("Player01", "Lordaeron", "Mage")).className, "Druid");
   } finally {
     moduleLoader._resolveFilename = originalResolve; globalThis.fetch = originalFetch; delete require.cache[dbMockPath];
