@@ -2,16 +2,14 @@ import type { PrismaClient } from "@/generated/prisma/client";
 import {
   buildRaidComparisonRuns,
   buildRaidComparisonSessions,
-  raidComparisonSessionKey,
-  selectRaidComparisonSessions,
   type RaidComparisonData,
   type RaidComparisonParams,
   type RaidComparisonScope,
 } from "@/lib/player-raid-comparison";
 
 /**
- * Group the full stored history before selecting runs. Only the two selected
- * sessions load participant rates; blobs and other players' rows are excluded.
+ * Load every recorded run in one exact raid/difficulty scope. Only the subject's
+ * lean kill rates are selected; blobs and other players' rows are excluded.
  */
 export async function getPlayerRaidComparison(
   database: Pick<PrismaClient, "encounter" | "boss" | "participant">,
@@ -53,28 +51,11 @@ export async function getPlayerRaidComparison(
   if (!selectedScope) return { scopes, raidSlug: "", difficulty: "", sessions: [], runs: [] };
 
   const scopeWhere = { difficulty: selectedScope.difficulty, boss: { raidSlug: selectedScope.raidSlug } };
-  const sessionGroups = await database.encounter.groupBy({
-    by: ["uploadId", "sessionIndex"],
-    where: { ...playerKills, ...scopeWhere },
-    _min: { startedAt: true },
-  });
-  const sources = sessionGroups.flatMap(group => group._min.startedAt ? [{
-    uploadId: group.uploadId, sessionIndex: group.sessionIndex, startedAt: group._min.startedAt,
-  }] : []);
-  const sessions = buildRaidComparisonSessions(sources);
-  const selected = selectRaidComparisonSessions(sessions, params.first, params.second);
-  const sourcesByKey = new Map(sources.map(source => [raidComparisonSessionKey(source.uploadId, source.sessionIndex), source]));
-  const selectedSources = selected.flatMap(session => {
-    const source = sourcesByKey.get(session.key);
-    return source ? [source] : [];
-  });
-
-  const participants = selectedSources.length ? await database.participant.findMany({
+  const participants = await database.participant.findMany({
     where: {
       playerId,
       encounter: {
         outcome: "KILL", ...scopeWhere,
-        OR: selectedSources.map(source => ({ uploadId: source.uploadId, sessionIndex: source.sessionIndex })),
       },
     },
     select: {
@@ -86,10 +67,13 @@ export async function getPlayerRaidComparison(
       } },
     },
     orderBy: [{ encounter: { startedAt: "asc" } }, { encounter: { id: "asc" } }],
-  }) : [];
+  });
+  const sessions = buildRaidComparisonSessions(participants.map(({ encounter }) => ({
+    uploadId: encounter.uploadId, sessionIndex: encounter.sessionIndex, startedAt: encounter.startedAt,
+  })));
 
   return {
     scopes, raidSlug: selectedScope.raidSlug, difficulty: selectedScope.difficulty,
-    sessions, runs: buildRaidComparisonRuns(selected, participants),
+    sessions, runs: buildRaidComparisonRuns(sessions, participants),
   };
 }

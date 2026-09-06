@@ -26,16 +26,14 @@ export function PlayerRaidComparison({ data, playerName }: {
   const raids = data.scopes.filter((scope, index, scopes) => scopes.findIndex(other => other.raidSlug === scope.raidSlug) === index);
   const difficulties = data.scopes.filter(scope => scope.raidSlug === data.raidSlug);
   const scope = data.scopes.find(item => item.raidSlug === data.raidSlug && item.difficulty === data.difficulty);
-  const first = data.runs[0]?.key ?? "";
-  const second = data.runs[1]?.key ?? "";
 
   function navigate(changes: Record<string, string | null>) {
     const query = new URLSearchParams(searchParams.toString());
     query.set("comparisonMetric", metric);
     if (data.raidSlug) query.set("comparisonRaid", data.raidSlug);
     if (data.difficulty) query.set("comparisonDifficulty", data.difficulty);
-    if (first) query.set("comparisonFirst", first);
-    if (second) query.set("comparisonSecond", second);
+    query.delete("comparisonFirst");
+    query.delete("comparisonSecond");
     for (const [key, value] of Object.entries(changes)) {
       if (value === null) query.delete(key);
       else query.set(key, value);
@@ -46,6 +44,8 @@ export function PlayerRaidComparison({ data, playerName }: {
   function chooseMetric(value: "DPS" | "HPS") {
     const query = new URLSearchParams(searchParams.toString());
     query.set("comparisonMetric", value);
+    query.delete("comparisonFirst");
+    query.delete("comparisonSecond");
     // Both rates are already loaded. Next syncs this with useSearchParams
     // without another database request, and reloads/shared URLs keep the metric.
     window.history.replaceState(null, "", `${pathname}?${query}${window.location.hash}`);
@@ -58,41 +58,28 @@ export function PlayerRaidComparison({ data, playerName }: {
   return (
     <div className="min-w-0 space-y-4" aria-busy={pending}>
       <fieldset disabled={pending} className="grid min-w-0 gap-3 border-0 p-0 sm:grid-cols-2">
-        <legend className="sr-only">Choose the raid, difficulty, and two recorded raids to compare</legend>
+        <legend className="sr-only">Choose the raid and exact difficulty for all recorded raids</legend>
         <div className="grid min-w-0 gap-1.5">
           <label htmlFor={`${id}-raid`} className="text-sm font-semibold text-text-secondary">Raid</label>
           <select id={`${id}-raid`} name="comparisonRaid" value={data.raidSlug ?? ""} className={fieldClass} onChange={event => {
             const nextRaid = event.target.value;
             const nextDifficulty = data.scopes.find(item => item.raidSlug === nextRaid && item.difficulty === data.difficulty)?.difficulty
               ?? data.scopes.find(item => item.raidSlug === nextRaid)?.difficulty;
-            navigate({ comparisonRaid: nextRaid, comparisonDifficulty: nextDifficulty ?? null, comparisonFirst: null, comparisonSecond: null });
+            navigate({ comparisonRaid: nextRaid, comparisonDifficulty: nextDifficulty ?? null });
           }}>
             {raids.map(raid => <option key={raid.raidSlug} value={raid.raidSlug}>{raid.raidName}</option>)}
           </select>
         </div>
         <div className="grid min-w-0 gap-1.5">
           <label htmlFor={`${id}-difficulty`} className="text-sm font-semibold text-text-secondary">Difficulty</label>
-          <select id={`${id}-difficulty`} name="comparisonDifficulty" value={data.difficulty ?? ""} className={fieldClass} onChange={event => navigate({ comparisonDifficulty: event.target.value, comparisonFirst: null, comparisonSecond: null })}>
+          <select id={`${id}-difficulty`} name="comparisonDifficulty" value={data.difficulty ?? ""} className={fieldClass} onChange={event => navigate({ comparisonDifficulty: event.target.value })}>
             {difficulties.map(item => <option key={item.difficulty} value={item.difficulty}>{difficultyLabel(item.difficulty)}</option>)}
-          </select>
-        </div>
-        <div className="grid min-w-0 gap-1.5">
-          <label htmlFor={`${id}-first`} className="text-sm font-semibold text-text-secondary">First raid</label>
-          <select id={`${id}-first`} name="comparisonFirst" value={first} className={fieldClass} onChange={event => navigate({ comparisonFirst: event.target.value })}>
-            {data.sessions.map(session => <option key={session.key} value={session.key} disabled={session.key === second}>{session.label}</option>)}
-          </select>
-        </div>
-        <div className="grid min-w-0 gap-1.5">
-          <label htmlFor={`${id}-second`} className="text-sm font-semibold text-text-secondary">Second raid</label>
-          <select id={`${id}-second`} name="comparisonSecond" value={second} disabled={pending || data.sessions.length < 2} className={fieldClass} onChange={event => navigate({ comparisonSecond: event.target.value })}>
-            {!second && <option value="">No second raid recorded</option>}
-            {data.sessions.map(session => <option key={session.key} value={session.key} disabled={session.key === first}>{session.label}</option>)}
           </select>
         </div>
       </fieldset>
 
       <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
-        <p className="text-sm text-text-secondary">{formatCountLabel(data.sessions.length, "recorded raid")} in this scope · Dates in UTC</p>
+        <p className="text-sm text-text-secondary">{data.runs.length === 1 ? "" : "All "}{formatCountLabel(data.runs.length, "recorded raid")} in this scope · Dates in UTC</p>
         <div role="group" aria-label="Metric" className="inline-flex gap-1">
           {(["DPS", "HPS"] as const).map(value => <button key={value} type="button" aria-pressed={metric === value} disabled={pending} onClick={() => chooseMetric(value)} className={cn(
             "min-h-11 min-w-14 rounded-sm border px-3 py-2 text-sm font-semibold focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-gold disabled:opacity-60",

@@ -5,7 +5,6 @@ import {
   buildRaidComparisonRuns,
   buildRaidComparisonSessions,
   raidComparisonSessionKey,
-  selectRaidComparisonSessions,
   type RaidComparisonParticipantSource,
 } from "../lib/player-raid-comparison";
 
@@ -39,18 +38,20 @@ test("raid sessions retain upload and session identity with stable same-date lab
   assert.notEqual(raidComparisonSessionKey("upload-a", 1), raidComparisonSessionKey("upload-b", 1));
 });
 
-test("selection defaults to the latest two known sessions and rejects forged keys", () => {
+test("every recorded session becomes a run in newest-first order", () => {
   const sessions = buildRaidComparisonSessions([
     source("old", 0, "2026-08-23T18:00:00Z"),
     source("middle", 0, "2026-08-30T18:00:00Z"),
     source("new", 0, "2026-09-06T18:00:00Z"),
   ]);
-  assert.deepEqual(selectRaidComparisonSessions(sessions).map(session => session.key), ["new:0", "middle:0"]);
-  assert.deepEqual(selectRaidComparisonSessions(sessions, "forged:5", "wrong-player:1").map(session => session.key), ["new:0", "middle:0"]);
-  assert.deepEqual(selectRaidComparisonSessions(sessions, "old:0", "new:0").map(session => session.key), ["old:0", "new:0"]);
-  assert.deepEqual(selectRaidComparisonSessions(sessions, "middle:0", "middle:0").map(session => session.key), ["middle:0", "new:0"]);
-  assert.equal(selectRaidComparisonSessions(sessions.slice(0, 1)).length, 1);
-  assert.deepEqual(selectRaidComparisonSessions([]), []);
+  const participants = sessions.map(session => participant(session.key, {
+    uploadId: session.key.split(":")[0], startedAt: session.startedAt,
+  }));
+  const runs = buildRaidComparisonRuns(sessions, participants);
+  assert.deepEqual(runs.map(run => run.key), ["new:0", "middle:0", "old:0"]);
+  assert.ok(runs.every(run => run.fights.length === 1));
+  assert.equal(buildRaidComparisonRuns(sessions.slice(0, 1), participants).length, 1);
+  assert.deepEqual(buildRaidComparisonRuns([], participants), []);
 });
 
 test("earliest successful boss kill wins, including short kills and stable timestamp ties", () => {
@@ -96,9 +97,9 @@ test("invalid duration or rate remains unavailable while zero and legacy seconds
 });
 
 test("chart aligns raid-order bosses across runs without turning missing kills into zero", () => {
-  const sessions = selectRaidComparisonSessions(buildRaidComparisonSessions([
+  const sessions = buildRaidComparisonSessions([
     source("upload", 0, "2026-08-30T18:00:00Z"), source("upload", 1, "2026-09-06T18:00:00Z"),
-  ]));
+  ]);
   const runs = buildRaidComparisonRuns(sessions, [
     participant("old-marrowgar", { startedAt: "2026-08-30T18:00:00Z" }, { dps: 0 }),
     participant("new-festergut", { sessionIndex: 1, boss: { slug: "festergut", name: "Festergut", sortOrder: 5 } }),

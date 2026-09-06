@@ -37,8 +37,6 @@ export interface RaidComparisonData {
 export interface RaidComparisonParams {
   raid?: string;
   difficulty?: string;
-  first?: string;
-  second?: string;
 }
 
 export interface RaidComparisonSessionSource {
@@ -81,7 +79,7 @@ function compareText(left: string, right: string): number {
   return left < right ? -1 : left > right ? 1 : 0;
 }
 
-/** The key is only matched to stored metadata; request keys are never parsed into a query. */
+/** Identify a stored run without conflating uploads or same-day sessions. */
 export function raidComparisonSessionKey(uploadId: string, sessionIndex: number): string {
   return `${uploadId}:${sessionIndex}`;
 }
@@ -115,19 +113,6 @@ export function buildRaidComparisonSessions(sources: RaidComparisonSessionSource
 
   return chronological.sort((left, right) =>
     compareText(right.startedAt, left.startedAt) || compareText(left.key, right.key));
-}
-
-/** Preserve selector positions, with the latest two known sessions as defaults. */
-export function selectRaidComparisonSessions(
-  sessions: RaidComparisonSession[],
-  first?: string,
-  second?: string,
-): RaidComparisonSession[] {
-  const selectedFirst = sessions.find(session => session.key === first) ?? sessions[0];
-  if (!selectedFirst) return [];
-  const selectedSecond = sessions.find(session => session.key === second && session.key !== selectedFirst.key)
-    ?? sessions.find(session => session.key !== selectedFirst.key);
-  return [selectedFirst, ...(selectedSecond ? [selectedSecond] : [])];
 }
 
 function storedRate(value: number | null, hasDuration: boolean): number | null {

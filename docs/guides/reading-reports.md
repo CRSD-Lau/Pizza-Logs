@@ -137,12 +137,19 @@ Pet and absorb ownership are conservative. Summon or owner-exclusive spell evide
 
 The **Raid-over-raid performance** chart on a global player profile compares the
 same character across recorded raid sessions. Bosses run along the horizontal
-axis; each dated line represents a raid. The latest two raids for the newest
-available raid/difficulty selection appear by default. Use **Raid**, **Difficulty**,
-**First raid** and **Second raid** to compare other runs. The newer selected raid
-has a solid gold line; the older run uses a dashed line. Raid selections are
-shareable in the page URL and retain the player's realm. The chosen DPS/HPS
-metric stays selected when switching raids or difficulty.
+axis; each dated line represents a raid. Every recorded raid in the selected
+**Raid** and **Difficulty** appears by default, with no recent-history cutoff.
+Use **Highlight raid** to trace a particular dated run while the surrounding
+history stays visible. The highlighted run has a brighter gold line, and its
+tooltip shows the source value and available specialization for that boss.
+Individual raid lines can be hidden, and **Show all raids** restores the complete
+history. Selecting a hidden raid to highlight reveals it again. The visible raid
+count states how many runs are currently shown.
+
+Raid and difficulty filters are shareable in the page URL and retain the
+player's realm. The chosen DPS/HPS metric stays selected when switching scope
+or refreshing. Older links containing two-raid selections now open the full
+history instead of limiting the chart to those two raids.
 
 This comparison uses the character's full stored kill history, independently of
 the latest-50 performance summary. Only successful boss kills count, including
@@ -153,7 +160,9 @@ Missing kills and invalid-duration measurements leave gaps, while recorded zero
 output stays zero. Different difficulties are never pooled, and unknown modes
 remain explicitly separate. DPS and effective HPS are available; HPS excludes
 absorbs. The **View chart values** table gives exact displayed values, available
-spec evidence, and links to the source fights. Gear, buffs, kill time and raid
+spec evidence, and links to the source fights for every boss and recorded raid,
+including hidden lines. Its pagination only changes the table rows; every raid
+remains available on the chart. Gear, buffs, kill time and raid
 assignments can affect these rates; they do not measure skill in isolation.
 
 The player directory is alphabetical, with name and class filters. Guild roster search filters all members before pagination. Neither directory assigns an overall performance rank. Raid history has pagination by upload, keeping every session from an upload together and stating the visible window.

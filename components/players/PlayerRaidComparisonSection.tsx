@@ -8,8 +8,6 @@ import { PlayerRaidComparison } from "@/components/players/PlayerRaidComparison"
 type Search = {
   comparisonRaid?: string | string[];
   comparisonDifficulty?: string | string[];
-  comparisonFirst?: string | string[];
-  comparisonSecond?: string | string[];
 };
 
 const first = (value: string | string[] | undefined) => Array.isArray(value) ? value[0] : value;
@@ -33,8 +31,6 @@ export async function PlayerRaidComparisonSection({ playerId, playerName, search
       data = await getPlayerRaidComparison(db, playerId, {
         raid: first(search.comparisonRaid),
         difficulty: first(search.comparisonDifficulty),
-        first: first(search.comparisonFirst),
-        second: first(search.comparisonSecond),
       });
     } catch {
       // Keep the profile usable when its independent history query is unavailable.

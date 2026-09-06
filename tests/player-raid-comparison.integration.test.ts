@@ -9,9 +9,9 @@ import { buildRaidComparisonChart } from "../lib/player-raid-comparison";
 
 const connection = process.env.TEST_DATABASE_URL;
 
-test("player raid comparison groups full isolated history and loads only two complete scoped runs", {
+test("player raid comparison loads every complete run in the isolated player's exact scope", {
   skip: connection ? false : "Set TEST_DATABASE_URL to a dedicated local PostgreSQL test database",
-}, async () => {
+}, async context => {
   const url = new URL(connection!);
   assert.ok(["localhost", "127.0.0.1", "[::1]"].includes(url.hostname), "Requires a local test database");
   const schema = `raid_compare_${randomUUID().replaceAll("-", "")}`;
@@ -21,14 +21,18 @@ test("player raid comparison groups full isolated history and loads only two com
   });
   const database = new PrismaClient({ adapter: new PrismaPg({ connectionString: url.toString() }, { schema }) });
   const detailQueries: Prisma.ParticipantFindManyArgs[] = [];
+  const detailQueryMilliseconds: number[] = [];
   const observedDatabase = {
     encounter: database.encounter,
     boss: database.boss,
     participant: new Proxy(database.participant, {
       get(target, property, receiver) {
-        if (property === "findMany") return (args: Prisma.ParticipantFindManyArgs) => {
+        if (property === "findMany") return async (args: Prisma.ParticipantFindManyArgs) => {
           detailQueries.push(args);
-          return database.participant.findMany(args);
+          const started = performance.now();
+          const result = await database.participant.findMany(args);
+          detailQueryMilliseconds.push(performance.now() - started);
+          return result;
         };
         return Reflect.get(target, property, receiver);
       },
@@ -75,14 +79,14 @@ test("player raid comparison groups full isolated history and loads only two com
       });
     };
 
-    // Sixty old sessions and 120 encounters precede the current runs. A latest-50
-    // participant window cannot discover the oldest selectable session.
-    for (let index = 0; index < 60; index++) {
+    // Together with the three recent runs, these create 250 sessions. The oldest
+    // complete run must reach the chart without any recent-encounter or run cap.
+    for (let index = 0; index < 247; index++) {
       addFight(`history-${index}-marrowgar`, {
-        uploadId: "history", sessionIndex: index, startedAt: new Date(Date.UTC(2026, 6, index + 1, 18)),
+        uploadId: "history", sessionIndex: index, startedAt: new Date(Date.UTC(2026, 0, index + 1, 18)),
       }, { dps: 1000 + index, hps: 10 });
       addFight(`history-${index}-gunship`, {
-        uploadId: "history", sessionIndex: index, bossId: "gunship", startedAt: new Date(Date.UTC(2026, 6, index + 1, 19)),
+        uploadId: "history", sessionIndex: index, bossId: "gunship", startedAt: new Date(Date.UTC(2026, 0, index + 1, 19)),
       }, { dps: 2000 + index, hps: 20 });
     }
     addFight("earlier-same-day", { sessionIndex: 0, startedAt: new Date("2026-09-06T18:00:00Z") });
@@ -108,13 +112,19 @@ test("player raid comparison groups full isolated history and loads only two com
     await database.encounter.createMany({ data: encounters });
     await database.participant.createMany({ data: participants });
 
+    const started = performance.now();
     const result = await getPlayerRaidComparison(observedDatabase, "subject");
+    const loadAndBuildMilliseconds = performance.now() - started;
     assert.equal(result.raidSlug, "icecrown-citadel");
     assert.equal(result.difficulty, "25H");
-    assert.equal(result.sessions.length, 63, "All stored matching sessions remain selectable beyond 50 encounters");
-    assert.equal(new Set(result.sessions.map(session => session.key)).size, 63);
+    assert.equal(result.sessions.length, 250, "Every stored matching session is included beyond 50 encounters");
+    assert.equal(new Set(result.sessions.map(session => session.key)).size, 250);
     assert.equal(new Set(result.sessions.filter(session => session.startedAt.startsWith("2026-09-06")).map(session => session.label)).size, 3);
-    assert.deepEqual(result.runs.map(run => run.key), ["recent-a:1", "recent-b:0"], "Stable defaults retain selector positions for tied session starts");
+    assert.deepEqual(result.runs.map(run => run.key), result.sessions.map(session => session.key), "Every session has complete run data in newest-first order");
+    assert.deepEqual(result.runs.slice(0, 3).map(run => run.key), ["recent-a:1", "recent-b:0", "recent-a:0"], "Tied starts retain deterministic order");
+    assert.equal(result.runs.at(-1)?.key, "history:0");
+    assert.deepEqual(result.runs.at(-1)?.fights.map(fight => fight.dps), [1000, 2000], "The oldest run keeps all of its bosses");
+    assert.equal(result.runs.reduce((total, run) => total + run.fights.length, 0), 500);
     assert.deepEqual(result.runs[0].fights.map(fight => [fight.encounterId, fight.dps, fight.hps]), [
       ["a-first", 13900, 125], ["a-short", 7920, 0], ["a-invalid", null, null],
     ], "Earliest successful kill wins, short kills remain, invalid duration is unavailable, and HPS excludes absorbs");
@@ -122,6 +132,8 @@ test("player raid comparison groups full isolated history and loads only two com
       ["b-zero", 0, 0], ["b-legacy", 14100, 50],
     ]);
     const chart = buildRaidComparisonChart(result.runs);
+    assert.ok(chart.every(row => Object.keys(row.values).length === 250), "Chart alignment includes all 250 dated lines");
+    assert.equal(chart.find(row => row.bossSlug === "marrowgar")?.values["history:0"]?.dps, 1000);
     assert.equal(chart.find(row => row.bossSlug === "gunship")?.values["recent-b:0"], null);
     assert.equal(chart.find(row => row.bossSlug === "marrowgar")?.values["recent-b:0"]?.dps, 0);
     assert.deepEqual(result.scopes.map(scope => `${scope.raidSlug}:${scope.difficulty}`).sort(), [
@@ -133,17 +145,12 @@ test("player raid comparison groups full isolated history and loads only two com
       playerId: "subject",
       encounter: {
         outcome: "KILL", difficulty: "25H", boss: { raidSlug: "icecrown-citadel" },
-        OR: [
-          { uploadId: "recent-a", sessionIndex: 1 }, { uploadId: "recent-b", sessionIndex: 0 },
-        ],
       },
-    }, "The detail query is limited to the selected two stored session identities");
-    assert.equal(detailQueries[0].take, undefined, "A selected raid is never truncated by an encounter cap");
+    }, "One lean detail query loads all runs for the player, raid, difficulty and successful outcome");
+    assert.equal(detailQueries[0].take, undefined, "Recorded history is never truncated by an encounter cap");
     assert.deepEqual(Object.keys(detailQueries[0].select!).sort(), ["dps", "encounter", "hps", "spec"]);
+    assert.doesNotMatch(JSON.stringify(detailQueries[0]), /spellBreakdown|targetBreakdown|absorbBreakdown|sessionAnalytics/);
 
-    const older = await getPlayerRaidComparison(observedDatabase, "subject", { first: "history:0", second: "recent-a:1" });
-    assert.deepEqual(older.runs.map(run => run.key), ["history:0", "recent-a:1"]);
-    assert.deepEqual(older.runs[0].fights.map(fight => fight.dps), [1000, 2000], "The oldest selected session returns its complete kill set");
     const normal = await getPlayerRaidComparison(observedDatabase, "subject", { raid: "icecrown-citadel", difficulty: "25N" });
     assert.equal(normal.runs.length, 1);
     assert.deepEqual(normal.runs[0].fights.map(fight => fight.encounterId), ["other-mode-25N"]);
@@ -154,11 +161,9 @@ test("player raid comparison groups full isolated history and loads only two com
     const ruby = await getPlayerRaidComparison(observedDatabase, "subject", { raid: "ruby-sanctum", difficulty: "25H" });
     assert.deepEqual(ruby.runs[0].fights.map(fight => fight.encounterId), ["other-raid"]);
     const tampered = await getPlayerRaidComparison(observedDatabase, "subject", {
-      raid: "forged-raid", difficulty: "forged-mode", first: "namesake-only:0", second: "__proto__",
+      raid: "forged-raid", difficulty: "forged-mode",
     });
-    assert.deepEqual(tampered.runs, result.runs, "Invalid scope and another player's session keys fall back to stored choices");
-    const duplicate = await getPlayerRaidComparison(observedDatabase, "subject", { first: "recent-a:1", second: "recent-a:1" });
-    assert.deepEqual(duplicate.runs.map(run => run.key), ["recent-a:1", "recent-b:0"]);
+    assert.deepEqual(tampered.runs, result.runs, "An invalid scope falls back to all runs in a known scope");
     const namesake = await getPlayerRaidComparison(observedDatabase, "namesake");
     assert.deepEqual(namesake.runs.map(run => run.key), ["namesake-only:0", "recent-a:1"]);
     assert.equal(namesake.runs[1].fights[0].dps, 555555, "Same-name characters in separate realms remain separate identities");
@@ -172,7 +177,18 @@ test("player raid comparison groups full isolated history and loads only two com
     assert.equal(detailQueries.length, beforeEmpty, "Players without kills never load participant details");
     for (const query of detailQueries) {
       const where = query.where?.encounter as Prisma.EncounterWhereInput;
-      assert.ok(Array.isArray(where.OR) && where.OR.length <= 2);
+      assert.equal(where.OR, undefined, "No session OR list limits or inflates the scoped history query");
+      assert.equal(query.take, undefined);
+      assert.equal(query.skip, undefined);
+    }
+    if (process.env.PIZZA_RAID_COMPARISON_BENCHMARK === "1") {
+      context.diagnostic(JSON.stringify({
+        runs: result.runs.length,
+        storedBossValues: result.runs.reduce((total, run) => total + run.fights.length, 0),
+        detailQueryMilliseconds: Math.round(detailQueryMilliseconds[0] * 100) / 100,
+        loadAndBuildMilliseconds: Math.round(loadAndBuildMilliseconds * 100) / 100,
+        serializedBytes: Buffer.byteLength(JSON.stringify(result), "utf8"),
+      }));
     }
   } finally {
     await database.$disconnect();
