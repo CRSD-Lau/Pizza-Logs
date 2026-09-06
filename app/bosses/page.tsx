@@ -260,27 +260,39 @@ export default async function BossesPage({ searchParams }: {
         ))}
         {inactiveBossCount > 0 && (
           <details className="group border-y border-gold-dim">
-            <summary className="flex min-h-14 cursor-pointer list-none items-center justify-between gap-4 rounded-sm px-2 py-3 transition-colors hover:bg-bg-panel/45 [&::-webkit-details-marker]:hidden">
-              <span>
-                <span className="heading-cinzel block font-semibold text-gold-light">Bosses without counted attempts in this selection</span>
-                <span className="mt-1 block text-sm text-text-dim">{formatCountLabel(inactiveBossCount, "boss", "bosses")} hidden until needed</span>
-              </span>
-              <span className="text-xl text-text-dim transition-transform group-open:rotate-180" aria-hidden="true">⌄</span>
+            <summary className="min-h-14 cursor-pointer list-none rounded-sm px-2 py-4 transition-colors hover:bg-bg-panel/45 [&::-webkit-details-marker]:hidden">
+              <h2 className="flex items-center justify-between gap-4">
+                <span className="min-w-0">
+                  <span className="heading-cinzel block font-semibold text-gold-light">Bosses without counted attempts</span>
+                  <span className="mt-1 block text-sm font-normal text-text-dim">
+                    {formatCountLabel(inactiveBossCount, "boss", "bosses")} across {formatCountLabel(inactiveRaids.length, "raid", "raids")} in this selection
+                  </span>
+                </span>
+                <span className="shrink-0 text-xl text-text-dim transition-transform group-open:rotate-180" aria-hidden="true">⌄</span>
+              </h2>
             </summary>
-            <div className="grid gap-x-8 gap-y-6 px-2 pb-6 pt-3 sm:grid-cols-2 lg:grid-cols-3">
+            <div className="px-2 pb-4">
+              <p className="pb-3 text-sm text-text-dim">Grouped by raid, in encounter order.</p>
+              <div className="divide-y divide-gold-dim border-t border-gold-dim">
               {inactiveRaids.map(raid => (
-                <div key={raid.slug}>
-                  <h2 className="heading-cinzel mb-2 text-sm font-semibold text-gold">{raid.name}</h2>
-                  <div className="divide-y divide-gold-dim/70 border-y border-gold-dim/70">
-                    {raid.bosses.map(boss => (
-                      <Link key={boss.slug} href={`/bosses/${boss.slug}${querySuffix}`} className="flex min-h-11 items-center justify-between gap-3 px-1 text-sm text-text-secondary hover:text-gold-light">
-                        <span>{boss.name}</span>
-                        <span className="text-text-dim" aria-hidden="true">&rarr;</span>
-                      </Link>
-                    ))}
+                <section key={raid.slug} aria-labelledby={`inactive-${raid.slug}`} className="grid gap-2 py-4 lg:grid-cols-[11rem_minmax(0,1fr)] lg:gap-6">
+                  <div className="lg:pt-3">
+                    <h3 id={`inactive-${raid.slug}`} className="heading-cinzel text-sm font-semibold text-gold">{raid.name}</h3>
+                    <p className="mt-1 text-sm text-text-dim">{formatCountLabel(raid.bosses.length, "boss", "bosses")}</p>
                   </div>
-                </div>
+                  <ul className="grid content-start gap-x-6 sm:grid-cols-2 xl:grid-cols-3">
+                    {raid.bosses.map(boss => (
+                      <li key={boss.slug} className="min-w-0 border-b border-gold-dim/50">
+                        <Link href={`/bosses/${boss.slug}${querySuffix}`} className="flex min-h-11 items-center justify-between gap-3 rounded-sm px-2 py-2 text-sm text-text-secondary transition-colors hover:bg-bg-panel/45 hover:text-gold-light focus-visible:bg-bg-panel/45 focus-visible:text-gold-light">
+                          <span className="min-w-0 break-words">{boss.name}</span>
+                          <span className="shrink-0 text-text-dim" aria-hidden="true">&rarr;</span>
+                        </Link>
+                      </li>
+                    ))}
+                  </ul>
+                </section>
               ))}
+              </div>
             </div>
           </details>
         )}

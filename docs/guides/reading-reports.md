@@ -31,6 +31,13 @@ Chart axes, tooltips and tables use the same compact metric format.
 The [frontend contract](../../DESIGN.md#numbers-units-time-and-lists)
 defines the same rules for public pages, previews and admin history.
 
+## Boss Directory
+
+The Bosses page shows statistics for bosses with counted attempts in the selected
+difficulty. Expand **Bosses without counted attempts** to browse the remaining
+bosses, grouped by raid in encounter order. Each raid has a compact grid of links
+and a boss count; links retain the selected difficulty and short-pull setting.
+
 ## Raid Session
 
 A canonical report URL identifies the public report and raid date. One uploaded file can contain multiple dated sessions; a second session on the same date receives a numeric suffix.
