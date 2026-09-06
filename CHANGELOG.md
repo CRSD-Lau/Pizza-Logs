@@ -6,6 +6,10 @@ This project follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) an
 
 ## [Unreleased]
 
+## [0.1.1] - 2026-09-06
+
+This snapshot includes the cumulative product features, fixes, security changes, and operating changes merged since 0.1.0.
+
 ### Added
 
 - Raid-over-raid comparison on global player profiles shows every recorded raid, with dated lines across the complete boss roster, individual highlighting and visibility controls, DPS/effective HPS controls, and paginated source values. The default combines normal and heroic kills of the same raid size to show complete mixed-mode runs; exact-mode filters remain available, and every recorded value identifies its actual difficulty. Uses stored successful kills independently of the latest-50 summary, preserving missing values and recorded zeros.
@@ -88,11 +92,21 @@ This project follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) an
 - Duplicate generated intro media, unused UI/helpers/constants/dependencies, stale tooling scripts, and obsolete project-vault/status documents.
 - Public imported agent-chat transcripts and the stale GitHub wiki workflow.
 
+### Upgrade notes and known limitations
+
+- The product package is 0.1.1. Parser provenance remains independently versioned at 1.1.1 with metric schema 1 and the canonical-v1 profile; this release does not relabel stored parser results.
+- The legacy shared-secret administrator flow and bypasses were removed. Existing admin cookies and callers must use the password/MFA account flow; follow the [administrator setup and recovery guide](docs/operations/admin-access.md).
+- Public uploads use the bounded UUID streaming protocol. Legacy multipart/debug/stream parser routes remain disabled by default. Interrupted uploads require reupload; there is no newly added durable background upload service.
+- Upgrades from the old snapshot include the committed database migrations, private authentication tables, and parser provenance fields. Follow the [Railway migration and rollout runbook](docs/operations/railway.md), preserve a verified backup, and inspect the target migration ledger. This release updates version metadata and the changelog; it adds no new migration, parser change, or analytics change beyond current main.
+- Parser correctness changes apply to newly parsed uploads. Historical report values are not automatically recalculated, and reuploading an identical file returns its existing completed report. Historical corrections require separately reviewed maintainer recovery or reprocessing with the original log and a verified backup; this release adds no automatic correction workflow.
+- Full representative UwU parity remains unproven ([issue 73](https://github.com/CRSD-Lau/Pizza-Logs/issues/73)). Native scheduled backups and isolated provider recovery remain deferred under the owner's current Hobby-plan decision ([issue 74](https://github.com/CRSD-Lau/Pizza-Logs/issues/74)). Publishing this snapshot does not close either issue or establish enterprise recovery targets.
+
 ## [0.1.0] - 2026-04-26
 
 ### Added
 
 - First public release with Skada-aligned combat-log parsing, ICC raid support, player statistics, boss pages, leaderboards, uploads, and Railway deployment.
 
-[Unreleased]: https://github.com/CRSD-Lau/Pizza-Logs/compare/v0.1.0...HEAD
+[Unreleased]: https://github.com/CRSD-Lau/Pizza-Logs/compare/v0.1.1...HEAD
+[0.1.1]: https://github.com/CRSD-Lau/Pizza-Logs/releases/tag/v0.1.1
 [0.1.0]: https://github.com/CRSD-Lau/Pizza-Logs/releases/tag/v0.1.0
