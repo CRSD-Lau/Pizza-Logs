@@ -4,9 +4,9 @@
 
 Production contains two application services plus PostgreSQL:
 
-- **Web Service** — Next.js standalone image built from the root `Dockerfile`
-- **parser-py** — FastAPI image built from `parser/Dockerfile`
-- **PostgreSQL** — durable Prisma data store
+- **Web Service** - Next.js standalone image built from the root `Dockerfile`
+- **parser-py** - FastAPI image built from `parser/Dockerfile`
+- **PostgreSQL** - durable Prisma data store
 
 `main` is the only production source branch. Do not deploy unmerged feature branches as production.
 

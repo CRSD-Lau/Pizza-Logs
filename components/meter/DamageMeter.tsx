@@ -129,7 +129,7 @@ export function DamageMeter({ participants, metric = "dps" }: DamageMeterProps) 
                   <div className="text-sm font-semibold tabular-nums text-text-primary">
                     <NumericValue value={rawVal} kind="number" />
                   </div>
-                  {/* Boss-only damage sub-label — shown when adds inflated the total */}
+                  {/* Boss-only damage sub-label - shown when adds inflated the total */}
                   {metric === "dps" && p.bossDmg !== undefined && p.bossDmg < rawVal * 0.98 && (
                     <div className="text-xs tabular-nums leading-tight text-text-dim">
                       <NumericValue value={p.bossDmg} kind="number" /> boss damage

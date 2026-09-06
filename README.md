@@ -1,6 +1,6 @@
 # Pizza Logs
 
-![Pizza Logs — WotLK Raid Analytics](public/social-preview.jpg)
+![Pizza Logs - WotLK Raid Analytics](public/social-preview.jpg)
 
 [![CI](https://github.com/CRSD-Lau/Pizza-Logs/actions/workflows/ci.yml/badge.svg)](https://github.com/CRSD-Lau/Pizza-Logs/actions/workflows/ci.yml)
 [![CodeQL](https://github.com/CRSD-Lau/Pizza-Logs/actions/workflows/codeql.yml/badge.svg)](https://github.com/CRSD-Lau/Pizza-Logs/actions/workflows/codeql.yml)

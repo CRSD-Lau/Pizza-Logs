@@ -14,7 +14,7 @@ import { parseIncludeShortPulls } from "@/lib/attempt-policy";
 import { countedAttemptWhere, shortPullWhere } from "@/lib/attempt-policy.server";
 
 export const metadata = buildPageMetadata({
-  title: "Pizza Logs — WotLK Raid Analytics",
+  title: "Pizza Logs - WotLK Raid Analytics",
   description: "Upload combat logs, analyze raid encounters, and track WotLK performance records.",
   path: "/",
   absoluteTitle: true,

@@ -134,7 +134,7 @@ async function main() {
 
     const { default: SessionPlayerPage } = require("../app/uploads/[id]/sessions/[sessionIdx]/players/[playerName]/page") as typeof import("../app/uploads/[id]/sessions/[sessionIdx]/players/[playerName]/page");
     const detail = renderToStaticMarkup(await SessionPlayerPage({ ...sessionProps, params: Promise.resolve({ id: "synthetic-report", sessionIdx: route.slug, playerName: player.name }) }));
-    contains(detail, "The average on kills is unavailable"); contains(detail, "Avg DPS — Unavailable on kills");
+    contains(detail, "The average on kills is unavailable"); contains(detail, "Avg DPS - Unavailable on kills");
     contains(detail, "Best DPS 13.93K single pull");
     contains(detail, "15.50 HPS"); contains(detail, "0.00 APS"); contains(detail, "1 death");
   } finally {

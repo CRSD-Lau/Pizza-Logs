@@ -97,11 +97,11 @@ async function main() {
     const { default: BossesPage } = require("../app/bosses/page") as typeof import("../app/bosses/page");
     const bossPage = () => BossPage({ params: Promise.resolve({ bossSlug: boss.slug }), searchParams: Promise.resolve({}) });
     const bossesPage = () => BossesPage({ searchParams: Promise.resolve({}) });
-    assert.match(textContent(renderToStaticMarkup(await bossPage())), /Fastest Kill — Unavailable No boss kills/);
+    assert.match(textContent(renderToStaticMarkup(await bossPage())), /Fastest Kill - Unavailable No boss kills/);
     const unknownKill = { id: "unknown-time", outcome: "KILL", difficulty: "25N", startedAt: new Date("2026-09-04T20:00:00Z"), durationSeconds: 0, durationMs: 0, participants: [] as never[] };
     bossEncounters.push(unknownKill);
     const unknownBoss = textContent(renderToStaticMarkup(await bossPage()));
-    assert.match(unknownBoss, /Fastest Kill — Unavailable Kill duration unavailable/);
+    assert.match(unknownBoss, /Fastest Kill - Unavailable Kill duration unavailable/);
     assert.match(unknownBoss, /Unavailable duration/);
     assert.doesNotMatch(unknownBoss, /Fastest Kill 0:00|0:00 duration/);
     assert.match(textContent(renderToStaticMarkup(await bossesPage())), /Kill duration unavailable/);

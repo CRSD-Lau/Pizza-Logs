@@ -682,7 +682,7 @@ export async function writeCachedGear(
   if (existing && isArmoryCharacterGear(existing.gear)) {
     const existingCount = existing.gear.items.length;
     if (existingCount >= 10 && enrichedGear.items.length < Math.floor(existingCount * 0.5)) {
-      // New snapshot has fewer than half the items of the existing one — skip write
+      // New snapshot has fewer than half the items of the existing one - skip write
       return enrichedGear;
     }
   }

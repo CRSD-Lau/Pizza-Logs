@@ -18,8 +18,8 @@ Skada-WoTLK is used as a behavioral reference for combat math. UwU Logs is used 
 
 Pizza Logs bundles the following fonts through Fontsource under the SIL Open Font License 1.1:
 
-- Cinzel — Copyright 2020 The Cinzel Project Authors (<https://github.com/NDISCOVER/Cinzel>)
-- Rajdhani — Copyright 2014 Indian Type Foundry (<https://github.com/itfoundry>)
+- Cinzel - Copyright 2020 The Cinzel Project Authors (<https://github.com/NDISCOVER/Cinzel>)
+- Rajdhani - Copyright 2014 Indian Type Foundry (<https://github.com/itfoundry>)
 
 The full license text is in [licenses/OFL-1.1.txt](licenses/OFL-1.1.txt).
 The public web distribution also includes the copyright notices and full license at

@@ -95,7 +95,7 @@ function GearSlotRailItem({
         // eslint-disable-next-line @next/next/no-img-element -- Item icon URLs are normalized and supplied by the Armory/item cache.
         <img src={item.iconUrl} alt="" className="h-full w-full object-cover" />
       ) : (
-        <span className="text-xs font-bold text-text-dim">—</span>
+        <span className="text-xs font-bold text-text-dim">-</span>
       )}
     </div>
   );
@@ -133,7 +133,7 @@ function WeaponSlotItem({
           // eslint-disable-next-line @next/next/no-img-element -- Item icon URLs are normalized and supplied by the Armory/item cache.
           <img src={item.iconUrl} alt="" className="h-full w-full object-cover" />
         ) : (
-          <span className="text-xs font-bold text-text-dim">—</span>
+          <span className="text-xs font-bold text-text-dim">-</span>
         )}
       </div>
       <div className="min-w-0">

@@ -99,7 +99,7 @@ async function main() {
     assert.match(markup, /Database unavailable/);
     assert.match(markup, /localhost:5432/);
     assert.match(markup, /Upload analytics are unavailable/);
-    assert.match(markup, /aria-hidden="true">—<\/span><span class="sr-only">Unavailable/);
+    assert.match(markup, /aria-hidden="true">-<\/span><span class="sr-only">Unavailable/);
     assert.doesNotMatch(markup, /No items imported yet/, "Unavailable inventory must not be presented as an observed zero");
 
     let cancelled = false;

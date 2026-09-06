@@ -135,7 +135,7 @@ export function EnrollmentForm({ email }: { email: string }) {
             <h2 className="text-lg font-semibold text-text-primary">Add this account to your app</h2>
             <p className="text-sm text-text-secondary">In your authenticator app, choose to enter a setup key manually. Use the account details below and select time-based codes.</p>
             <dl className="space-y-3 rounded-sm border border-gold-dim bg-bg-deep p-4 text-sm">
-              <div><dt className="text-text-secondary">Account</dt><dd className="break-all text-text-primary">Pizza Logs — {email}</dd></div>
+              <div><dt className="text-text-secondary">Account</dt><dd className="break-all text-text-primary">Pizza Logs - {email}</dd></div>
               <div><dt className="text-text-secondary">Setup key</dt><dd className="mt-1 break-all font-mono text-base text-text-primary">{setup.secret}</dd></div>
               <div><dt className="text-text-secondary">Code settings</dt><dd className="text-text-primary">Time-based · 6 digits · changes every 30 seconds</dd></div>
             </dl>

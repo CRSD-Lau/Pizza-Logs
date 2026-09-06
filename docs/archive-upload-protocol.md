@@ -58,11 +58,11 @@ The additive upload provenance columns are nullable: `parserVersion`, `metricSch
 
 ## Timing Fields
 
-- `networkUploadMs` — parser receive time through final byte
-- `archiveValidationMs` — format/resource validation
-- `quickClassificationMs` — difficulty-only scan
-- `finalByteToQuickResultMs` — validation plus quick classification/handoff
-- `fullProcessingMs` — complete parser aggregation
+- `networkUploadMs` - parser receive time through final byte
+- `archiveValidationMs` - format/resource validation
+- `quickClassificationMs` - difficulty-only scan
+- `finalByteToQuickResultMs` - validation plus quick classification/handoff
+- `fullProcessingMs` - complete parser aggregation
 
 ## Limits
 

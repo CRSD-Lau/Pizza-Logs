@@ -73,6 +73,6 @@ assert.doesNotMatch(zeroScore, /Unavailable/);
 assert.match(zeroScore, /Apr 30, 2026, 12:00:00 UTC/);
 assert.match(zeroScore, /1–1 of 1 member</);
 const missingScore = renderToStaticMarkup(React.createElement(GuildRosterTable, { members: [{ ...members[0], gearScore: null }] }));
-assert.match(missingScore, /aria-hidden="true">—<\/span><span class="sr-only">Unavailable/);
+assert.match(missingScore, /aria-hidden="true">-<\/span><span class="sr-only">Unavailable/);
 
 console.log("guild-roster-table-render tests passed");

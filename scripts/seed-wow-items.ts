@@ -3,12 +3,12 @@
  *
  * Warmane gear snapshots already include itemLevel,
  * iconUrl, quality, and equipLoc enriched by the browser. This script
- * extracts those fields from the existing cache rows — no external API calls.
+ * extracts those fields from the existing cache rows - no external API calls.
  *
  * Usage:
  *   npm run db:seed-items
  *
- * Safe to re-run — already-known items are skipped.
+ * Safe to re-run - already-known items are skipped.
  */
 
 import { createPrismaClient } from "../lib/prisma-client";
