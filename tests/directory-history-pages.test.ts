@@ -59,6 +59,7 @@ async function main() {
     "@/lib/warmane-armory": { getWarmaneCharacterGear: async () => ({ ok: false }) },
     "@/lib/warmane-guild-roster": { DEFAULT_GUILD_NAME: "Synthetic Guild", DEFAULT_GUILD_REALM: "Lordaeron" },
     "@/components/players/PlayerGearSection": { PlayerGearSection: () => null, PlayerGearSectionSkeleton: () => null },
+    "@/components/players/PlayerRaidComparisonSection": { PlayerRaidComparisonSection: () => null, PlayerRaidComparisonSkeleton: () => null },
   };
   const mockPaths = Object.fromEntries(Object.entries(mockExports).map(([name, exports], index) => {
     const filename = path.join(process.cwd(), "tests", "__mocks__", `directory-history-${index}.js`);
