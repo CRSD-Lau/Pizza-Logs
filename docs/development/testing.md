@@ -52,14 +52,17 @@ The integration suites exercise ingestion rollback and concurrent deduplication,
 The focused global-player comparison suite runs with
 `npx tsx --test tests/player-raid-comparison*.test.ts`. Its PostgreSQL test uses
 an isolated schema to verify complete raid history without a session cutoff,
-lean detail queries, player/realm and raid/difficulty boundaries, repeated
-boss kills, and missing-versus-zero rates.
+lean detail queries, player/realm and raid/size/mode boundaries, repeated
+boss kills, canonical boss slots, and missing-versus-zero rates. Mixed normal
+and heroic runs must produce complete boss values in the combined default,
+while explicit exact-mode filters retain their original boundaries.
 
 The final `test:e2e` step runs `scripts/player-raid-comparison-e2e.mjs` against the
 disposable loopback stack. It creates UUID-owned synthetic raid/player/cache rows,
 checks all-raid defaults, highlighting without filtering, visibility recovery,
-DPS/HPS controls, gaps, paginated source values, realm isolation, and responsive
-accessibility, then removes only its own rows. Dense synthetic history exercises
+DPS/HPS controls, mixed-mode full runs, all boss labels, gaps, paginated source
+values with fight difficulty, realm isolation, and responsive accessibility,
+including the plot's contained horizontal scrolling, then removes only its own rows. Dense synthetic history exercises
 rendering and interaction without truncating plotted raids.
 It supports the default test schema or a validated isolated schema, and records
 screenshots and results under `.test-artifacts/player-raid-comparison`.

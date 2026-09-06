@@ -1,4 +1,6 @@
 import { formatDateUtc, getRecordedDurationSeconds } from "@/lib/utils";
+import { WOTLK_BOSSES } from "@/lib/constants/bosses";
+import { DIFFICULTY_FILTERS } from "@/lib/difficulty-filter";
 
 export interface RaidComparisonScope {
   raidSlug: string;
@@ -17,6 +19,7 @@ export interface RaidComparisonFight {
   bossSlug: string;
   bossName: string;
   bossOrder: number;
+  difficulty: string;
   dps: number | null;
   hps: number | null;
   spec: string | null;
@@ -55,6 +58,7 @@ export interface RaidComparisonParticipantSource {
     sessionIndex: number;
     startedAt: Date | string;
     outcome: string;
+    difficulty: string;
     durationMs?: number | null;
     durationSeconds?: number | null;
     boss: { slug: string; name: string; sortOrder: number };
@@ -62,6 +66,7 @@ export interface RaidComparisonParticipantSource {
 }
 
 export interface RaidComparisonChartValue {
+  difficulty: string;
   dps: number | null;
   hps: number | null;
   encounterId: string;
@@ -77,6 +82,12 @@ export interface RaidComparisonChartRow {
 
 function compareText(left: string, right: string): number {
   return left < right ? -1 : left > right ? 1 : 0;
+}
+
+/** Combined scopes are local to this view; exact difficulty labels remain unchanged. */
+export function raidComparisonDifficultyLabel(value: string): string {
+  if (value === "10" || value === "25") return `${value}-player · Normal + heroic`;
+  return DIFFICULTY_FILTERS.find(option => option.value === value)?.label ?? value;
 }
 
 /** Identify a stored run without conflating uploads or same-day sessions. */
@@ -143,6 +154,7 @@ export function buildRaidComparisonRuns(
       bossSlug: encounter.boss.slug,
       bossName: encounter.boss.name,
       bossOrder: encounter.boss.sortOrder,
+      difficulty: encounter.difficulty,
       dps: storedRate(participant.dps, hasDuration),
       hps: storedRate(participant.hps, hasDuration),
       spec: participant.spec,
@@ -156,9 +168,12 @@ export function buildRaidComparisonRuns(
   }));
 }
 
-/** Align the union of recorded bosses; a missing kill stays distinct from zero output. */
-export function buildRaidComparisonChart(runs: RaidComparisonRun[]): RaidComparisonChartRow[] {
+/** Keep canonical raid slots even without recorded kills; custom raids use their observed bosses. */
+export function buildRaidComparisonChart(runs: RaidComparisonRun[], raidSlug?: string): RaidComparisonChartRow[] {
   const bosses = new Map<string, Pick<RaidComparisonFight, "bossSlug" | "bossName" | "bossOrder">>();
+  for (const boss of WOTLK_BOSSES.filter(boss => boss.raidSlug === raidSlug)) {
+    bosses.set(boss.slug, { bossSlug: boss.slug, bossName: boss.name, bossOrder: boss.sortOrder });
+  }
   const fightsByRun = new Map(runs.map(run => [run.key, new Map(run.fights.map(fight => [fight.bossSlug, fight]))]));
   for (const run of runs) {
     for (const fight of run.fights) {
@@ -174,7 +189,7 @@ export function buildRaidComparisonChart(runs: RaidComparisonRun[]): RaidCompari
       values: Object.fromEntries(runs.map(run => {
         const fight = fightsByRun.get(run.key)!.get(boss.bossSlug);
         return [run.key, fight ? {
-          dps: fight.dps, hps: fight.hps, encounterId: fight.encounterId, spec: fight.spec,
+          difficulty: fight.difficulty, dps: fight.dps, hps: fight.hps, encounterId: fight.encounterId, spec: fight.spec,
         } : null];
       })),
     }));
