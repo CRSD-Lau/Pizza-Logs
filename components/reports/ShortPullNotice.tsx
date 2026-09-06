@@ -5,9 +5,11 @@ interface Props {
   shortPulls: number;
   includeShortPulls: boolean;
   basePath: string;
+  /** On session summaries, only the encounter list follows this control. */
+  listOnly?: boolean;
 }
 
-export function ShortPullNotice({ shortPulls, includeShortPulls, basePath }: Props) {
+export function ShortPullNotice({ shortPulls, includeShortPulls, basePath, listOnly = false }: Props) {
   if (shortPulls === 0) return null;
 
   const target = new URL(basePath, "https://pizzalogs.local");
@@ -19,11 +21,12 @@ export function ShortPullNotice({ shortPulls, includeShortPulls, basePath }: Pro
     <details className="border-y border-gold-dim text-sm text-text-secondary">
       <summary className="min-h-11 cursor-pointer py-3 marker:text-gold">
         <span className="font-semibold text-text-primary">{formatCountLabel(shortPulls, "short pull")}</span>
-        {includeShortPulls ? " included in counts" : " excluded from counts"}
+        {includeShortPulls ? " included in " : " excluded from "}{listOnly ? "encounter list" : "counts"}
         {" "}<span className="ml-2 text-gold">Details</span>
       </summary>
       <div className="pb-3 pl-4">
-        <p>Wipes under one minute with no recorded deaths are excluded from wipe and pull counts by default. Short successful kills still count. All original attempts remain available.</p>
+        <p>Wipes under one minute with no recorded deaths are excluded from {listOnly ? "the encounter list" : "wipe and pull counts"} by default. Short successful kills still count. All original attempts remain available.</p>
+        {listOnly && <p className="mt-2">This control changes the encounter list and its counts. Summary totals above remain unchanged; All Boss Attempts always includes short pulls.</p>}
         <Link href={href} className="inline-flex min-h-11 items-center font-semibold text-gold hover:text-gold-light">
           {includeShortPulls ? "Exclude short pulls" : "Include short pulls"}
         </Link>

@@ -25,6 +25,8 @@ This project follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) an
 
 ### Changed
 
+- Add an All Boss Attempts default raid-summary view alongside Successful Boss Fights. Keep headline, player and target totals on the same selected fights, include every stored attempt in the all-attempt view, and preserve selection through report navigation. Short-pull controls change the encounter list and its counts without changing either summary; existing reports need no re-upload.
+
 - Standardize report amounts and rates with exactly two decimals and K/M abbreviations (`13.93K`, `4.20M`, `1,234.57M`), matching charts, tables and tooltips. Percentages, decimal seconds and scaled binary file sizes also use two decimals; counts, ranks, levels and GearScore retain grouped whole numbers. Preserve clock-style durations, UTC dates, missing-value handling, mobile metric labels and explicit death/kill/wipe count words across public and admin pages.
 - Keep recent player history chronological, expose every spell in expanded breakdowns and paginate the complete admin upload inventory with accurate visible/total counts.
 - Remove unscoped player crowns, historical-award sorting and unreliable award-derived best figures. Add alphabetical name/class browsing, guild filtering before pagination, and complete upload-based raid history pagination.

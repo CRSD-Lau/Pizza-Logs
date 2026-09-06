@@ -186,6 +186,21 @@ Historical stored reports are not automatically recalculated.
 
 ## Initial upload groups and Custom Slice boundaries
 
+Pizza's **All Boss Attempts** view includes every stored boss attempt, including
+kills, wipes, unknown outcomes and short pulls. **Successful Boss Fights** remains
+a separate `KILL`-only selection. Both use the same stored primitives for headline,
+player and target totals, with the combined selected duration for rates. The
+short-pull control filters the encounter list and its counts only. Neither view
+includes between-fight trash; Full Session Breakdown retains that broader scope.
+
+The inspected reference's `boss=all` selection includes wipes. This makes Pizza's
+all-attempt view a closer scope for comparison, but does not establish numerical
+parity: admitted attempts, windows, ownership and display calculations still differ.
+Pizza does not duplicate player damage in an additional abomination-owner row or
+change its effective-healing-plus-attributed-absorbs definition to imitate a
+reference display quirk. Historical reports use their stored encounter metrics
+without a parser rerun or database rewrite.
+
 At the pinned reference revision, upload report grouping and boss-attempt admission
 are separate operations. The upload reader processes each text archive member through
 its own separator. Candidate chunks use changes in the numeric `HHMMSS` clock value,

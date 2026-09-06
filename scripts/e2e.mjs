@@ -131,6 +131,10 @@ assert.equal(policyEncounters.filter(value => value.outcome === "WIPE").length, 
 assert.equal(policyEncounters.filter(value => value.outcome === "KILL").length, 1);
 assert.equal(policyEncounters.reduce((sum, value) => sum + value.totalDamage, 0), 4100);
 const policyKill = policyEncounters.find(value => value.outcome === "KILL");
+const policyAllDurationMs = policyEncounters.reduce((sum, value) => {
+  assert.ok(Number.isFinite(value.durationMs) && value.durationMs > 0, "All synthetic attempts must have measured durations");
+  return sum + value.durationMs;
+}, 0);
 assert.equal(policyKill.totalDamage, 1500, "Winning-fight damage includes its add, without wipes or between-fight trash");
 assert.equal(policyKill.totalHealing, 900, "Winning-fight healing excludes overheal");
 assert.equal(policyKill.totalDamageTaken, 450);
@@ -181,11 +185,46 @@ try {
     ? view.locator(":scope > li > div:first-child").allTextContents()
     : view.locator("tbody th[scope='row']").allTextContents();
   const cardValue = (scope, label) => scope.getByText(label, { exact: true }).locator("..").locator(":scope > div").nth(1).innerText();
+  const fixtureDuration = milliseconds => {
+    assert.ok(milliseconds >= 0 && milliseconds < 3_600_000, "Synthetic combined fight time stays below one hour");
+    return new Date(milliseconds).toISOString().slice(12, 23);
+  };
   const assertKillCards = async () => {
     const scope = page.getByRole("region", { name: "Boss kill summary", exact: true });
+    assert.equal(await cardValue(scope, "Fight results"), "1 kill");
     assert.equal(await cardValue(scope, "Total Damage"), "1.50K");
     assert.equal(await cardValue(scope, "Healing + absorbs"), "900.00");
     assert.equal(await cardValue(scope, "Damage Taken"), "450.00");
+    assert.equal(await cardValue(scope, "Kill Time"), fixtureDuration(policyKill.durationMs));
+  };
+  const assertAllCards = async () => {
+    const scope = page.getByRole("region", { name: "All boss attempt summary", exact: true });
+    assert.equal(await cardValue(scope, "Recorded results"), "1 kill / 2 wipes");
+    assert.match(await scope.innerText(), /3 recorded attempts/);
+    assert.equal(await cardValue(scope, "Total Damage"), "4.10K");
+    assert.equal(await cardValue(scope, "Healing + absorbs"), "1.90K");
+    assert.equal(await cardValue(scope, "Damage Taken"), "1.45K");
+    assert.equal(await cardValue(scope, "Fight Time"), fixtureDuration(policyAllDurationMs));
+  };
+  const assertScopeSelection = async selected => {
+    const navigation = page.getByRole("navigation", { name: "Boss fight scope", exact: true });
+    for (const label of ["All Boss Attempts", "Successful Boss Fights"]) {
+      assert.equal(await navigation.getByRole("link", { name: label, exact: true }).getAttribute("aria-current"), label === selected ? "page" : null);
+    }
+  };
+  const auditOpenMetrics = async (width, route, openedToggle) => {
+    // Contrast must be measured after the accordion's opening opacity transition.
+    await page.waitForFunction(id => {
+      const panel = document.getElementById(id);
+      return panel && !panel.inert && getComputedStyle(panel).opacity === "1";
+    }, await openedToggle.getAttribute("aria-controls"));
+    await page.evaluate(axe);
+    const violations = await page.evaluate(async () => (await window.axe.run(document,
+      { runOnly: { type: "tag", values: ["wcag2a", "wcag2aa", "wcag21aa", "wcag22aa"] } })).violations.map(item => ({
+        id: item.id, impact: item.impact, nodes: item.nodes.map(node => ({ target: node.target, summary: node.failureSummary })),
+      })));
+    failures.push(...violations.map(item => ({ route, width, ...item })));
+    assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth), false);
   };
   const assertPlayerValues = async (view, width, expected) => {
     for (const [index, values] of expected.entries()) {
@@ -227,6 +266,11 @@ try {
     damageTaken: ["SyntheticSecond", "SyntheticFirst", "SyntheticThird"],
     dtps: ["SyntheticSecond", "SyntheticFirst", "SyntheticThird"],
   };
+  const allAscending = {
+    ...killAscending,
+    damageTaken: ["SyntheticFirst", "SyntheticThird", "SyntheticSecond"],
+    dtps: ["SyntheticFirst", "SyntheticThird", "SyntheticSecond"],
+  };
   const fullAscending = {
     name: ["SyntheticFirst", "SyntheticSecond", "SyntheticThird", "SyntheticTrashOnly"],
     totalDamage: ["SyntheticThird", "SyntheticTrashOnly", "SyntheticSecond", "SyntheticFirst"],
@@ -236,18 +280,69 @@ try {
     damageTaken: ["SyntheticTrashOnly", "SyntheticFirst", "SyntheticThird", "SyntheticSecond"],
     dtps: ["SyntheticTrashOnly", "SyntheticFirst", "SyntheticThird", "SyntheticSecond"],
   };
-  // This fixture's values stay below 1,000; keep the display oracle independent of production formatters.
+  // Keep the fixture display oracle independent of production formatters.
   const fixtureDecimal = new Intl.NumberFormat("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-  const rate = amount => {
-    const value = amount / (policyKill.durationMs / 1000);
-    assert.ok(value >= 0.01 && value < 1000, "Synthetic kill rates must stay in the unsuffixed range");
+  const fixtureAmount = amount => amount >= 1000 ? `${fixtureDecimal.format(amount / 1000)}K` : fixtureDecimal.format(amount);
+  const rate = (amount, durationMs = policyKill.durationMs) => {
+    const value = amount / (durationMs / 1000);
+    assert.ok(value >= 0.01 && value < 1000, "Synthetic rates must stay in the unsuffixed range");
     return fixtureDecimal.format(value);
+  };
+  const allPlayers = [
+    { name: "SyntheticFirst", damage: 2500, heal: 100, taken: 150 },
+    { name: "SyntheticSecond", damage: 1400, heal: 1500, taken: 1050 },
+    { name: "SyntheticThird", damage: 200, heal: 300, taken: 250 },
+  ];
+  const assertAllPlayerValues = async width => {
+    const view = playerView("All boss attempt player metrics", width);
+    const names = await playerNames(view, width);
+    assert.deepEqual([...names].sort(), allPlayers.map(player => player.name));
+    await assertPlayerValues(view, width, names.map(name => {
+      const player = allPlayers.find(value => value.name === name);
+      return [fixtureAmount(player.damage), rate(player.damage, policyAllDurationMs), fixtureAmount(player.heal), rate(player.heal, policyAllDurationMs),
+        fixtureAmount(player.taken), rate(player.taken, policyAllDurationMs)];
+    }));
   };
   for (const width of [390, 1440]) {
     await page.setViewportSize({ width, height: 1000 });
     await page.goto(new URL(policyReport, base).href);
+    await assertScopeSelection("All Boss Attempts");
+    await assertAllCards();
+    const allView = playerView("All boss attempt player metrics", width);
+    assert.deepEqual(await playerNames(allView, width), allPlayers.map(player => player.name));
+    await assertAllPlayerValues(width);
+    assert.equal(await allView.getByRole("link", { name: /SyntheticTrashOnly/ }).count(), 0, "Boss-attempt totals exclude the between-fight-only player");
+    assert.equal(await page.locator('a[href^="/encounters/"]').count(), 2, "Short pull is initially hidden from the list, while all metrics retain its 1,200 damage");
+    await assertSorting("All boss attempt player metrics", width, allAscending);
+    const allMobToggle = page.getByRole("button", { name: /^Mob Damage - All Boss Attempts/ });
+    if (await allMobToggle.getAttribute("aria-expanded") === "false") await allMobToggle.click();
+    const allMobContent = page.locator(`[id="${await allMobToggle.getAttribute("aria-controls")}"]`);
+    for (const [target, damage] of [["Lord Marrowgar", "3.60K"], ["Synthetic Kill Add", "300.00"], ["Synthetic Wipe Add", "200.00"]]) {
+      const targetRow = allMobContent.getByRole("button", { name: new RegExp(target) });
+      assert.match(await targetRow.innerText(), new RegExp(damage.replace(".", "\\.")));
+    }
+    assert.doesNotMatch(await allMobContent.innerText(), /Synthetic Between-Fight Trash/);
+    await auditOpenMetrics(width, policyReport, allMobToggle);
+    await page.screenshot({ path: path.join(out, `${width}-all-boss-attempts.png`), fullPage: true });
+    await toggleShortPulls(page, "Include short pulls");
+    await page.waitForURL(new URL(`${policyReport}?includeShortPulls=1`, base).href);
+    await assertAllCards();
+    await assertAllPlayerValues(width);
+    await assertScopeSelection("All Boss Attempts");
+    assert.equal(await page.locator('a[href^="/encounters/"]').count(), 3);
+    await toggleShortPulls(page, "Exclude short pulls");
+    await page.waitForURL(new URL(policyReport, base).href);
+    await assertAllCards();
+    await assertAllPlayerValues(width);
+    // Both scope links must support native keyboard navigation on mobile and desktop.
+    const scopeNavigation = page.getByRole("navigation", { name: "Boss fight scope", exact: true });
+    await scopeNavigation.getByRole("link", { name: "All Boss Attempts", exact: true }).focus();
+    await page.keyboard.press("Tab");
+    assert.equal(await scopeNavigation.getByRole("link", { name: "Successful Boss Fights", exact: true }).evaluate(element => document.activeElement === element), true);
+    await page.keyboard.press("Enter");
+    await page.waitForURL(new URL(`${policyReport}?scope=kills`, base).href);
+    await assertScopeSelection("Successful Boss Fights");
     const defaultText = await page.locator("main").innerText();
-    assert.match(defaultText, /1 kill \/ 1 wipe/);
     assert.match(defaultText, /1 short pull excluded/);
     await assertKillCards();
     assert.equal(await page.locator('a[href^="/encounters/"]').count(), 2);
@@ -256,17 +351,20 @@ try {
     await assertPlayerValues(killView, width, killPlayers.map(player => [
       fixtureDecimal.format(player.damage), rate(player.damage), fixtureDecimal.format(player.heal), rate(player.heal), fixtureDecimal.format(player.taken), rate(player.taken),
     ]));
-    assert.equal(await killView.getByRole("link", { name: "View SyntheticFirst's all-attempt raid report", exact: true }).getAttribute("href"), `${policyReport}/players/SyntheticFirst`);
+    assert.equal(await killView.getByRole("link", { name: "View SyntheticFirst's all-attempt raid report", exact: true }).getAttribute("href"), `${policyReport}/players/SyntheticFirst?scope=kills`);
     await assertSorting("Boss kill player metrics", width, killAscending);
     const fullToggle = page.getByRole("button", { name: /^Full Session Breakdown/ });
     const fullContent = page.locator(`[id="${await fullToggle.getAttribute("aria-controls")}"]`);
+    // Query-only scope changes may preserve accordion state; explicitly prepare
+    // the collapsed panel before checking that its controls cannot receive focus.
+    if (await fullToggle.getAttribute("aria-expanded") === "true") await fullToggle.click();
     assert.equal(await fullToggle.getAttribute("aria-expanded"), "false");
     assert.equal(await fullContent.getAttribute("aria-hidden"), "true");
     assert.equal(await fullContent.evaluate(element => element.inert), true);
     const hiddenControl = fullContent.locator(width < 1280 ? "select" : "table button").first();
     await hiddenControl.evaluate(element => element.focus());
     assert.equal(await hiddenControl.evaluate(element => document.activeElement === element), false, "Collapsed metrics cannot receive keyboard focus");
-    await fullToggle.click();
+    if (await fullToggle.getAttribute("aria-expanded") === "false") await fullToggle.click();
     assert.equal(await fullContent.getAttribute("aria-hidden"), "false");
     assert.equal(await fullContent.evaluate(element => element.inert), false);
     const fullView = playerView("Full session player metrics", width);
@@ -282,38 +380,55 @@ try {
     await fullToggle.click();
     assert.equal(await fullContent.evaluate(element => element.inert), true);
     const mobToggle = page.getByRole("button", { name: /^Mob Damage - Boss Kills/ });
-    await mobToggle.click();
+    if (await mobToggle.getAttribute("aria-expanded") === "false") await mobToggle.click();
     const mobContent = page.locator(`[id="${await mobToggle.getAttribute("aria-controls")}"]`);
     assert.match(await mobContent.innerText(), /Lord Marrowgar/);
     assert.match(await mobContent.innerText(), /Synthetic Kill Add/);
     assert.doesNotMatch(await mobContent.innerText(), /Synthetic Wipe Add|Synthetic Between-Fight Trash/);
-    // Contrast must be measured after the accordion's opening opacity transition.
-    await page.waitForFunction(id => {
-      const panel = document.getElementById(id);
-      return panel && !panel.inert && getComputedStyle(panel).opacity === "1";
-    }, await mobToggle.getAttribute("aria-controls"));
-    await page.evaluate(axe);
-    const policyViolations = await page.evaluate(async () => (await window.axe.run(document,
-      { runOnly: { type: "tag", values: ["wcag2a", "wcag2aa", "wcag21aa", "wcag22aa"] } })).violations.map(item => ({
-        id: item.id, impact: item.impact, nodes: item.nodes.map(node => ({ target: node.target, summary: node.failureSummary })),
-      })));
-    failures.push(...policyViolations.map(item => ({ route: policyReport, width, ...item })));
-    assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth), false);
+    await auditOpenMetrics(width, `${policyReport}?scope=kills`, mobToggle);
     await page.screenshot({ path: path.join(out, `${width}-short-pulls-default.png`), fullPage: true });
     await toggleShortPulls(page, "Include short pulls");
-    await page.waitForURL(new URL(`${policyReport}?includeShortPulls=1`, base).href);
+    await page.waitForURL(new URL(`${policyReport}?scope=kills&includeShortPulls=1`, base).href);
     const includedText = await page.locator("main").innerText();
-    assert.match(includedText, /1 kill \/ 2 wipes/);
     assert.match(includedText, /1 short pull included/);
     await assertKillCards();
     const includedKillView = playerView("Boss kill player metrics", width);
     assert.deepEqual((await playerNames(includedKillView, width)).sort(), killPlayers.map(player => player.name).sort(), "Including short pulls cannot add wipe-only players to kill metrics");
-    assert.equal(await includedKillView.getByRole("link", { name: "View SyntheticFirst's all-attempt raid report", exact: true }).getAttribute("href"), `${policyReport}/players/SyntheticFirst?includeShortPulls=1`);
+    const scopedPlayerPath = `${policyReport}/players/SyntheticFirst?scope=kills&includeShortPulls=1`;
+    assert.equal(await includedKillView.getByRole("link", { name: "View SyntheticFirst's all-attempt raid report", exact: true }).getAttribute("href"), scopedPlayerPath);
     assert.equal(await page.locator('a[href^="/encounters/"]').count(), 3);
     await page.screenshot({ path: path.join(out, `${width}-short-pulls-included.png`), fullPage: true });
+    await includedKillView.getByRole("link", { name: "View SyntheticFirst's all-attempt raid report", exact: true }).click();
+    await page.waitForURL(new URL(scopedPlayerPath, base).href);
+    await page.locator(`a[href="${policyReport}?scope=kills&includeShortPulls=1"]`).first().click();
+    await page.waitForURL(new URL(`${policyReport}?scope=kills&includeShortPulls=1`, base).href);
+    await assertKillCards();
+    const scopedEncounterPath = `/encounters/${policyKill.id}?scope=kills&includeShortPulls=1`;
+    await page.locator(`a[href="${scopedEncounterPath}"]`).click();
+    await page.waitForURL(new URL(scopedEncounterPath, base).href);
+    await page.locator(`a[href="${policyReport}?scope=kills&includeShortPulls=1"]`).first().click();
+    await page.waitForURL(new URL(`${policyReport}?scope=kills&includeShortPulls=1`, base).href);
+    await assertKillCards();
+    await page.getByRole("navigation", { name: "Boss fight scope", exact: true }).getByRole("link", { name: "All Boss Attempts", exact: true }).click();
+    await page.waitForURL(new URL(`${policyReport}?includeShortPulls=1`, base).href);
+    await assertAllCards();
+    await assertAllPlayerValues(width);
+    await page.getByRole("navigation", { name: "Boss fight scope", exact: true }).getByRole("link", { name: "Successful Boss Fights", exact: true }).click();
+    await page.waitForURL(new URL(`${policyReport}?scope=kills&includeShortPulls=1`, base).href);
     await toggleShortPulls(page, "Exclude short pulls");
-    await page.waitForURL(new URL(policyReport, base).href);
-    assert.match(await page.locator("main").innerText(), /1 kill \/ 1 wipe/);
+    await page.waitForURL(new URL(`${policyReport}?scope=kills`, base).href);
+    await assertKillCards();
+    assert.equal(await page.locator('a[href^="/encounters/"]').count(), 2);
+  }
+  const legacyPolicyReport = `/uploads/${policyUpload.uploadId}/sessions/${policyKill.sessionIndex}`;
+  for (const suffix of ["", "?scope=kills", "?includeShortPulls=1", "?scope=kills&includeShortPulls=1"]) {
+    await page.goto(new URL(`${legacyPolicyReport}${suffix}`, base).href);
+    await page.waitForURL(new URL(`${policyReport}${suffix}`, base).href);
+    if (suffix.includes("scope=kills")) await assertKillCards();
+    else await assertAllCards();
+    await page.goto(new URL(`${legacyPolicyReport}/players/SyntheticFirst${suffix}`, base).href);
+    await page.waitForURL(new URL(`${policyReport}/players/SyntheticFirst${suffix}`, base).href);
+    assert.equal(await page.locator(`a[href="${policyReport}${suffix}"]`).count(), 1, "Legacy player redirects retain report scope and short-pull preferences in the return link");
   }
   const briefAttempt = policyEncounters.find(value => value.outcome === "WIPE" && value.durationMs < 10000);
   assert.ok(briefAttempt);
@@ -327,8 +442,8 @@ try {
     await toggleShortPulls(page, "Exclude short pulls");
     await page.waitForURL(url => url.pathname === original.pathname && !url.searchParams.has("includeShortPulls"));
   }
-  observations.push({ check: "kill-only totals and targets, retained full-session trash/wipes, all-column sorting in both directions at 390/1440px, independent scopes and collapsed-control focus exclusion", status: "pass" });
-  observations.push({ check: "short-pull counting, include-all without changing kill metrics, short kill and death-bearing wipe retention, direct access", status: "pass" });
+  observations.push({ check: "all-attempt and kill-only totals, duration denominators, player contributions and targets; retained full-session trash/wipes; sorting, keyboard scope selection, axe and overflow at 390/1440px", status: "pass" });
+  observations.push({ check: "short-pull list toggles preserve both aggregate scopes; scope selection preserves short-pull preferences; player/encounter return links and legacy redirects retain scope", status: "pass" });
   await page.goto(new URL(report, base).href);
   await page.keyboard.press("Tab");
   assert.notEqual(await page.evaluate(() => document.activeElement?.tagName), "BODY");
