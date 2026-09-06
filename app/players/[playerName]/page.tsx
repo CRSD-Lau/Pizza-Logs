@@ -30,8 +30,6 @@ interface Props {
     realm?: string | string[];
     comparisonRaid?: string | string[];
     comparisonDifficulty?: string | string[];
-    comparisonFirst?: string | string[];
-    comparisonSecond?: string | string[];
     comparisonMetric?: string | string[];
   }>;
 }
