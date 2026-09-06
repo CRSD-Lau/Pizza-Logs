@@ -135,6 +135,27 @@ Pet and absorb ownership are conservative. Summon or owner-exclusive spell evide
 
 ## Player Detail
 
+The **Raid-over-raid performance** chart on a global player profile compares the
+same character across recorded raid sessions. Bosses run along the horizontal
+axis; each dated line represents a raid. The latest two raids for the newest
+available raid/difficulty selection appear by default. Use **Raid**, **Difficulty**,
+**First raid** and **Second raid** to compare other runs. The newer selected raid
+has a solid gold line; the older run uses a dashed line. Raid selections are
+shareable in the page URL and retain the player's realm. The chosen DPS/HPS
+metric stays selected when switching raids or difficulty.
+
+This comparison uses the character's full stored kill history, independently of
+the latest-50 performance summary. Only successful boss kills count, including
+short successful kills. Each upload/session pair remains a separate recorded
+raid; same-day sessions receive distinct labels. Within a session, the earliest
+successful kill of each boss in the selected difficulty supplies its stored rate.
+Missing kills and invalid-duration measurements leave gaps, while recorded zero
+output stays zero. Different difficulties are never pooled, and unknown modes
+remain explicitly separate. DPS and effective HPS are available; HPS excludes
+absorbs. The **View chart values** table gives exact displayed values, available
+spec evidence, and links to the source fights. Gear, buffs, kill time and raid
+assignments can affect these rates; they do not measure skill in isolation.
+
 The player directory is alphabetical, with name and class filters. Guild roster search filters all members before pagination. Neither directory assigns an overall performance rank. Raid history has pagination by upload, keeping every session from an upload together and stating the visible window.
 
 Profile and encounter awards describe the rank **when achieved**, for the named boss, difficulty, metric and period. They are historical awards, not continuously recalculated current standings. Use the linked leaderboards for current comparisons.

@@ -47,6 +47,21 @@ These migration commands use `DATABASE_URL`; verify it points to the dedicated l
 
 The integration suites exercise ingestion rollback and concurrent deduplication, report aggregates, weekly/all-time milestones, migration preflight, PostgreSQL schema isolation, and canonical Python payloads against the TypeScript persistence schema. Database suites create unique schemas for each invocation and retain them for investigation. They reject non-loopback database hosts. `npm run test:integration` runs the same integration glob; `npm test` includes these suites alongside the unit tests. Both environment variables are required to avoid integration skips.
 
+## Player Raid Comparison
+
+The focused global-player comparison suite runs with
+`npx tsx --test tests/player-raid-comparison*.test.ts`. Its PostgreSQL test uses
+an isolated schema to verify full historical session discovery, two selected
+session detail queries, player/realm and raid/difficulty boundaries, repeated
+boss kills, and missing-versus-zero rates.
+
+The final `test:e2e` step runs `scripts/player-raid-comparison-e2e.mjs` against the
+disposable loopback stack. It creates UUID-owned synthetic raid/player/cache rows,
+checks the default and older comparisons, DPS/HPS controls, gaps, source links,
+realm isolation, and responsive accessibility, then removes only its own rows.
+It supports the default test schema or a validated isolated schema, and records
+screenshots and results under `.test-artifacts/player-raid-comparison`.
+
 ## Parser Gate
 
 With the Python 3.14 virtual environment active:

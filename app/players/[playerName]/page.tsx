@@ -7,6 +7,7 @@ import { StatCard, StatGroup } from "@/components/ui/StatCard";
 import { AccordionSection } from "@/components/ui/AccordionSection";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { PlayerProfileIdentity } from "@/components/players/PlayerProfileIdentity";
+import { PlayerRaidComparisonSection, PlayerRaidComparisonSkeleton } from "@/components/players/PlayerRaidComparisonSection";
 import { PlayerGearSection, PlayerGearSectionSkeleton } from "@/components/players/PlayerGearSection";
 import { getWarmaneCharacterGear } from "@/lib/warmane-armory";
 import { DEFAULT_GUILD_NAME, DEFAULT_GUILD_REALM } from "@/lib/warmane-guild-roster";
@@ -24,7 +25,15 @@ import { reportQueryString } from "@/lib/difficulty-filter";
 
 interface Props {
   params: Promise<{ playerName: string }>;
-  searchParams: Promise<{ includeShortPulls?: string | string[]; realm?: string | string[] }>;
+  searchParams: Promise<{
+    includeShortPulls?: string | string[];
+    realm?: string | string[];
+    comparisonRaid?: string | string[];
+    comparisonDifficulty?: string | string[];
+    comparisonFirst?: string | string[];
+    comparisonSecond?: string | string[];
+    comparisonMetric?: string | string[];
+  }>;
 }
 
 async function PlayerGear({ name, realm, playerClass }: { name: string; realm?: string; playerClass?: string | null }) {
@@ -144,6 +153,7 @@ export default async function PlayerPage({ params, searchParams }: Props) {
       }} latestSpec={latestSpec} />
 
       <SectionNav items={[
+        { id: "raid-progress", label: "Raid progress" },
         { id: "gear", label: "Gear" },
         ...(milestones.length > 0 ? [{ id: "achievements", label: "Achievements" }] : []),
         ...(perBoss.length > 0 ? [{ id: "boss-summary", label: "Boss summary" }] : []),
@@ -160,6 +170,10 @@ export default async function PlayerPage({ params, searchParams }: Props) {
           <StatCard label="Best APS" value={<NumericValue value={bestAps} kind="rate" />} sub={participants.length ? "single encounter" : "No recorded attempts"} />
         </StatGroup>
       </div>
+
+      <Suspense fallback={<PlayerRaidComparisonSkeleton />}>
+        <PlayerRaidComparisonSection playerId={player?.id} playerName={profile.name} search={search} />
+      </Suspense>
 
       {/* Gear */}
       <Suspense fallback={<PlayerGearSectionSkeleton />}>

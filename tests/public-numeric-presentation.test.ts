@@ -16,6 +16,7 @@ const bossEncounters: Array<{
 const boss = { id: "synthetic-boss", name: "Lord Marrowgar", slug: "lord-marrowgar", raid: "Icecrown Citadel", raidSlug: "icecrown-citadel", encounters: bossEncounters };
 const textContent = (markup: string) => markup.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim();
 const mocks: Record<string, unknown> = {
+  "@/components/players/PlayerRaidComparisonSection": { PlayerRaidComparisonSection: () => null, PlayerRaidComparisonSkeleton: () => null },
   "@/lib/db": { db: {
     player: { findFirst: async () => ({ name: "Synthetic", class: "Mage", realm: { name: "Lordaeron" }, milestones: [] }) },
     guildRosterMember: { findFirst: async () => null }, participant: { findMany: async () => attempts },
