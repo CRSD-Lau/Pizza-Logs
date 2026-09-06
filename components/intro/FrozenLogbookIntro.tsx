@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { Pause, Play, Volume2, VolumeX } from "lucide-react";
+import { GuildCrest } from "@/components/brand/GuildCrest";
 import { Button } from "@/components/ui/Button";
 
 const DESKTOP_POSTER = "/animations/posters/desktop-poster.jpg";
@@ -231,6 +232,9 @@ export function FrozenLogbookIntro() {
         style={reducedMotion ? { transform: "translateX(-50%)" } : undefined}
         aria-hidden="true"
       >
+        <div className="isolate mx-auto mb-4 w-fit rounded-full bg-bg-deep p-2 shadow-xl">
+          <GuildCrest size={96} className="h-20 w-20 sm:h-24 sm:w-24" />
+        </div>
         <span>Pizza Logs</span>
       </div>
       </>}

@@ -6,6 +6,28 @@ This project follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) an
 
 ## [Unreleased]
 
+## [1.0.0] - 2026-09-06
+
+The first stable product release defines the current canonical Warmane/WotLK analysis scope. See the [1.0.0 release contract](docs/releases/1.0.0.md) for compatibility commitments, operating boundaries and release validation requirements. The existing 0.1.1 snapshot remains part of the release history.
+
+### Added
+
+- Document the stable product scope for published report links, bounded UUID streaming uploads and canonical parser primitives, with explicit compatibility and bug-fix semantics.
+- Add Pizza Warriors artwork to the existing guild-roster loading state, mobile installation and startup, Apple home-screen icons, and upload notifications. Preserve the roster skeleton and existing route-loading boundaries; browsing does not wait for a forced splash screen.
+
+### Changed
+
+- Replace the geometric gold mark with the approved Pizza Warriors crest across navigation, the optional guild intro, browser icons, URL-share artwork, README branding and the repository social-preview artwork. Preserve the gold/navy palette, the 44-pixel header crest and existing accessible intro controls.
+- Set the product package and deployment-version fallback to 1.0.0. Parser provenance remains independently versioned at 1.1.1 with metric schema 1 and the canonical-v1 profile.
+- Reconcile the quality review with recorded production MFA acceptance and the owner's accepted streaming/reupload decision for issue 75.
+
+### Upgrade notes and known limitations
+
+- This release adds no migration, parser behavior change or analytics recalculation relative to 0.1.1. Existing reports and parser provenance are preserved. Older installations still require the migrations and administrator setup described in the 0.1.1 upgrade notes.
+- Interrupted uploads require reupload under the accepted [upload recovery decision](docs/adr/0004-durable-upload-boundary.md). Raw combat logs are not retained as a recovery service, and completed duplicate files continue to return their stored reports.
+- Full representative UwU parity remains unproven ([issue 73](https://github.com/CRSD-Lau/Pizza-Logs/issues/73)); reference differences are not automatically canonical parser defects. Native scheduled backups and isolated provider recovery remain deferred under the owner's Hobby-plan decision ([issue 74](https://github.com/CRSD-Lau/Pizza-Logs/issues/74)). Neither issue is closed by the stable version number, and no enterprise availability or recovery guarantee is introduced.
+- Release publication requires the reviewed revision's required checks, successful Railway rollout and production smoke/visual verification. This changelog records the release contents; it does not establish that deployment or publication has completed. Existing browser, installed-app and social-client caches may retain earlier artwork until refreshed.
+
 ## [0.1.1] - 2026-09-06
 
 This snapshot includes the cumulative product features, fixes, security changes, and operating changes merged since 0.1.0.
@@ -107,6 +129,7 @@ This snapshot includes the cumulative product features, fixes, security changes,
 
 - First public release with Skada-aligned combat-log parsing, ICC raid support, player statistics, boss pages, leaderboards, uploads, and Railway deployment.
 
-[Unreleased]: https://github.com/CRSD-Lau/Pizza-Logs/compare/v0.1.1...HEAD
+[Unreleased]: https://github.com/CRSD-Lau/Pizza-Logs/compare/v1.0.0...HEAD
+[1.0.0]: https://github.com/CRSD-Lau/Pizza-Logs/releases/tag/v1.0.0
 [0.1.1]: https://github.com/CRSD-Lau/Pizza-Logs/releases/tag/v0.1.1
 [0.1.0]: https://github.com/CRSD-Lau/Pizza-Logs/releases/tag/v0.1.0

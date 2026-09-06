@@ -4,7 +4,7 @@ Author: Neil Mitchell
 
 Last modified by: Neil Mitchell
 
-Observed: 2026-09-04; asset scope clarified: 2026-09-05
+Observed: 2026-09-04; asset scope clarified: 2026-09-05; admin and upload acceptance reconciled: 2026-09-06
 
 ## Decision
 
@@ -16,6 +16,11 @@ has a useful, independently implemented raid-analysis core and reproducible data
 parser, upload and browser gates. It is not yet a demonstrated replacement for all UwU
 analytical surfaces. A green regression build is not evidence of full parity,
 continuous availability, a successful restore, or security certification.
+
+The [1.0.0 release contract](releases/1.0.0.md) defines the stable canonical product
+scope and its release gates. Full UwU equivalence and enterprise provider recovery
+remain unproven under A12 and A13. The recorded administrator acceptance and the
+owner's accepted reupload operating model resolve A15 for the current site.
 
 The starting Pizza revision was `8a90aee2651663613b8aaf2dbd148ea493eae2a3`.
 The initial delivery PR records its final revision and hosted checks. That initial
@@ -128,15 +133,17 @@ Public descriptions deliberately omit payloads and detailed exploitation procedu
 | A12 P1 High, open | [Parity matrix](uwu-analytics-parity.md): broad historical claims exceeded independently observed evidence. | Certain for a full replacement claim | **Coverage expanded; full parity incomplete.** Fourteen exact synthetic cases, twelve explicit mismatches, seven unproven categories; four private ICC samples exposed two parser corrections. | Private ICC data is now available. Broader modes/raids, unresolved attribution/detail differences and the missing historical source archive still need evidence; synthetic and private results remain distinct. |
 | A13 P1 High, open | Provider inspection found no scheduled backups; newest listed snapshot was 2026-08-23. | Recovery exposure is confirmed; native restoration remains untested | **Logical restore verified; provider recovery remains open.** Neil chose to keep Railway backup settings unchanged. | Respect that decision. Enterprise RPO/RTO remains unproven until an independently approved provider backup and isolated restore demonstration exists. |
 | A14 Critical/High scanner findings, remediated and deployed | Previous Debian parser image reproduced 3 Critical and 51 High package/advisory instances. | Historical runtime package exposure; future images require scanning | **Reviewed replacement scans clean; PR 77 rollout verified.** Digest-pinned supported Alpine runtime, actual-OS tests, unchanged hash locks and no severity suppression. | [Runtime evidence and tradeoffs](operations/parser-runtime.md): 388 tests, real HTTP cancellation/upload checks, zero detected OS/Python findings. Railway source revision/readiness and production smoke passed; future Critical/High findings block CI. |
-| A15 P2 Medium, open pending operational acceptance | Private identity/MFA implementation replaces shared-secret admin access; progress/admission remain process-local, with single-region dependencies and a single CODEOWNER. | Operational growth or outage | **[Admin login implemented](operations/admin-access.md); deployment and real enrollment remain required.** | Record deployed MFA acceptance and the remaining upload-reliability decision. Interrupted uploads still require reupload; no added infrastructure cost is authorized. |
+| A15 P2 Medium, resolved for the accepted operating model | Private identity/MFA replaces shared-secret admin access; progress/admission remain process-local, with single-region dependencies and a single CODEOWNER. | Operational growth or outage | **[Production admin acceptance recorded](operations/admin-access.md#deployment-and-acceptance) on 2026-09-06:** provisioning, authenticator enrollment, MFA access and current-device session deletion were verified. The owner accepted [streaming and reupload recovery](adr/0004-durable-upload-boundary.md). | A fresh admin navigation in the same browser required login after sign-out; the old cookie was not directly replayed. Interrupted uploads require reupload. Durable orchestration needs a separate request and budget; provider recovery remains A13. |
 | A16 P2 Medium, scope resolved | The earlier asset-clearance condition assumed a sale or transfer that is not planned. | Acquisition/transfer is out of scope | **[Asset scope corrected](security/asset-provenance.md):** Neil identifies the intro as Veo-generated and social preview as ChatGPT-generated. Font/jQuery notices are retained; no UwU code/assets copied. | Buyer clearance is not a current release gate. Ordinary third-party terms still apply; unverified media-use details remain recorded without claiming blanket rights certification. |
 
 Four High implementation finding groups and seven Medium groups were corrected.
 The open rows remain quality findings with their stated evidence and owner decisions.
-The follow-up work is assigned to the maintainer in GitHub:
-[A12 representative parity](https://github.com/CRSD-Lau/Pizza-Logs/issues/73),
-[A13 provider recovery](https://github.com/CRSD-Lau/Pizza-Logs/issues/74),
-[A15 identity and durable uploads](https://github.com/CRSD-Lau/Pizza-Logs/issues/75).
+The remaining follow-up work is assigned to the maintainer in GitHub:
+[A12 representative parity](https://github.com/CRSD-Lau/Pizza-Logs/issues/73) and
+[A13 provider recovery](https://github.com/CRSD-Lau/Pizza-Logs/issues/74).
+[A15 identity and upload recovery](https://github.com/CRSD-Lau/Pizza-Logs/issues/75)
+records the completed administrator acceptance and accepted reupload decision;
+it is not a pending durable-upload requirement for this operating model.
 [A16 asset rights](https://github.com/CRSD-Lau/Pizza-Logs/issues/76) records the corrected
 scope; it is not a buyer-clearance prerequisite for the owner's site. Each issue
 records its evidence or decision.

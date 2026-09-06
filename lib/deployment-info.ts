@@ -14,7 +14,7 @@ export function getDeploymentInfo(env: DeploymentEnvironment = process.env): Dep
   const commitSha = env.RAILWAY_GIT_COMMIT_SHA ?? env.GITHUB_SHA ?? null;
 
   return {
-    version: env.APP_VERSION ?? env.npm_package_version ?? "0.1.1",
+    version: env.APP_VERSION ?? env.npm_package_version ?? "1.0.0",
     commitSha,
     commitShort: commitSha?.slice(0, 7) ?? null,
     branch: env.RAILWAY_GIT_BRANCH ?? env.GITHUB_REF_NAME ?? null,

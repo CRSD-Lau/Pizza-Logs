@@ -1,0 +1,69 @@
+{
+  "author": "Neil Mitchell",
+  "lastModifiedBy": "Neil Mitchell",
+  "source": "assets/brand/pizza-warriors-source.png",
+  "sourceSha256": "1fea4b90c299620227bfec21a73b6a41b807da39e7059fe49a1d6a3cc152a70b",
+  "background": "#0a0c10",
+  "method": "Browser-rendered existing artwork, CSS lighten background blend, native-size exports; no generated replacement logo.",
+  "outputs": [
+    {
+      "file": "public/brand/guild-crest-v1.png",
+      "width": 512,
+      "height": 512,
+      "bytes": 460831,
+      "sha256": "08dd89f65b0849892feefe0e269f4bd7000729217860fdc25c5c7328b8a4cb5d"
+    },
+    {
+      "file": "public/brand/icon-192.png",
+      "width": 192,
+      "height": 192,
+      "bytes": 47921,
+      "sha256": "e8397f23d28dbb86ad58e3ef693207d6a0153ba9cfaaabe4a0816cfcd585cf39"
+    },
+    {
+      "file": "public/brand/icon-512.png",
+      "width": 512,
+      "height": 512,
+      "bytes": 308999,
+      "sha256": "f25d9e9c310b208da3e09afaf9797b3428fd0ef861e72c359587672787cff35a"
+    },
+    {
+      "file": "public/brand/icon-maskable-512.png",
+      "width": 512,
+      "height": 512,
+      "bytes": 217013,
+      "sha256": "6c76c2d23865ee17e4b211c755e8a47942b758cd9a2ca73c8814bb41085763b2"
+    },
+    {
+      "file": "public/brand/apple-touch-icon.png",
+      "width": 180,
+      "height": 180,
+      "bytes": 36540,
+      "sha256": "cdadb7e005a3794c5ef37518611403604ab1341a720be3912f4a617084667ee0"
+    },
+    {
+      "file": "public/favicon.ico",
+      "sizes": [
+        16,
+        32,
+        48
+      ],
+      "bytes": 7859,
+      "sha256": "6ff0b4dde0c0f269de044efdc5c713602b5683a5a2850bf2e66ac0f52472ecfb"
+    },
+    {
+      "file": "app/icon.svg",
+      "width": 192,
+      "height": 192,
+      "bytes": 77889,
+      "sha256": "d5167391196d6849972b3f12e13f2e0081af321bec874c9c9891fd414ce2ba1c"
+    },
+    {
+      "file": "public/social-preview.jpg",
+      "width": 1280,
+      "height": 640,
+      "bytes": 172542,
+      "sha256": "db10143b266b000703538d7edb45abfd6db0277f17538047007f43a19b3a16dd"
+    }
+  ]
+}

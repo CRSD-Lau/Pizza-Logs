@@ -5,6 +5,7 @@ This directory contains maintained, versioned project documentation. GitHub issu
 ## Start Here
 
 - [Project README](../README.md) - product overview and quick start
+- [1.0.0 release contract](releases/1.0.0.md) - stable product scope, compatibility, known limits and release gates
 - [Development setup](development/setup.md) - local environment and database
 - [Testing](development/testing.md) - validation gates
 - [Acquisition review](acquisition-review.md) - evidence, findings and release conditions
@@ -27,6 +28,7 @@ This directory contains maintained, versioned project documentation. GitHub issu
 - [Player gear quick look](player-gear-quick-look.md)
 - [Retired browser automation](userscript-retirement.md)
 - [Intro animation pipeline](intro-animation.md)
+- [Guild branding](branding.md)
 - [Frontend design contract](../DESIGN.md)
 
 ## Operations and Security
