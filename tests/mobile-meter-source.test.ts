@@ -35,6 +35,6 @@ assert.doesNotMatch(mobBreakdown, /min-w-\[/);
 
 // The other class-color bar families are already contained within mobile gutters.
 assert.match(leaderboardBar, /grid-cols-\[auto_minmax\(0,1fr\)_auto\]/);
-assert.match(playersPage, /className="flex-1 h-3 bg-bg-card rounded-sm overflow-hidden"/);
+assert.match(playersPage, /className="h-2 min-w-4 flex-1 overflow-hidden rounded-full bg-bg-card"/);
 
 console.log("mobile meter source tests passed");

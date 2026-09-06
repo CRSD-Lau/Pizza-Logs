@@ -40,13 +40,22 @@ assert.match(markup, /data-pizza-avatar-state="class-icon"/);
 assert.match(markup, /classicon_paladin/);
 assert.match(markup, /min-h-11 min-w-11/);
 
+const unknown = renderToStaticMarkup(React.createElement(PlayerAvatar, {
+  name: "Unresolved", characterClass: "not-a-class", color: "#f58cba", fallbackIconUrl: "https://example.test/paladin.jpg",
+}));
+assert.match(unknown, /data-pizza-avatar-state="fallback-icon"/);
+assert.match(unknown, /data-pizza-avatar-fallback="true"/);
+assert.match(unknown, /color:#a3a3a3/);
+assert.doesNotMatch(unknown, /paladin.jpg|#f58cba/, "An unverified player cannot inherit a class icon or a name-derived class color");
+
 const source = fs.readFileSync("components/players/PlayerAvatar.tsx", "utf8");
+const previewSource = fs.readFileSync("lib/player-gear-preview.ts", "utf8");
 const modelSource = fs.readFileSync("components/players/WarmaneCharacterModel.tsx", "utf8");
-assert.match(source, /\/api\/players\/\$\{encodeURIComponent\(name\)\}\/gear/);
+assert.match(previewSource, /\/api\/players\/\$\{encodeURIComponent\(name.trim\(\)\)\}\/gear/);
 assert.match(source, /createPortal\(/);
 assert.match(source, /role="tooltip"/);
 assert.match(source, /Loading gear from Warmane/);
-assert.match(source, /Live Armory/);
+assert.match(source, /Armory snapshot/);
 assert.match(source, /w-\[min\(46rem,calc\(100vw-1\.5rem\)\)\]/);
 assert.match(source, /PAPER_DOLL_LEFT_SLOTS\.map/);
 assert.match(source, /PAPER_DOLL_RIGHT_SLOTS\.map/);

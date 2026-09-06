@@ -8,8 +8,8 @@ const players = Array.from({ length: 65 }, (_, index) => ({
   id: `player-${index}`, name: `Player${String(index + 1).padStart(2, "0")}`,
   class: index % 2 === 0 ? "Rogue" : "Mage", realm: { name: "Lordaeron" }, _count: { participants: 1 },
 }));
-type PlayerWhere = { class?: string; name?: { contains: string; mode: string } };
-type PlayerQuery = { where?: PlayerWhere; select?: { class: boolean }; skip: number; take: number; orderBy: unknown; include: Record<string, unknown> };
+type PlayerWhere = { class?: string; name?: { contains: string; mode: string }; id?: { in: string[] } };
+type PlayerQuery = { where?: PlayerWhere; select?: { class?: boolean; _count?: unknown }; skip?: number; take?: number; orderBy?: unknown; include?: Record<string, unknown> };
 type UploadQuery = { where: unknown; skip: number; take: number; orderBy: unknown; select: { encounters: { orderBy: unknown; select: unknown } } };
 const filterPlayers = (where: PlayerWhere = {}) => players.filter(player => (!where.class || player.class === where.class)
   && (!where.name || player.name.toLowerCase().includes(where.name.contains.toLowerCase())));
@@ -28,13 +28,14 @@ const uploads = Array.from({ length: 61 }, (_, index) => ({
 let unavailable = false;
 const checkAvailable = () => { if (unavailable) throw new Error("Can't reach database server at localhost:5432"); };
 const db = {
+  $queryRaw: async () => { checkAvailable(); return []; },
   player: {
     count: async ({ where }: { where: PlayerWhere }) => { checkAvailable(); return filterPlayers(where).length; },
     findMany: async (query: PlayerQuery) => {
       checkAvailable();
-      if (query.select) return players.map(player => ({ class: player.class }));
       playerQueries.push(query);
-      return filterPlayers(query.where).slice(query.skip, query.skip + query.take);
+      if (query.where?.id) return players.filter(player => query.where!.id!.in.includes(player.id));
+      return filterPlayers(query.where);
     },
     findFirst: async () => ({ ...players[0], milestones: [{ id: "award", rank: 1, metric: "HPS", value: 7000, difficulty: "25H", achievedAt: new Date("2026-08-15T14:00:00Z"), encounter: { boss } }] }),
   },
@@ -65,6 +66,7 @@ async function main() {
     return [name, filename];
   }));
   loader._resolveFilename = function resolve(request, parent, isMain, options) {
+    if (request === "./db" && parent?.filename.endsWith("player-directory.ts")) return mockPaths["@/lib/db"];
     if (mockPaths[request]) return mockPaths[request];
     if (request.startsWith("@/")) {
       const base = path.join(process.cwd(), request.slice(2));
@@ -82,16 +84,16 @@ async function main() {
     assert.doesNotMatch(directory, /Player59|Player62|👑|Best DPS|Best HPS|Rank #/);
     assert.match(directory, /31–33 of 33 players · Page 2 of 2/);
     assert.match(directory, /href="\/players\?q=player&amp;class=Rogue&amp;includeShortPulls=1"/);
-    assert.match(directory, /href="\/players\/Player61\?includeShortPulls=1"/);
+    assert.match(directory, /href="\/players\/Player61\?realm=Lordaeron&amp;includeShortPulls=1"/);
     assert.match(directory, /name="includeShortPulls" value="1"/);
     assert.match(directory, /1 pull<\/span>/); assert.doesNotMatch(directory, /1 pulls/);
-    assert.deepEqual(playerQueries[0].where, { class: "Rogue", name: { contains: "player", mode: "insensitive" } });
+    assert.equal(playerQueries[0].where, undefined, "Canonical identity is resolved before filtering");
     assert.deepEqual(playerQueries[0].orderBy, [{ name: "asc" }, { id: "asc" }]);
-    assert.equal(playerQueries[0].skip, 30); assert.equal(playerQueries[0].take, 30);
-    assert.ok(!("milestones" in playerQueries[0].include), "Directory data must not use awards as current standing");
+    assert.deepEqual(playerQueries[1].where, { id: { in: ["player-60", "player-62", "player-64"] } }, "Only paginated identities load pull counts");
+    assert.ok(!("milestones" in (playerQueries[0].include ?? {})), "Directory data must not use awards as current standing");
     const narrow = renderToStaticMarkup(await PlayersPage({ searchParams: Promise.resolve({ q: "Player6", class: "Rogue", page: "99" }) }));
     assert.match(narrow, /1–3 of 3 players · Page 1 of 1/);
-    assert.equal(playerQueries[1].skip, 0);
+    assert.equal(playerQueries[3].where?.id?.in.length, 3);
 
     const { default: RaidsPage } = require("../app/raids/page") as typeof import("../app/raids/page");
     const sessionLinks = (markup: string) => [...markup.matchAll(/href="(\/raids\/synthetic-\d+\/sessions\/[^\"]+)"/g)].map(match => match[1]).sort();
