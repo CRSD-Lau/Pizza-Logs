@@ -27,8 +27,9 @@ Secrets belong in Railway configuration, never Git, a PR body, issue, screenshot
 For the MFA rollout, follow [admin setup and recovery](admin-access.md). Auth tables are additive;
 existing raid reports are not rewritten. Old admin cookies and shared-secret callers stop authenticating.
 The owner must configure the origin/key and provision/enroll the account. An agent must not change
-Railway production environment variables. Keep #75 open until actual enrollment and deployed enforcement
-are verified; build/CI success alone is not enrollment proof.
+Railway production environment variables. Record actual enrollment, deployed enforcement and logout
+verification; build/CI success alone is not enrollment proof. The completed production acceptance and
+accepted reupload behavior are recorded in [admin access](admin-access.md#deployment-and-acceptance).
 
 ## Deployment Flow
 
