@@ -21,6 +21,7 @@ const dates = ["2026-07-26", "2026-08-16", "2026-08-30", "2026-09-06"];
 const previousDps = [12400, 11600, 6800, 12900, 11900, 12000, 10100, 9500, 10400, 0, 9100, 7300];
 const latestDps = [13900, 12400, 7920, 14100, 13600, 12900, 10900, 10500, 11000, 5500, 9600, 8800];
 const normalBossIndexes = new Set([1, 6, 8, 10, 11]);
+const bossAxisNames = ["Marrowgar", "Deathwhisper", "Gunship", "Saurfang", "Festergut", "Rotface", "Putricide", "Council", "Lana'thel", "Dreamwalker", "Sindragosa", "Lich King"];
 const errors = [];
 let database;
 let browser;
@@ -277,7 +278,8 @@ async function run() {
   assert.equal(dpsRows.length, 48, "All raid/boss combinations are reachable");
   assert.equal(dpsRows.filter(row => row.value !== null).length, 47, "Three complete mixed-mode raids and one incomplete raid have 47 actual observations");
   assert.equal(await section.locator(".recharts-line-dot").count(), 47, "The chart draws each recorded normal and heroic observation");
-  assert.equal(await section.locator(".recharts-xAxis .recharts-cartesian-axis-tick").count(), 12, "All twelve canonical ICC boss labels are rendered");
+  assert.equal(await section.locator(".recharts-xAxis-tick-labels .recharts-cartesian-axis-tick-value").count(), 12, "All twelve canonical ICC boss labels are rendered");
+  assert.deepEqual(await section.locator(".recharts-xAxis-tick-labels .recharts-cartesian-axis-tick-value").allTextContents(), bossAxisNames, "Every label follows the complete ICC progression");
   for (const date of dates) {
     assert.equal(dpsRows.filter(row => row.date === date && row.difficulty === "25N").length, date === dates[3] ? 4 : 5);
     assert.equal(dpsRows.filter(row => row.date === date && row.difficulty === "25H").length, 7);
@@ -303,7 +305,7 @@ async function run() {
     assert.equal(exactRows.length, 48, "Exact difficulty retains all 12 canonical boss slots per raid");
     assert.equal(exactRows.filter(row => row.value !== null).length, pointCount);
     assert.equal(await section.locator(".recharts-line-dot").count(), pointCount);
-    assert.equal(await section.locator(".recharts-xAxis .recharts-cartesian-axis-tick").count(), 12);
+    assert.equal(await section.locator(".recharts-xAxis-tick-labels .recharts-cartesian-axis-tick-value").count(), 12);
     assert.ok(exactRows.filter(row => row.value !== null).every(row => row.difficulty === mode));
     for (const date of dates.slice(0, 3)) assert.equal(exactRows.filter(row => row.date === date && row.value !== null).length, perComplete);
     await page.reload({ waitUntil: "networkidle" });
@@ -411,7 +413,7 @@ async function run() {
     await section.getByRole("button", { name: "Previous values page", exact: true }).click();
     await assertLayout(width);
     const plot = section.getByRole("region", { name: "DPS boss chart", exact: true });
-    assert.equal(await plot.locator(".recharts-xAxis .recharts-cartesian-axis-tick").count(), 12);
+    assert.equal(await plot.locator(".recharts-xAxis-tick-labels .recharts-cartesian-axis-tick-value").count(), 12);
     const scrolls = await plot.evaluate(element => element.scrollWidth > element.clientWidth + 1);
     if (width < 1000) {
       assert.equal(scrolls, true, "Narrow plots provide contained horizontal scrolling rather than omit bosses");
@@ -420,19 +422,35 @@ async function run() {
       await plot.focus();
       await page.keyboard.press("ArrowRight");
       await page.waitForFunction(() => document.querySelector('[aria-label="DPS boss chart"]').scrollLeft > 0);
+      await plot.evaluate(element => new Promise((resolve, reject) => {
+        let previous = element.scrollLeft, stableFrames = 0;
+        const deadline = performance.now() + 2000;
+        const settled = () => {
+          if (performance.now() > deadline) return reject(new Error("Keyboard chart scroll did not settle within 2000ms"));
+          const current = element.scrollLeft;
+          stableFrames = current === previous ? stableFrames + 1 : 0;
+          previous = current;
+          if (stableFrames >= 8) resolve();
+          else requestAnimationFrame(settled);
+        };
+        settled();
+      }));
       await plot.hover({ position: { x: 100, y: 20 } });
       await page.mouse.wheel(2000, 0);
       await page.waitForFunction(() => {
         const element = document.querySelector('[aria-label="DPS boss chart"]');
         return element.scrollLeft + element.clientWidth >= element.scrollWidth - 2;
-      });
-      const lastTick = plot.locator(".recharts-xAxis .recharts-cartesian-axis-tick").last();
+      }, undefined, { timeout: 4000 });
+      await twoFrames();
+      const lastTick = plot.locator(".recharts-xAxis-tick-labels .recharts-cartesian-axis-tick-value").last();
+      await lastTick.waitFor({ state: "visible", timeout: 2500 });
       assert.match(await lastTick.textContent(), /Lich King/);
       const tickBounds = await lastTick.boundingBox(), plotBounds = await plot.boundingBox();
       assert.ok(tickBounds.x >= plotBounds.x && tickBounds.x + tickBounds.width <= plotBounds.x + plotBounds.width + 1, "Last boss label is reachable within the scroll viewport");
       await plot.locator(`.recharts-line-dot[data-run-key="${fixture.sessions[0]}"][data-boss-index="11"]`).hover();
       const scrolledTooltip = section.getByTestId("highlighted-raid-tooltip");
       await scrolledTooltip.waitFor({ state: "visible" });
+      await scrolledTooltip.getByText("The Lich King", { exact: true }).waitFor({ state: "visible" });
       assert.match(await scrolledTooltip.innerText(), /The Lich King/);
       assert.match(await scrolledTooltip.innerText(), /10\.10K DPS/);
       assert.match(await scrolledTooltip.innerText(), /25N/);
@@ -446,7 +464,7 @@ async function run() {
     } else {
       assert.equal(scrolls, false, "Desktop shows all twelve labels without scrolling");
       const plotBounds = await plot.boundingBox();
-      assert.ok(await plot.locator(".recharts-xAxis .recharts-cartesian-axis-tick").evaluateAll((ticks, bounds) => ticks.every(tick => {
+      assert.ok(await plot.locator(".recharts-xAxis-tick-labels .recharts-cartesian-axis-tick-value").evaluateAll((ticks, bounds) => ticks.every(tick => {
         const rect = tick.getBoundingClientRect();
         return rect.left >= bounds.x - 1 && rect.right <= bounds.x + bounds.width + 1;
       }), plotBounds), "Every desktop boss label fits the visible plot");
@@ -472,7 +490,7 @@ async function run() {
     assert.ok(dots >= 3 && dots < 100, "Ordinary dense dots are suppressed while isolated observations remain");
     const domNodes = await section.locator("*").count();
     assert.ok(domNodes < 8000, "Dense chart has bounded DOM without a 3000-row table");
-    assert.equal(await section.locator(".recharts-xAxis .recharts-cartesian-axis-tick").count(), 12);
+    assert.equal(await section.locator(".recharts-xAxis-tick-labels .recharts-cartesian-axis-tick-value").count(), 12);
     denseMeasurements.push({ width, raids: 250, recordedBosses: 3, canonicalBossSlots: 12, initialDomNodes: domNodes, initialDots: dots, decodedDocumentBytes: (await response.body()).length });
     await measure(`250 raids highlight at ${width}px`, 10000, () => choose("Highlight raid", fixture.denseSessions[125]));
     assert.equal(await lineCount(), 250);
@@ -511,6 +529,7 @@ try {
       await page.screenshot({ path: path.join(out, "failure.png"), fullPage: true });
       await fs.writeFile(path.join(out, "failure-geometry.json"), JSON.stringify({ ...metadata, geometry: await page.locator("#raid-progress").evaluate(root => ({
         width: root.clientWidth, scrollWidth: root.scrollWidth,
+        ticks: [...root.querySelectorAll(".recharts-xAxis-tick-labels .recharts-cartesian-axis-tick-value")].map(element => ({ text: element.textContent, html: element.outerHTML })),
         overflow: [...root.querySelectorAll("*")].filter(element => element.scrollWidth > element.clientWidth + 1).map(element => ({
           tag: element.tagName, class: element.getAttribute("class"), width: element.clientWidth, scrollWidth: element.scrollWidth,
         })),
