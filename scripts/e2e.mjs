@@ -187,7 +187,7 @@ try {
   const cardValue = (scope, label) => scope.getByText(label, { exact: true }).locator("..").locator(":scope > div").nth(1).innerText();
   const fixtureDuration = milliseconds => {
     assert.ok(milliseconds >= 0 && milliseconds < 3_600_000, "Synthetic combined fight time stays below one hour");
-    return new Date(milliseconds).toISOString().slice(12, 23);
+    return `${Math.floor(milliseconds / 60_000)}:${new Date(milliseconds).toISOString().slice(17, 19)}`;
   };
   const assertKillCards = async () => {
     const scope = page.getByRole("region", { name: "Boss kill summary", exact: true });
