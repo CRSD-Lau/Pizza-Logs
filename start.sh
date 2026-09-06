@@ -9,7 +9,7 @@ echo "[start] Running prisma migrate deploy..."
 # The .bin/prisma bundled script looks for a companion .wasm at __dirname
 # which doesn't survive the multi-stage Docker copy. Running the source
 # entry directly (node_modules/prisma/<bin-field>) loads wasm from
-# node_modules/@prisma instead — which we do copy.
+# node_modules/@prisma instead - which we do copy.
 PRISMA_BIN=$(node -e "
   const pkg = require('./node_modules/prisma/package.json');
   const bin = pkg.bin;

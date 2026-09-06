@@ -24,7 +24,7 @@ test("metrics consistently use two decimals and K/M while discrete counts stay w
 
 test("zero, small contributions and unavailable evidence remain distinct", () => {
   for (const format of [formatInteger, formatDecimal, formatNumber, formatRate, formatPercent, formatCompactNumber]) {
-    for (const invalid of [null, undefined, NaN, Infinity, -Infinity]) assert.equal(format(invalid), "—");
+    for (const invalid of [null, undefined, NaN, Infinity, -Infinity]) assert.equal(format(invalid), "-");
   }
   assert.equal(formatPercent(0), "0.00%");
   assert.equal(formatPercent(0.0001), "<0.01%");
@@ -38,7 +38,7 @@ test("zero, small contributions and unavailable evidence remain distinct", () =>
   assert.equal(formatRate(-0.003), ">-0.01");
   assert.equal(formatSeconds(0), "0.00 s");
   assert.equal(formatSeconds(1234.5), "1,234.50 s");
-  assert.equal(formatSeconds(null), "—");
+  assert.equal(formatSeconds(null), "-");
 });
 
 test("rounding promotes K/M boundaries and preserves grouped millions", () => {
@@ -57,7 +57,7 @@ test("rounding promotes K/M boundaries and preserves grouped millions", () => {
   assert.equal(formatBytes(1536), "1.50 KiB");
   assert.equal(formatBytes(1024 ** 2 - 1), "1.00 MiB");
   assert.equal(formatBytes(1024 ** 3), "1.00 GiB");
-  assert.equal(formatBytes(-1), "—");
+  assert.equal(formatBytes(-1), "-");
   assert.equal(formatCountLabel(1, "application"), "1 application");
   assert.equal(formatCountLabel(1234, "application"), "1,234 applications");
   assert.equal(formatCountLabel(0, "entry", "entries"), "0 entries");
@@ -72,8 +72,8 @@ test("UTC dates, years and midnight crossings are explicit", () => {
   assert.equal(formatDateTimeRangeUtc(beforeMidnight, afterMidnight), "Dec 31, 2026, 23:59 – Jan 1, 2027, 00:04 UTC");
   assert.equal(formatDateTimeRangeUtc("2027-01-01T00:04:00Z", "2027-01-01T01:30:00Z"), "Jan 1, 2027, 00:04 – 01:30 UTC");
   for (const badDate of ["", "invalid", null, undefined]) {
-    assert.equal(formatDateUtc(badDate), "—");
-    assert.equal(formatDateTimeUtc(badDate), "—");
+    assert.equal(formatDateUtc(badDate), "-");
+    assert.equal(formatDateTimeUtc(badDate), "-");
   }
 });
 
@@ -83,8 +83,8 @@ test("elapsed time supports hours and does not invent a valid rate denominator",
   assert.equal(formatDuration(3600), "1:00:00");
   assert.equal(formatDuration(7503), "2:05:03");
   assert.equal(formatDurationPrecise(3_599_999.6), "1:00:00.000");
-  assert.equal(formatDuration(null), "—");
-  assert.equal(formatDuration(Infinity), "—");
+  assert.equal(formatDuration(null), "-");
+  assert.equal(formatDuration(Infinity), "-");
   assert.equal(getRecordedDurationSeconds({ durationMs: 1244.96, durationSeconds: 1 }), 1.24496);
   assert.equal(getRecordedDurationSeconds({ durationMs: 0, durationSeconds: 20 }), 20);
   assert.equal(getRecordedDurationSeconds({ durationSeconds: 20 }), 20);

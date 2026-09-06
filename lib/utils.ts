@@ -22,7 +22,7 @@ export function getWeekBounds(date: Date = new Date()): { start: Date; end: Date
 type DisplayNumber = number | null | undefined;
 type DisplayDate = string | Date | null | undefined;
 
-export const UNAVAILABLE_VALUE = "—";
+export const UNAVAILABLE_VALUE = "-";
 const integerFormat = new Intl.NumberFormat("en-US", { maximumFractionDigits: 0 });
 const decimalFormat = new Intl.NumberFormat("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 const dateFormat = new Intl.DateTimeFormat("en-US", { year: "numeric", month: "short", day: "numeric", timeZone: "UTC" });

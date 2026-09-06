@@ -87,7 +87,7 @@ export function AccordionSection({
       </button>
       </h2>
 
-      {/* Grid-rows collapse trick — animates height without JS measurement */}
+      {/* Grid-rows collapse trick - animates height without JS measurement */}
       <div
         id={contentId}
         inert={!open}

@@ -25,10 +25,7 @@ export function GuildRosterSyncPanel({
       </StatGroup>
 
       <p className="text-sm text-text-secondary max-w-3xl">
-        Refreshing runs entirely on the Pizza Logs server and writes a durable roster snapshot.
-        The public roster continues to load from that snapshot if Warmane is temporarily
-        unavailable. No Tampermonkey install, open Warmane tab, or browser-stored admin secret
-        is required.
+        Refresh to save the latest roster from Warmane. Visitors can view the saved roster even when Warmane is unavailable.
       </p>
 
       <div className="flex flex-wrap items-center gap-3">

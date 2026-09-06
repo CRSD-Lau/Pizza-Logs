@@ -45,7 +45,7 @@ const modelSource = fs.readFileSync("components/players/WarmaneCharacterModel.ts
 assert.match(source, /\/api\/players\/\$\{encodeURIComponent\(name\)\}\/gear/);
 assert.match(source, /createPortal\(/);
 assert.match(source, /role="tooltip"/);
-assert.match(source, /Pulling current gear from Warmane/);
+assert.match(source, /Loading gear from Warmane/);
 assert.match(source, /Live Armory/);
 assert.match(source, /w-\[min\(46rem,calc\(100vw-1\.5rem\)\)\]/);
 assert.match(source, /PAPER_DOLL_LEFT_SLOTS\.map/);

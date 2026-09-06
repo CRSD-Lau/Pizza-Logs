@@ -18,7 +18,7 @@ import { formatCountLabel, formatInteger } from "@/lib/utils";
 
 export const metadata = buildPageMetadata({
   title: "Players",
-  description: "Find PizzaWarriors players, raid history, records, and cached Warmane gear.",
+  description: "Find players by name or class. View their raid history, records and Warmane gear.",
   path: "/players",
 });
 export const dynamic = "force-dynamic";
@@ -78,7 +78,7 @@ export default async function PlayersPage({ searchParams }: Props) {
 
   return (
     <PageShell>
-      <PageHeader title="Players" description={<p>Find a player and open their raid history. Listed alphabetically, A–Z.</p>} />
+      <PageHeader title="Players" description={<p>Find a player by name or class to view their raid history.</p>} />
       {!data ? (
         <DatabaseUnavailable description="Player profiles are temporarily unavailable. Please try again shortly." />
       ) : (

@@ -199,7 +199,7 @@ export default async function AdminPage() {
       </PageSection>
 
       {/* 3. Guild Roster */}
-      <PageSection title="Guild Roster" description="First-party Warmane refresh for PizzaWarriors">
+      <PageSection title="Guild Roster" description="Update the PizzaWarriors roster from Warmane">
         <GuildRosterSyncPanel
           rosterCount={databaseAvailable ? rosterCount : null}
           available={databaseAvailable}
@@ -208,7 +208,7 @@ export default async function AdminPage() {
       </PageSection>
 
       {/* 4. Warmane Gear Cache */}
-      <PageSection title="Warmane Gear Cache" description="On-demand equipment snapshots for player quick looks">
+      <PageSection title="Warmane Gear Cache" description="Saved equipment for player gear previews">
         <div className="space-y-4">
           <StatGroup columns={2}>
             <StatCard label="Cached Snapshots" value={databaseAvailable ? gearCacheTotal : null} />
@@ -220,10 +220,7 @@ export default async function AdminPage() {
           </StatGroup>
           <div className="flex flex-wrap items-start justify-between gap-4">
             <p className="text-sm text-text-secondary max-w-3xl">
-              Class avatars fetch current equipment directly through Pizza Logs when a gear quick
-              look opens. Healthy snapshots are cached for five minutes, and the last successful
-              snapshot remains available if Warmane is temporarily unreachable. No browser helper,
-              open Armory tab, or copied admin secret is part of this path.
+              Open a player&apos;s gear preview to load equipment from Warmane. Pizza Logs reuses saved equipment for five minutes and shows the last saved copy if Warmane cannot respond.
             </p>
             <ClearGearCacheButton />
           </div>

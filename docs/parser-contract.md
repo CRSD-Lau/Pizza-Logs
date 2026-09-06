@@ -206,12 +206,12 @@ Legacy `/parse`, `/parse-debug`, and `/parse-stream` routes are disabled by defa
 
 ## Regression Gates
 
-- `parser/tests/test_parser_core.py` — focused behavioral rules
-- `parser/tests/test_fixtures.py` — canonical fixture expectations
-- `parser/tests/test_difficulty_detector.py` — detector matrix and conflicts
-- `parser/tests/test_archive_upload.py` — archive/resource safety
-- `parser/tests/test_parser_service.py` — HTTP/default-off legacy boundary
-- `parser/tests/baselines/` — frozen analytical output
-- `parser/tests/test_uwu_parity_baseline.py` — historical external-oracle integrity check (no paired source input)
+- `parser/tests/test_parser_core.py` - focused behavioral rules
+- `parser/tests/test_fixtures.py` - canonical fixture expectations
+- `parser/tests/test_difficulty_detector.py` - detector matrix and conflicts
+- `parser/tests/test_archive_upload.py` - archive/resource safety
+- `parser/tests/test_parser_service.py` - HTTP/default-off legacy boundary
+- `parser/tests/baselines/` - frozen analytical output
+- `parser/tests/test_uwu_parity_baseline.py` - historical external-oracle integrity check (no paired source input)
 
 Any behavior change needs focused evidence or a fixture plus the full parser suite. Historic database rows are not reparsed automatically.

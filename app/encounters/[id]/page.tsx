@@ -33,7 +33,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     where: { id },
     select: { outcome: true, difficulty: true, boss: { select: { name: true } } },
   });
-  const title = enc ? `${enc.boss.name} — ${enc.outcome}` : "Encounter";
+  const title = enc ? `${enc.boss.name} - ${enc.outcome}` : "Encounter";
   return buildPageMetadata({
     title,
     description: enc
@@ -467,3 +467,4 @@ export default async function EncounterPage({ params, searchParams }: Props) {
     </div>
   );
 }
+

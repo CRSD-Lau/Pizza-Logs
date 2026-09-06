@@ -26,6 +26,7 @@ This project follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) an
 
 ### Changed
 
+- Remove em dashes from site copy, page and social metadata, and missing-value displays. Simplify upload messages, directory descriptions and admin help text; retain canonical raid URLs and report calculations.
 - Compact the expandable boss directory into full-width raid rows with responsive boss-link grids, visible raid counts, and a clearer selection summary.
 
 - Display raid Kill Time, Fight Time and full-session Duration in whole seconds, retaining recorded millisecond precision for calculations.

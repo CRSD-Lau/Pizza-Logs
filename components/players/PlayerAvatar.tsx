@@ -95,7 +95,7 @@ function GearSlotRailItem({
         // eslint-disable-next-line @next/next/no-img-element -- Item icon URLs are normalized and supplied by the Armory/item cache.
         <img src={item.iconUrl} alt="" className="h-full w-full object-cover" />
       ) : (
-        <span className="text-xs font-bold text-text-dim">—</span>
+        <span className="text-xs font-bold text-text-dim">-</span>
       )}
     </div>
   );
@@ -133,7 +133,7 @@ function WeaponSlotItem({
           // eslint-disable-next-line @next/next/no-img-element -- Item icon URLs are normalized and supplied by the Armory/item cache.
           <img src={item.iconUrl} alt="" className="h-full w-full object-cover" />
         ) : (
-          <span className="text-xs font-bold text-text-dim">—</span>
+          <span className="text-xs font-bold text-text-dim">-</span>
         )}
       </div>
       <div className="min-w-0">
@@ -231,7 +231,7 @@ function GearPreviewPanel({
       {loading && (
         <div className="flex min-h-36 items-center justify-center gap-2 px-4 py-6 text-sm text-text-secondary">
           <span className="h-4 w-4 animate-spin rounded-full border-2 border-gold-dim border-t-gold" aria-hidden="true" />
-          Pulling current gear from Warmane…
+          Loading gear from Warmane…
         </div>
       )}
 

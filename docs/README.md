@@ -4,21 +4,21 @@ This directory contains maintained, versioned project documentation. GitHub issu
 
 ## Start Here
 
-- [Project README](../README.md) — product overview and quick start
-- [Development setup](development/setup.md) — local environment and database
-- [Testing](development/testing.md) — validation gates
-- [Acquisition review](acquisition-review.md) — evidence, findings and release conditions
-- [Architecture overview](architecture/overview.md) — services, data flow, and boundaries
-- [Surface inventory](architecture/surface-inventory.md) — pages, APIs, actions, jobs and data lifecycle
-- [Contribution workflow](../CONTRIBUTING.md) — branches and pull requests
+- [Project README](../README.md) - product overview and quick start
+- [Development setup](development/setup.md) - local environment and database
+- [Testing](development/testing.md) - validation gates
+- [Acquisition review](acquisition-review.md) - evidence, findings and release conditions
+- [Architecture overview](architecture/overview.md) - services, data flow, and boundaries
+- [Surface inventory](architecture/surface-inventory.md) - pages, APIs, actions, jobs and data lifecycle
+- [Contribution workflow](../CONTRIBUTING.md) - branches and pull requests
 
 ## Parser and Analytics
 
-- [Parser contract](parser-contract.md) — authoritative combat-log behavior
-- [Difficulty detector](difficulty-detector.md) — evidence model and Ulduar rules
-- [Streamed upload protocol](archive-upload-protocol.md) — request, state, limits, and cleanup
-- [UwU analytical parity](uwu-analytics-parity.md) — adopted comparison definitions and exclusions
-- [Fixture guide](../parser/tests/fixtures/README.md) — canonical test data
+- [Parser contract](parser-contract.md) - authoritative combat-log behavior
+- [Difficulty detector](difficulty-detector.md) - evidence model and Ulduar rules
+- [Streamed upload protocol](archive-upload-protocol.md) - request, state, limits, and cleanup
+- [UwU analytical parity](uwu-analytics-parity.md) - adopted comparison definitions and exclusions
+- [Fixture guide](../parser/tests/fixtures/README.md) - canonical test data
 
 ## Product Guides
 

@@ -7,7 +7,7 @@ export function NumericValue({ value, kind = "integer", className }: {
   className?: string;
 }) {
   if (!isDisplayNumber(value)) {
-    return <span className={className}><span aria-hidden="true">—</span><span className="sr-only">Unavailable</span></span>;
+    return <span className={className}><span aria-hidden="true">-</span><span className="sr-only">Unavailable</span></span>;
   }
   const format = kind === "percent" ? formatPercent : kind === "rate" ? formatRate : kind === "number" ? formatNumber : formatInteger;
   return <span className={cn("tabular-nums", className)}>{format(value)}</span>;

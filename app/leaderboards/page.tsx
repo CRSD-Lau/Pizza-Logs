@@ -17,7 +17,7 @@ import { formatCountLabel } from "@/lib/utils";
 
 export const metadata = buildPageMetadata({
   title: "Leaderboards",
-  description: "Compare all-time average DPS and HPS across logged boss attempts, plus personal-best kill records per boss.",
+  description: "Compare average DPS and HPS across logged boss attempts, or browse each boss's best kill records.",
   path: "/leaderboards",
 });
 export const dynamic = "force-dynamic";
@@ -113,7 +113,7 @@ export default async function LeaderboardsPage({ searchParams }: { searchParams:
         title="Leaderboards"
         description={
           <p>
-          All-time average leaders and top 10 personal-best DPS and HPS kill records per boss.
+          All-time averages across logged attempts, plus each boss&apos;s top 10 DPS and HPS kill records.
           </p>
         }
       />

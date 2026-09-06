@@ -51,7 +51,7 @@ export function StatCard({ label, value, sub, highlight, className }: StatCardPr
         "break-words text-2xl font-bold leading-tight tabular-nums sm:text-3xl",
         highlight ? "text-gold-light" : "text-text-primary"
       )}>
-        {typeof value === "number" ? <NumericValue value={value} /> : value === "—" || value === null || value === undefined ? <NumericValue value={null} /> : value}
+        {typeof value === "number" ? <NumericValue value={value} /> : value === "-" || value === null || value === undefined ? <NumericValue value={null} /> : value}
       </div>
       {sub && <div className="mt-1 text-sm leading-snug text-text-secondary">{sub}</div>}
     </div>

@@ -4,7 +4,7 @@ const SOCIAL_IMAGE = {
   url: "/social-preview.jpg",
   width: 1280,
   height: 640,
-  alt: "Pizza Logs — WotLK Raid Analytics",
+  alt: "Pizza Logs: WotLK raid analytics",
 } as const;
 
 export function buildPageMetadata({
