@@ -30,7 +30,7 @@ for (const className of WOW_CLASSES) {
   assert.match(markup, /1,234 pulls/);
   assert.match(markup, /Armory class/);
   assert.match(markup, /href="\/players\/Lausudo\?realm=Lordaeron&amp;includeShortPulls=1"/);
-  assert.match(markup, /https:\/\/armory\.warmane\.com\/character\/Lausudo\/Lordaeron\/summary/);
+  assert.ok(markup.includes('href="https://armory.warmane.com/character/Lausudo/Lordaeron/summary"'));
   assert.match(markup, /opens in a new tab/);
   assert.match(markup, /min-h-11/);
 }
