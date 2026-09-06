@@ -22,7 +22,6 @@ import { getRevealClassName, getRevealStyle, orderBossDisplayEntries } from "@/l
 import { buildSessionPlayerMetricChart } from "@/lib/session-player-chart";
 import { cn, formatCountLabel, formatDateTimeUtc, formatDuration, getRecordedDurationSeconds } from "@/lib/utils";
 import { NumericValue } from "@/components/ui/NumericValue";
-import { ShortPullNotice } from "@/components/reports/ShortPullNotice";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { countAttempts, isShortPull, parseIncludeShortPulls } from "@/lib/attempt-policy";
 import { buildRaidSummaryQuery, parseRaidSummaryScope } from "@/lib/raid-summary-scope";
@@ -226,8 +225,6 @@ export default async function SessionPlayerPage({ params, searchParams }: Props)
         ...(chartData.length > 1 ? [{ id: "performance", label: "Performance" }] : []),
         { id: "encounters", label: "Boss fights" },
       ]} />
-
-      <ShortPullNotice shortPulls={counts.shortPulls} includeShortPulls={includeShortPulls} basePath={`${sessionPath}/players/${encodeURIComponent(name)}${raidQuerySuffix}`} />
 
       <section aria-label="Player performance summary" className="space-y-4">
         <div className="flex flex-wrap items-baseline gap-x-5 gap-y-1 text-sm text-text-secondary">

@@ -10,7 +10,6 @@ import { cn } from "@/lib/utils";
 import { isDatabaseConnectionError } from "@/lib/database-errors";
 import { getRevealClassName, getRevealStyle } from "@/lib/ui-animation";
 import { PageHeader, PageShell } from "@/components/ui/PageLayout";
-import { ShortPullNotice } from "@/components/reports/ShortPullNotice";
 import { countAttempts, parseIncludeShortPulls } from "@/lib/attempt-policy";
 import { DifficultyFilter } from "@/components/reports/DifficultyFilter";
 import { difficultyFilterWhere, difficultyScopeLabel, parseDifficultyFilter, reportQueryString, type DifficultyFilterValue, type ReportSearchParams } from "@/lib/difficulty-filter";
@@ -83,7 +82,6 @@ async function getBossStats(includeShortPulls: boolean, difficulty: DifficultyFi
       wipeCount:  counts.wipes,
       unknownCount: counts.unknown,
       totalPulls: counts.totalPulls,
-      shortPulls: counts.shortPulls,
       bestKill,
       fastestKill,
     };
@@ -139,11 +137,6 @@ export default async function BossesPage({ searchParams }: {
           <DifficultyFilter action="/bosses" id="bosses" difficulty={difficulty} searchParams={query} />
           <p className="text-sm text-text-secondary">{difficultyScopeLabel(difficulty)}. Top DPS uses successful attempts. Fastest kills use known recorded kill durations.</p>
         </div>
-        <ShortPullNotice
-          shortPulls={bosses.reduce((sum, boss) => sum + boss.shortPulls, 0)}
-          includeShortPulls={includeShortPulls}
-          basePath={`/bosses${querySuffix}`}
-        />
         </>
       )}
 

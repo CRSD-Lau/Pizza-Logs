@@ -170,21 +170,20 @@ try {
     return { evidence };
   });
 
-  await check("weekly difficulty selection preserves other query values and short-pull toggle", async () => {
-    await visit("/weekly?includeShortPulls=1&context=ux&context=second");
-    await applyDifficulty(policy.difficulty);
-    const query = new URL(page.url()).searchParams;
-    assert.deepEqual(query.getAll("context"), ["ux", "second"]);
-    assert.equal(query.get("includeShortPulls"), "1");
-    const links = await encounterLinks();
-    assert.ok(links.length > 0);
-    for (const href of links) assert.equal(byId.get(idFromHref(href)).difficulty, policy.difficulty);
-    const notice = page.locator("details").filter({ has: page.getByRole("link", { name: "Exclude short pulls", exact: true, includeHidden: true }) });
-    await notice.locator("summary").click();
-    await page.getByRole("link", { name: "Exclude short pulls", exact: true }).click();
-    await page.waitForURL(url => !url.searchParams.has("includeShortPulls"));
-    assert.equal(new URL(page.url()).searchParams.get("difficulty"), policy.difficulty);
-    assert.deepEqual(new URL(page.url()).searchParams.getAll("context"), ["ux", "second"]);
+  await check("weekly difficulty selection preserves other query values and short-pull preference without a notice", async () => {
+    for (const included of [false, true]) {
+      await visit(`/weekly?context=ux&context=second${included ? "&includeShortPulls=1" : ""}`);
+      await applyDifficulty(policy.difficulty);
+      const query = new URL(page.url()).searchParams;
+      assert.deepEqual(query.getAll("context"), ["ux", "second"]);
+      assert.equal(query.get("includeShortPulls"), included ? "1" : null);
+      assert.equal(query.get("difficulty"), policy.difficulty);
+      const links = await encounterLinks();
+      assert.ok(links.length > 0);
+      for (const href of links) assert.equal(byId.get(idFromHref(href)).difficulty, policy.difficulty);
+      assert.equal(await page.getByRole("link", { name: /^(Include|Exclude) short pulls$/, includeHidden: true }).count(), 0);
+      assert.doesNotMatch(await page.locator("main").innerText(), /\d+ short pulls? (included|excluded)/);
+    }
   });
 
   await check("unknown and empty difficulty are explicit; invalid difficulty defaults to pooled data", async () => {
@@ -297,16 +296,16 @@ try {
     const short = encounters.filter(encounter => encounter.upload.filename === "synthetic-short-pulls.txt" && encounter.outcome === "WIPE")
       .sort((left, right) => left.durationMs - right.durationMs)[0];
     assert.ok(short, "Short-pull fixture must exist");
-    await visit(`/encounters/${short.id}?difficulty=${policy.difficulty}&context=ux`);
-    for (const [label, included] of [["Include short pulls", true], ["Exclude short pulls", false]]) {
-      const link = page.getByRole("link", { name: label, exact: true, includeHidden: true });
-      const notice = page.locator("details").filter({ has: link });
-      if (await notice.getAttribute("open") === null) await notice.locator("summary").click();
-      await page.getByRole("link", { name: label, exact: true }).click();
-      await page.waitForURL(url => url.searchParams.has("includeShortPulls") === included);
-      const query = new URL(page.url()).searchParams;
-      assert.equal(query.get("difficulty"), policy.difficulty);
-      assert.equal(query.has("context"), false);
+    for (const included of [false, true]) {
+      await visit(`/encounters/${short.id}?difficulty=${policy.difficulty}&context=ux${included ? "&includeShortPulls=1" : ""}`);
+      assert.equal(await page.getByRole("link", { name: /^(Include|Exclude) short pulls$/, includeHidden: true }).count(), 0);
+      assert.doesNotMatch(await page.locator("main").innerText(), /\d+ short pulls? (included|excluded)/);
+      for (const href of await page.locator('main a[href^="/bosses"]').evaluateAll(links => links.map(link => link.getAttribute("href")))) {
+        const query = new URL(href, base).searchParams;
+        assert.equal(query.get("difficulty"), policy.difficulty);
+        assert.equal(query.get("includeShortPulls"), included ? "1" : null);
+        assert.equal(query.has("context"), false);
+      }
     }
     await visit(`/encounters/${short.id}?difficulty=invalid-mode&context=ux`);
     for (const href of await page.locator('main a[href^="/bosses"]').evaluateAll(links => links.map(link => link.getAttribute("href")))) {

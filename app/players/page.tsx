@@ -5,14 +5,13 @@ import { DatabaseUnavailable } from "@/components/ui/DatabaseUnavailable";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { PlayerAvatar } from "@/components/players/PlayerAvatar";
 import { PageHeader, PageShell } from "@/components/ui/PageLayout";
-import { ShortPullNotice } from "@/components/reports/ShortPullNotice";
 import { WOW_CLASSES, getClassColor } from "@/lib/constants/classes";
 import { getClassIconUrl } from "@/lib/class-icons";
 import { isDatabaseConnectionError } from "@/lib/database-errors";
 import { getRevealClassName, getRevealStyle } from "@/lib/ui-animation";
 import { buildPageMetadata } from "@/lib/page-metadata";
 import { parseIncludeShortPulls } from "@/lib/attempt-policy";
-import { countedAttemptWhere, shortPullWhere } from "@/lib/attempt-policy.server";
+import { countedAttemptWhere } from "@/lib/attempt-policy.server";
 import { buildDirectoryHref, getDirectoryPagination, parseDirectoryFilters, parseDirectoryPage, type DirectoryQueryValue } from "@/lib/directory-pagination";
 import { formatCountLabel, formatInteger } from "@/lib/utils";
 
@@ -36,10 +35,9 @@ async function getPlayersPageData(query: string, classFilter: string | undefined
     ...(classFilter ? { class: classFilter } : {}),
     ...(query ? { name: { contains: query, mode: "insensitive" as const } } : {}),
   };
-  const [allPlayersForStats, totalCount, shortPulls] = await Promise.all([
+  const [allPlayersForStats, totalCount] = await Promise.all([
     db.player.findMany({ select: { class: true } }),
     db.player.count({ where }),
-    db.encounter.count({ where: { AND: [shortPullWhere(), { participants: { some: { player: where } } }] } }),
   ]);
   const pagination = getDirectoryPagination(totalCount, requestedPage, PLAYERS_PER_PAGE);
   const players = await db.player.findMany({
@@ -52,7 +50,7 @@ async function getPlayersPageData(query: string, classFilter: string | undefined
       _count: { select: { participants: { where: { encounter: countedAttemptWhere({ includeShortPulls }) } } } },
     },
   });
-  return { players, allPlayersForStats, totalCount, shortPulls, pagination };
+  return { players, allPlayersForStats, totalCount, pagination };
 }
 
 export default async function PlayersPage({ searchParams }: Props) {
@@ -112,7 +110,6 @@ export default async function PlayersPage({ searchParams }: Props) {
               {formatCountLabel(data.totalCount, "player")}{query || classFilter ? (data.totalCount === 1 ? " matches these filters" : " match these filters") : " tracked"} · A–Z
             </p>
           </div>
-          <ShortPullNotice shortPulls={data.shortPulls} includeShortPulls={includeShortPulls} basePath={pageHref(data.pagination.currentPage)} />
           {visiblePlayers.length === 0 ? (
             <EmptyState title="No players found" description={query || classFilter ? "Try another name or class, or clear the filters." : "Player profiles appear after a combat log is uploaded."}
               action={<Link href={query || classFilter ? resetHref : "/"} className={actionClass}>{query || classFilter ? "Clear filters" : "Upload a log"}</Link>} />

@@ -18,7 +18,6 @@ import { getClassColor } from "@/lib/constants/classes";
 import { getRevealClassName, getRevealStyle } from "@/lib/ui-animation";
 import { cn } from "@/lib/utils";
 import { buildPageMetadata } from "@/lib/page-metadata";
-import { ShortPullNotice } from "@/components/reports/ShortPullNotice";
 import { countAttempts, isShortPull, parseIncludeShortPulls } from "@/lib/attempt-policy";
 import { SectionNav } from "@/components/ui/SectionNav";
 import { reportQueryString } from "@/lib/difficulty-filter";
@@ -159,8 +158,6 @@ export default async function PlayerPage({ params, searchParams }: Props) {
         ...(perBoss.length > 0 ? [{ id: "boss-summary", label: "Boss summary" }] : []),
         { id: "recent-encounters", label: "Recent encounters" },
       ]} />
-
-      <ShortPullNotice shortPulls={counts.shortPulls} includeShortPulls={includeShortPulls} basePath={`/players/${encodeURIComponent(name)}`} />
 
       {/* Stats */}
       <div className="space-y-3">
