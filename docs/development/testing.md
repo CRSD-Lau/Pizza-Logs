@@ -116,6 +116,10 @@ The same command then runs `scripts/upload-journey-e2e.mjs` and `scripts/ux-navi
 The quick-look helper waits for the model-ready condition after keyboard reopening
 before comparing viewer-request counts on the next surface. Tooltip visibility
 alone does not establish that the reopened model has finished starting.
+It also places the pointer in the overlap between the player-index avatar and its
+tooltip, checks that Escape remains closed after the exposed avatar receives
+pointer-enter, and verifies deliberate leave/re-enter, first hover after an
+outside-pointer Escape, and keyboard reopening.
 
 The direct upload helper builds its sample in memory from synthetic constants; a
 unit test compares it with the canonical parser fixture without uploading file

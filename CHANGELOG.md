@@ -31,6 +31,7 @@ This project follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) an
 - Make parser upload-event logs explicitly single-line at the logging boundary, retaining JSON escaping and validated correlation IDs.
 - Generate headless upload samples from synthetic constants, restrict upload targets to credential-free HTTP(S) loopback URLs, and reject redirects before they can forward upload bytes.
 - Wait for the reopened character model to be ready before comparing viewer-request counts across headless acceptance surfaces.
+- Keep character quick looks dismissed by Escape when the closing tooltip exposes its avatar beneath the pointer; preserve deliberate hover and keyboard reopening.
 
 - Remove em dashes from site copy, page and social metadata, and missing-value displays. Simplify upload messages, directory descriptions and admin help text; retain canonical raid URLs and report calculations.
 - Compact the expandable boss directory into full-width raid rows with responsive boss-link grids, visible raid counts, and a clearer selection summary.

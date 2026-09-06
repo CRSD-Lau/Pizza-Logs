@@ -44,6 +44,10 @@ Warmane availability cannot be guaranteed. A class verified from the matching pu
 
 Quick looks remain open while the pointer moves into them. On short screens, their contents scroll within the viewport; Arrow Up/Down and Page Up/Down also scroll while the avatar has keyboard focus. Escape or an outside interaction closes the preview. They contain no embedded third-party page or privileged browser helper.
 
+When Escape closes a tooltip overlapping its avatar, the stationary pointer does
+not immediately reopen it. Move away and hover again to reopen, or use keyboard
+focus. Closing with the pointer outside the avatar still permits the next hover.
+
 If fresh equipment arrives while the profile is unavailable or has no usable appearance recipe, the last valid appearance for that same character and realm is retained in both the response and database cache. The desktop footer labels it **Cached appearance** independently of equipment freshness. Its displayed outfit may be older than the equipment list. A valid new profile replaces it and clears that label; neither a different character nor a different realm can supply this fallback.
 
 Tampermonkey, bookmarklets, admin secrets, and open Warmane tabs are not part of this viewing path. Gear refresh is fully on demand, and guild-roster refresh is a first-party authenticated admin action.

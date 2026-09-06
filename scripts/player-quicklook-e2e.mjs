@@ -311,8 +311,46 @@ export async function verifyPlayerQuickLooks({ browser, base, out, report, encou
         }
         const screenshot = `1440-quicklook-${index}.png`;
         await page.screenshot({ path: path.join(out, screenshot), animations: "disabled" });
+        let overlap = null;
+        if (surface.name === "player index") {
+          overlap = await avatar.evaluate(element => {
+            const trigger = element.getBoundingClientRect();
+            const panel = document.querySelector('[role="tooltip"]').getBoundingClientRect();
+            const left = Math.max(trigger.left, panel.left);
+            const right = Math.min(trigger.right, panel.right);
+            const top = Math.max(trigger.top, panel.top);
+            const bottom = Math.min(trigger.bottom, panel.bottom);
+            return right > left && bottom > top ? { x: (left + right) / 2, y: (top + bottom) / 2 } : null;
+          });
+          assert.ok(overlap, "Player-index fixture must exercise a tooltip overlapping its trigger");
+          await page.mouse.move(overlap.x, overlap.y);
+          assert.equal(await page.evaluate(({ x, y }) => !!document.elementFromPoint(x, y)?.closest('[role="tooltip"]'), overlap), true);
+          await avatar.evaluate(element => {
+            element.dataset.escapeReentry = "pending";
+            element.addEventListener("pointerenter", () => { element.dataset.escapeReentry = "observed"; }, { once: true });
+          });
+        }
         await page.keyboard.press("Escape");
+        if (overlap) {
+          await page.waitForFunction(element => element.dataset.escapeReentry === "observed", await avatar.elementHandle());
+          await page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
+          assert.equal(await tooltip.count(), 0, "Escape remains dismissed when the exposed trigger receives pointerenter");
+        }
         await tooltip.waitFor({ state: "detached" });
+        if (overlap) {
+          await page.mouse.move(0, 0);
+          await page.mouse.move(overlap.x, overlap.y);
+          await visibleModel(page);
+          await page.mouse.move(0, 0);
+          await page.keyboard.press("Escape");
+          await tooltip.waitFor({ state: "detached" });
+          // Escape with the pointer outside must not suppress the next hover.
+          await page.mouse.move(overlap.x, overlap.y);
+          await visibleModel(page);
+          await page.mouse.move(0, 0);
+          await page.keyboard.press("Escape");
+          await tooltip.waitFor({ state: "detached" });
+        }
         // Move focus through the keyboard after Escape; reopening uses the
         // existing response rather than repeating the upstream API request.
         await avatar.focus();
