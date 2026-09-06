@@ -10,7 +10,8 @@ import { StatCard } from "@/components/ui/StatCard";
 import { ShortPullNotice } from "@/components/reports/ShortPullNotice";
 import { SessionPlayerTable } from "@/components/reports/SessionPlayerTable";
 import type { SessionPlayerRow } from "@/lib/session-player-sort";
-import { buildRaidKillSummary, raidMetricRate } from "@/lib/raid-kill-summary";
+import { buildRaidSummary, raidMetricRate } from "@/lib/raid-kill-summary";
+import { buildRaidSummaryQuery, parseRaidSummaryScope } from "@/lib/raid-summary-scope";
 import { countAttempts, isShortPull, parseIncludeShortPulls } from "@/lib/attempt-policy";
 import { getClassColor } from "@/lib/constants/classes";
 import { getClassIconUrl } from "@/lib/class-icons";
@@ -28,7 +29,7 @@ import { NumericValue } from "@/components/ui/NumericValue";
 
 interface Props {
   params: Promise<{ id: string; sessionIdx: string }>;
-  searchParams: Promise<{ includeShortPulls?: string | string[] }>;
+  searchParams: Promise<{ includeShortPulls?: string | string[]; scope?: string | string[] }>;
 }
 
 interface SessionPlayerAnalytics {
@@ -90,13 +91,16 @@ export async function generateMetadata({ params, searchParams }: Props): Promise
 
 export default async function SessionDetailPage({ params, searchParams }: Props) {
   const { id, sessionIdx } = await params;
-  const includeShortPulls = parseIncludeShortPulls((await searchParams).includeShortPulls);
+  const query = await searchParams;
+  const includeShortPulls = parseIncludeShortPulls(query.includeShortPulls);
+  const scope = parseRaidSummaryScope(query.scope);
+  const isKills = scope === "kills";
   const resolution = await resolveRaidSession(id, sessionIdx);
   if (!resolution) notFound();
 
   const { route: sessionRoute, uploadId, publicSlug } = resolution;
   const sessionPath = getRaidSessionPath(publicSlug, sessionRoute);
-  const querySuffix = includeShortPulls ? "?includeShortPulls=1" : "";
+  const querySuffix = buildRaidSummaryQuery(scope, includeShortPulls);
   const viewPath = `${sessionPath}${querySuffix}`;
   if (resolution.isLegacyUploadId || resolution.isLegacyIndex) permanentRedirect(viewPath);
 
@@ -139,12 +143,18 @@ export default async function SessionDetailPage({ params, searchParams }: Props)
   );
   const encounterRevealIndex = new Map(orderedEncounters.map((enc, index) => [enc.id, index]));
 
-  const { kills, wipes, shortPulls, totalPulls } = countAttempts(orderedEncounters, { includeShortPulls });
+  const { kills, wipes, unknown, shortPulls, totalPulls } = countAttempts(orderedEncounters, { includeShortPulls });
   const visibleEncounters = includeShortPulls ? orderedEncounters : orderedEncounters.filter(enc => !isShortPull(enc));
   const sessionAnalyticsMap = (upload.sessionAnalytics ?? {}) as unknown as Record<string, SessionAnalytics>;
   const sessionAnalytics = sessionAnalyticsMap[String(sessionIndex)];
   const legacySessionDamage = ((upload.sessionDamage ?? {}) as Record<string, number>)[String(sessionIndex)];
-  const killSummary = buildRaidKillSummary(orderedEncounters);
+  const raidSummary = buildRaidSummary(orderedEncounters, scope);
+  const recordedResults = countAttempts(raidSummary.encounters, { includeShortPulls: true });
+  const summaryResults = isKills ? formatCountLabel(recordedResults.kills, "kill")
+    : [formatCountLabel(recordedResults.kills, "kill"), formatCountLabel(recordedResults.wipes, "wipe"),
+      ...(recordedResults.unknown > 0 ? [formatCountLabel(recordedResults.unknown, "unknown outcome")] : [])].join(" / ");
+  const listedResults = [formatCountLabel(kills, "kill"), formatCountLabel(wipes, "wipe"),
+    ...(unknown > 0 ? [formatCountLabel(unknown, "unknown outcome")] : [])].join(" / ");
   const startedAt = sessionAnalytics?.startedAt ?? encounters[0].startedAt;
   const endedAt = sessionAnalytics?.endedAt ?? encounters[encounters.length - 1].endedAt;
   const sessionPlayers = Object.entries(sessionAnalytics?.players ?? {});
@@ -175,16 +185,16 @@ export default async function SessionDetailPage({ params, searchParams }: Props)
     damageTaken: metrics.damageTaken,
     dtps: raidMetricRate(metrics.damageTaken, sessionAnalytics?.durationMs ?? null),
   }));
-  const killBreakdownRows: SessionPlayerRow[] = killSummary.players.map(player => ({
+  const raidBreakdownRows: SessionPlayerRow[] = raidSummary.players.map(player => ({
     name: player.name,
     href: `${sessionPath}/players/${encodeURIComponent(player.name)}${querySuffix}`,
     color: getClassColor(player.playerClass ?? player.name),
     totalDamage: player.totalDamage,
-    dps: raidMetricRate(player.totalDamage, killSummary.durationMs),
+    dps: raidMetricRate(player.totalDamage, raidSummary.durationMs),
     heal: player.heal,
-    healPerSecond: raidMetricRate(player.heal, killSummary.durationMs),
+    healPerSecond: raidMetricRate(player.heal, raidSummary.durationMs),
     damageTaken: player.damageTaken,
-    dtps: raidMetricRate(player.damageTaken, killSummary.durationMs),
+    dtps: raidMetricRate(player.damageTaken, raidSummary.durationMs),
   }));
   const realmName = upload.realm?.name ?? "Lordaeron";
   const guildName = upload.guild?.name ?? null;
@@ -211,7 +221,7 @@ export default async function SessionDetailPage({ params, searchParams }: Props)
     byPlayer: Map<string, { damage: number; hits: number; crits: number; playerClass: string | null }>;
   }>();
 
-  for (const enc of killSummary.encounters) {
+  for (const enc of raidSummary.encounters) {
     for (const p of enc.participants) {
       if (!p.targetBreakdown) continue;
       const td = p.targetBreakdown as Record<string, { damage: number; hits: number; crits: number }>;
@@ -308,47 +318,64 @@ export default async function SessionDetailPage({ params, searchParams }: Props)
         ...(playerSet.size > 0 ? [{ id: "roster", label: "Roster" }] : []),
       ]} />
 
-      <section aria-label="Boss kill summary" className="space-y-2">
-        <h2 className="heading-cinzel text-sm font-bold uppercase tracking-widest text-gold">Successful Boss Fights</h2>
+      <nav aria-label="Boss fight scope" className="flex flex-wrap gap-2">
+        {(["all", "kills"] as const).map(value => (
+          <Link
+            key={value}
+            href={`${sessionPath}${buildRaidSummaryQuery(value, includeShortPulls)}`}
+            scroll={false}
+            aria-current={scope === value ? "page" : undefined}
+            className={cn("inline-flex min-h-11 items-center rounded-sm border px-4 py-2 text-sm font-semibold transition-colors",
+              scope === value ? "border-gold bg-gold/10 text-gold-light" : "border-gold-dim text-text-secondary hover:border-gold hover:text-gold-light")}
+          >
+            {value === "all" ? "All Boss Attempts" : "Successful Boss Fights"}
+          </Link>
+        ))}
+      </nav>
+
+      <section aria-label={isKills ? "Boss kill summary" : "All boss attempt summary"} className="space-y-2">
+        <h2 className="heading-cinzel text-sm font-bold uppercase tracking-widest text-gold">{isKills ? "Successful Boss Fights" : "All Boss Attempts"}</h2>
         <p className="text-sm text-text-secondary">
-          Totals cover winning boss fights and their adds. Wipes and between-fight trash are excluded.
+          {isKills
+            ? "Totals cover winning boss fights and their adds. Wipes and between-fight trash are excluded."
+            : "Totals cover every recorded boss attempt and its adds, including wipes, unknown outcomes and short pulls. Between-fight trash is excluded."}
         </p>
         <div className="grid grid-cols-2 items-stretch gap-y-2 rounded-sm bg-bg-panel/40 p-2 lg:grid-cols-4">
-          <StatCard label="Fight results" value={`${formatCountLabel(kills, "kill")} / ${formatCountLabel(wipes, "wipe")}`} sub="counted attempts" highlight className="col-span-2" />
-          <StatCard label="Total Damage" value={formatNumber(killSummary.totalDamage)} sub="boss kills only" />
-          <StatCard label="Healing + absorbs" value={formatNumber(killSummary.heal)} sub="effective healing + absorbs" />
-          <StatCard label="Damage Taken" value={formatNumber(killSummary.totalDamageTaken)} sub="boss kills only" />
-          <StatCard label="Kill Time" value={formatDurationPrecise(killSummary.durationMs)} sub="combined boss kill duration" className="col-span-2 lg:col-span-1" />
+          <StatCard label={isKills ? "Fight results" : "Recorded results"} value={summaryResults} sub={formatCountLabel(raidSummary.encounters.length, isKills ? "successful fight" : "recorded attempt")} highlight className="col-span-2" />
+          <StatCard label="Total Damage" value={formatNumber(raidSummary.totalDamage)} sub={isKills ? "boss kills only" : "all recorded boss attempts"} />
+          <StatCard label="Healing + absorbs" value={formatNumber(raidSummary.heal)} sub="effective healing + absorbs" />
+          <StatCard label="Damage Taken" value={formatNumber(raidSummary.totalDamageTaken)} sub={isKills ? "boss kills only" : "all recorded boss attempts"} />
+          <StatCard label={isKills ? "Kill Time" : "Fight Time"} value={formatDurationPrecise(raidSummary.durationMs)} sub={isKills ? "combined boss kill duration" : "combined boss attempt duration"} className="col-span-2 lg:col-span-1" />
         </div>
       </section>
 
-      <ShortPullNotice shortPulls={shortPulls} includeShortPulls={includeShortPulls} basePath={sessionPath} />
+      <ShortPullNotice shortPulls={shortPulls} includeShortPulls={includeShortPulls} basePath={viewPath} listOnly />
 
-      <AccordionSection id="boss-kill-breakdown" title="Boss Kill Breakdown" count={killBreakdownRows.length} defaultOpen>
-        {killBreakdownRows.length > 0 ? (
+      <AccordionSection id="boss-kill-breakdown" title={isKills ? "Boss Kill Breakdown" : "All Boss Attempt Breakdown"} count={raidBreakdownRows.length} defaultOpen>
+        {raidBreakdownRows.length > 0 ? (
           <>
             <details className="mb-3 text-sm text-text-secondary">
               <summary className="min-h-11 cursor-pointer py-3 text-gold">How totals and rates are calculated</summary>
               <p className="pb-3">
               Healing + absorbs includes effective healing and attributed shields; Healing + absorbs /s is their combined rate.
-              Every player uses the same combined kill time, including fights they sat out.
+              Every player uses the same combined {isKills ? "kill" : "attempt"} time, including fights they sat out.
               Player links open their report across all attempts.
               </p>
             </details>
-            {killSummary.durationMs === null && (
-              <p className="mb-3 text-sm text-text-secondary">Some kill durations are missing. Totals remain available; rates are unavailable.</p>
+            {raidSummary.durationMs === null && (
+              <p className="mb-3 text-sm text-text-secondary">Some {isKills ? "kill" : "attempt"} durations are missing. Totals remain available; rates are unavailable.</p>
             )}
-            <SessionPlayerTable rows={killBreakdownRows} label="Boss kill player metrics" />
+            <SessionPlayerTable key={scope} rows={raidBreakdownRows} label={isKills ? "Boss kill player metrics" : "All boss attempt player metrics"} />
           </>
         ) : (
           <p className="text-sm text-text-secondary">
-            {kills === 0 ? "No successful boss kills were recorded in this session." : "No player metrics were recorded for these boss kills."}
+            {isKills && recordedResults.kills === 0 ? "No successful boss kills were recorded in this session." : "No player metrics were recorded for these boss fights."}
             {" "}Recorded attempts and any full-session data remain available below.
           </p>
         )}
       </AccordionSection>
 
-      <AccordionSection id="encounters" title="Encounters" sub="Grouped by raid · Earliest fight first within each raid · Times in UTC" count={totalPulls} defaultOpen>
+      <AccordionSection id="encounters" title="Encounters" sub={`${listedResults} listed · Grouped by raid · Earliest fight first · Times in UTC`} count={totalPulls} defaultOpen>
         {visibleEncounters.length === 0 && (
           <p className="text-sm text-text-secondary">Only short pulls were recorded. Include short pulls to inspect them.</p>
         )}
@@ -412,8 +439,8 @@ export default async function SessionDetailPage({ params, searchParams }: Props)
       {mobEntries.length > 0 && (
         <AccordionSection
           id="targets"
-          title="Mob Damage - Boss Kills"
-          sub="Damage to targets during successful boss fights, including encounter adds - click to drill down by player"
+          title={isKills ? "Mob Damage - Boss Kills" : "Mob Damage - All Boss Attempts"}
+          sub={`Damage to targets during ${isKills ? "successful boss fights" : "all recorded boss attempts"}, including encounter adds - click to drill down by player`}
           count={mobEntries.length}
           defaultOpen={false}
         >
@@ -454,7 +481,7 @@ export default async function SessionDetailPage({ params, searchParams }: Props)
               <StatCard label="Total Damage" value={formatNumber(legacySessionDamage)} sub="stored full raid session total" />
             )}
             <p className="text-sm text-text-secondary">
-              Detailed full-session analytics were not stored for this older report. The boss-kill summary uses its recorded encounters;
+              Detailed full-session analytics were not stored for this older report. The boss summary uses its recorded encounters;
               full-session healing, damage taken and player rates are unavailable.
             </p>
           </div>

@@ -20,10 +20,11 @@ import { buildPageMetadata } from "@/lib/page-metadata";
 import { ShortPullNotice } from "@/components/reports/ShortPullNotice";
 import { isShortPull, parseIncludeShortPulls } from "@/lib/attempt-policy";
 import { parseDifficultyFilter, reportQueryString } from "@/lib/difficulty-filter";
+import { buildRaidSummaryQuery, parseRaidSummaryScope } from "@/lib/raid-summary-scope";
 
 interface Props {
   params: Promise<{ id: string }>;
-  searchParams: Promise<{ includeShortPulls?: string | string[]; difficulty?: string | string[] }>;
+  searchParams: Promise<{ includeShortPulls?: string | string[]; difficulty?: string | string[]; scope?: string | string[] }>;
 }
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
@@ -48,8 +49,11 @@ export default async function EncounterPage({ params, searchParams }: Props) {
   const query = await searchParams;
   const includeShortPulls = parseIncludeShortPulls(query.includeShortPulls);
   const querySuffix = includeShortPulls ? "?includeShortPulls=1" : "";
+  const scope = parseRaidSummaryScope(query.scope);
+  const raidQuerySuffix = buildRaidSummaryQuery(scope, includeShortPulls);
   const difficulty = parseDifficultyFilter(query.difficulty);
   const comparisonQuerySuffix = reportQueryString({
+    scope: scope === "kills" ? "kills" : undefined,
     includeShortPulls: includeShortPulls ? "1" : undefined,
     difficulty: difficulty === "all" ? undefined : difficulty,
   });
@@ -208,7 +212,7 @@ export default async function EncounterPage({ params, searchParams }: Props) {
         <span>&gt;</span>
         {raidSessionRoute ? (
           <Link
-            href={`${getRaidSessionPath(encounter.upload.publicSlug, raidSessionRoute)}${querySuffix}`}
+            href={`${getRaidSessionPath(encounter.upload.publicSlug, raidSessionRoute)}${raidQuerySuffix}`}
             className="inline-flex min-h-11 items-center hover:text-gold"
           >
             {formatRaidSessionTitle(raidSessionRoute)}

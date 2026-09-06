@@ -11,7 +11,7 @@ const guildRosterTable = readFileSync(
 );
 const sessionPlayerTable = readFileSync("components/reports/SessionPlayerTable.tsx", "utf8");
 
-assert.match(sessionPage, /<SessionPlayerTable rows=\{killBreakdownRows\} label="Boss kill player metrics"/);
+assert.match(sessionPage, /<SessionPlayerTable key=\{scope\} rows=\{raidBreakdownRows\} label=\{isKills \? "Boss kill player metrics" : "All boss attempt player metrics"\}/);
 assert.match(sessionPage, /<SessionPlayerTable rows=\{sessionBreakdownRows\} label="Full session player metrics"/);
 assert.match(sessionPlayerTable, /className="data-panel xl:hidden"/);
 assert.match(sessionPlayerTable, /className="data-panel hidden xl:block"/);

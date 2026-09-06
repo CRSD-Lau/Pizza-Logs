@@ -25,10 +25,11 @@ import { NumericValue } from "@/components/ui/NumericValue";
 import { ShortPullNotice } from "@/components/reports/ShortPullNotice";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { countAttempts, isShortPull, parseIncludeShortPulls } from "@/lib/attempt-policy";
+import { buildRaidSummaryQuery, parseRaidSummaryScope } from "@/lib/raid-summary-scope";
 
 interface Props {
   params: Promise<{ id: string; sessionIdx: string; playerName: string }>;
-  searchParams: Promise<{ includeShortPulls?: string | string[] }>;
+  searchParams: Promise<{ includeShortPulls?: string | string[]; scope?: string | string[] }>;
 }
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
@@ -48,8 +49,10 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 
 export default async function SessionPlayerPage({ params, searchParams }: Props) {
   const { id, sessionIdx, playerName } = await params;
-  const includeShortPulls = parseIncludeShortPulls((await searchParams).includeShortPulls);
+  const query = await searchParams;
+  const includeShortPulls = parseIncludeShortPulls(query.includeShortPulls);
   const querySuffix = includeShortPulls ? "?includeShortPulls=1" : "";
+  const raidQuerySuffix = buildRaidSummaryQuery(parseRaidSummaryScope(query.scope), includeShortPulls);
   const name = playerName;
   const resolution = await resolveRaidSession(id, sessionIdx);
 
@@ -58,7 +61,7 @@ export default async function SessionPlayerPage({ params, searchParams }: Props)
   const { route: sessionRoute, uploadId, publicSlug } = resolution;
   const sessionPath = getRaidSessionPath(publicSlug, sessionRoute);
   if (resolution.isLegacyUploadId || resolution.isLegacyIndex) {
-    permanentRedirect(`${sessionPath}/players/${encodeURIComponent(name)}${querySuffix}`);
+    permanentRedirect(`${sessionPath}/players/${encodeURIComponent(name)}${raidQuerySuffix}`);
   }
 
   const sessionIndex = sessionRoute.sessionIndex;
@@ -188,7 +191,7 @@ export default async function SessionPlayerPage({ params, searchParams }: Props)
       <div className="text-xs text-text-dim flex items-center gap-1 flex-wrap">
         <Link href={`/raids${querySuffix}`} className="inline-flex min-h-11 items-center hover:text-gold">Raids</Link>
         <span>&gt;</span>
-        <Link href={`${sessionPath}${querySuffix}`} className="inline-flex min-h-11 items-center hover:text-gold">
+        <Link href={`${sessionPath}${raidQuerySuffix}`} className="inline-flex min-h-11 items-center hover:text-gold">
           {sessionLabel}
         </Link>
         <span>&gt;</span>
@@ -224,7 +227,7 @@ export default async function SessionPlayerPage({ params, searchParams }: Props)
         { id: "encounters", label: "Boss fights" },
       ]} />
 
-      <ShortPullNotice shortPulls={counts.shortPulls} includeShortPulls={includeShortPulls} basePath={`${sessionPath}/players/${encodeURIComponent(name)}`} />
+      <ShortPullNotice shortPulls={counts.shortPulls} includeShortPulls={includeShortPulls} basePath={`${sessionPath}/players/${encodeURIComponent(name)}${raidQuerySuffix}`} />
 
       <p className="text-sm text-text-secondary">Best values use all recorded pulls in this session, including short pulls. The average gives each successful fight equal weight.</p>
       {kills.length === 0 && <p className="text-sm text-text-secondary">No successful fights were recorded for this player. The average on kills is unavailable.</p>}
@@ -263,7 +266,7 @@ export default async function SessionPlayerPage({ params, searchParams }: Props)
           {visibleStats.map((e, index) => (
             <Link
               key={e.encounterId}
-              href={`/encounters/${e.encounterId}${querySuffix}`}
+              href={`/encounters/${e.encounterId}${raidQuerySuffix}`}
               className={getRevealClassName({
                 boss: true,
                 className:

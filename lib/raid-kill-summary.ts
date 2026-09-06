@@ -1,3 +1,5 @@
+import type { RaidSummaryScope } from "./raid-summary-scope";
+
 interface CombatTotals {
   totalDamage: number;
   totalHealing: number;
@@ -35,9 +37,12 @@ function encounterDurationMs(encounter: RaidSummaryEncounter): number | null {
     : null;
 }
 
-/** Roll up stored successful encounter windows, including their adds and mechanics. */
-export function buildRaidKillSummary<T extends RaidSummaryEncounter>(encounters: readonly T[]) {
-  const kills = encounters.filter(encounter => encounter.outcome === "KILL");
+/** Roll up stored encounter windows without applying the short-pull count policy. */
+export function buildRaidSummary<T extends RaidSummaryEncounter>(
+  encounters: readonly T[],
+  scope: RaidSummaryScope,
+) {
+  const selectedEncounters = encounters.filter(encounter => scope === "all" || encounter.outcome === "KILL");
   const players = new Map<string, RaidSummaryPlayer>();
   let durationMs: number | null = 0;
   let totalDamage = 0;
@@ -45,7 +50,7 @@ export function buildRaidKillSummary<T extends RaidSummaryEncounter>(encounters:
   let totalAbsorbs = 0;
   let totalDamageTaken = 0;
 
-  for (const encounter of kills) {
+  for (const encounter of selectedEncounters) {
     const duration = encounterDurationMs(encounter);
     durationMs = durationMs === null || duration === null ? null : durationMs + duration;
     totalDamage += encounter.totalDamage;
@@ -70,7 +75,7 @@ export function buildRaidKillSummary<T extends RaidSummaryEncounter>(encounters:
   }
 
   return {
-    encounters: kills,
+    encounters: selectedEncounters,
     durationMs,
     totalDamage,
     totalHealing,
@@ -79,6 +84,11 @@ export function buildRaidKillSummary<T extends RaidSummaryEncounter>(encounters:
     totalDamageTaken,
     players: Array.from(players.values()),
   };
+}
+
+/** Roll up stored successful encounter windows, including their adds and mechanics. */
+export function buildRaidKillSummary<T extends RaidSummaryEncounter>(encounters: readonly T[]) {
+  return buildRaidSummary(encounters, "kills");
 }
 
 /** All players in an aggregate use its same duration; unavailable evidence stays unavailable. */

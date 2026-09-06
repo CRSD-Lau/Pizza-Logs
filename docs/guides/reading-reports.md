@@ -36,18 +36,28 @@ A canonical report URL identifies the public report and raid date. One uploaded 
 
 Use **On this page** to jump to player totals, boss fights, targets, the full session or the roster. Shortcuts open collapsed sections and support keyboard navigation. Similar shortcuts appear on encounter, boss and player reports.
 
-The main session summary and **Boss Kill Breakdown** include successful boss fights
-only. Total Damage, Healing + absorbs, Damage Taken and the mob breakdown use stored `KILL`
-encounters. Adds and mechanics within those fights still count; wipes, unknown
-outcomes and between-fight trash do not contribute to the summary.
+Choose the scope above the main summary:
+
+- **All Boss Attempts** is the default. It includes every stored boss attempt:
+  kills, wipes, unknown outcomes and short pulls, with their adds and mechanics.
+  **Recorded results** shows the outcomes and count of these summarized attempts.
+- **Successful Boss Fights** includes only stored `KILL` encounters. The summary
+  shows the number of successful fights; wipes and unknown outcomes are excluded.
+
+Both scopes exclude between-fight trash. The selected scope applies together to
+Total Damage, Healing + absorbs, Damage Taken, player totals and target damage.
+Use `?scope=kills` to share the successful-fights view. The default URL (or
+`?scope=all`) selects all attempts. Navigation and return links preserve the view;
+the existing `#boss-kill-breakdown` shortcut continues to open player totals.
 
 Player DPS, Healing + absorbs /s (effective healing plus attributed absorbs per second) and DTPS
-use each player's summed output divided by the combined duration of all successful
-fights. Every player uses this same duration, including fights they sat out; these
+use each player's summed output divided by the combined duration of the selected
+boss attempts. Every player uses this same duration, including fights they sat out; these
 are raid-wide contribution rates, not averages of individual fight rates. Precise
-milliseconds take priority, with valid legacy seconds as a fallback. Missing kill
-duration makes rates unavailable without hiding totals. A session with no recorded
-kills shows an empty summary rather than substituting wipe totals.
+milliseconds take priority, with valid legacy seconds as a fallback. Missing selected
+fight duration makes rates unavailable without hiding totals. A session with no
+recorded kills has an empty successful-fights view; its all-attempt view still shows
+recorded wipes and unknown outcomes.
 
 Click any player-table column heading to sort it; click again to reverse the order.
 Mobile cards have equivalent sort and direction controls. Player links open the
@@ -58,7 +68,7 @@ The collapsed **Full Session Breakdown** retains first-to-last-event totals,
 including boss pulls, wipes, trash and downtime, with its own sortable player table.
 Rates in this section use the entire session duration. Older reports without stored
 full-session analytics retain any known full-session damage total and show an
-availability notice for missing metrics; their kill summary still works from stored
+availability notice for missing metrics; their boss summaries still work from stored
 encounters. Full-session trash spell and target breakdowns are not stored.
 
 ## Short Pulls and Wipe Counts
@@ -76,8 +86,11 @@ unavailable. Missing or invalid duration/death evidence does not trigger exclusi
 This is a reversible counting policy, not proof of why a pull ended. Preparation,
 accidental engagements and genuine short attempts can look alike, especially in a
 partial log. Stored outcomes and combat metrics are unchanged. The optional
-full-session totals still include short pulls; the main kill summary is unaffected
-by the toggle, and best-performance values retain their existing scope.
+full-session totals still include short pulls. **All Boss Attempts** also always
+includes them, even when hidden from the encounter list. Both summary scopes and
+their player/target totals remain unchanged by the toggle; only the list and its
+counts change. The summary's recorded-attempt count can therefore exceed the listed
+count. Best-performance values retain their existing scope.
 The policy works on existing reports without re-uploading or changing database rows.
 Admin inventory and the raw encounter API continue to expose the recorded attempts.
 
@@ -86,6 +99,12 @@ Public boss, weekly and player statistics include `shortPullCount`; use
 `/api/encounters` array and direct encounter URLs retain their existing behavior.
 
 ## Encounter Metrics
+
+Recorded encounter healing and absorb totals can include healing from non-player
+mechanics and numeric absorbs that have no credited player. Player rows show only
+their credited healing and absorbs, so those rows may sum to less than the headline.
+Both boss-summary scopes preserve this distinction in stored reports; switching
+scope does not attribute missing ownership or recalculate historical encounters.
 
 - **Total Damage / DPS:** raw outgoing damage-event amount divided by the encounter duration.
 - **Effective Healing / HPS:** gross healing minus overheal; shield absorbs are not silently folded into this primitive.
