@@ -25,6 +25,8 @@ This project follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) an
 
 ### Changed
 
+- Require account-level backup eligibility and subscription-cost checks before native Railway recovery setup; document the Pro-plan gate, owner-operated PITR activation and isolated restore validation.
+- Record production administrator MFA and current-device sign-out acceptance, including stored-session deletion and a fresh same-browser login requirement, plus owner acceptance of direct streaming with reupload after interruption; durable upload orchestration remains a separate future request.
 - Add an All Boss Attempts default raid-summary view alongside Successful Boss Fights. Keep headline, player and target totals on the same selected fights, include every stored attempt in the all-attempt view, and preserve selection through report navigation. Short-pull controls change the encounter list and its counts without changing either summary; existing reports need no re-upload.
 
 - Standardize report amounts and rates with exactly two decimals and K/M abbreviations (`13.93K`, `4.20M`, `1,234.57M`), matching charts, tables and tooltips. Percentages, decimal seconds and scaled binary file sizes also use two decimals; counts, ranks, levels and GearScore retain grouped whole numbers. Preserve clock-style durations, UTC dates, missing-value handling, mobile metric labels and explicit death/kill/wipe count words across public and admin pages.

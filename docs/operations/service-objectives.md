@@ -63,7 +63,8 @@ backups and a timed restoration exercise.
 
 Before adopting these targets, the infrastructure owner must:
 
-1. Enable and inspect encrypted PostgreSQL backups; record schedule, retention, location,
+1. Verify that the current Railway plan permits the chosen backup and restore features, and approve
+   both the subscription minimum and usage costs. Then enable and inspect encrypted PostgreSQL backups; record schedule, retention, location,
    access controls and a successful backup identifier. Choose PITR if a 24-hour loss is unacceptable.
 2. Restore a selected backup to a new isolated database without changing production routing.
 3. Validate migration history, schema, row counts, relationships, representative historical
@@ -75,6 +76,43 @@ Before adopting these targets, the infrastructure owner must:
 
 Raw combat logs are not retained for recovery. Database backup protects stored reports;
 reparsing requires the uploader's original file and explicit reupload.
+
+### Plan eligibility and cost controls
+
+Check the authenticated service **Backups** page before enabling a schedule or quoting native
+recovery costs. On 2026-09-06, the production workspace was on Hobby and that page required Pro
+for backups and point-in-time recovery (PITR). A schedule request was rejected and readback
+confirmed that schedules remained empty. Feature documentation and per-GB prices alone did not
+establish account eligibility; do not retry a denied API operation to bypass the plan restriction.
+
+Railway's subscription minimum includes resource usage. Before tax and other account adjustments,
+the monthly resource bill is `max(plan minimum, normal usage + backup/restore usage)`.
+Compare both plans using that formula without counting the included credit twice.
+A small database can have cheap storage while still requiring a plan
+upgrade. Verify current [plan pricing](https://docs.railway.com/pricing/plans) before an owner decision.
+
+Use an owner-approved retention period, an email spending alert that preserves any stricter existing
+threshold, and inspection of backup storage, archive uploads and temporary recovery-service costs.
+Review usage after the first week and after the retention window fills. The alert is not a backup-only
+cap. A workspace hard limit can stop production workloads; retained bucket storage remains billable.
+See [cost controls](https://docs.railway.com/pricing/cost-control) and
+[bucket billing](https://docs.railway.com/storage-buckets/billing).
+
+### Isolated provider restoration
+
+Railway's [PITR workflow](https://docs.railway.com/volumes/point-in-time-recovery) creates a new
+PostgreSQL service and volume for the selected recovery time, preserving the source service.
+Enabling it creates an archive bucket, sets production variables and redeploys PostgreSQL, so
+activation is an owner action under this project's production-variable rule. Verify plan eligibility,
+the supported image and startup configuration, archive health and the first successful base backup
+before selecting a time within the actual recovery window.
+
+Keep the restored copy private. Compare source and restored evidence before changing the copy's
+authentication state or running upload tests, account for any production writes between evidence
+captures, and follow the post-restore admin recovery procedure above. Record the newest recovered
+data and the time until report and upload checks pass. A successful provider workflow alone does
+not establish application recovery. Remove only the explicitly approved temporary service and volume
+after validation; preserve the source and its backups.
 
 ### Repeatable database evidence
 
