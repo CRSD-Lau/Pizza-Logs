@@ -63,7 +63,7 @@ assert.match(sessionPage, /Full Session Breakdown/);
 assert.match(sessionPage, /label="Total Damage"/);
 assert.match(sessionPage, /label="Healing \+ absorbs"/);
 assert.match(sessionPage, /label="Damage Taken"/);
-assert.match(sessionPage, /formatDurationPrecise/);
+assert.match(sessionPage, /formatDuration/);
 assert.match(sessionPage, /first to last log event/);
 assert.match(meter, /Healing \+ absorbs \/s/);
 assert.doesNotMatch(publicUiSource, /%c\b/, "critical-hit rate is written out in public UI");

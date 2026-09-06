@@ -58,7 +58,7 @@ Use the display helpers in `lib/utils.ts` on public pages, admin pages, previews
 | File size | Binary units, matching the 1,024 divisor; scaled units have exactly two decimals and byte counts remain whole | `1.50 KiB`, `2.00 MiB`, `512 B` |
 | Recorded date/time | Month name, day, year; 24-hour time explicitly labelled UTC; ranges crossing midnight include both dates | `Sep 4, 2026, 23:04:10 UTC` |
 | Decimal seconds | Exactly two decimals with an explicit seconds unit; never use K/M for time | `1.25 s`, `0.00 s` |
-| Elapsed time | `M:SS`, adding hours when needed; retain `H:MM:SS.mmm` in precise analysis | `4:27`, `2:05:03`, `1:04:29.712` |
+| Elapsed time | Whole seconds as `M:SS`, adding hours when needed; calculations retain recorded precision | `4:27`, `2:05:03`, `1:04:29` |
 
 - Comparison columns align numbers to the right and use tabular digits. Responsive layouts must retain complete formatted values and visible units, not rely on desktop-only headings or hover titles.
 - Formatting affects display only. Sort by the original numeric values before rounding; values that display alike do not become analytical ties. A positive amount or rate below `0.01` displays `<0.01` instead of appearing to be zero.

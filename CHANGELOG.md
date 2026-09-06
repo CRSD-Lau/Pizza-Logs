@@ -25,6 +25,8 @@ This project follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) an
 
 ### Changed
 
+- Display raid Kill Time, Fight Time and full-session Duration in whole seconds, retaining recorded millisecond precision for calculations.
+
 - Refined the full site layout with consistent metric groups, paired encounter totals/rates, quieter borders, compact leaderboards and roster rows, grouped filters, and shared admin/report spacing across desktop and mobile. Recorded values, analytical scopes, upload behavior, and administrator access remain unchanged.
 
 - Require account-level backup eligibility and subscription-cost checks before native Railway recovery setup; document the Pro-plan gate, owner-operated PITR activation and isolated restore validation.

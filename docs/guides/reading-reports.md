@@ -19,8 +19,9 @@ Counts, ranks, character/item levels and GearScore remain whole numbers with com
 grouping. File sizes use binary units with two decimals after scaling, such as
 `1.50 KiB` or `2.00 MiB`; byte counts remain whole. Dates include the year and
 timestamps use labelled UTC. Decimal seconds use two places, such as `1.25 s` or
-`0.00 s`. Clock-style durations such as `4:27`, `2:05:03` and precise
-`1:04:29.712` retain their existing formats.
+`0.00 s`. Clock-style durations use whole seconds, such as `4:27` or `2:05:03`,
+including Kill Time, Fight Time and full-session Duration. Fractional seconds are
+omitted from these displays; calculations retain the recorded precision.
 
 Current comparison lists show numbered positions within the stated metric and scope.
 Alphabetical directories have no performance position. Recent player history is newest
