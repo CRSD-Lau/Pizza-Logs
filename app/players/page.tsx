@@ -83,44 +83,46 @@ export default async function PlayersPage({ searchParams }: Props) {
         <DatabaseUnavailable description="Player profiles are temporarily unavailable. Please try again shortly." />
       ) : (
         <>
-          <form key={`${query}:${classFilter ?? ""}`} action="/players" method="get" role="search" aria-label="Filter player directory" className="grid grid-cols-[minmax(0,1fr)_auto] items-end gap-3 sm:flex">
-            <div className="col-span-2 min-w-0 flex-1">
-              <label htmlFor="directory-player-name" className="mb-1.5 block text-sm font-semibold text-text-secondary">Player name</label>
-              <input id="directory-player-name" name="q" type="search" defaultValue={query} maxLength={64} placeholder="Find a player by name" className={fieldClass} />
-            </div>
-            <div className="sm:hidden">
-              <label htmlFor="directory-player-class" className="mb-1.5 block text-sm font-semibold text-text-secondary">Class</label>
-              <select id="directory-player-class" name="class" defaultValue={classFilter ?? ""} className={fieldClass}>
-                <option value="">All classes</option>
-                {WOW_CLASSES.map(className => <option key={className} value={className}>{className}</option>)}
-              </select>
-            </div>
-            {includeShortPulls && <input type="hidden" name="includeShortPulls" value="1" />}
-            <button type="submit" className={`${actionClass} border-gold text-gold-light`}>Find players</button>
-            {(query || classFilter) && <Link href={resetHref} className={`${actionClass} col-span-2`}>Clear filters</Link>}
-          </form>
-          <nav aria-label="Filter players by class" className="hidden flex-wrap gap-1.5 sm:flex">
-            <Link href={pageHref(1, "")} aria-current={!classFilter ? "page" : undefined} className={`${actionClass} ${!classFilter ? "border-gold text-gold-light" : ""}`}>All classes</Link>
-            {WOW_CLASSES.map(className => (
-              <Link key={className} href={pageHref(1, className)} aria-current={classFilter === className ? "page" : undefined} className={`${actionClass} ${classFilter === className ? "border-gold text-gold-light" : ""}`}>
-                {className}
-              </Link>
-            ))}
-          </nav>
-          <p className="text-sm text-text-secondary">
-            {formatCountLabel(data.totalCount, "player")}{query || classFilter ? (data.totalCount === 1 ? " matches these filters" : " match these filters") : " tracked"} · A–Z
-          </p>
+          <div className="space-y-3">
+            <form key={`${query}:${classFilter ?? ""}`} action="/players" method="get" role="search" aria-label="Filter player directory" className="grid grid-cols-[minmax(0,1fr)_auto] items-end gap-3 sm:flex">
+              <div className="col-span-2 min-w-0 flex-1">
+                <label htmlFor="directory-player-name" className="mb-1.5 block text-sm font-semibold text-text-secondary">Player name</label>
+                <input id="directory-player-name" name="q" type="search" defaultValue={query} maxLength={64} placeholder="Find a player by name" className={fieldClass} />
+              </div>
+              <div className="sm:hidden">
+                <label htmlFor="directory-player-class" className="mb-1.5 block text-sm font-semibold text-text-secondary">Class</label>
+                <select id="directory-player-class" name="class" defaultValue={classFilter ?? ""} className={fieldClass}>
+                  <option value="">All classes</option>
+                  {WOW_CLASSES.map(className => <option key={className} value={className}>{className}</option>)}
+                </select>
+              </div>
+              {includeShortPulls && <input type="hidden" name="includeShortPulls" value="1" />}
+              <button type="submit" className={`${actionClass} border-gold text-gold-light`}>Find players</button>
+              {(query || classFilter) && <Link href={resetHref} className={`${actionClass} col-span-2`}>Clear filters</Link>}
+            </form>
+            <nav aria-label="Filter players by class" className="hidden flex-wrap gap-1.5 sm:flex">
+              <Link href={pageHref(1, "")} aria-current={!classFilter ? "page" : undefined} className={`${actionClass} ${!classFilter ? "border-gold text-gold-light" : ""}`}>All classes</Link>
+              {WOW_CLASSES.map(className => (
+                <Link key={className} href={pageHref(1, className)} aria-current={classFilter === className ? "page" : undefined} className={`${actionClass} ${classFilter === className ? "border-gold text-gold-light" : ""}`}>
+                  {className}
+                </Link>
+              ))}
+            </nav>
+            <p className="text-sm text-text-secondary">
+              {formatCountLabel(data.totalCount, "player")}{query || classFilter ? (data.totalCount === 1 ? " matches these filters" : " match these filters") : " tracked"} · A–Z
+            </p>
+          </div>
           <ShortPullNotice shortPulls={data.shortPulls} includeShortPulls={includeShortPulls} basePath={pageHref(data.pagination.currentPage)} />
           {visiblePlayers.length === 0 ? (
             <EmptyState title="No players found" description={query || classFilter ? "Try another name or class, or clear the filters." : "Player profiles appear after a combat log is uploaded."}
               action={<Link href={query || classFilter ? resetHref : "/"} className={actionClass}>{query || classFilter ? "Clear filters" : "Upload a log"}</Link>} />
           ) : (
             <div className="space-y-5">
-              <ul aria-label="Players" className="grid list-none border-y border-gold-dim sm:grid-cols-2 lg:grid-cols-3">
+              <ul aria-label="Players" className="grid list-none gap-x-6 border-t border-gold-dim sm:grid-cols-2 lg:grid-cols-3">
                 {visiblePlayers.map((player, index) => {
                   const color = getClassColor(player.class ?? player.name);
                   return (
-                    <li key={player.id} className={getRevealClassName({ className: "flex min-h-20 items-center gap-3 border-b border-gold-dim px-3 py-3 hover:bg-bg-panel/55 sm:border-r" })} style={getRevealStyle(index)}>
+                    <li key={player.id} className={getRevealClassName({ className: "flex min-h-20 items-center gap-3 border-b border-gold-dim px-2 py-2 hover:bg-bg-panel/55" })} style={getRevealStyle(index)}>
                       <PlayerAvatar name={player.name} realmName={player.realm?.name} characterClass={player.class} color={color} fallbackIconUrl={getClassIconUrl(player.class)} size="sm" />
                       <div className="min-w-0 flex-1">
                         <Link href={`/players/${encodeURIComponent(player.name)}${includeShortPulls ? "?includeShortPulls=1" : ""}`} className="flex min-h-11 items-center text-base font-semibold hover:underline" style={{ color }}>

@@ -22,13 +22,14 @@ interface LeaderboardBarProps {
   metric: "dps" | "hps";
   className?: string;
   querySuffix?: string;
+  showBoss?: boolean;
 }
 
-export function LeaderboardBar({ entries, metric, className, querySuffix = "" }: LeaderboardBarProps) {
+export function LeaderboardBar({ entries, metric, className, querySuffix = "", showBoss = true }: LeaderboardBarProps) {
   const maxVal = entries[0]?.value ?? 1;
 
   return (
-    <ol aria-label={`${metric.toUpperCase()} positions`} className={cn("@container list-none space-y-2", className)}>
+    <ol aria-label={`${metric.toUpperCase()} positions`} className={cn("@container list-none space-y-1.5", className)}>
       {entries.map((e, index) => {
         const fillPct = maxVal > 0 ? (e.value / maxVal) * 100 : 0;
         const color = getClassColor(e.class ?? e.playerName);
@@ -47,10 +48,10 @@ export function LeaderboardBar({ entries, metric, className, querySuffix = "" }:
               style={{ background: color, opacity: 0.1, width: `${fillPct}%` }}
             />
 
-            <div className="relative z-10 grid grid-cols-[auto_minmax(0,1fr)_auto] gap-x-3 gap-y-2 px-3 py-3 @2xl:grid-cols-[40px_minmax(0,1fr)_max-content_104px_56px] @2xl:items-center">
+            <div className="relative z-10 grid grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-x-3 px-3 py-2 @2xl:grid-cols-[auto_minmax(0,1fr)_max-content_max-content_auto]">
               <span
                 className={cn(
-                  "rank-badge whitespace-nowrap text-center row-span-2 @2xl:row-span-1",
+                  "rank-badge whitespace-nowrap text-center",
                   e.rank === 1 && "rank-1",
                   e.rank === 2 && "rank-2",
                   e.rank === 3 && "rank-3",
@@ -59,36 +60,31 @@ export function LeaderboardBar({ entries, metric, className, querySuffix = "" }:
                 <span className="sr-only">Position </span><span aria-hidden="true">#</span>{formatInteger(e.rank)}
               </span>
 
-              <div className="min-w-0">
-                <Link
-                  href={`/players/${encodeURIComponent(e.playerName)}`}
-                  className="flex min-h-11 items-center text-sm font-semibold hover:underline"
-                  style={{ color }}
-                >
-                  <span className="break-words">{e.playerName}</span>
-                </Link>
-                <div className="mt-1 flex flex-wrap items-center gap-x-2 text-sm text-text-secondary">
-                  <Link href={`/bosses/${e.bossSlug}${querySuffix}`} className="inline-flex min-h-11 items-center hover:text-text-primary">
-                    {e.bossName}
-                  </Link>
-                  <span className={cn("diff-badge", e.difficulty.endsWith("H") ? "heroic" : "normal")} style={{ color: "var(--color-text-secondary)" }}>
-                    {e.difficulty}
-                  </span>
-                  <span className="@2xl:hidden">
-                    {formatShortDateUtc(e.date)}
-                  </span>
-                </div>
-              </div>
+              <Link
+                href={`/players/${encodeURIComponent(e.playerName)}`}
+                className="flex min-h-11 min-w-0 items-center text-sm font-semibold hover:underline"
+                style={{ color }}
+              >
+                <span className="break-words">{e.playerName}</span>
+              </Link>
 
-              <div className="text-right">
+              <div className="col-start-3 row-start-1 text-right @2xl:col-start-4">
                 <span className="text-base font-bold tabular-nums text-text-primary">
                   {formatDps(e.value)}
                 </span>
                 <span className="block text-sm text-text-secondary">{metric.toUpperCase()}</span>
               </div>
 
-              <div className="hidden text-right text-sm tabular-nums text-text-secondary @2xl:block">
-                {formatShortDateUtc(e.date)}
+              <div className="col-span-2 col-start-1 row-start-2 flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1 text-xs text-text-secondary @2xl:col-span-1 @2xl:col-start-3 @2xl:row-start-1">
+                {showBoss && (
+                  <Link href={`/bosses/${e.bossSlug}${querySuffix}`} className="inline-flex min-h-11 items-center text-sm hover:text-text-primary">
+                    {e.bossName}
+                  </Link>
+                )}
+                <span className={cn("diff-badge", e.difficulty.endsWith("H") ? "heroic" : "normal")} style={{ color: "var(--color-text-secondary)" }}>
+                  {e.difficulty}
+                </span>
+                <time dateTime={e.date} className="tabular-nums">{formatShortDateUtc(e.date)}</time>
               </div>
 
               <div className="col-start-3 row-start-2 text-right @2xl:col-start-5 @2xl:row-start-1">
@@ -96,7 +92,7 @@ export function LeaderboardBar({ entries, metric, className, querySuffix = "" }:
                   <Link
                     href={`/encounters/${e.encounterId}${querySuffix}`}
                     aria-label={`View ${e.playerName}'s ${e.bossName} ${e.difficulty} attempt`}
-                    className="inline-flex min-h-11 min-w-11 items-center text-sm text-gold hover:text-gold-light transition-colors"
+                    className="inline-flex min-h-11 min-w-11 items-center justify-end text-sm text-gold hover:text-gold-light transition-colors"
                   >
                     View &rarr;
                   </Link>

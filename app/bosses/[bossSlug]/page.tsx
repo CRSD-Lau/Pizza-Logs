@@ -3,7 +3,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { db } from "@/lib/db";
 import { SectionHeader } from "@/components/ui/SectionHeader";
-import { StatCard } from "@/components/ui/StatCard";
+import { StatCard, StatGroup } from "@/components/ui/StatCard";
 import { LeaderboardBar } from "@/components/charts/LeaderboardBar";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { formatDps, formatDuration, formatInteger, formatDateTimeUtc, getRecordedDurationSeconds } from "@/lib/utils";
@@ -140,8 +140,10 @@ export default async function BossPage({ params, searchParams }: Props) {
       {/* Header */}
       <PageHeader title={boss.name} description={<p>{boss.raid} · Fight history and kill rankings</p>} />
 
-      <DifficultyFilter action={`/bosses/${bossSlug}`} id="boss" difficulty={difficulty} searchParams={query} />
-      <p className="text-sm text-text-secondary">{difficultyScopeLabel(difficulty)}. Choose one difficulty to compare the same raid size and mode.</p>
+      <div className="space-y-3">
+        <DifficultyFilter action={`/bosses/${bossSlug}`} id="boss" difficulty={difficulty} searchParams={query} />
+        <p className="text-sm text-text-secondary">{difficultyScopeLabel(difficulty)}. Choose one difficulty to compare the same raid size and mode.</p>
+      </div>
       <SectionNav label="Boss page sections" items={[
         { id: "boss-history", label: "Fight history" },
         { id: "boss-dps", label: "DPS rankings" },
@@ -150,21 +152,22 @@ export default async function BossPage({ params, searchParams }: Props) {
       <ShortPullNotice shortPulls={counts.shortPulls} includeShortPulls={includeShortPulls} basePath={`/bosses/${bossSlug}${querySuffix}`} />
 
       {/* Stats */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+      <StatGroup columns={4}>
         <StatCard label="Total Kills" value={formatInteger(kills.length)} highlight />
         <StatCard label="Total Wipes" value={formatInteger(counts.wipes)} />
         <StatCard label="Fastest Kill" value={fastestKill !== null ? formatDuration(fastestKill) : <NumericValue value={null} />} sub={kills.length === 0 ? "No boss kills" : fastestKill === null ? "Kill duration unavailable" : "From known kill durations"} />
         <StatCard label="Total Pulls" value={formatInteger(counts.totalPulls)} />
-      </div>
+      </StatGroup>
 
       {/* Kill counts by difficulty */}
       {visibleEncounters.length > 0 && (
-        <div className="flex flex-wrap gap-2">
+        <div className="flex flex-wrap items-center gap-x-6 gap-y-3 text-sm">
+          <span className="text-text-secondary">Kills by difficulty</span>
           {DIFFICULTIES.filter(d => killsByDiff[d] > 0 || visibleEncounters.some(e => e.difficulty === d)).map(d => (
-            <div key={d} className="bg-bg-card border border-gold-dim rounded-sm px-4 py-2 text-center">
-              <div className={`diff-badge mb-1 ${d.endsWith("H") ? "heroic" : "normal"}`}>{d}</div>
-              <div className="text-xl font-bold text-text-primary tabular-nums">{formatInteger(killsByDiff[d] ?? 0)}</div>
-              <div className="text-sm text-text-secondary">{killsByDiff[d] === 1 ? "kill" : "kills"}</div>
+            <div key={d} className="flex items-center gap-2">
+              <span className={`diff-badge ${d.endsWith("H") ? "heroic" : "normal"}`}>{d}</span>
+              <span className="font-semibold text-text-primary tabular-nums">{formatInteger(killsByDiff[d] ?? 0)}</span>
+              <span className="text-text-secondary">{killsByDiff[d] === 1 ? "kill" : "kills"}</span>
             </div>
           ))}
         </div>
@@ -175,6 +178,7 @@ export default async function BossPage({ params, searchParams }: Props) {
         {dpsLeaders.length > 0 ? (
           <LeaderboardBar
             metric="dps"
+            showBoss={false}
             querySuffix={querySuffix}
             entries={dpsLeaders.map((p, i) => ({
               rank:        i + 1,
@@ -198,6 +202,7 @@ export default async function BossPage({ params, searchParams }: Props) {
         {hpsLeaders.length > 0 ? (
           <LeaderboardBar
             metric="hps"
+            showBoss={false}
             querySuffix={querySuffix}
             entries={hpsLeaders.map((p, i) => ({
               rank:        i + 1,

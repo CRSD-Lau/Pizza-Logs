@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { SectionHeader } from "@/components/ui/SectionHeader";
-import { StatCard } from "@/components/ui/StatCard";
+import { StatCard, StatGroup } from "@/components/ui/StatCard";
 import { LeaderboardBar } from "@/components/charts/LeaderboardBar";
 import { DatabaseUnavailable } from "@/components/ui/DatabaseUnavailable";
 import { EmptyState } from "@/components/ui/EmptyState";
@@ -140,11 +140,13 @@ export default async function WeeklyPage({ searchParams }: {
 
       {databaseAvailable && (
       <>
-        <DifficultyFilter action="/weekly" id="weekly" difficulty={difficulty} searchParams={query} />
-        <p className="text-sm text-text-secondary">{difficultyScopeLabel(difficulty)}. Rankings compare individual attempts across bosses.</p>
+        <div className="space-y-3">
+          <DifficultyFilter action="/weekly" id="weekly" difficulty={difficulty} searchParams={query} />
+          <p className="text-sm text-text-secondary">{difficultyScopeLabel(difficulty)}. Rankings compare individual attempts across bosses.</p>
+        </div>
         <ShortPullNotice shortPulls={data.shortPulls} includeShortPulls={includeShortPulls} basePath={`/weekly${querySuffix}`} />
-        <div className="grid grid-cols-2 items-stretch gap-y-2 rounded-sm bg-bg-panel/40 p-2 sm:grid-cols-5">
-          <StatCard label="Boss Kills" value={formatInteger(data.totalKills)} highlight className="col-span-2" />
+        <StatGroup columns={4}>
+          <StatCard label="Boss Kills" value={formatInteger(data.totalKills)} highlight />
           <StatCard label="Wipes" value={formatInteger(data.totalWipes)} />
           <StatCard label="Bosses Cleared" value={formatInteger(data.bossesCleared)} />
           <StatCard
@@ -153,7 +155,7 @@ export default async function WeeklyPage({ searchParams }: {
               ? data.totalKills / (data.totalKills + data.totalWipes) * 100 : null} kind="percent" />}
             sub={data.totalKills + data.totalWipes > 0 ? "kills / counted kills and wipes" : "No kills or wipes"}
           />
-        </div>
+        </StatGroup>
 
         <section>
           <SectionHeader title="Top DPS Attempts This Week" sub="Highest single-attempt DPS across recorded pulls. A player can appear more than once." />

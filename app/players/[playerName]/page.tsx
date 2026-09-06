@@ -3,7 +3,7 @@ import Link from "next/link";
 import { Suspense } from "react";
 import { notFound } from "next/navigation";
 import { db } from "@/lib/db";
-import { StatCard } from "@/components/ui/StatCard";
+import { StatCard, StatGroup } from "@/components/ui/StatCard";
 import { AccordionSection } from "@/components/ui/AccordionSection";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { PlayerAvatar } from "@/components/players/PlayerAvatar";
@@ -134,9 +134,9 @@ export default async function PlayerPage({ params, searchParams }: Props) {
           fallbackIconUrl={getClassIconUrl(profile.className)}
           size="lg"
         />
-        <div>
+        <div className="min-w-0">
           <h1
-            className="heading-cinzel text-2xl font-bold text-glow-gold"
+            className="heading-cinzel break-words text-2xl font-bold"
             style={{ color }}
           >
             {profile.name}
@@ -163,13 +163,14 @@ export default async function PlayerPage({ params, searchParams }: Props) {
       <ShortPullNotice shortPulls={counts.shortPulls} includeShortPulls={includeShortPulls} basePath={`/players/${encodeURIComponent(name)}`} />
 
       {/* Stats */}
-      <p className="text-sm text-text-secondary">Performance summary and per-boss bests use the latest 50 recorded encounters. Ranked achievements below are historical records.</p>
-      <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
-        <StatCard label="Encounters" value={formatInteger(counts.totalPulls)} sub="latest 50 recorded" />
-        <StatCard label="Kills" value={formatInteger(kills.length)} highlight />
-        <StatCard label="Best DPS" value={<NumericValue value={bestDps} kind="rate" />} sub={participants.length ? "single encounter" : "No recorded attempts"} />
-        <StatCard label="Avg DPS" value={<NumericValue value={avgDps} kind="rate" />} sub={kills.length ? "on kills" : "No boss kills"} />
-        <StatCard label="Best APS" value={<NumericValue value={bestAps} kind="rate" />} sub={participants.length ? "single encounter" : "No recorded attempts"} />
+      <div className="space-y-3">
+        <p className="text-sm text-text-secondary">Performance summary and per-boss bests use the latest 50 recorded encounters. Ranked achievements below are historical records.</p>
+        <StatGroup columns={4}>
+          <StatCard label="Encounters" value={formatInteger(counts.totalPulls)} sub={<><span className="text-text-primary">{formatCountLabel(kills.length, "kill")}</span> · latest 50 recorded</>} />
+          <StatCard label="Best DPS" value={<NumericValue value={bestDps} kind="rate" />} sub={participants.length ? "single encounter" : "No recorded attempts"} />
+          <StatCard label="Avg DPS" value={<NumericValue value={avgDps} kind="rate" />} sub={kills.length ? "on kills" : "No boss kills"} />
+          <StatCard label="Best APS" value={<NumericValue value={bestAps} kind="rate" />} sub={participants.length ? "single encounter" : "No recorded attempts"} />
+        </StatGroup>
       </div>
 
       {/* Gear */}
