@@ -138,7 +138,7 @@ export function GuildRosterTable({ members, currentPage = 1, query = "", classFi
           return (
             <li
               key={member.id}
-              className={getRevealClassName({ className: "px-4 py-4" })}
+              className={getRevealClassName({ className: "px-4 py-3" })}
               style={getRevealStyle(index)}
             >
               <div className="flex items-start gap-3">
@@ -167,28 +167,28 @@ export function GuildRosterTable({ members, currentPage = 1, query = "", classFi
                 </div>
               </div>
 
-              <dl className="mt-4 grid grid-cols-2 gap-x-4 gap-y-3">
-                <div>
+              <dl className="mt-2 grid grid-cols-2 gap-x-4 gap-y-2">
+                <div className="flex flex-wrap items-baseline gap-x-2">
                   <dt className="text-xs uppercase tracking-wide text-text-dim">Rank</dt>
-                  <dd className="mt-1 text-sm text-text-primary">{member.rankName ?? "-"}</dd>
+                  <dd className="text-sm text-text-primary">{member.rankName ?? "-"}</dd>
                 </div>
-                <div>
+                <div className="flex flex-wrap items-baseline gap-x-2">
                   <dt className="text-xs uppercase tracking-wide text-text-dim">Gear Score</dt>
-                  <dd className="mt-1 text-sm text-text-primary tabular-nums">
+                  <dd className="text-sm text-text-primary tabular-nums">
                     <NumericValue value={member.gearScore} />
                   </dd>
                 </div>
-                <div className="col-span-2">
+                <div className="col-span-2 flex flex-wrap items-baseline gap-x-2">
                   <dt className="text-xs uppercase tracking-wide text-text-dim">Professions</dt>
-                  <dd className="mt-1 text-sm text-text-secondary">{formatProfessions(member.professionsJson)}</dd>
+                  <dd className="text-sm text-text-secondary">{formatProfessions(member.professionsJson)}</dd>
                 </div>
               </dl>
 
-              <div className="mt-3 flex items-center justify-between gap-4 border-t border-gold-dim/70 pt-3">
-                <dl>
+              <div className="mt-2 flex flex-wrap items-center justify-between gap-x-3 border-t border-gold-dim/50 pt-2">
+                <dl className="min-w-0">
                   <div>
                     <dt className="text-xs uppercase tracking-wide text-text-dim">Last Synced</dt>
-                    <dd className="mt-1 text-sm text-text-secondary tabular-nums">{formatSyncedAt(member.lastSyncedAt)}</dd>
+                    <dd className="text-xs text-text-secondary tabular-nums">{formatSyncedAt(member.lastSyncedAt)}</dd>
                   </div>
                 </dl>
                 <Link

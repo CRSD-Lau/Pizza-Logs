@@ -99,7 +99,7 @@ export function SecurityForm({ email }: { email: string }) {
       <div className="space-y-2 border-b border-gold-dim pb-5 text-sm">
         <p className="break-all text-text-primary">{email}</p>
         <p className="text-text-secondary">Authenticator protection is required. To change your password or recovery codes, you must have signed in within the last 15 minutes.</p>
-        <Link href="/admin" className="inline-block rounded-sm text-gold hover:text-gold-light focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-gold">Back to admin</Link>
+        <Link href="/admin" className="inline-flex min-h-11 items-center rounded-sm text-gold hover:text-gold-light focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-gold">Back to admin</Link>
       </div>
       <AuthError message={error} />
       {notice && <p role="status" className="text-sm text-text-secondary">{notice}</p>}

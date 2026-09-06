@@ -25,6 +25,8 @@ This project follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) an
 
 ### Changed
 
+- Refined the full site layout with consistent metric groups, paired encounter totals/rates, quieter borders, compact leaderboards and roster rows, grouped filters, and shared admin/report spacing across desktop and mobile. Recorded values, analytical scopes, upload behavior, and administrator access remain unchanged.
+
 - Require account-level backup eligibility and subscription-cost checks before native Railway recovery setup; document the Pro-plan gate, owner-operated PITR activation and isolated restore validation.
 - Record production administrator MFA and current-device sign-out acceptance, including stored-session deletion and a fresh same-browser login requirement, plus owner acceptance of direct streaming with reupload after interruption; durable upload orchestration remains a separate future request.
 - Add an All Boss Attempts default raid-summary view alongside Successful Boss Fights. Keep headline, player and target totals on the same selected fights, include every stored attempt in the all-attempt view, and preserve selection through report navigation. Short-pull controls change the encounter list and its counts without changing either summary; existing reports need no re-upload.

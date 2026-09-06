@@ -175,10 +175,10 @@ export default async function RaidsPage({ searchParams }: {
           action={<Link href="/" className="text-gold hover:text-gold-light text-sm">Upload a log &rarr;</Link>}
         />
       ) : (
-        <div className="space-y-10">
+        <div className="space-y-6">
           {Array.from(byDay.entries()).map(([day, daySessions]) => (
             <div key={day}>
-              <p className="heading-cinzel text-xs text-gold uppercase tracking-widest mb-3 pb-2 border-b border-gold-dim">
+              <p className="heading-cinzel mb-2 text-xs uppercase tracking-widest text-text-secondary">
                 {day}
               </p>
               <div className="space-y-3">
@@ -214,7 +214,7 @@ export default async function RaidsPage({ searchParams }: {
                         </div>
                       </div>
 
-                      <div className="grid grid-cols-3 gap-2 sm:flex sm:items-center sm:gap-5">
+                      <div className="grid grid-cols-3 gap-3 border-t border-gold-dim/50 pt-3 sm:min-w-56 sm:shrink-0 sm:border-0 sm:pt-0">
                         <Metric label="Kills" value={s.kills} valueClassName="text-success" />
                         <Metric label="Wipes" value={s.wipes} valueClassName="text-danger" />
                         <Metric label="Pulls" value={s.encounterCount} valueClassName="text-text-secondary" />
@@ -254,7 +254,7 @@ function Metric({
   valueClassName: string;
 }) {
   return (
-    <div className="rounded-sm border border-gold-dim bg-bg-card px-3 py-2 text-center min-w-[74px]">
+    <div className="min-w-0 text-center">
       <div className={`font-bold tabular-nums ${valueClassName}`}>{formatInteger(value)}</div>
       <div className="text-xs text-text-dim uppercase tracking-wide">{label}</div>
     </div>

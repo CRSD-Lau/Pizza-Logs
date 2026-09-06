@@ -6,7 +6,7 @@ import { MobBreakdown, type MobEntry } from "@/components/meter/MobBreakdown";
 import { PlayerAvatar } from "@/components/players/PlayerAvatar";
 import { AccordionSection } from "@/components/ui/AccordionSection";
 import { SectionNav } from "@/components/ui/SectionNav";
-import { StatCard } from "@/components/ui/StatCard";
+import { StatCard, StatGroup } from "@/components/ui/StatCard";
 import { ShortPullNotice } from "@/components/reports/ShortPullNotice";
 import { SessionPlayerTable } from "@/components/reports/SessionPlayerTable";
 import type { SessionPlayerRow } from "@/lib/session-player-sort";
@@ -278,14 +278,14 @@ export default async function SessionDetailPage({ params, searchParams }: Props)
       </div>
 
       {sessionCount > 1 && (
-        <div className="flex items-center gap-3 text-xs flex-wrap">
+        <div className="flex flex-wrap items-center gap-3 text-sm">
           {previousSession && (
-            <Link href={`${getRaidSessionPath(publicSlug, previousSession)}${querySuffix}`} className="text-gold hover:text-gold-light">
+            <Link href={`${getRaidSessionPath(publicSlug, previousSession)}${querySuffix}`} className="inline-flex min-h-11 items-center text-gold hover:text-gold-light">
               Previous raid
             </Link>
           )}
           {nextSession && (
-            <Link href={`${getRaidSessionPath(publicSlug, nextSession)}${querySuffix}`} className="text-gold hover:text-gold-light sm:ml-auto">
+            <Link href={`${getRaidSessionPath(publicSlug, nextSession)}${querySuffix}`} className="inline-flex min-h-11 items-center text-gold hover:text-gold-light sm:ml-auto">
               Next raid
             </Link>
           )}
@@ -318,35 +318,41 @@ export default async function SessionDetailPage({ params, searchParams }: Props)
         ...(playerSet.size > 0 ? [{ id: "roster", label: "Roster" }] : []),
       ]} />
 
-      <nav aria-label="Boss fight scope" className="flex flex-wrap gap-2">
-        {(["all", "kills"] as const).map(value => (
-          <Link
-            key={value}
-            href={`${sessionPath}${buildRaidSummaryQuery(value, includeShortPulls)}`}
-            scroll={false}
-            aria-current={scope === value ? "page" : undefined}
-            className={cn("inline-flex min-h-11 items-center rounded-sm border px-4 py-2 text-sm font-semibold transition-colors",
-              scope === value ? "border-gold bg-gold/10 text-gold-light" : "border-gold-dim text-text-secondary hover:border-gold hover:text-gold-light")}
-          >
-            {value === "all" ? "All Boss Attempts" : "Successful Boss Fights"}
-          </Link>
-        ))}
-      </nav>
+      <section aria-label={isKills ? "Boss kill summary" : "All boss attempt summary"} className="space-y-4">
+        <nav aria-label="Boss fight scope" className="flex flex-wrap gap-2">
+          {(["all", "kills"] as const).map(value => (
+            <Link
+              key={value}
+              href={`${sessionPath}${buildRaidSummaryQuery(value, includeShortPulls)}`}
+              scroll={false}
+              aria-current={scope === value ? "page" : undefined}
+              className={cn("inline-flex min-h-11 items-center rounded-sm border px-4 py-2 text-sm font-semibold transition-colors",
+                scope === value ? "border-gold bg-gold/10 text-gold-light" : "border-gold-dim text-text-secondary hover:border-gold hover:text-gold-light")}
+            >
+              {value === "all" ? "All Boss Attempts" : "Successful Boss Fights"}
+            </Link>
+          ))}
+        </nav>
 
-      <section aria-label={isKills ? "Boss kill summary" : "All boss attempt summary"} className="space-y-2">
-        <h2 className="heading-cinzel text-sm font-bold uppercase tracking-widest text-gold">{isKills ? "Successful Boss Fights" : "All Boss Attempts"}</h2>
-        <p className="text-sm text-text-secondary">
-          {isKills
-            ? "Totals cover winning boss fights and their adds. Wipes and between-fight trash are excluded."
-            : "Totals cover every recorded boss attempt and its adds, including wipes, unknown outcomes and short pulls. Between-fight trash is excluded."}
-        </p>
-        <div className="grid grid-cols-2 items-stretch gap-y-2 rounded-sm bg-bg-panel/40 p-2 lg:grid-cols-4">
-          <StatCard label={isKills ? "Fight results" : "Recorded results"} value={summaryResults} sub={formatCountLabel(raidSummary.encounters.length, isKills ? "successful fight" : "recorded attempt")} highlight className="col-span-2" />
+        <div className="space-y-2">
+          <h2 className="heading-cinzel text-sm font-bold uppercase tracking-widest text-gold">{isKills ? "Successful Boss Fights" : "All Boss Attempts"}</h2>
+          <p className="text-sm text-text-secondary">
+            {isKills
+              ? "Totals cover winning boss fights and their adds. Wipes and between-fight trash are excluded."
+              : "Totals cover every recorded boss attempt and its adds, including wipes, unknown outcomes and short pulls. Between-fight trash is excluded."}
+          </p>
+          <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1 text-sm">
+            <span className="text-text-secondary">{isKills ? "Fight results" : "Recorded results"}</span>
+            <span className="font-semibold tabular-nums text-text-primary">{summaryResults}</span>
+            <span className="text-text-secondary">· {formatCountLabel(raidSummary.encounters.length, isKills ? "successful fight" : "recorded attempt")}</span>
+          </div>
+        </div>
+        <StatGroup columns={4}>
           <StatCard label="Total Damage" value={formatNumber(raidSummary.totalDamage)} sub={isKills ? "boss kills only" : "all recorded boss attempts"} />
           <StatCard label="Healing + absorbs" value={formatNumber(raidSummary.heal)} sub="effective healing + absorbs" />
           <StatCard label="Damage Taken" value={formatNumber(raidSummary.totalDamageTaken)} sub={isKills ? "boss kills only" : "all recorded boss attempts"} />
-          <StatCard label={isKills ? "Kill Time" : "Fight Time"} value={formatDurationPrecise(raidSummary.durationMs)} sub={isKills ? "combined boss kill duration" : "combined boss attempt duration"} className="col-span-2 lg:col-span-1" />
-        </div>
+          <StatCard label={isKills ? "Kill Time" : "Fight Time"} value={formatDurationPrecise(raidSummary.durationMs)} sub={isKills ? "combined boss kill duration" : "combined boss attempt duration"} />
+        </StatGroup>
       </section>
 
       <ShortPullNotice shortPulls={shortPulls} includeShortPulls={includeShortPulls} basePath={viewPath} listOnly />
@@ -419,11 +425,11 @@ export default async function SessionDetailPage({ params, searchParams }: Props)
                           {enc.difficulty}
                         </span>
                       </div>
-                      <div className="flex items-center gap-4 text-xs tabular-nums text-text-secondary flex-wrap justify-end">
+                      <div className="flex w-full flex-wrap items-center gap-x-4 gap-y-2 text-sm tabular-nums text-text-secondary lg:w-auto lg:justify-end">
                         <span>{formatDuration(durationSec)} duration</span>
                         <span>{formatNumber(enc.totalDamage)} damage</span>
                         <span><NumericValue value={rdps} kind="rate" /> raid DPS</span>
-                        <span className="text-text-dim">
+                        <span className="w-full text-xs text-text-dim sm:w-auto">
                           {formatDateTimeUtc(enc.startedAt)}
                         </span>
                       </div>
@@ -459,11 +465,13 @@ export default async function SessionDetailPage({ params, searchParams }: Props)
       >
         {sessionAnalytics ? (
           <div className="space-y-4">
-            <div className="grid grid-cols-2 gap-2 sm:grid-cols-4" aria-label="Full session totals">
-              <StatCard label="Total Damage" value={formatNumber(sessionAnalytics.totalDamage)} sub="full raid session" />
-              <StatCard label="Healing + absorbs" value={formatNumber(sessionAnalytics.heal)} sub="effective healing + absorbs" />
-              <StatCard label="Damage Taken" value={formatNumber(sessionAnalytics.totalDamageTaken)} sub="full raid session" />
-              <StatCard label="Duration" value={formatDurationPrecise(sessionAnalytics.durationMs)} sub="first to last log event" />
+            <div aria-label="Full session totals">
+              <StatGroup columns={4}>
+                <StatCard label="Total Damage" value={formatNumber(sessionAnalytics.totalDamage)} sub="full raid session" />
+                <StatCard label="Healing + absorbs" value={formatNumber(sessionAnalytics.heal)} sub="effective healing + absorbs" />
+                <StatCard label="Damage Taken" value={formatNumber(sessionAnalytics.totalDamageTaken)} sub="full raid session" />
+                <StatCard label="Duration" value={formatDurationPrecise(sessionAnalytics.durationMs)} sub="first to last log event" />
+              </StatGroup>
             </div>
             <p className="text-sm text-text-secondary">
               These rates use the entire session duration, including downtime. Player links open their recorded boss attempts;

@@ -135,8 +135,10 @@ export default async function BossesPage({ searchParams }: {
 
       {databaseAvailable && (
         <>
-        <DifficultyFilter action="/bosses" id="bosses" difficulty={difficulty} searchParams={query} />
-        <p className="text-sm text-text-secondary">{difficultyScopeLabel(difficulty)}. Top DPS uses successful attempts. Fastest kills use known recorded kill durations.</p>
+        <div className="space-y-3">
+          <DifficultyFilter action="/bosses" id="bosses" difficulty={difficulty} searchParams={query} />
+          <p className="text-sm text-text-secondary">{difficultyScopeLabel(difficulty)}. Top DPS uses successful attempts. Fastest kills use known recorded kill durations.</p>
+        </div>
         <ShortPullNotice
           shortPulls={bosses.reduce((sum, boss) => sum + boss.shortPulls, 0)}
           includeShortPulls={includeShortPulls}
@@ -216,11 +218,11 @@ export default async function BossesPage({ searchParams }: {
                         />
                       </div>
 
-                      <div className="rounded-sm border border-gold-dim/70 bg-bg-panel/70 px-3 py-2">
+                      <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1 border-t border-gold-dim/50 pt-2">
                         <div className="text-xs font-semibold uppercase tracking-widest text-text-dim">
                           Top DPS
                         </div>
-                        <div className="mt-0.5 break-words text-sm text-text-primary tabular-nums">
+                        <div className="break-words text-sm text-text-primary tabular-nums">
                           {b.bestKill ? topDps : <NumericValue value={null} />}
                         </div>
                       </div>

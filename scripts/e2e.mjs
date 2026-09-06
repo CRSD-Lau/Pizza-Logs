@@ -191,7 +191,7 @@ try {
   };
   const assertKillCards = async () => {
     const scope = page.getByRole("region", { name: "Boss kill summary", exact: true });
-    assert.equal(await cardValue(scope, "Fight results"), "1 kill");
+    assert.match(await scope.innerText(), /Fight results\s+1 kill\s+· 1 successful fight/);
     assert.equal(await cardValue(scope, "Total Damage"), "1.50K");
     assert.equal(await cardValue(scope, "Healing + absorbs"), "900.00");
     assert.equal(await cardValue(scope, "Damage Taken"), "450.00");
@@ -199,7 +199,7 @@ try {
   };
   const assertAllCards = async () => {
     const scope = page.getByRole("region", { name: "All boss attempt summary", exact: true });
-    assert.equal(await cardValue(scope, "Recorded results"), "1 kill / 2 wipes");
+    assert.match(await scope.innerText(), /Recorded results\s+1 kill \/ 2 wipes\s+· 3 recorded attempts/);
     assert.match(await scope.innerText(), /3 recorded attempts/);
     assert.equal(await cardValue(scope, "Total Damage"), "4.10K");
     assert.equal(await cardValue(scope, "Healing + absorbs"), "1.90K");

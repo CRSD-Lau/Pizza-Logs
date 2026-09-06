@@ -35,7 +35,7 @@ export function ClearDatabaseButton() {
 
   if (phase === "confirm") {
     return (
-      <div className="flex items-center gap-3">
+      <div className="flex max-w-2xl flex-wrap items-center gap-3 rounded-sm border border-danger/30 bg-danger/5 p-4">
         <span className="text-sm text-warning max-w-md">
           This will delete uploaded logs, parsed raids, encounters, combat events, and upload analytics.
           Cached Warmane gear, player profiles, guild roster, and item template data will be retained.
@@ -48,7 +48,7 @@ export function ClearDatabaseButton() {
         </button>
         <button
           onClick={() => setPhase("idle")}
-          className="px-3 py-1.5 text-sm text-text-dim hover:text-text-secondary transition-colors"
+          className="min-h-11 px-3 py-1.5 text-sm text-text-dim hover:text-text-secondary transition-colors"
         >
           Cancel
         </button>
@@ -66,9 +66,9 @@ export function ClearDatabaseButton() {
 
   // error
   return (
-    <div className="flex items-center gap-3">
-      <span className="text-sm text-danger">{error}</span>
-      <button onClick={() => setPhase("idle")} className="text-sm text-text-dim hover:text-text-secondary">
+    <div className="flex max-w-2xl flex-wrap items-center gap-3">
+      <span className="break-words text-sm text-danger-light">{error}</span>
+      <button onClick={() => setPhase("idle")} className="min-h-11 px-3 text-sm text-text-dim hover:text-text-secondary">
         Dismiss
       </button>
     </div>

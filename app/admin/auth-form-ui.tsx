@@ -13,7 +13,7 @@ export function authErrorMessage(error: { status?: number; code?: string }, fall
 }
 
 export function AuthError({ message }: { message: string | null }) {
-  return message ? <p role="alert" className="rounded-sm border border-danger/50 bg-danger/10 p-3 text-sm text-red-300">{message}</p> : null;
+  return message ? <p role="alert" className="rounded-sm border border-danger/50 bg-danger/10 p-3 text-sm text-danger-light">{message}</p> : null;
 }
 
 export function RecoveryCodes({ codes, onSaved, pending = false, buttonLabel = "I have saved these codes" }: {
@@ -48,7 +48,7 @@ export function RecoveryCodes({ codes, onSaved, pending = false, buttonLabel = "
       </ul>
       <Button type="button" size="sm" onClick={copyCodes} disabled={pending}>Copy codes</Button>
       <p role="status" className="text-sm text-text-secondary">{copyStatus}</p>
-      <label className="flex cursor-pointer items-start gap-3 text-sm text-text-secondary">
+      <label className="flex min-h-11 cursor-pointer items-start gap-3 py-2 text-sm text-text-secondary">
         <input type="checkbox" checked={saved} onChange={(event) => setSaved(event.target.checked)} disabled={pending} className="mt-0.5 size-4 shrink-0 accent-gold" />
         <span>I have saved these recovery codes somewhere safe.</span>
       </label>

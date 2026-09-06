@@ -118,10 +118,10 @@ export default async function LeaderboardsPage({ searchParams }: { searchParams:
       )}
 
       {databaseAvailable && (
-        <>
+        <div className="space-y-3">
           <DifficultyFilter action="/leaderboards" id="leaderboards" difficulty={difficulty} searchParams={query} bosses={bosses} boss={selectedBoss} />
           <p className="text-sm text-text-secondary">{difficultyScopeLabel(difficulty)}. Choose one difficulty to compare the same raid size and mode.</p>
-        </>
+        </div>
       )}
 
       {databaseAvailable && (boards.length === 0 ? (
@@ -140,14 +140,14 @@ export default async function LeaderboardsPage({ searchParams }: { searchParams:
               sub={`${boss.raid} · ${formatCountLabel(dpsEntries.length, "DPS entry", "DPS entries")} · ${formatCountLabel(hpsEntries.length, "HPS entry", "HPS entries")}`}
               defaultOpen={index === 0}
             >
-              <div className={`grid gap-8 px-2 pb-8 pt-3 sm:px-4 ${dpsEntries.length > 0 && hpsEntries.length > 0 ? "md:grid-cols-2" : ""}`}>
+              <div className={`grid gap-6 px-2 pb-4 pt-3 sm:px-4 ${dpsEntries.length > 0 && hpsEntries.length > 0 ? "md:grid-cols-2" : ""}`}>
                 {/* DPS */}
                 {dpsEntries.length > 0 && (
                   <div className="space-y-2">
                     <p className="text-xs font-semibold text-text-dim uppercase tracking-widest">
                       Top DPS
                     </p>
-                    <LeaderboardBar entries={dpsEntries} metric="dps" querySuffix={querySuffix} />
+                    <LeaderboardBar entries={dpsEntries} metric="dps" querySuffix={querySuffix} showBoss={false} />
                   </div>
                 )}
 
@@ -157,7 +157,7 @@ export default async function LeaderboardsPage({ searchParams }: { searchParams:
                     <p className="text-xs font-semibold text-text-dim uppercase tracking-widest">
                       Top HPS
                     </p>
-                    <LeaderboardBar entries={hpsEntries} metric="hps" querySuffix={querySuffix} />
+                    <LeaderboardBar entries={hpsEntries} metric="hps" querySuffix={querySuffix} showBoss={false} />
                   </div>
                 )}
               </div>
