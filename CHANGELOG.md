@@ -26,6 +26,8 @@ This project follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) an
 
 ### Changed
 
+- Compact the expandable boss directory into full-width raid rows with responsive boss-link grids, visible raid counts, and a clearer selection summary.
+
 - Display raid Kill Time, Fight Time and full-session Duration in whole seconds, retaining recorded millisecond precision for calculations.
 
 - Refined the full site layout with consistent metric groups, paired encounter totals/rates, quieter borders, compact leaderboards and roster rows, grouped filters, and shared admin/report spacing across desktop and mobile. Recorded values, analytical scopes, upload behavior, and administrator access remain unchanged.
