@@ -319,6 +319,9 @@ export async function verifyPlayerQuickLooks({ browser, base, out, report, encou
         await page.keyboard.press("Tab");
         await page.keyboard.press("Shift+Tab");
         await tooltip.waitFor();
+        // Finish this surface's intentional viewer startup before the next
+        // surface snapshots the context-wide request counters.
+        await visibleModel(page);
         assert.equal(requests.gear, before.gear + 1, `${surface.name}: cached keyboard reopen`);
         await page.keyboard.press("Escape");
         await tooltip.waitFor({ state: "detached" });
