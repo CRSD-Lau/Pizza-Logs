@@ -232,8 +232,8 @@ export function FrozenLogbookIntro() {
         style={reducedMotion ? { transform: "translateX(-50%)" } : undefined}
         aria-hidden="true"
       >
-        <div className="isolate mx-auto mb-4 w-fit rounded-full bg-bg-deep p-2 shadow-xl">
-          <GuildCrest size={96} className="h-20 w-20 sm:h-24 sm:w-24" />
+        <div className="mx-auto mb-4 w-fit rounded-full bg-bg-deep p-2 shadow-xl">
+          <GuildCrest size={96} surface="solid" className="h-20 w-20 sm:h-24 sm:w-24" />
         </div>
         <span>Pizza Logs</span>
       </div>

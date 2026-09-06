@@ -18,6 +18,7 @@ The first stable product release defines the current canonical Warmane/WotLK ana
 ### Changed
 
 - Replace the geometric gold mark with the approved Pizza Warriors crest across navigation, the optional guild intro, browser icons, URL-share artwork, README branding and the repository social-preview artwork. Preserve the gold/navy palette, the 44-pixel header crest and existing accessible intro controls.
+- Match the optional intro crest to its navy backing and clip the image to a circle, including the mobile reduced-motion preview, so black square corners cannot show over the cinematic.
 - Set the product package and deployment-version fallback to 1.0.0. Parser provenance remains independently versioned at 1.1.1 with metric schema 1 and the canonical-v1 profile.
 - Reconcile the quality review with recorded production MFA acceptance and the owner's accepted streaming/reupload decision for issue 75.
 

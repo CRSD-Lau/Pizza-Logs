@@ -18,10 +18,12 @@ The [brand manifest](../assets/brand/manifest.json) records the source digest an
 each exported asset's dimensions, byte size and SHA-256. The
 [asset register](security/asset-provenance.md) records provenance and usage limits.
 
-The shared [GuildCrest](../components/brand/GuildCrest.tsx) displays the exported
-512px crest with CSS `mix-blend-mode: lighten`, allowing its black surround to
-blend into the dark page behind it. Static install icons, favicon and social card
-use the same browser blend against `#0a0c10`; their backgrounds are already
+The shared [GuildCrest](../components/brand/GuildCrest.tsx) normally displays the
+exported 512px crest with CSS `mix-blend-mode: lighten`, allowing its black surround
+to blend into the dark page behind it. The intro uses the component's solid variant:
+the precomposed 512px icon is clipped to a circle on a matching navy backing, so
+the animated overlay does not depend on backdrop blending. Static install icons,
+favicon and social card use the same browser blend against `#0a0c10`; their backgrounds are already
 composited because external consumers cannot use the site's CSS. The SVG icon
 embeds a raster export of the exact artwork; it is not a traced replacement.
 
@@ -50,7 +52,7 @@ font or encoder updates can change exported bytes even when the source is unchan
 |---|---|---|
 | Desktop and mobile header | [Nav](../components/layout/Nav.tsx) through `GuildCrest` | 44px crest; preserve the wordmark and responsive navigation space. |
 | Guild roster loading state | [Existing roster loading UI](../app/guild-roster/loading.tsx) through `GuildCrest` | Crest and accessible loading status alongside the existing roster skeleton. |
-| Optional guild intro | [FrozenLogbookIntro](../components/intro/FrozenLogbookIntro.tsx) through `GuildCrest` | Responsive crest and wordmark overlay; inspect normal playback, reduced motion and failed-video fallback. |
+| Optional guild intro | [FrozenLogbookIntro](../components/intro/FrozenLogbookIntro.tsx) through `GuildCrest` | Responsive solid crest on a circular navy backing and wordmark overlay; inspect normal playback, reduced motion and failed-video fallback. |
 | Installed-app icon and supported mobile startup screen | [Manifest](../app/manifest.ts) | 192/512px PNG icons, a separate 512px maskable icon with inset artwork, and `#0a0c10` background/theme. The operating system controls startup presentation. |
 | Apple home-screen icon | [Root metadata](../app/layout.tsx) | 180px `public/brand/apple-touch-icon.png`. |
 | Browser tabs and bookmarks | Root metadata, [SVG route](../app/icon.svg), [favicon](../public/favicon.ico) | SVG plus ICO containing 16/32/48px artwork. |
