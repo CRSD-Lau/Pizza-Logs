@@ -7,7 +7,7 @@ import { MobBreakdown, type MobEntry } from "@/components/meter/MobBreakdown";
 import { AccordionSection } from "@/components/ui/AccordionSection";
 import { SectionNav } from "@/components/ui/SectionNav";
 import { Badge } from "@/components/ui/Badge";
-import { StatCard } from "@/components/ui/StatCard";
+import { StatCard, StatGroup } from "@/components/ui/StatCard";
 import { PlayerAvatar } from "@/components/players/PlayerAvatar";
 import { FilteredAnalyticsBreakdown } from "@/components/analytics/FilteredAnalyticsBreakdown";
 import { getClassIconUrl } from "@/lib/class-icons";
@@ -245,7 +245,8 @@ export default async function EncounterPage({ params, searchParams }: Props) {
             {encounter.upload.realm?.name && <span className="text-xs text-text-dim">- {encounter.upload.realm.name}</span>}
           </div>
         </div>
-        <div className="text-right text-sm text-text-dim">
+        <div className="space-y-1 text-sm text-text-secondary sm:text-right">
+          <div>Duration <span className="ml-1 font-semibold tabular-nums text-text-primary">{durationSec === null ? <NumericValue value={null} /> : formatDuration(durationSec)}</span></div>
           <div>{formatDateTimeUtc(encounter.startedAt)}</div>
         </div>
       </div>
@@ -260,15 +261,12 @@ export default async function EncounterPage({ params, searchParams }: Props) {
 
       <ShortPullNotice shortPulls={isShortPull(encounter) ? 1 : 0} includeShortPulls={includeShortPulls} basePath={`/encounters/${id}${comparisonQuerySuffix}`} />
 
-      <div className="grid grid-cols-2 items-stretch gap-y-2 rounded-sm bg-bg-panel/40 p-2 lg:grid-cols-4">
-        <StatCard label="Duration" value={formatDuration(durationSec)} highlight className="col-span-2" />
-        <StatCard label="Total Damage" value={formatNumber(encounter.totalDamage)} />
-        <StatCard label="Raid DPS" value={<NumericValue value={totalDps} kind="rate" />} sub="damage per second" />
-        <StatCard label="Effective Healing" value={formatNumber(encounter.totalHealing)} />
-        <StatCard label="Effective HPS" value={<NumericValue value={totalHps} kind="rate" />} sub="effective healing per second" />
+      <StatGroup columns={4}>
+        <StatCard label="Damage" value={formatNumber(encounter.totalDamage)} sub={<><NumericValue value={totalDps} kind="rate" /> raid DPS</>} />
+        <StatCard label="Effective healing" value={formatNumber(encounter.totalHealing)} sub={<><NumericValue value={totalHps} kind="rate" /> effective HPS</>} />
         <StatCard label="Absorbs" value={formatNumber(encounter.totalAbsorbs)} sub={totalAps === null ? "Absorb rate unavailable" : `${formatRate(totalAps)} APS`} />
-        <StatCard label="Healing + absorbs" value={formatNumber(totalHealAndAbsorb)} sub={totalHealAndAbsorbPs === null ? "Combined rate unavailable" : `${formatRate(totalHealAndAbsorbPs)} healing + absorbs /s`} className="col-span-2" />
-      </div>
+        <StatCard label="Healing + absorbs" value={formatNumber(totalHealAndAbsorb)} sub={totalHealAndAbsorbPs === null ? "Combined rate unavailable" : `${formatRate(totalHealAndAbsorbPs)} healing + absorbs /s`} />
+      </StatGroup>
       {durationSec === null && <p className="text-sm text-text-secondary">Raid rates are unavailable because the recorded fight duration is missing or invalid. Totals and recorded player rates remain available.</p>}
 
       {encounter.milestones.length > 0 && (
@@ -277,19 +275,21 @@ export default async function EncounterPage({ params, searchParams }: Props) {
             Awards recorded for this encounter
           </p>
           <p className="text-sm text-text-secondary">Historical rank when achieved, for this boss and difficulty. Current standings may differ.</p>
-          {encounter.milestones.map((m) => (
-            <div key={m.id} className="milestone-banner flex items-center justify-between text-sm flex-wrap gap-2">
-              <span>
-                <span className="font-bold text-gold">#{formatInteger(m.rank)}</span>
-                {" "}{m.type === "WEEKLY_BEST" ? "weekly best" : "all-time"}{" "}
-                <span className="text-text-primary font-semibold">{m.player.name}</span>
-                <span className="text-text-secondary"> - {m.metric}</span>
-              </span>
-              <span className="tabular-nums font-bold text-gold-light">
-                <NumericValue value={m.value} kind="rate" /> {m.metric}
-              </span>
-            </div>
-          ))}
+          <div className="grid gap-2 lg:grid-cols-2">
+            {encounter.milestones.map((m) => (
+              <div key={m.id} className="milestone-banner flex items-center justify-between text-sm flex-wrap gap-2">
+                <span>
+                  <span className="font-bold text-gold">#{formatInteger(m.rank)}</span>
+                  {" "}{m.type === "WEEKLY_BEST" ? "weekly best" : "all-time"}{" "}
+                  <span className="text-text-primary font-semibold">{m.player.name}</span>
+                  <span className="text-text-secondary"> - {m.metric}</span>
+                </span>
+                <span className="tabular-nums font-bold text-gold-light">
+                  <NumericValue value={m.value} kind="rate" /> {m.metric}
+                </span>
+              </div>
+            ))}
+          </div>
         </div>
       )}
 
@@ -454,7 +454,7 @@ export default async function EncounterPage({ params, searchParams }: Props) {
                   {p.role}
                 </Badge>
               </div>
-              <div className="flex items-center gap-4 text-sm tabular-nums text-text-secondary flex-wrap justify-end">
+              <div className="flex w-full flex-wrap items-center gap-x-4 gap-y-2 text-sm tabular-nums text-text-secondary sm:w-auto sm:justify-end">
                 <span><NumericValue value={p.dps} kind="rate" /> DPS</span>
                 <span><NumericValue value={p.hps} kind="rate" /> HPS</span>
                 <span><NumericValue value={p.aps} kind="rate" /> APS</span>

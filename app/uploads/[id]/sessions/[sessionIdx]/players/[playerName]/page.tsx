@@ -7,7 +7,7 @@ import { SectionNav } from "@/components/ui/SectionNav";
 import { PlayerAvatar } from "@/components/players/PlayerAvatar";
 import { SessionLineChart } from "@/components/charts/SessionLineChart";
 import type { ChartPoint, PlayerLine } from "@/components/charts/SessionLineChart";
-import { StatCard } from "@/components/ui/StatCard";
+import { StatCard, StatGroup } from "@/components/ui/StatCard";
 import { getClassColor } from "@/lib/constants/classes";
 import { getClassIconUrl } from "@/lib/class-icons";
 import {
@@ -188,7 +188,7 @@ export default async function SessionPlayerPage({ params, searchParams }: Props)
 
   return (
     <div className="page-shell">
-      <div className="text-xs text-text-dim flex items-center gap-1 flex-wrap">
+      <div className="flex flex-wrap items-center gap-1 text-sm text-text-dim">
         <Link href={`/raids${querySuffix}`} className="inline-flex min-h-11 items-center hover:text-gold">Raids</Link>
         <span>&gt;</span>
         <Link href={`${sessionPath}${raidQuerySuffix}`} className="inline-flex min-h-11 items-center hover:text-gold">
@@ -229,16 +229,20 @@ export default async function SessionPlayerPage({ params, searchParams }: Props)
 
       <ShortPullNotice shortPulls={counts.shortPulls} includeShortPulls={includeShortPulls} basePath={`${sessionPath}/players/${encodeURIComponent(name)}${raidQuerySuffix}`} />
 
-      <p className="text-sm text-text-secondary">Best values use all recorded pulls in this session, including short pulls. The average gives each successful fight equal weight.</p>
-      {kills.length === 0 && <p className="text-sm text-text-secondary">No successful fights were recorded for this player. The average on kills is unavailable.</p>}
-      <div className="grid grid-cols-2 lg:grid-cols-3 gap-3">
-        <StatCard label="Pulls" value={counts.totalPulls} />
-        <StatCard label="Kills" value={kills.length} highlight />
-        <StatCard label={`Best ${metric}`} value={<NumericValue value={bestMetric} kind="rate" />} sub="single pull" />
-        <StatCard label={`Avg ${metric}`} value={<NumericValue value={avgKillMetric} kind="rate" />} sub="on kills" />
-        <StatCard label="Best APS" value={<NumericValue value={bestAps} kind="rate" />} sub="single pull" />
-        <StatCard label="Best Healing + absorbs /s" value={<NumericValue value={bestHealAndAbsorbPs} kind="rate" />} sub="single pull" />
-      </div>
+      <section aria-label="Player performance summary" className="space-y-4">
+        <div className="flex flex-wrap items-baseline gap-x-5 gap-y-1 text-sm text-text-secondary">
+          <span>Pulls <span className="ml-1 font-semibold tabular-nums text-text-primary"><NumericValue value={counts.totalPulls} /></span></span>
+          <span>Kills <span className="ml-1 font-semibold tabular-nums text-text-primary"><NumericValue value={kills.length} /></span></span>
+        </div>
+        <StatGroup columns={4}>
+          <StatCard label={`Best ${metric}`} value={<NumericValue value={bestMetric} kind="rate" />} sub="single pull" />
+          <StatCard label={`Avg ${metric}`} value={<NumericValue value={avgKillMetric} kind="rate" />} sub="on kills" />
+          <StatCard label="Best APS" value={<NumericValue value={bestAps} kind="rate" />} sub="single pull" />
+          <StatCard label="Best Healing + absorbs /s" value={<NumericValue value={bestHealAndAbsorbPs} kind="rate" />} sub="single pull" />
+        </StatGroup>
+        <p className="text-sm text-text-secondary">Best values use all recorded pulls in this session, including short pulls. The average gives each successful fight equal weight.</p>
+        {kills.length === 0 && <p className="text-sm text-text-secondary">No successful fights were recorded for this player. The average on kills is unavailable.</p>}
+      </section>
 
       {chartData.length > 1 && (
         <AccordionSection
@@ -251,7 +255,7 @@ export default async function SessionPlayerPage({ params, searchParams }: Props)
           }
           defaultOpen
         >
-          <div className="bg-bg-panel border border-gold-dim rounded-sm p-4">
+          <div className="data-panel p-4">
             {counts.shortPulls > 0 && (
               <p className="mb-3 text-xs text-text-dim">This chart includes winning boss fights only, including short successful kills. Wipes are excluded.</p>
             )}
@@ -262,7 +266,7 @@ export default async function SessionPlayerPage({ params, searchParams }: Props)
 
       <AccordionSection id="encounters" title="Encounter Breakdown" sub="Earliest fight first · Times in UTC" count={visibleStats.length} defaultOpen>
         {visibleStats.length === 0 && <EmptyState title="No counted encounters" />}
-        <div className="bg-bg-panel border border-gold-dim rounded-sm divide-y divide-gold-dim overflow-hidden">
+        <div className="data-panel divide-y divide-gold-dim">
           {visibleStats.map((e, index) => (
             <Link
               key={e.encounterId}
@@ -270,7 +274,7 @@ export default async function SessionPlayerPage({ params, searchParams }: Props)
               className={getRevealClassName({
                 boss: true,
                 className:
-                  "flex items-start justify-between px-4 py-3 hover:bg-bg-hover transition-colors group gap-3 flex-wrap",
+                  "group grid gap-3 px-4 py-3 transition-colors hover:bg-bg-hover lg:grid-cols-[minmax(0,1fr)_minmax(0,1.4fr)] lg:items-center",
               })}
               style={getRevealStyle(index)}
             >
@@ -295,14 +299,18 @@ export default async function SessionPlayerPage({ params, searchParams }: Props)
                 </span>
               </div>
 
-              <div className="flex items-center gap-4 text-xs tabular-nums text-text-secondary flex-wrap justify-end">
-                <span><NumericValue value={e.dps} kind="rate" /> DPS</span>
-                <span><NumericValue value={e.hps} kind="rate" /> HPS</span>
-                <span><NumericValue value={e.aps} kind="rate" /> APS</span>
-                <span><NumericValue value={e.critPct} kind="percent" /> overall crit</span>
-                {e.deaths > 0 && <span className="text-danger">{formatCountLabel(e.deaths, "death")}</span>}
-                <span className="text-text-dim">{formatDuration(e.duration)} duration</span>
-                <span className="text-text-dim">{formatDateTimeUtc(e.startedAt)}</span>
+              <div className="space-y-2 tabular-nums text-text-secondary">
+                <div className="grid grid-cols-3 gap-3 text-sm lg:text-right">
+                  <span><NumericValue value={e.dps} kind="rate" /> DPS</span>
+                  <span><NumericValue value={e.hps} kind="rate" /> HPS</span>
+                  <span><NumericValue value={e.aps} kind="rate" /> APS</span>
+                </div>
+                <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs lg:justify-end">
+                  <span><NumericValue value={e.critPct} kind="percent" /> overall crit</span>
+                  {e.deaths > 0 && <span className="text-danger">{formatCountLabel(e.deaths, "death")}</span>}
+                  <span className="text-text-dim">{formatDuration(e.duration)} duration</span>
+                  <span className="text-text-dim">{formatDateTimeUtc(e.startedAt)}</span>
+                </div>
               </div>
             </Link>
           ))}
@@ -318,7 +326,7 @@ export default async function SessionPlayerPage({ params, searchParams }: Props)
       <div className="pt-2 border-t border-gold-dim">
         <Link
           href={`/players/${encodeURIComponent(name)}${querySuffix}`}
-          className="text-xs text-gold hover:text-gold-light transition-colors"
+          className="inline-flex min-h-11 items-center text-sm text-gold transition-colors hover:text-gold-light"
         >
           View {name}&apos;s all-time profile &rarr;
         </Link>
