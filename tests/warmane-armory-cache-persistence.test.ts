@@ -18,7 +18,7 @@ const cachedGear: ArmoryCharacterGear = {
   }],
   appearance,
 };
-const freshProfile = `var charactermodel = {
+const freshProfile = `<title>Warmane Armory | Character Synthetic @ Lordaeron</title>var charactermodel = {
   sk: 0, ha: 2, hc: 3, fa: 7, fh: 0, fc: 0, ep: 0, ho: 4, ta: 0, cls: 2,
   items: [[1,63931]], models: { id: 'draeneifemale' }
 };`;
@@ -34,6 +34,7 @@ async function main() {
   const dbMockPath = path.join(process.cwd(), "tests", "__mocks__", "armory-cache-db.js");
   const enrichmentMockPath = path.join(process.cwd(), "tests", "__mocks__", "armory-cache-enrichment.js");
   let storedGear = structuredClone(cachedGear);
+  let cachePresent = true;
   let writes = 0;
   let failureWrites = 0;
   const checkKey = (where: CacheKey) => {
@@ -41,14 +42,16 @@ async function main() {
   };
   const db = {
     armoryGearCache: {
-      findUnique: async ({ where }: { where: CacheKey }) => {
-        checkKey(where);
-        return { gear: structuredClone(storedGear) };
+      findFirst: async ({ where }: { where: { characterKey: { equals: string; mode: string }; realm: { equals: string; mode: string } } }) => {
+        assert.deepEqual(where, { characterKey: { equals: "synthetic", mode: "insensitive" }, realm: { equals: "Lordaeron", mode: "insensitive" } });
+        return cachePresent ? { realm: "Lordaeron", gear: structuredClone(storedGear) } : null;
       },
-      upsert: async ({ where, update }: { where: CacheKey; update: { gear: ArmoryCharacterGear } }) => {
+      upsert: async ({ where, update }: { where: CacheKey; update: { gear: ArmoryCharacterGear; lastError?: string | null } }) => {
         checkKey(where);
         storedGear = JSON.parse(JSON.stringify(update.gear)) as ArmoryCharacterGear;
-        writes += 1;
+        cachePresent = true;
+        if (update.lastError) failureWrites += 1;
+        else writes += 1;
       },
       update: async ({ where, data }: { where: CacheKey; data: { gear?: ArmoryCharacterGear } }) => {
         checkKey(where);
@@ -136,6 +139,24 @@ async function main() {
     assert.equal(storedGear.appearance?.hairStyle, 2);
     assert.equal(storedGear.fetchedAt, cachedGear.fetchedAt, "Equipment failure must not advance its freshness");
     assert.equal(failureWrites, 1);
+
+    cachePresent = false;
+    const coldFailure = await getWarmaneCharacterGear("Synthetic", "Lordaeron", { maxAgeMs: 0 });
+    assert.equal(coldFailure.ok, false, "A cold cache with profile identity must not invent equipment");
+    if (coldFailure.ok) throw new Error("Expected identity without equipment");
+    assert.equal(coldFailure.identity?.className, "Paladin");
+    assert.equal(storedGear.identityOnly, true);
+    assert.equal(storedGear.className, "Paladin", "Profile identity persists for the next directory render");
+    assert.equal(storedGear.items.length, 0);
+    globalThis.fetch = async () => new Response("unavailable", { status: 503 });
+    const stillUnavailable = await getWarmaneCharacterGear("Synthetic", "Lordaeron");
+    assert.equal(stillUnavailable.ok, false, "An identity-only cache never becomes a successful equipment fallback");
+    if (stillUnavailable.ok) throw new Error("Expected unavailable equipment");
+    assert.equal(stillUnavailable.identity?.className, "Paladin");
+
+    storedGear = { ...structuredClone(cachedGear), realm: "Icecrown" };
+    const wrongRealmCache = await getWarmaneCharacterGear("Synthetic", "Lordaeron");
+    assert.equal(wrongRealmCache.ok, false, "A cache payload for a different realm cannot supply fallback gear");
   } finally {
     moduleLoader._resolveFilename = originalResolve;
     globalThis.fetch = originalFetch;

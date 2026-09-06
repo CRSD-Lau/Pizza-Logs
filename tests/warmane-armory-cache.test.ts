@@ -56,6 +56,13 @@ const liveGear: ArmoryCharacterGear = {
   items: [{ slot: "Head", name: "Fresh Hat" }],
 };
 
+const retainedClass = resolveArmoryGearResult({ cachedGear: { ...cachedGear, className: "Paladin" }, liveResult: { ok: true, gear: liveGear } });
+assert.equal(retainedClass.ok, true);
+if (retainedClass.ok) {
+  assert.equal(retainedClass.gear.className, "Paladin", "Fresh equipment without class retains the last healthy identity");
+  assert.equal(retainedClass.gear.classFetchedAt, cachedGear.fetchedAt, "Retaining class must not advance its observation time");
+}
+
 assert.deepEqual(
   resolveArmoryGearResult({ cachedGear, liveResult: { ok: true, gear: liveGear } }),
   { ok: true, gear: liveGear },

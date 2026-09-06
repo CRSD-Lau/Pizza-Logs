@@ -115,6 +115,14 @@ The same command then runs `scripts/upload-journey-e2e.mjs` and `scripts/ux-navi
 
 ## CI and Security Gates
 
+The players-directory acceptance script can also run against the isolated, migrated and seeded loopback web/database stack:
+
+```bash
+node scripts/players-directory-e2e.mjs
+```
+
+Set `PIZZA_TEST_BASE_URL` and `DATABASE_URL` explicitly. The script creates and removes its own synthetic characters and Armory snapshots, tests class corrections, cross-realm isolation, pagination and filter preservation, and checks keyboard previews, short-screen scrolling, accessibility and overflow at 375, 768 and 1440 pixels. Screenshots and its result report are saved under `.test-artifacts/players-directory`. Class images and gear responses are controlled fixtures; actual Warmane data and icon availability require a separate live check.
+
 The navigation audit allows up to 12 seconds for React's streamed fallback/content
 swap to settle before reporting duplicate IDs. It still examines hidden elements;
 browser controls verify that transient duplicates clear and persistent hidden
