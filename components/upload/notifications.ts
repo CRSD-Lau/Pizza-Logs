@@ -11,7 +11,7 @@ export async function requestUploadNotifications(): Promise<NotificationPermissi
 export function sendUploadNotification(title: string, body: string): void {
   if (typeof Notification === "undefined" || Notification.permission !== "granted") return;
   try {
-    const notification = new Notification(title, { body, icon: "/favicon.ico" });
+    const notification = new Notification(title, { body, icon: "/brand/icon-192.png?v=guild-1" });
     setTimeout(() => notification.close(), 8000);
   } catch {
     // Some browsers expose permission without supporting window notifications.

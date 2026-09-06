@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import "@fontsource/cinzel/latin-400.css";
 import "@fontsource/cinzel/latin-600.css";
 import "@fontsource/cinzel/latin-700.css";
@@ -11,6 +11,11 @@ import "./globals.css";
 import Link from "next/link";
 import { Nav } from "@/components/layout/Nav";
 import { PIZZA_LOGS_ORIGIN } from "@/lib/site";
+import { SOCIAL_IMAGE } from "@/lib/page-metadata";
+
+export const viewport: Viewport = {
+  themeColor: "#0a0c10",
+};
 
 export const metadata: Metadata = {
   metadataBase: new URL(PIZZA_LOGS_ORIGIN),
@@ -32,23 +37,20 @@ export const metadata: Metadata = {
     siteName: "Pizza Logs",
     title: "Pizza Logs | WotLK Raid Analytics",
     description: "Upload a Warmane combat log to review boss fights, damage and healing.",
-    images: [
-      {
-        url: "/social-preview.jpg",
-        width: 1280,
-        height: 640,
-        alt: "Pizza Logs | WotLK Raid Analytics",
-      },
-    ],
+    images: [SOCIAL_IMAGE],
   },
   twitter: {
     card: "summary_large_image",
     title: "Pizza Logs | WotLK Raid Analytics",
     description: "Upload a Warmane combat log to review boss fights, damage and healing.",
-    images: ["/social-preview.jpg"],
+    images: [SOCIAL_IMAGE.url],
   },
   icons: {
-    icon: [{ url: "/favicon.ico" }, { url: "/icon.svg", type: "image/svg+xml" }],
+    icon: [
+      { url: "/favicon.ico?v=guild-1" },
+      { url: "/icon.svg?v=guild-1", type: "image/svg+xml" },
+    ],
+    apple: [{ url: "/brand/apple-touch-icon.png?v=guild-1", sizes: "180x180", type: "image/png" }],
   },
   manifest: "/manifest.webmanifest",
 };

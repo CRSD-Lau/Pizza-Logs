@@ -11,6 +11,8 @@ Pizza Logs turns Wrath of the Lich King combat logs into readable raid sessions,
 
 [Open the live app](https://pizza-logs-production.up.railway.app) · [Read the docs](docs/README.md) · [Report a bug](https://github.com/CRSD-Lau/Pizza-Logs/issues/new/choose) · [Report a vulnerability privately](https://github.com/CRSD-Lau/Pizza-Logs/security/advisories/new)
 
+The [1.0.0 release contract](docs/releases/1.0.0.md) defines the stable canonical product: supported report links, bounded uploads and documented parser metrics. It records compatibility commitments and known limits, including incomplete full UwU parity, reupload after interruption and owner-deferred provider recovery. The product version is independent of parser version 1.1.1; the release record and deployment checks establish which revision is live.
+
 ## What It Does
 
 - Streams `.txt`, `.log`, or `.zip` uploads with live progress and bounded server-side validation.

@@ -1,10 +1,10 @@
 import type { Metadata } from "next";
 
-const SOCIAL_IMAGE = {
-  url: "/social-preview.jpg",
+export const SOCIAL_IMAGE = {
+  url: "/social-preview.jpg?v=guild-1",
   width: 1280,
   height: 640,
-  alt: "Pizza Logs: WotLK raid analytics",
+  alt: "Pizza Logs: WotLK raid analytics with the Pizza Warriors guild crest",
 } as const;
 
 export function buildPageMetadata({

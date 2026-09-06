@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useRef, useState } from "react";
 import { Menu, X } from "lucide-react";
+import { GuildCrest } from "@/components/brand/GuildCrest";
 import { PlayerSearch } from "@/components/players/PlayerSearch";
 import { cn } from "@/lib/utils";
 
@@ -33,7 +34,7 @@ export function Nav() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-16 gap-4">
           <Link href="/" className="group flex min-h-11 shrink-0 items-center gap-3 rounded-sm" onClick={() => setMobileOpen(false)}>
-            <PizzaIcon />
+            <GuildCrest />
             <div className="min-w-0">
               <div className="heading-cinzel text-lg font-bold text-gold-light text-glow-gold leading-none">
                 Pizza<span className="text-text-secondary font-normal">Logs</span>
@@ -113,21 +114,5 @@ export function Nav() {
         )}
       </div>
     </header>
-  );
-}
-
-function PizzaIcon() {
-  return (
-    <svg className="text-gold" width="36" height="36" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
-      <polygon points="20,3 37,12 37,28 20,37 3,28 3,12" fill="none" stroke="currentColor" strokeWidth="1.5" />
-      <polygon points="20,9 31,15 31,25 20,31 9,25 9,15" fill="none" stroke="currentColor" strokeWidth="0.75" opacity="0.5" />
-      <circle cx="20" cy="20" r="5" fill="currentColor" opacity="0.85" />
-      <line x1="20" y1="3" x2="20" y2="9" stroke="currentColor" strokeWidth="1" />
-      <line x1="20" y1="31" x2="20" y2="37" stroke="currentColor" strokeWidth="1" />
-      <line x1="3" y1="12" x2="9" y2="15" stroke="currentColor" strokeWidth="1" />
-      <line x1="31" y1="25" x2="37" y2="28" stroke="currentColor" strokeWidth="1" />
-      <line x1="37" y1="12" x2="31" y2="15" stroke="currentColor" strokeWidth="1" />
-      <line x1="9" y1="25" x2="3" y2="28" stroke="currentColor" strokeWidth="1" />
-    </svg>
   );
 }
