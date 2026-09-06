@@ -26,6 +26,8 @@ This project follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) an
 
 ### Changed
 
+- Remove em dashes from site copy, page and social metadata, and missing-value displays. Simplify upload messages, directory descriptions and admin help text; retain canonical raid URLs and report calculations.
+
 - Display raid Kill Time, Fight Time and full-session Duration in whole seconds, retaining recorded millisecond precision for calculations.
 
 - Refined the full site layout with consistent metric groups, paired encounter totals/rates, quieter borders, compact leaderboards and roster rows, grouped filters, and shared admin/report spacing across desktop and mobile. Recorded values, analytical scopes, upload behavior, and administrator access remain unchanged.

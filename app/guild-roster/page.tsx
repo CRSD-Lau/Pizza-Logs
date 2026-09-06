@@ -12,7 +12,7 @@ import { formatCountLabel, formatDateTimeUtc } from "@/lib/utils";
 
 export const metadata = buildPageMetadata({
   title: "Guild Roster",
-  description: "Browse the cached PizzaWarriors roster and character profiles on Warmane Lordaeron.",
+  description: "Browse PizzaWarriors members and character profiles from the latest saved Warmane Lordaeron roster.",
   path: "/guild-roster",
 });
 export const dynamic = "force-dynamic";

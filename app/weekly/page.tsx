@@ -19,7 +19,7 @@ import { buildPageMetadata } from "@/lib/page-metadata";
 
 export const metadata = buildPageMetadata({
   title: "This Week",
-  description: "Review this week's WotLK boss kills, damage, healing, and raid performance.",
+  description: "This week's WotLK boss kills and top DPS and HPS attempts.",
   path: "/weekly",
 });
 export const dynamic = "force-dynamic";

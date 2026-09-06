@@ -14,8 +14,8 @@ import { parseIncludeShortPulls } from "@/lib/attempt-policy";
 import { countedAttemptWhere, shortPullWhere } from "@/lib/attempt-policy.server";
 
 export const metadata = buildPageMetadata({
-  title: "Pizza Logs - WotLK Raid Analytics",
-  description: "Upload combat logs, analyze raid encounters, and track WotLK performance records.",
+  title: "Pizza Logs | WotLK Raid Analytics",
+  description: "Upload a Warmane combat log to review boss fights, damage and healing.",
   path: "/",
   absoluteTitle: true,
 });
@@ -88,8 +88,8 @@ export default async function HomePage({ searchParams }: {
           className="group flex min-h-24 items-center justify-between gap-4 border-y border-gold-dim px-2 py-6 transition-colors hover:bg-bg-panel/45 sm:px-4"
         >
           <span>
-            <span className="heading-cinzel block text-xl font-bold text-gold-light transition-colors group-hover:text-gold">Compare boss performances</span>
-            <span className="mt-1 block text-sm text-text-secondary">Compare boss-specific damage and healing performances.</span>
+            <span className="heading-cinzel block text-xl font-bold text-gold-light transition-colors group-hover:text-gold">Compare boss records</span>
+            <span className="mt-1 block text-sm text-text-secondary">See each boss&apos;s top damage and healing records.</span>
           </span>
           <span className="text-2xl text-gold" aria-hidden="true">&rarr;</span>
         </Link>

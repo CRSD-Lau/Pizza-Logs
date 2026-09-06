@@ -38,7 +38,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const name = playerName;
   return buildPageMetadata({
     title: name,
-    description: `${name}'s WotLK raid history, records, performance, and cached Warmane gear.`,
+    description: `${name}'s WotLK raid history, damage and healing records, and latest saved Warmane gear.`,
     path: `/players/${encodeURIComponent(name)}`,
   });
 }

@@ -15,11 +15,11 @@ import { PIZZA_LOGS_ORIGIN } from "@/lib/site";
 export const metadata: Metadata = {
   metadataBase: new URL(PIZZA_LOGS_ORIGIN),
   title: {
-    default: "Pizza Logs - WotLK Raid Analytics",
+    default: "Pizza Logs | WotLK Raid Analytics",
     template: "%s | Pizza Logs",
   },
   description:
-    "Server-side Wrath of the Lich King combat-log analytics for raid encounters, DPS, HPS, player records, and progression.",
+    "Upload a Warmane combat log to review boss fights, damage and healing.",
   applicationName: "Pizza Logs",
   authors: [{ name: "Neil Mitchell", url: "https://github.com/CRSD-Lau" }],
   creator: "Neil Mitchell",
@@ -30,21 +30,21 @@ export const metadata: Metadata = {
     type: "website",
     locale: "en_CA",
     siteName: "Pizza Logs",
-    title: "Pizza Logs - WotLK Raid Analytics",
-    description: "Upload combat logs, analyze raid encounters, and track WotLK performance records.",
+    title: "Pizza Logs | WotLK Raid Analytics",
+    description: "Upload a Warmane combat log to review boss fights, damage and healing.",
     images: [
       {
         url: "/social-preview.jpg",
         width: 1280,
         height: 640,
-        alt: "Pizza Logs - WotLK Raid Analytics",
+        alt: "Pizza Logs | WotLK Raid Analytics",
       },
     ],
   },
   twitter: {
     card: "summary_large_image",
-    title: "Pizza Logs - WotLK Raid Analytics",
-    description: "Upload combat logs, analyze raid encounters, and track WotLK performance records.",
+    title: "Pizza Logs | WotLK Raid Analytics",
+    description: "Upload a Warmane combat log to review boss fights, damage and healing.",
     images: ["/social-preview.jpg"],
   },
   icons: {
@@ -65,7 +65,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           </main>
           <footer className="relative z-10 border-t border-gold-dim px-4 py-6 text-center">
             <p className="text-sm text-text-dim">
-              Pizza Logs - WotLK raid analytics &nbsp;·&nbsp;
+              Pizza Logs: WotLK raid analytics &nbsp;·&nbsp;
               <span className="text-gold">PizzaWarriors</span>
             </p>
             <nav aria-label="Footer" className="mt-2 flex flex-wrap justify-center gap-x-6">

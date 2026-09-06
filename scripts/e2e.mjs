@@ -458,7 +458,7 @@ try {
   await (await chooser).setFiles({ name: "synthetic.txt", mimeType: "text/plain", buffer: input });
   await page.getByRole("progressbar", { name: "Combat log upload" }).waitFor();
   await page.screenshot({ path: path.join(out, "1920-upload-progress.png"), fullPage: true });
-  await page.getByText("Already Parsed", { exact: true }).waitFor();
+  await page.getByText("Report Already Exists", { exact: true }).waitFor();
   await page.getByRole("link", { name: "View raid report", exact: true }).click();
   await page.waitForURL(new URL(report, base).href);
   assert.match(await page.locator("main").innerText(), /54\.00K/);

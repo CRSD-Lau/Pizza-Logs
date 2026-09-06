@@ -2,9 +2,9 @@ import type { MetadataRoute } from "next";
 
 export default function manifest(): MetadataRoute.Manifest {
   return {
-    name: "Pizza Logs - WotLK Raid Analytics",
+    name: "Pizza Logs | WotLK Raid Analytics",
     short_name: "Pizza Logs",
-    description: "Server-side WotLK combat-log analytics for raid encounters and player records.",
+    description: "WotLK raid reports, damage and healing from Warmane combat logs.",
     start_url: "/",
     display: "standalone",
     background_color: "#080a0f",

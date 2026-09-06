@@ -19,13 +19,13 @@ import { buildPageMetadata } from "@/lib/page-metadata";
 
 export const metadata = buildPageMetadata({
   title: "Bosses",
-  description: "Explore WotLK boss history, kill totals, and performance rankings.",
+  description: "Browse WotLK boss fights, kill totals and DPS/HPS rankings.",
   path: "/bosses",
 });
 export const dynamic = "force-dynamic";
 
 const BOSS_GRID_COLUMNS = "minmax(0,2fr) minmax(60px,max-content) minmax(60px,max-content) 64px minmax(150px,1fr) 108px";
-const EMPTY_VALUE = "\u2014";
+const EMPTY_VALUE = "-";
 
 async function getBossStats(includeShortPulls: boolean, difficulty: DifficultyFilterValue) {
   const bosses = await db.boss.findMany({

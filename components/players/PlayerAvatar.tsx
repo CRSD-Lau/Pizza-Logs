@@ -231,7 +231,7 @@ function GearPreviewPanel({
       {loading && (
         <div className="flex min-h-36 items-center justify-center gap-2 px-4 py-6 text-sm text-text-secondary">
           <span className="h-4 w-4 animate-spin rounded-full border-2 border-gold-dim border-t-gold" aria-hidden="true" />
-          Pulling current gear from Warmane…
+          Loading gear from Warmane…
         </div>
       )}
 

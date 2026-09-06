@@ -94,7 +94,7 @@ try {
   await page.getByText("Browser notifications are enabled for upload results.", { exact: true }).waitFor();
   assert.equal(await page.evaluate(() => window.uploadNotificationRequests), 1);
   await upload();
-  await page.getByText("Already Parsed", { exact: true }).waitFor({ timeout: 120_000 });
+  await page.getByText("Report Already Exists", { exact: true }).waitFor({ timeout: 120_000 });
   assert.equal(await viewReport.getAttribute("href"), reportPath);
   assert.equal(await page.evaluate(() => window.uploadNotificationRequests), 1, "Duplicate upload does not request permission again");
   assert.deepEqual(await page.evaluate(() => window.uploadNotifications), ["Upload complete"]);

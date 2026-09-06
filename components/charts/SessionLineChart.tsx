@@ -73,7 +73,7 @@ function CustomTooltip({
         .map((e) => (
           <p key={e.name} style={{ color: e.color, margin: "2px 0" }}>
             <span style={{ fontWeight: 600 }}>{e.name}</span>
-            {" - "}
+            {": "}
             {formatRate(e.value)} {metric}
           </p>
         ))

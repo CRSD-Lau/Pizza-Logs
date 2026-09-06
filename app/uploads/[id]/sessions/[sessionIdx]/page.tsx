@@ -446,7 +446,7 @@ export default async function SessionDetailPage({ params, searchParams }: Props)
         <AccordionSection
           id="targets"
           title={isKills ? "Mob Damage - Boss Kills" : "Mob Damage - All Boss Attempts"}
-          sub={`Damage to targets during ${isKills ? "successful boss fights" : "all recorded boss attempts"}, including encounter adds - click to drill down by player`}
+          sub={`Damage to targets during ${isKills ? "successful boss fights" : "all recorded boss attempts"}, including adds. Select a target to see damage by player.`}
           count={mobEntries.length}
           defaultOpen={false}
         >

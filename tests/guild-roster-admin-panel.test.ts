@@ -14,8 +14,8 @@ assert.match(markup, /Roster Members/);
 assert.match(markup, /42/);
 assert.match(markup, /Warmane/);
 assert.match(markup, /Refresh from Warmane/);
-assert.match(markup, /runs entirely on the Pizza Logs server/);
-assert.match(markup, /No Tampermonkey install/);
+assert.match(markup, /Refresh to save the latest roster from Warmane/);
+assert.match(markup, /view the saved roster even when Warmane is unavailable/);
 assert.doesNotMatch(markup, /userscript\.user\.js|Install Local Roster Userscript|Browser Roster Import/);
 assert.match(markup, /View public roster/);
 

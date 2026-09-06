@@ -9,7 +9,7 @@ Warmane combat logs frequently lack reliable encounter markers, and raiders comp
 
 ## Decision
 
-Skada-WoTLK is the authority for supported damage/healing events and effective-healing primitives. Pizza Logs may adopt clearly labeled UwU analytical views-such as the first-to-last-event Custom Slice and healing plus attributed absorbs-without changing the stored primitive definitions.
+Skada-WoTLK is the authority for supported damage/healing events and effective-healing primitives. Pizza Logs may adopt clearly labeled UwU analytical views, such as the first-to-last-event Custom Slice and healing plus attributed absorbs, without changing the stored primitive definitions.
 
 Headline outgoing damage and damage taken use the raw reported combat-log amount. Useful/effective damage remains a supplemental analytical formula. Missing or conflicting ownership/difficulty evidence remains unknown or unattributed.
 

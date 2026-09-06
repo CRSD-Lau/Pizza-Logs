@@ -167,7 +167,7 @@ export function UploadZone({ onComplete }: UploadZoneProps) {
                 "Upload complete",
                 stored > 0
                   ? `${formatCountLabel(stored, "encounter")} stored`
-                  : "No new encounters were found",
+                  : "No new encounters in this log",
               );
             } else if (event.type === "error") {
               throw new Error((event as { msg?: string }).msg ?? "Upload failed");
@@ -309,13 +309,13 @@ export function UploadZone({ onComplete }: UploadZoneProps) {
             <p className="heading-cinzel text-lg text-gold-light mb-1" role="status">{state.message}</p>
             {state.stalled ? (
               <p className="text-xs text-warning mt-1">
-                Stream connection lost - your data may have saved successfully.{" "}
+                The connection was lost. Your report may have been saved.{" "}
                 <Link href="/raids" className="text-gold hover:text-gold-light underline">
                   Check raids &rarr;
                 </Link>
               </p>
             ) : (
-              <p className="text-xs text-text-dim">Large logs can take 1-3 minutes - do not close this tab</p>
+              <p className="text-xs text-text-dim">Large logs can take 1-3 minutes. Keep this tab open.</p>
             )}
           </div>
 
@@ -365,11 +365,11 @@ export function UploadResult({
       <div className="px-5 py-4 flex flex-wrap items-center justify-between gap-4">
         <div>
           <p className="heading-cinzel text-sm text-gold-light">
-            {isDuplicate ? "Already Parsed" : "Upload Complete"}
+            {isDuplicate ? "Report Already Exists" : "Upload Complete"}
           </p>
           <p className="text-xs text-text-secondary mt-0.5">
             {isDuplicate
-              ? "This log was already parsed and the raid data is ready"
+              ? "This log already has a raid report."
               : `${formatCountLabel(result.encountersInserted, "encounter")} stored`}
           </p>
         </div>
