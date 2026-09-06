@@ -424,7 +424,9 @@ def _log_upload_event(event: str, upload_id: str, *, level: int = logging.INFO,
                       **fields: object) -> None:
     # Only explicit operational fields belong here: never filenames, raw log
     # lines, player names, exception messages or local paths.
-    logger.log(level, json.dumps({"event": event, "uploadId": upload_id, **fields}, allow_nan=False))
+    entry = json.dumps({"event": event, "uploadId": upload_id, **fields}, allow_nan=False, ensure_ascii=True)
+    # Keep the single-line guarantee at the log sink as well as in JSON encoding.
+    logger.log(level, entry.replace("\r", "\\r").replace("\n", "\\n"))
 
 def _parse_msg(pct: int) -> str:
     if pct < 38: return "Parser reading combat events…"

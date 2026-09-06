@@ -1,17 +1,15 @@
 import assert from "node:assert/strict";
-import { createHmac, randomUUID } from "node:crypto";
+import { createHmac } from "node:crypto";
 import fs from "node:fs/promises";
 import path from "node:path";
 import { chromium } from "playwright";
 import { createRequire } from "node:module";
 import { spawnSync } from "node:child_process";
 import { verifyPlayerQuickLooks } from "./player-quicklook-e2e.mjs";
+import { localTestBase, syntheticCombatLog, uploadSyntheticLog } from "./e2e-upload.mjs";
 
 const require = createRequire(import.meta.url);
-const base = new URL(process.env.PIZZA_TEST_BASE_URL ?? "http://127.0.0.1:3000");
-if (!["localhost", "127.0.0.1", "[::1]"].includes(base.hostname)) {
-  throw new Error("E2E uploads are restricted to an isolated loopback test stack.");
-}
+const base = localTestBase(process.env.PIZZA_TEST_BASE_URL ?? "http://127.0.0.1:3000");
 const out = path.resolve(process.env.PIZZA_TEST_ARTIFACTS ?? ".test-artifacts/e2e");
 await fs.mkdir(out, { recursive: true });
 const observations = [];
@@ -43,20 +41,8 @@ for (let attempt = 0; attempt < 30; attempt += 1) {
   await new Promise(resolve => setTimeout(resolve, 1000));
 }
 assert.equal(stackReady, true, "Isolated stack must become ready before upload tests");
-async function upload(bytes, filename = "synthetic.txt") {
-  const params = new URLSearchParams({ filename, fileSize: String(bytes.length), uploaderName: "Audit", guildName: "Synthetic Audit" });
-  const response = await fetch(new URL(`/api/upload?${params}`, base), {
-    method: "POST", body: bytes, signal: AbortSignal.timeout(120000),
-    headers: { "content-type": "application/octet-stream", "x-upload-id": randomUUID() },
-  });
-  assert.equal(response.status, 200);
-  const events = (await response.text()).split("\n").filter(line => line.startsWith("data: ")).map(line => JSON.parse(line.slice(6)));
-  assert.equal(events.some(event => event.type === "error"), false, JSON.stringify(events));
-  const complete = events.find(event => event.type === "complete");
-  assert.ok(complete, "Upload must complete and persist");
-  return complete.result;
-}
-const input = await fs.readFile(new URL("../parser/tests/fixtures/icc-25n-synthetic/combatlog.txt", import.meta.url));
+const upload = (bytes, filename) => uploadSyntheticLog(base, bytes, filename);
+const input = syntheticCombatLog();
 const first = await upload(input);
 const duplicates = await Promise.all([upload(input), upload(input)]);
 assert.ok(duplicates.every(result => result.status === "DUPLICATE" && result.uploadId === first.uploadId));

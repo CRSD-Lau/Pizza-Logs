@@ -113,6 +113,21 @@ Player quick-look acceptance also covers all six existing avatar surfaces, cente
 
 The same command then runs `scripts/upload-journey-e2e.mjs` and `scripts/ux-navigation-e2e.mjs` against that stack. Upload acceptance exercises fresh and duplicate reports, explicit notification permission, first-screen form placement, and the opt-in intro dialog including reduced motion and media failure. Navigation acceptance checks 12 public routes at 375, 768, 1024 and 1440 pixels, full axe rules, horizontal overflow, duplicate IDs and readable leaderboard names. It also tests keyboard search with stale responses, mobile menu focus, directory and difficulty filters, dated weekly links, section shortcuts and missing-page recovery. These scripts reject non-loopback targets and save reports and screenshots under `.test-artifacts/ux-upload` and `.test-artifacts/ux-navigation`; `PIZZA_UX_UPLOAD_ARTIFACTS` and `PIZZA_UX_ARTIFACTS` override those paths. Review axe incomplete results and screenshots manually: a passing automated run is not a WCAG certification.
 
+The quick-look helper waits for the model-ready condition after keyboard reopening
+before comparing viewer-request counts on the next surface. Tooltip visibility
+alone does not establish that the reopened model has finished starting.
+It also places the pointer in the overlap between the player-index avatar and its
+tooltip, checks that Escape remains closed after the exposed avatar receives
+pointer-enter, and verifies deliberate leave/re-enter, first hover after an
+outside-pointer Escape, and keyboard reopening.
+It also moves directly into the model iframe before Escape, then checks that the
+first return to the avatar reopens it without requiring a second pointer entry.
+
+The direct upload helper builds its sample in memory from synthetic constants; a
+unit test compares it with the canonical parser fixture without uploading file
+contents. It accepts only credential-free HTTP(S) loopback URLs and rejects every
+HTTP redirect so upload bodies cannot be forwarded to a different destination.
+
 ## CI and Security Gates
 
 The players-directory acceptance script can also run against the isolated, migrated and seeded loopback web/database stack:

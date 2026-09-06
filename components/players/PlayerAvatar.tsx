@@ -347,6 +347,7 @@ export function PlayerAvatar({
   const tooltipRef = useRef<HTMLDivElement | null>(null);
   const closeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const pointerInPreviewRef = useRef(false);
+  const suppressPointerOpenRef = useRef(false);
   const requestIdRef = useRef(0);
   const identityRef = useRef<{ key: string; characterClass?: string | null; onClassResolved?: PlayerAvatarProps["onClassResolved"]; classOverride?: string | null }>({ key: "", characterClass, onClassResolved });
   const reportedClassRef = useRef<string | null>(null);
@@ -435,6 +436,7 @@ export function PlayerAvatar({
 
   const showPreview = useCallback(() => {
     cancelClose();
+    suppressPointerOpenRef.current = false;
     setOpenKey(cacheKey);
     void loadPreview();
   }, [cacheKey, cancelClose, loadPreview]);
@@ -448,7 +450,13 @@ export function PlayerAvatar({
   useEffect(() => {
     if (!visible) return;
     const closeOnEscape = (event: KeyboardEvent) => {
-      if (event.key === "Escape") closePreview();
+      if (event.key === "Escape") {
+        // Closing an overlapping tooltip can expose its trigger beneath a
+        // stationary pointer. Only real pointer movement or another deliberate
+        // interaction should reopen it, including after leaving the model iframe.
+        suppressPointerOpenRef.current = true;
+        closePreview();
+      }
     };
     const closeOutside = (event: PointerEvent) => {
       if (buttonRef.current?.contains(event.target as Node) || tooltipRef.current?.contains(event.target as Node)) return;
@@ -488,10 +496,16 @@ export function PlayerAvatar({
       data-initials={initials}
       data-fallback-icon-url={resolvedFallbackIconUrl ?? ""}
       onPointerEnter={(event) => {
-        if (event.pointerType === "mouse") showPreview();
+        if (event.pointerType === "mouse" && !suppressPointerOpenRef.current) showPreview();
+      }}
+      onPointerMove={(event) => {
+        if (event.pointerType === "mouse" && suppressPointerOpenRef.current) showPreview();
       }}
       onPointerLeave={(event) => {
-        if (event.pointerType === "mouse") scheduleClose();
+        if (event.pointerType === "mouse") {
+          suppressPointerOpenRef.current = false;
+          scheduleClose();
+        }
       }}
       onFocus={showPreview}
       onBlur={scheduleClose}
