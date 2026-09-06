@@ -24,7 +24,7 @@ import { getRaidSessionRoutes, resolveRaidSession } from "@/lib/raid-session-rou
 import { PIZZA_LOGS_ORIGIN } from "@/lib/site";
 import { buildPageMetadata } from "@/lib/page-metadata";
 import { getRevealClassName, getRevealStyle, orderBossDisplayEntries } from "@/lib/ui-animation";
-import { cn, formatCountLabel, formatDateTimeRangeUtc, formatDateTimeUtc, formatDuration, formatDurationPrecise, formatNumber, getRecordedDurationSeconds } from "@/lib/utils";
+import { cn, formatCountLabel, formatDateTimeRangeUtc, formatDateTimeUtc, formatDuration, formatNumber, getRecordedDurationSeconds } from "@/lib/utils";
 import { NumericValue } from "@/components/ui/NumericValue";
 
 interface Props {
@@ -351,7 +351,7 @@ export default async function SessionDetailPage({ params, searchParams }: Props)
           <StatCard label="Total Damage" value={formatNumber(raidSummary.totalDamage)} sub={isKills ? "boss kills only" : "all recorded boss attempts"} />
           <StatCard label="Healing + absorbs" value={formatNumber(raidSummary.heal)} sub="effective healing + absorbs" />
           <StatCard label="Damage Taken" value={formatNumber(raidSummary.totalDamageTaken)} sub={isKills ? "boss kills only" : "all recorded boss attempts"} />
-          <StatCard label={isKills ? "Kill Time" : "Fight Time"} value={formatDurationPrecise(raidSummary.durationMs)} sub={isKills ? "combined boss kill duration" : "combined boss attempt duration"} />
+          <StatCard label={isKills ? "Kill Time" : "Fight Time"} value={formatDuration(raidSummary.durationMs === null ? null : raidSummary.durationMs / 1000)} sub={isKills ? "combined boss kill duration" : "combined boss attempt duration"} />
         </StatGroup>
       </section>
 
@@ -470,7 +470,7 @@ export default async function SessionDetailPage({ params, searchParams }: Props)
                 <StatCard label="Total Damage" value={formatNumber(sessionAnalytics.totalDamage)} sub="full raid session" />
                 <StatCard label="Healing + absorbs" value={formatNumber(sessionAnalytics.heal)} sub="effective healing + absorbs" />
                 <StatCard label="Damage Taken" value={formatNumber(sessionAnalytics.totalDamageTaken)} sub="full raid session" />
-                <StatCard label="Duration" value={formatDurationPrecise(sessionAnalytics.durationMs)} sub="first to last log event" />
+                <StatCard label="Duration" value={formatDuration(sessionAnalytics.durationMs / 1000)} sub="first to last log event" />
               </StatGroup>
             </div>
             <p className="text-sm text-text-secondary">
