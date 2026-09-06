@@ -8,6 +8,7 @@ This project follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) an
 
 ### Added
 
+- Top-three all-time average DPS and effective HPS panels on leaderboards, using equally weighted logged boss attempts (including wipes and short pulls), at least 10 valid-duration appearances, visible fight counts, and boss/difficulty filters.
 - Private administrator account provisioning, authenticator enrollment, single-use recovery codes and an account security page, with no paid authentication service.
 - Public third-party license notices and owner-confirmed Veo/ChatGPT media provenance with Git introduction dates; sale or transfer clearance is outside the current site's scope.
 - Additional independently captured UwU mode, outcome, spell and target comparisons, with explicit mismatch classifications; current evidence is 14 exact cases and 12 visible differences, not full parity.

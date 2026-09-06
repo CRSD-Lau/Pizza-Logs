@@ -36,6 +36,7 @@ const db = {
   },
   encounter: { findMany: async ({ where }: { where: Where }) => encounters(where) },
   participant: {
+    groupBy: async () => [],
     findMany: async (query: ParticipantQuery) => {
       calls.push(query);
       const metric = query.orderBy.dps ? "dps" : "hps";
@@ -78,6 +79,9 @@ async function main() {
     assert.match(leaders, /Heroicplayer/);
     assert.doesNotMatch(leaders, /Normalplayer|Otherbossplayer/);
     assert.match(leaders, /name="boss"/);
+    assert.match(leaders, /Top 3 Average DPS/);
+    assert.match(leaders, /Top 3 Average HPS/);
+    assert.match(leaders, /No qualifying players yet/);
     assert.ok(calls.every(query => query.where.encounter.bossId === boss.id && query.where.encounter.difficulty === "25H" && query.where.encounter.outcome === "KILL" && query.distinct?.[0] === "playerId" && query.take === 10));
     calls.length = 0;
     await LeaderboardsPage({ searchParams: Promise.resolve({}) });
