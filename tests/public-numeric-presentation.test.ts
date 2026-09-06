@@ -23,6 +23,7 @@ const mocks: Record<string, unknown> = {
     encounter: { findMany: async () => [] },
   } },
   "@/lib/warmane-armory": { getWarmaneCharacterGear: async () => ({ ok: false }) },
+  "@/lib/player-directory": { getStoredPlayerIdentity: async () => ({ className: "Mage", raceName: null, guildName: null }) },
   "@/lib/warmane-guild-roster": { DEFAULT_GUILD_NAME: "Synthetic", DEFAULT_GUILD_REALM: "Lordaeron" },
   "@/components/players/PlayerGearSection": { PlayerGearSection: () => null, PlayerGearSectionSkeleton: () => null },
 };

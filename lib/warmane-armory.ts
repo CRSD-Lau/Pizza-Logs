@@ -2,9 +2,13 @@ import { db } from "./db";
 import { readUpstreamText } from "./upstream-response";
 import { enrichGearWithLocalTemplate } from "./item-template";
 import type { GearScoreEquipLoc } from "./gearscore";
+import { normalizePlayerClass } from "./player-class";
+import { isMatchingArmorySource, playerIdentityKey } from "./player-identity";
+import { PAPER_DOLL_LEFT_SLOTS, PAPER_DOLL_RIGHT_SLOTS, PAPER_DOLL_WEAPON_SLOTS } from "./gear-layout";
 
 export type ArmoryGearItem = {
   slot: string;
+  slotSource?: "armory-profile";
   name: string;
   itemId?: string;
   quality?: string;
@@ -36,6 +40,8 @@ export type ArmoryCharacterGear = {
   characterName: string;
   realm: string;
   className?: string;
+  classFetchedAt?: string;
+  identityOnly?: boolean;
   raceName?: string;
   guildName?: string;
   sourceUrl: string;
@@ -45,6 +51,15 @@ export type ArmoryCharacterGear = {
   appearanceStale?: boolean;
 };
 
+export type ArmoryCharacterIdentity = {
+  characterName: string;
+  realm: string;
+  className: string;
+  classFetchedAt: string;
+  raceName?: string;
+  guildName?: string;
+};
+
 export type ArmoryGearResult =
   | { ok: true; gear: ArmoryCharacterGear; stale?: boolean }
   | {
@@ -52,6 +67,7 @@ export type ArmoryGearResult =
       sourceUrl: string;
       message: string;
       appearance?: ArmoryCharacterAppearance;
+      identity?: ArmoryCharacterIdentity;
     };
 
 type WarmaneEquipmentItem = {
@@ -141,7 +157,14 @@ function getCharacterKey(name: string): string {
 }
 
 function sanitizeRealm(realm: string): string {
-  return /^[A-Za-z]{2,24}$/.test(realm) ? realm : DEFAULT_REALM;
+  const trimmed = realm.trim();
+  if (!/^[A-Za-z]{2,24}$/.test(trimmed)) return DEFAULT_REALM;
+  return ["Lordaeron", "Icecrown", "Blackrock", "Onyxia"].find(value => value.toLowerCase() === trimmed.toLowerCase()) ?? trimmed;
+}
+
+export function hasMatchingWarmaneProfileIdentity(html: string, name: string, realm: string): boolean {
+  const title = html.match(/<title>\s*Warmane Armory\s*\|\s*Character\s+([A-Za-z]{2,12})\s*@\s*([A-Za-z]{2,24})\s*<\/title>/i);
+  return Boolean(title && playerIdentityKey(title[1], title[2]) === playerIdentityKey(name, realm));
 }
 
 function getSourceUrl(characterName: string, realm: string): string {
@@ -186,6 +209,64 @@ export function extractWarmaneGearIconUrls(html: string): Record<string, string>
   }
 
   return icons;
+}
+
+/** Read balanced divs only; nested icon wrappers must not consume an equipment position. */
+function extractDivContents(html: string, className: string): string[] | null {
+  const tags = /<\/?div\b[^>]*>/gi;
+  const contents: string[] = [];
+  let token: RegExpExecArray | null;
+  while ((token = tags.exec(html))) {
+    if (token[0].startsWith("</")) continue;
+    const classes = token[0].match(/\bclass\s*=\s*["']([^"']*)["']/i)?.[1].split(/\s+/) ?? [];
+    if (!classes.includes(className)) continue;
+    const start = tags.lastIndex;
+    let depth = 1;
+    let scanned = 0;
+    while ((token = tags.exec(html))) {
+      if (++scanned > 256) return null;
+      depth += token[0].startsWith("</") ? -1 : 1;
+      if (depth === 0) break;
+    }
+    if (!token || depth !== 0 || contents.length >= 24) return null;
+    contents.push(html.slice(start, token.index));
+  }
+  return contents;
+}
+
+export function extractWarmaneEquipmentSlots(html: string, characterName: string, realm: string): Array<{ slot: string; itemId: string | null }> {
+  if (!hasMatchingWarmaneProfileIdentity(html, characterName, realm)) return [];
+  const result: Array<{ slot: string; itemId: string | null }> = [];
+  const rails = [
+    ["item-left", PAPER_DOLL_LEFT_SLOTS], ["item-right", PAPER_DOLL_RIGHT_SLOTS], ["item-bottom", PAPER_DOLL_WEAPON_SLOTS],
+  ] as const;
+  for (const [className, slots] of rails) {
+    const containers = extractDivContents(html, className);
+    if (containers?.length !== 1) return [];
+    const cells = extractDivContents(containers[0], "item-slot");
+    // A changed or truncated grid cannot safely establish positional meaning.
+    if (cells?.length !== slots.length) return [];
+    for (const [index, cell] of cells.entries()) {
+      const ids = new Set(Array.from(cell.matchAll(/<a\b[^>]*\bhref\s*=\s*["'][^"']*\bitem=(\d{1,8})(?:[^\d"'][^"']*)?["']/gi), match => match[1]));
+      if (ids.size > 1) return [];
+      result.push({ slot: slots[index], itemId: [...ids][0] ?? null });
+    }
+  }
+  return result;
+}
+
+function assignProfileEquipmentSlots(items: ArmoryGearItem[], slots: Array<{ slot: string; itemId: string | null }>): ArmoryGearItem[] {
+  const occurrences = new Map<string, string[]>();
+  for (const entry of slots) {
+    if (!entry.itemId) continue;
+    const values = occurrences.get(entry.itemId) ?? [];
+    values.push(entry.slot);
+    occurrences.set(entry.itemId, values);
+  }
+  return items.map(item => {
+    const slot = item.itemId ? occurrences.get(item.itemId)?.shift() : undefined;
+    return slot ? { ...item, slot, slotSource: "armory-profile" } : item;
+  });
 }
 
 export function extractWarmaneCharacterAppearance(html: string): ArmoryCharacterAppearance | null {
@@ -313,11 +394,12 @@ export function gearNeedsEnrichment(gear: unknown): boolean {
   return gear.items.some(item => !item.itemId || !item.itemLevel || !item.equipLoc || !item.iconUrl);
 }
 
-function normalizeEquipment(items: unknown): ArmoryGearItem[] {
+function normalizeEquipment(items: unknown, { positionalSlots = true }: { positionalSlots?: boolean } = {}): ArmoryGearItem[] {
   if (!Array.isArray(items)) return [];
 
   return items
     .map((raw, index): ArmoryGearItem | null => {
+      if (!raw || typeof raw !== "object") return null;
       const item = raw as WarmaneEquipmentItem;
       const name = asString(item.name);
       if (!name) return null;
@@ -328,7 +410,7 @@ function normalizeEquipment(items: unknown): ArmoryGearItem[] {
         ?? (iconSlug ? `https://wow.zamimg.com/images/wow/icons/large/${iconSlug}.jpg` : undefined);
 
       return {
-        slot: EQUIPMENT_SLOTS[index] ?? `Slot ${index + 1}`,
+        slot: positionalSlots ? EQUIPMENT_SLOTS[index] ?? `Slot ${index + 1}` : "Unknown slot",
         name,
         itemId,
         quality: asString(item.quality),
@@ -474,6 +556,7 @@ export function normalizeArmoryGearSlots(items: ArmoryGearItem[]): ArmoryGearIte
     }
 
     const iconUrl = normalizeExternalIconUrl(item.iconUrl) ?? item.iconUrl;
+    if (item.slotSource === "armory-profile") slot = item.slot;
     if (slot === item.slot && iconUrl === item.iconUrl) return item;
     return { ...item, slot, iconUrl };
   });
@@ -529,6 +612,7 @@ export async function fetchWarmaneGearLive(
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
   let liveAppearance: ArmoryCharacterAppearance | null = null;
+  let liveIdentity: ArmoryCharacterIdentity | undefined;
 
   try {
     const requestHeaders = {
@@ -552,7 +636,11 @@ export async function fetchWarmaneGearLive(
       }),
     ]);
     const armoryHtml = profileResult.status === "fulfilled" ? profileResult.value : null;
-    liveAppearance = armoryHtml ? extractWarmaneCharacterAppearance(armoryHtml) : null;
+    const profileMismatch = armoryHtml && /<title\b/i.test(armoryHtml) && !hasMatchingWarmaneProfileIdentity(armoryHtml, sanitizedName, sanitizedRealm);
+    liveAppearance = armoryHtml && !profileMismatch ? extractWarmaneCharacterAppearance(armoryHtml) : null;
+    const profileClass = armoryHtml && hasMatchingWarmaneProfileIdentity(armoryHtml, sanitizedName, sanitizedRealm)
+      ? normalizePlayerClass(liveAppearance?.classId) : null;
+    if (profileClass) liveIdentity = { characterName: sanitizedName, realm: sanitizedRealm, className: profileClass, classFetchedAt: new Date().toISOString() };
 
     if (summaryResult.status === "rejected") {
       throw summaryResult.reason;
@@ -568,9 +656,23 @@ export async function fetchWarmaneGearLive(
     if (data.error) {
       throw new Error("Warmane Armory returned an error response");
     }
+    if ((data.name !== undefined && (typeof data.name !== "string" || getCharacterKey(data.name) !== getCharacterKey(sanitizedName)))
+      || (data.realm !== undefined && (typeof data.realm !== "string" || data.realm.trim().toLowerCase() !== sanitizedRealm.toLowerCase()))) {
+      throw new Error("Warmane Armory returned a different character");
+    }
+    const summaryClass = normalizePlayerClass(data.class);
+    if (summaryClass) liveIdentity = {
+      characterName: sanitizedName, realm: sanitizedRealm, className: summaryClass, classFetchedAt: new Date().toISOString(),
+      ...(asString(data.race) ? { raceName: asString(data.race) } : {}),
+      ...(asString(data.guild) ? { guildName: asString(data.guild) } : {}),
+    };
+    if (!Array.isArray(data.equipment)) throw new Error("Warmane Armory equipment is unavailable");
 
     const liveIcons = armoryHtml ? extractWarmaneGearIconUrls(armoryHtml) : {};
-    const equipment = normalizeEquipment(data.equipment).map(item => (
+    const profileSlots = armoryHtml ? extractWarmaneEquipmentSlots(armoryHtml, sanitizedName, sanitizedRealm) : [];
+    const equipment = assignProfileEquipmentSlots(normalizeEquipment(data.equipment, {
+      positionalSlots: data.equipment.length === EQUIPMENT_SLOTS.length,
+    }), profileSlots).map(item => (
       item.iconUrl || !item.itemId || !liveIcons[item.itemId]
         ? item
         : { ...item, iconUrl: liveIcons[item.itemId] }
@@ -579,9 +681,9 @@ export async function fetchWarmaneGearLive(
     return {
       ok: true,
       gear: {
-        characterName: asString(data.name) ?? sanitizedName,
-        realm: asString(data.realm) ?? sanitizedRealm,
-        ...(asString(data.class) ? { className: asString(data.class) } : {}),
+        characterName: sanitizedName,
+        realm: sanitizedRealm,
+        ...(liveIdentity ? { className: liveIdentity.className, classFetchedAt: liveIdentity.classFetchedAt } : {}),
         ...(asString(data.race) ? { raceName: asString(data.race) } : {}),
         ...(asString(data.guild) ? { guildName: asString(data.guild) } : {}),
         sourceUrl,
@@ -600,6 +702,7 @@ export async function fetchWarmaneGearLive(
       sourceUrl,
       message: "Gear data is temporarily unavailable from Warmane Armory.",
       ...(liveAppearance ? { appearance: liveAppearance } : {}),
+      ...(liveIdentity ? { identity: liveIdentity } : {}),
     };
   } finally {
     clearTimeout(timeout);
@@ -614,26 +717,42 @@ export function resolveArmoryGearResult({
   liveResult: ArmoryGearResult;
 }): ArmoryGearResult {
   if (liveResult.ok) {
-    if (isArmoryCharacterAppearance(liveResult.gear.appearance)) {
-      return { ...liveResult, gear: { ...liveResult.gear, appearanceStale: false } };
-    }
     const sameCharacter = cachedGear &&
       getCharacterKey(cachedGear.characterName) === getCharacterKey(liveResult.gear.characterName) &&
       cachedGear.realm.trim().toLowerCase() === liveResult.gear.realm.trim().toLowerCase();
+    const cachedClass = sameCharacter ? normalizePlayerClass(cachedGear.className) : null;
+    const gear = !normalizePlayerClass(liveResult.gear.className) && cachedClass && cachedGear
+      ? { ...liveResult.gear, className: cachedClass, classFetchedAt: cachedGear.classFetchedAt ?? cachedGear.fetchedAt }
+      : liveResult.gear;
+    if (isArmoryCharacterAppearance(gear.appearance)) {
+      return { ...liveResult, gear: { ...gear, appearanceStale: false } };
+    }
     if (sameCharacter && isArmoryCharacterAppearance(cachedGear.appearance)) {
       return {
         ...liveResult,
-        gear: { ...liveResult.gear, appearance: cachedGear.appearance, appearanceStale: true },
+        gear: { ...gear, appearance: cachedGear.appearance, appearanceStale: true },
       };
     }
-    return liveResult;
+    return gear === liveResult.gear ? liveResult : { ...liveResult, gear };
   }
   if (cachedGear) {
+    const identity = liveResult.identity && playerIdentityKey(liveResult.identity.characterName, liveResult.identity.realm) === playerIdentityKey(cachedGear.characterName, cachedGear.realm)
+      ? liveResult.identity : undefined;
+    if (cachedGear.identityOnly) {
+      const className = normalizePlayerClass(cachedGear.className);
+      return { ...liveResult, ...(identity ? { identity } : className ? { identity: {
+        characterName: cachedGear.characterName, realm: cachedGear.realm, className,
+        classFetchedAt: cachedGear.classFetchedAt ?? cachedGear.fetchedAt,
+        ...(cachedGear.raceName ? { raceName: cachedGear.raceName } : {}),
+        ...(cachedGear.guildName ? { guildName: cachedGear.guildName } : {}),
+      } } : {}) };
+    }
+    const gear = identity ? { ...cachedGear, ...identity } : cachedGear;
     return {
       ok: true,
       gear: isArmoryCharacterAppearance(liveResult.appearance)
-        ? { ...cachedGear, appearance: liveResult.appearance, appearanceStale: false }
-        : cachedGear,
+        ? { ...gear, appearance: liveResult.appearance, appearanceStale: false }
+        : gear,
       stale: true,
     };
   }
@@ -641,17 +760,19 @@ export function resolveArmoryGearResult({
 }
 
 async function readCachedGear(characterName: string, realm: string): Promise<ArmoryCharacterGear | null> {
-  const cached = await db.armoryGearCache.findUnique({
+  const cached = await db.armoryGearCache.findFirst({
     where: {
-      characterKey_realm: {
-        characterKey: getCharacterKey(characterName),
-        realm,
-      },
+      characterKey: { equals: getCharacterKey(characterName), mode: "insensitive" },
+      realm: { equals: realm, mode: "insensitive" },
     },
+    orderBy: [{ fetchedAt: "desc" }, { id: "asc" }],
   });
 
-  if (!cached || !isArmoryCharacterGear(cached.gear)) return null;
-  return { ...cached.gear, items: normalizeArmoryGearSlots(cached.gear.items) };
+  if (!cached || !isArmoryCharacterGear(cached.gear)
+    || !Number.isFinite(new Date(cached.gear.fetchedAt).getTime())
+    || playerIdentityKey(cached.gear.characterName, cached.gear.realm) !== playerIdentityKey(characterName, realm)
+    || !isMatchingArmorySource(cached.gear.sourceUrl, characterName, realm)) return null;
+  return { ...cached.gear, realm: sanitizeRealm(cached.gear.realm), items: normalizeArmoryGearSlots(cached.gear.items) };
 }
 
 export async function writeCachedGear(
@@ -669,14 +790,13 @@ export async function writeCachedGear(
   await backfillWowItemIcons(enrichedGear.items);
 
   // Snapshot preservation: don't overwrite a healthy cache with a degraded fetch
-  const existing = await db.armoryGearCache.findUnique({
+  const existing = await db.armoryGearCache.findFirst({
     where: {
-      characterKey_realm: {
-        characterKey: getCharacterKey(enrichedGear.characterName),
-        realm: enrichedGear.realm,
-      },
+      characterKey: { equals: getCharacterKey(enrichedGear.characterName), mode: "insensitive" },
+      realm: { equals: enrichedGear.realm, mode: "insensitive" },
     },
-    select: { gear: true },
+    orderBy: [{ fetchedAt: "desc" }, { id: "asc" }],
+    select: { gear: true, realm: true },
   });
 
   if (existing && isArmoryCharacterGear(existing.gear)) {
@@ -691,7 +811,7 @@ export async function writeCachedGear(
     where: {
       characterKey_realm: {
         characterKey: getCharacterKey(enrichedGear.characterName),
-        realm: enrichedGear.realm,
+        realm: existing?.realm ?? enrichedGear.realm,
       },
     },
     create: {
@@ -726,24 +846,38 @@ async function markRefreshFailed(
   sourceUrl: string,
   message: string,
   cachedGear?: ArmoryCharacterGear | null,
+  identity?: ArmoryCharacterIdentity,
 ): Promise<void> {
   try {
-    await db.armoryGearCache.update({
+    const existing = await db.armoryGearCache.findFirst({
+      where: { characterKey: { equals: getCharacterKey(characterName), mode: "insensitive" }, realm: { equals: realm, mode: "insensitive" } },
+      orderBy: [{ fetchedAt: "desc" }, { id: "asc" }], select: { realm: true },
+    });
+    const sameIdentity = identity && playerIdentityKey(identity.characterName, identity.realm) === playerIdentityKey(characterName, realm) ? identity : undefined;
+    if (!existing && !sameIdentity) return;
+    const identityGear: ArmoryCharacterGear | undefined = sameIdentity ? {
+      ...sameIdentity, sourceUrl, fetchedAt: sameIdentity.classFetchedAt, items: [], appearance: null, identityOnly: true,
+    } : undefined;
+    const gear = cachedGear ? (sameIdentity ? { ...cachedGear, ...sameIdentity } : cachedGear) : identityGear;
+    if (!gear) return;
+    await db.armoryGearCache.upsert({
       where: {
         characterKey_realm: {
           characterKey: getCharacterKey(characterName),
-          realm,
+          realm: existing?.realm ?? realm,
         },
       },
-      data: {
+      create: { characterName, characterKey: getCharacterKey(characterName), realm, sourceUrl, gear,
+        fetchedAt: new Date(gear.fetchedAt), lastAttemptAt: new Date(), lastError: message },
+      update: {
         sourceUrl,
         lastAttemptAt: new Date(),
         lastError: message,
-        ...(cachedGear ? { gear: cachedGear } : {}),
+        gear,
       },
     });
   } catch {
-    // No cached row exists yet; the returned public result already handles that state.
+    // The public response remains useful even if preserving identity is temporarily unavailable.
   }
 }
 
@@ -772,7 +906,7 @@ export async function getWarmaneCharacterGear(
 
   const cacheIsFresh = cachedGear && !shouldRefreshArmoryGearCache({ cachedGear, now: new Date(), maxAgeMs });
 
-  if (cachedGear && cacheIsFresh) {
+  if (cachedGear && cacheIsFresh && !cachedGear.identityOnly) {
     // Always re-enrich details from local template at read time (fast batch lookup,
     // ensures AzerothCore stats are current regardless of what's stored in the cache blob)
     const freshItems = await enrichGearWithLocalTemplate(cachedGear.items);
@@ -790,6 +924,7 @@ export async function getWarmaneCharacterGear(
     await markRefreshFailed(
       sanitizedName, sanitizedRealm, sourceUrl, liveResult.message,
       baseResult.ok ? baseResult.gear : cachedGear,
+      !baseResult.ok ? baseResult.identity : liveResult.identity,
     );
   }
 
@@ -810,6 +945,7 @@ export function shouldRefreshArmoryGearCache({
   maxAgeMs?: number;
 }): boolean {
   if (!cachedGear) return true;
+  if (cachedGear.identityOnly) return true;
   if (cachedGear.appearance === undefined) return true;
   if (gearNeedsEnrichment(cachedGear)) return true;
 

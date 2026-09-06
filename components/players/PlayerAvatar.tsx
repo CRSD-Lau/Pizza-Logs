@@ -5,13 +5,15 @@ import {
   useEffect,
   useId,
   useLayoutEffect,
+  useMemo,
   useRef,
   useState,
 } from "react";
 import { createPortal } from "react-dom";
-import { Shield } from "lucide-react";
+import { Shield, UserRound } from "lucide-react";
 import type { ArmoryCharacterGear } from "@/lib/warmane-armory";
-import { getClassIconUrl } from "@/lib/class-icons";
+import { getPlayerClassMeta, normalizePlayerClass } from "@/lib/player-class";
+import { getPlayerGearPreviewKey, getResolvedPreviewClass, hasResolvedPreviewClass, playerGearPreviewClient, type GearPreviewResponse } from "@/lib/player-gear-preview";
 import {
   PAPER_DOLL_LEFT_SLOTS,
   PAPER_DOLL_RIGHT_SLOTS,
@@ -32,32 +34,8 @@ type PlayerAvatarProps = {
   fallbackIconUrl?: string | null;
   size?: PlayerAvatarSize;
   className?: string;
+  onClassResolved?: (className: string | null) => void;
 };
-
-type GearPreview = {
-  ok: true;
-  gear: ArmoryCharacterGear;
-  stale: boolean;
-  className: string | null;
-  raceName: string | null;
-  guildName: string | null;
-  gearScore: {
-    score: number;
-    averageItemLevel: number;
-    quality: string;
-  } | null;
-};
-
-type GearPreviewFailure = {
-  ok: false;
-  message: string;
-  sourceUrl: string;
-  characterName: string;
-  realm: string;
-  className: string | null;
-};
-
-type GearPreviewResponse = GearPreview | GearPreviewFailure;
 
 const SIZE_CLASSES: Record<PlayerAvatarSize, string> = {
   xs: "h-9 w-9 text-xs",
@@ -68,16 +46,9 @@ const SIZE_CLASSES: Record<PlayerAvatarSize, string> = {
 const TOOLTIP_GAP = 10;
 const VIEWPORT_PADDING = 12;
 const TOOLTIP_MAX_WIDTH = 736;
-const CLIENT_CACHE_MS = 5 * 60 * 1000;
-const previewCache = new Map<string, { expiresAt: number; data: GearPreviewResponse }>();
-const previewRequests = new Map<string, Promise<GearPreviewResponse>>();
 
 function getInitials(name: string): string {
   return name.trim().substring(0, 2).toUpperCase() || "??";
-}
-
-function getPreviewKey(name: string, realmName?: string | null): string {
-  return `${name.trim().toLowerCase()}@${(realmName ?? "Lordaeron").trim().toLowerCase()}`;
 }
 
 function GearSlotRailItem({
@@ -172,6 +143,8 @@ function GearPreviewPanel({
   tooltipId,
   tooltipRef,
   position,
+  onPointerEnter,
+  onPointerLeave,
 }: {
   name: string;
   initialClass?: string | null;
@@ -182,38 +155,49 @@ function GearPreviewPanel({
   tooltipId: string;
   tooltipRef: React.RefObject<HTMLDivElement | null>;
   position: { left: number; top: number };
+  onPointerEnter: () => void;
+  onPointerLeave: () => void;
 }) {
-  const className = preview?.className ?? initialClass ?? null;
-  const classIconUrl = getClassIconUrl(className);
-  const raceName = preview?.ok ? preview.raceName : initialRace;
-  const guildName = preview?.ok ? preview.guildName : initialGuild;
+  const identity = getPlayerClassMeta(hasResolvedPreviewClass(preview) ? preview?.className : initialClass);
+  const className = identity.className;
+  const classIconUrl = identity.iconUrl;
+  const [failedIconUrl, setFailedIconUrl] = useState<string | null>(null);
+  const hasClassIcon = classIconUrl && failedIconUrl !== classIconUrl;
+  const raceName = preview?.raceName ?? initialRace;
+  const guildName = preview?.guildName ?? initialGuild;
   const itemsBySlot = preview?.ok
     ? new Map(preview.gear.items.map((item) => [item.slot === "Ranged" ? "Ranged/Relic" : item.slot, item]))
     : new Map<string, ArmoryCharacterGear["items"][number]>();
+  const knownSlots = new Set<string>([...PAPER_DOLL_LEFT_SLOTS, ...PAPER_DOLL_RIGHT_SLOTS, ...PAPER_DOLL_WEAPON_SLOTS]);
+  const unplacedItems = preview?.ok
+    ? preview.gear.items.filter(item => !knownSlots.has(item.slot === "Ranged" ? "Ranged/Relic" : item.slot))
+    : [];
 
   return (
     <div
       ref={tooltipRef}
       id={tooltipId}
       role="tooltip"
-      className="pointer-events-none fixed z-2147483647 w-[min(46rem,calc(100vw-1.5rem))] overflow-hidden rounded-sm border border-gold bg-bg-deep text-left shadow-2xl shadow-black/60"
+      className="pointer-events-auto fixed z-2147483647 max-h-[calc(100dvh-1.5rem)] w-[min(46rem,calc(100vw-1.5rem))] overflow-y-auto overscroll-contain rounded-sm border border-gold bg-bg-deep text-left shadow-2xl shadow-black/60"
       style={{ left: position.left, top: position.top }}
+      onPointerEnter={onPointerEnter}
+      onPointerLeave={onPointerLeave}
     >
       <div className="flex items-center gap-3 border-b border-gold-dim bg-bg-panel px-3 py-3">
         <div className="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-xs border border-gold-dim bg-bg-deep">
-          {classIconUrl ? (
+          {hasClassIcon ? (
             // eslint-disable-next-line @next/next/no-img-element -- Static WoW icon host; remote Next image optimization is intentionally disabled.
-            <img src={classIconUrl} alt="" className="h-full w-full object-cover" />
+            <img src={classIconUrl} alt="" className="h-full w-full object-cover" onError={() => setFailedIconUrl(classIconUrl)} />
           ) : (
-            <span className="text-xs font-bold text-text-secondary">{getInitials(name)}</span>
+            <UserRound aria-hidden="true" className="h-5 w-5 text-text-secondary" />
           )}
         </div>
         <div className="min-w-0 flex-1">
           <div className="flex items-start justify-between gap-3">
             <div className="min-w-0">
-              <p className="truncate text-sm font-bold text-text-primary">{name}</p>
+              <p className="truncate text-sm font-bold" style={{ color: identity.textColor }}>{name}</p>
               <p className="truncate text-xs text-text-secondary">
-                {[className, raceName, guildName].filter(Boolean).join(" · ") || "Warmane character"}
+                {[identity.label, raceName, guildName].filter(Boolean).join(" · ")}
               </p>
             </div>
             {preview?.ok && preview.gearScore && (
@@ -228,7 +212,7 @@ function GearPreviewPanel({
         </div>
       </div>
 
-      {loading && (
+      {loading && !preview?.ok && (
         <div className="flex min-h-36 items-center justify-center gap-2 px-4 py-6 text-sm text-text-secondary">
           <span className="h-4 w-4 animate-spin rounded-full border-2 border-gold-dim border-t-gold" aria-hidden="true" />
           Loading gear from Warmane…
@@ -242,7 +226,7 @@ function GearPreviewPanel({
         </div>
       )}
 
-      {!loading && preview?.ok && (
+      {preview?.ok && (
         <>
           <div className="grid grid-cols-2 gap-x-3 px-3 py-3 sm:hidden">
             {preview.gear.items.map((item, index) => (
@@ -283,15 +267,16 @@ function GearPreviewPanel({
                     Appearance unavailable from Armory
                   </p>
                 )}
-                {classIconUrl ? (
+                {hasClassIcon ? (
                   // eslint-disable-next-line @next/next/no-img-element -- Static WoW class icon host.
                   <img
                     src={classIconUrl}
                     alt=""
+                    onError={() => setFailedIconUrl(classIconUrl)}
                     className="h-24 w-24 rounded-full border border-gold-dim/70 object-cover opacity-55 grayscale-[20%] shadow-2xl shadow-black"
                   />
                 ) : (
-                  <span className="text-3xl font-bold text-gold/60">{getInitials(name)}</span>
+                  <UserRound aria-hidden="true" className="h-20 w-20 text-text-secondary" />
                 )}
                 <p className="relative z-20 mt-4 text-sm font-bold text-gold-light drop-shadow-[0_1px_2px_rgba(0,0,0,0.95)]">{name}</p>
                 <p className="relative z-20 mt-1 text-xs uppercase tracking-[0.18em] text-text-secondary drop-shadow-[0_1px_2px_rgba(0,0,0,0.95)]">
@@ -320,9 +305,17 @@ function GearPreviewPanel({
               ))}
             </div>
           </div>
+          {unplacedItems.length > 0 && (
+            <div className="hidden border-t border-gold-dim px-3 py-3 sm:block">
+              <p className="text-xs font-semibold text-text-secondary">Slot unavailable</p>
+              <ul className="mt-2 grid list-none grid-cols-2 gap-x-3 gap-y-1 text-xs text-text-primary">
+                {unplacedItems.map((item, index) => <li key={`${item.itemId ?? item.name}-${index}`} className="min-w-0 break-words">{item.name}</li>)}
+              </ul>
+            </div>
+          )}
           <div className="flex items-center justify-between gap-3 border-t border-gold-dim bg-bg-panel px-3 py-2 text-xs text-text-dim">
             <span>
-              {preview.stale ? "Cached fallback" : "Live Armory"} · {formatDateTimeUtc(preview.gear.fetchedAt)}
+              {loading ? "Refreshing Armory" : preview.stale ? "Cached fallback" : "Armory snapshot"} · {formatDateTimeUtc(preview.gear.fetchedAt)}
               {preview.gear.appearanceStale && <span className="hidden sm:inline"> · Cached appearance</span>}
             </span>
             {preview.gearScore && <span>Average item level {formatInteger(preview.gearScore.averageItemLevel)}</span>}
@@ -339,25 +332,73 @@ export function PlayerAvatar({
   characterClass,
   raceName,
   guildName,
-  color,
-  fallbackIconUrl,
   size = "sm",
   className,
+  onClassResolved,
 }: PlayerAvatarProps) {
-  const [iconFailed, setIconFailed] = useState(false);
+  const cacheKey = getPlayerGearPreviewKey(name, realmName);
+  const canonicalClass = normalizePlayerClass(characterClass);
+  const [failedIconUrl, setFailedIconUrl] = useState<string | null>(null);
   const [mounted, setMounted] = useState(false);
-  const [visible, setVisible] = useState(false);
-  const [loading, setLoading] = useState(false);
-  const [preview, setPreview] = useState<GearPreviewResponse | null>(null);
+  const [openKey, setOpenKey] = useState<string | null>(null);
+  const [requestState, setRequestState] = useState<{ key: string; loading: boolean; preview: GearPreviewResponse | null } | null>(null);
   const [position, setPosition] = useState({ left: VIEWPORT_PADDING, top: VIEWPORT_PADDING });
   const buttonRef = useRef<HTMLButtonElement | null>(null);
   const tooltipRef = useRef<HTMLDivElement | null>(null);
+  const closeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const pointerInPreviewRef = useRef(false);
+  const requestIdRef = useRef(0);
+  const identityRef = useRef<{ key: string; characterClass?: string | null; onClassResolved?: PlayerAvatarProps["onClassResolved"]; classOverride?: string | null }>({ key: "", characterClass, onClassResolved });
+  const reportedClassRef = useRef<string | null>(null);
   const tooltipId = useId();
   const initials = getInitials(name);
-  const resolvedClass = preview?.className ?? characterClass;
-  const resolvedFallbackIconUrl = getClassIconUrl(resolvedClass) ?? fallbackIconUrl;
-  const imageUrl = !iconFailed && resolvedFallbackIconUrl ? resolvedFallbackIconUrl : null;
-  const state = imageUrl ? "class-icon" : "initials";
+  const visible = openKey === cacheKey;
+  const rawPreview = requestState?.key === cacheKey ? requestState.preview : null;
+  const [classState, setClassState] = useState<{ key: string; propClass: string | null; overrideClass?: string | null }>({ key: cacheKey, propClass: canonicalClass });
+  const sameIdentity = classState.key === cacheKey;
+  const changedClass = sameIdentity && classState.propClass !== canonicalClass;
+  // A prop which confirms our correction keeps the open preview. A different
+  // server identity supersedes its older class, including on cached reopen.
+  const classOverride = !sameIdentity ? undefined : changedClass
+    ? getResolvedPreviewClass(rawPreview) === canonicalClass ? undefined : canonicalClass
+    : classState.overrideClass;
+  if (!sameIdentity || changedClass) {
+    setClassState({ key: cacheKey, propClass: canonicalClass, overrideClass: classOverride });
+  }
+  const preview = useMemo(() => rawPreview && classOverride !== undefined ? { ...rawPreview, className: classOverride } : rawPreview, [rawPreview, classOverride]);
+  const loading = requestState?.key === cacheKey && requestState.loading;
+  const identity = getPlayerClassMeta(hasResolvedPreviewClass(preview) ? preview?.className : characterClass);
+  const resolvedClass = identity.className;
+  const resolvedFallbackIconUrl = identity.iconUrl;
+  const imageUrl = failedIconUrl !== resolvedFallbackIconUrl ? resolvedFallbackIconUrl : null;
+  const state = imageUrl ? "class-icon" : "fallback-icon";
+
+  useLayoutEffect(() => {
+    if (identityRef.current.key !== cacheKey) reportedClassRef.current = null;
+    identityRef.current = { key: cacheKey, characterClass, onClassResolved, classOverride };
+  }, [cacheKey, characterClass, onClassResolved, classOverride]);
+
+  useEffect(() => () => {
+    requestIdRef.current += 1;
+    clearTimeout(closeTimerRef.current ?? undefined);
+  }, []);
+
+  const cancelClose = useCallback(() => {
+    clearTimeout(closeTimerRef.current ?? undefined);
+  }, []);
+
+  const closePreview = useCallback(() => {
+    cancelClose();
+    pointerInPreviewRef.current = false;
+    setOpenKey(null);
+  }, [cancelClose]);
+
+  const scheduleClose = useCallback(() => {
+    cancelClose();
+    closeTimerRef.current = setTimeout(() => {
+      if (!pointerInPreviewRef.current && document.activeElement !== buttonRef.current) setOpenKey(null);
+    }, 180);
+  }, [cancelClose]);
 
   const updateTooltipPosition = useCallback(() => {
     if (!buttonRef.current) return;
@@ -373,55 +414,30 @@ export function PlayerAvatar({
   }, []);
 
   const loadPreview = useCallback(async () => {
-    const cacheKey = getPreviewKey(name, realmName);
-    const cached = previewCache.get(cacheKey);
-    if (cached && cached.expiresAt > Date.now()) {
-      setPreview(cached.data);
-      return;
+    const requestId = ++requestIdRef.current;
+    setRequestState(current => ({ key: cacheKey, loading: true, preview: current?.key === cacheKey ? current.preview : null }));
+    const data = await playerGearPreviewClient.load(name, realmName);
+    if (requestIdRef.current !== requestId || identityRef.current.key !== cacheKey) return;
+    setRequestState({ key: cacheKey, loading: false, preview: data });
+    const correctedClass = getResolvedPreviewClass(data);
+    const hasClassResult = hasResolvedPreviewClass(data);
+    const acceptedClass = identityRef.current.classOverride === undefined || correctedClass === identityRef.current.classOverride;
+    if (hasClassResult && correctedClass === identityRef.current.classOverride) {
+      setClassState(current => current.key === cacheKey ? { ...current, overrideClass: undefined } : current);
     }
-    setLoading(true);
-    try {
-      let request = previewRequests.get(cacheKey);
-      if (!request) {
-        request = (async () => {
-          try {
-            const searchParams = new URLSearchParams();
-            if (realmName) searchParams.set("realm", realmName);
-            const query = searchParams.toString();
-            const response = await fetch(`/api/players/${encodeURIComponent(name)}/gear${query ? `?${query}` : ""}`);
-            const data = await response.json() as GearPreviewResponse | { error?: string };
-            if (!response.ok || !("ok" in data)) {
-              throw new Error("Gear quick look is unavailable.");
-            }
-            return data;
-          } finally {
-            previewRequests.delete(cacheKey);
-          }
-        })();
-        previewRequests.set(cacheKey, request);
-      }
-
-      const data = await request;
-      previewCache.set(cacheKey, { expiresAt: Date.now() + CLIENT_CACHE_MS, data });
-      setPreview(data);
-    } catch (error) {
-      setPreview({
-        ok: false,
-        message: error instanceof Error ? error.message : "Gear quick look is unavailable.",
-        sourceUrl: "",
-        characterName: name,
-        realm: realmName ?? "Lordaeron",
-        className: characterClass ?? null,
-      });
-    } finally {
-      setLoading(false);
+    const reportKey = `${cacheKey}:${normalizePlayerClass(identityRef.current.characterClass)}:${correctedClass}`;
+    if (acceptedClass && hasClassResult && correctedClass !== normalizePlayerClass(identityRef.current.characterClass)
+      && reportedClassRef.current !== reportKey) {
+      reportedClassRef.current = reportKey;
+      identityRef.current.onClassResolved?.(correctedClass);
     }
-  }, [characterClass, name, realmName]);
+  }, [cacheKey, name, realmName]);
 
   const showPreview = useCallback(() => {
-    setVisible(true);
+    cancelClose();
+    setOpenKey(cacheKey);
     void loadPreview();
-  }, [loadPreview]);
+  }, [cacheKey, cancelClose, loadPreview]);
 
   useEffect(() => setMounted(true), []);
 
@@ -432,11 +448,11 @@ export function PlayerAvatar({
   useEffect(() => {
     if (!visible) return;
     const closeOnEscape = (event: KeyboardEvent) => {
-      if (event.key === "Escape") setVisible(false);
+      if (event.key === "Escape") closePreview();
     };
     const closeOutside = (event: PointerEvent) => {
-      if (buttonRef.current?.contains(event.target as Node)) return;
-      setVisible(false);
+      if (buttonRef.current?.contains(event.target as Node) || tooltipRef.current?.contains(event.target as Node)) return;
+      closePreview();
     };
     window.addEventListener("resize", updateTooltipPosition);
     window.addEventListener("scroll", updateTooltipPosition, true);
@@ -448,9 +464,10 @@ export function PlayerAvatar({
       window.removeEventListener("keydown", closeOnEscape);
       window.removeEventListener("pointerdown", closeOutside);
     };
-  }, [updateTooltipPosition, visible]);
+  }, [closePreview, updateTooltipPosition, visible]);
 
   return (
+    <>
     <button
       ref={buttonRef}
       type="button"
@@ -474,18 +491,26 @@ export function PlayerAvatar({
         if (event.pointerType === "mouse") showPreview();
       }}
       onPointerLeave={(event) => {
-        if (event.pointerType === "mouse") setVisible(false);
+        if (event.pointerType === "mouse") scheduleClose();
       }}
       onFocus={showPreview}
-      onBlur={() => setVisible(false)}
+      onBlur={scheduleClose}
       onClick={showPreview}
+      onKeyDown={(event) => {
+        if (!visible || !tooltipRef.current) return;
+        const distances: Record<string, number> = { ArrowDown: 48, ArrowUp: -48, PageDown: tooltipRef.current.clientHeight, PageUp: -tooltipRef.current.clientHeight };
+        if (event.key in distances) {
+          event.preventDefault();
+          tooltipRef.current.scrollBy({ top: distances[event.key] });
+        }
+      }}
     >
       <span
         className={cn(
           "flex items-center justify-center overflow-hidden rounded-xs font-bold transition-colors group-hover/avatar:border-gold/70",
           SIZE_CLASSES[size],
         )}
-        style={{ background: `${color}22`, color, border: `1px solid ${color}66` }}
+        style={{ background: `${identity.color}22`, color: identity.textColor, border: `1px solid ${identity.color}66` }}
       >
         {imageUrl ? (
           // eslint-disable-next-line @next/next/no-img-element -- Static class icon URLs are external and not optimized by Next.
@@ -495,10 +520,10 @@ export function PlayerAvatar({
             alt={`${resolvedClass ?? name} class icon`}
             className="h-full w-full object-cover"
             referrerPolicy="no-referrer"
-            onError={() => setIconFailed(true)}
+            onError={() => setFailedIconUrl(imageUrl)}
           />
         ) : (
-          <span data-pizza-avatar-initials="true">{initials}</span>
+          <UserRound data-pizza-avatar-fallback="true" aria-hidden="true" className="h-5 w-5" />
         )}
       </span>
       <span
@@ -507,6 +532,7 @@ export function PlayerAvatar({
       >
         <Shield className="h-2.5 w-2.5" strokeWidth={2.25} />
       </span>
+    </button>
       {mounted && visible && createPortal(
         <GearPreviewPanel
           name={name}
@@ -518,9 +544,17 @@ export function PlayerAvatar({
           tooltipId={tooltipId}
           tooltipRef={tooltipRef}
           position={position}
+          onPointerEnter={() => {
+            pointerInPreviewRef.current = true;
+            cancelClose();
+          }}
+          onPointerLeave={() => {
+            pointerInPreviewRef.current = false;
+            scheduleClose();
+          }}
         />,
         document.body,
       )}
-    </button>
+    </>
   );
 }

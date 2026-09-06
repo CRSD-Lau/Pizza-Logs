@@ -6,15 +6,15 @@ import { db } from "@/lib/db";
 import { StatCard, StatGroup } from "@/components/ui/StatCard";
 import { AccordionSection } from "@/components/ui/AccordionSection";
 import { EmptyState } from "@/components/ui/EmptyState";
-import { PlayerAvatar } from "@/components/players/PlayerAvatar";
+import { PlayerProfileIdentity } from "@/components/players/PlayerProfileIdentity";
 import { PlayerGearSection, PlayerGearSectionSkeleton } from "@/components/players/PlayerGearSection";
 import { getWarmaneCharacterGear } from "@/lib/warmane-armory";
 import { DEFAULT_GUILD_NAME, DEFAULT_GUILD_REALM } from "@/lib/warmane-guild-roster";
 import { buildPlayerPerBossSummary, buildPlayerRecentEncounters, resolvePlayerProfile } from "@/lib/player-profile";
-import { getClassIconUrl } from "@/lib/class-icons";
 import { formatDps, formatCountLabel, formatDateUtc, formatDateTimeUtc, formatInteger } from "@/lib/utils";
 import { NumericValue } from "@/components/ui/NumericValue";
-import { getClassColor } from "@/lib/constants/classes";
+import { getStoredPlayerIdentity } from "@/lib/player-directory";
+import { DEFAULT_PLAYER_REALM } from "@/lib/player-identity";
 import { getRevealClassName, getRevealStyle } from "@/lib/ui-animation";
 import { cn } from "@/lib/utils";
 import { buildPageMetadata } from "@/lib/page-metadata";
@@ -24,7 +24,7 @@ import { reportQueryString } from "@/lib/difficulty-filter";
 
 interface Props {
   params: Promise<{ playerName: string }>;
-  searchParams: Promise<{ includeShortPulls?: string | string[] }>;
+  searchParams: Promise<{ includeShortPulls?: string | string[]; realm?: string | string[] }>;
 }
 
 async function PlayerGear({ name, realm, playerClass }: { name: string; realm?: string; playerClass?: string | null }) {
@@ -45,11 +45,24 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 export default async function PlayerPage({ params, searchParams }: Props) {
   const { playerName } = await params;
   const name = playerName;
-  const includeShortPulls = parseIncludeShortPulls((await searchParams).includeShortPulls);
+  const search = await searchParams;
+  const includeShortPulls = parseIncludeShortPulls(search.includeShortPulls);
+  const rawRealm = Array.isArray(search.realm) ? search.realm[0] : search.realm;
+  const requestedRealm = rawRealm?.trim();
+  if (requestedRealm && !/^[A-Za-z]{2,24}$/.test(requestedRealm)) notFound();
   const querySuffix = includeShortPulls ? "?includeShortPulls=1" : "";
 
   const player = await db.player.findFirst({
-    where: { name },
+    where: {
+      name: { equals: name, mode: "insensitive" },
+      ...(requestedRealm ? {
+        OR: [
+          { realm: { is: { name: { equals: requestedRealm, mode: "insensitive" } } } },
+          ...(requestedRealm.toLowerCase() === DEFAULT_PLAYER_REALM.toLowerCase() ? [{ realmId: null }] : []),
+        ],
+      } : {}),
+    },
+    orderBy: [{ realm: { name: "asc" } }, { id: "asc" }],
     include: {
       realm: { select: { name: true } },
       milestones: {
@@ -66,7 +79,7 @@ export default async function PlayerPage({ params, searchParams }: Props) {
     where: {
       normalizedCharacterName: name.toLowerCase(),
       guildName: DEFAULT_GUILD_NAME,
-      realm: DEFAULT_GUILD_REALM,
+      realm: { equals: player?.realm?.name ?? requestedRealm ?? DEFAULT_GUILD_REALM, mode: "insensitive" },
     },
     select: {
       characterName: true,
@@ -81,6 +94,10 @@ export default async function PlayerPage({ params, searchParams }: Props) {
 
   const profile = resolvePlayerProfile({ player, rosterMember });
   if (!profile) notFound();
+  const identity = await getStoredPlayerIdentity(profile.name, profile.realmName, profile.className);
+  profile.className = identity.className;
+  profile.raceName = identity.raceName ?? profile.raceName;
+  profile.guildName = identity.guildName ?? profile.guildName;
 
   const participants = player
     ? await db.participant.findMany({
@@ -111,7 +128,6 @@ export default async function PlayerPage({ params, searchParams }: Props) {
   const latestSpec  = participants.find((participant) => participant.spec)?.spec ?? null;
 
   const milestones = player?.milestones ?? [];
-  const color = getClassColor(profile.className ?? name);
 
   const perBoss = buildPlayerPerBossSummary(participants);
   const recentEncounters = buildPlayerRecentEncounters(visibleParticipants, 50);
@@ -121,36 +137,11 @@ export default async function PlayerPage({ params, searchParams }: Props) {
       <Link href={`/players${querySuffix}`} className="inline-flex min-h-11 items-center text-sm text-text-dim hover:text-gold">
         Players
       </Link>
-      {/* Header */}
-      <div className="flex items-center gap-4">
-        <PlayerAvatar
-          name={profile.name}
-          realmName={profile.realmName}
-          characterClass={profile.className}
-          raceName={profile.raceName}
-          guildName={profile.guildName}
-          color={color}
-          fallbackIconUrl={getClassIconUrl(profile.className)}
-          size="lg"
-        />
-        <div className="min-w-0">
-          <h1
-            className="heading-cinzel break-words text-2xl font-bold"
-            style={{ color }}
-          >
-            {profile.name}
-          </h1>
-          <div className="flex flex-wrap items-center gap-2 mt-1">
-            {profile.className && <span className="text-sm text-text-secondary">{profile.className}</span>}
-            {latestSpec && <span className="text-sm text-gold">{latestSpec}</span>}
-            {profile.raceName && <span className="text-sm text-text-dim">{profile.raceName}</span>}
-            {profile.level && <span className="text-xs text-text-dim">Level {profile.level}</span>}
-            <span className="text-xs text-text-dim">{profile.realmName}</span>
-            {profile.guildName && <span className="text-xs text-gold">{profile.guildName}</span>}
-            {profile.rankName && <span className="text-xs text-text-secondary">{profile.rankName}</span>}
-          </div>
-        </div>
-      </div>
+      <PlayerProfileIdentity key={`${profile.name}@${profile.realmName}`} profile={{
+        name: profile.name, realmName: profile.realmName, className: profile.className,
+        raceName: profile.raceName, guildName: profile.guildName, level: profile.level,
+        rankName: profile.rankName, isRosterOnly: profile.isRosterOnly,
+      }} latestSpec={latestSpec} />
 
       <SectionNav items={[
         { id: "gear", label: "Gear" },

@@ -28,7 +28,21 @@ The portrait reports when its model is loading, when Armory supplies no appearan
 
 The client lazily calls `GET /api/players/[name]/gear`. The route rejects arbitrary names and only serves a character already present in `players` or `guild_roster_members`. Pizza Logs then reads or refreshes `armory_gear_cache` through the Warmane character JSON endpoint, reads the display recipe from the matching public profile, and enriches the equipment from local `wow_items` metadata.
 
-Quick looks use a five-minute Armory refresh window and a five-minute in-browser response cache. If Warmane's equipment endpoint is unavailable, the last healthy database snapshot is returned with a stale label. The independent public profile response can still supply and persist the appearance recipe, so cached equipment does not unnecessarily fall back to a class icon. A page render does not fan out Armory requests for every player; only an opened quick look performs the read.
+Quick looks use a five-minute Armory refresh window and a five-minute in-browser cache for healthy responses. Failed requests and stale fallbacks retry after 15 seconds, and browser requests time out after 12 seconds. Concurrent requests for the same character and realm share one request. If Warmane's equipment endpoint is unavailable, the last healthy snapshot remains readable with a stale label. The independent public profile response can still supply and persist the appearance recipe, so cached equipment does not unnecessarily fall back to a class icon. The directory does not fan out Armory requests for every player; only an opened quick look performs the upstream read.
+
+## Player class identity
+
+Equipment slots use the matching Armory profile's full character pane, including empty positions. This prevents a missing shirt or tabard in Warmane's compact API list from shifting wrist, hand and weapon labels. When neither that grid nor local item metadata can establish a slot, the item remains visible under **Slot unavailable** instead of receiving a guessed position.
+
+The players directory resolves the ten Wrath classes through one shared normalizer, including class IDs and common Death Knight spellings. Class names, authentic colour swatches and Warmane class icons come from that same mapping. Small name text uses the site's readable version of the class hue. Unknown classes use a neutral character symbol and an explicit label; character names never generate a guessed class colour. If a class icon fails to load, a visible symbol remains and a corrected class can load its own icon.
+
+Initial directory rendering uses database identity fields only. The newest valid Armory gear-cache or guild-roster observation for the exact character and realm takes precedence over the combat-log class. Evidence needs a matching Armory source URL and a usable timestamp. Equal-time conflicting class observations remain unknown. Class filters, result counts, overview and pagination all use the resolved identity before selecting rows. Historical parser classes are not rewritten.
+
+A quick look can correct the entire directory row, including name colour and class label. It then refreshes the server directory to reconcile class membership and counts. Character and realm must match in upstream responses and cached payloads before they can contribute evidence. Profile links and their short-pull controls retain the selected realm.
+
+Warmane availability cannot be guaranteed. A class verified from the matching public profile can remain useful when equipment is unavailable; that does not turn missing equipment into a successful gear snapshot. The interface distinguishes unknown identity, unavailable equipment and cached equipment.
+
+Quick looks remain open while the pointer moves into them. On short screens, their contents scroll within the viewport; Arrow Up/Down and Page Up/Down also scroll while the avatar has keyboard focus. Escape or an outside interaction closes the preview. They contain no embedded third-party page or privileged browser helper.
 
 If fresh equipment arrives while the profile is unavailable or has no usable appearance recipe, the last valid appearance for that same character and realm is retained in both the response and database cache. The desktop footer labels it **Cached appearance** independently of equipment freshness. Its displayed outfit may be older than the equipment list. A valid new profile replaces it and clears that label; neither a different character nor a different realm can supply this fallback.
 
