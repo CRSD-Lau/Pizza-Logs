@@ -1,17 +1,18 @@
 import { Skeleton } from "@/components/ui/Skeleton";
+import { DataPanel, PageShell } from "@/components/ui/PageLayout";
 
 export default function GuildRosterLoading() {
   return (
-    <div className="page-shell">
+    <PageShell>
       <div>
         <Skeleton className="h-8 w-48" />
-        <Skeleton className="mt-2 h-4 w-72" />
+        <Skeleton className="mt-2 h-4 w-full max-w-72" />
       </div>
-      <div className="border border-gold-dim bg-bg-panel rounded-sm p-4 space-y-3">
+      <DataPanel className="space-y-3 p-4">
         {Array.from({ length: 8 }).map((_, index) => (
           <Skeleton key={index} className="h-10 w-full" />
         ))}
-      </div>
-    </div>
+      </DataPanel>
+    </PageShell>
   );
 }

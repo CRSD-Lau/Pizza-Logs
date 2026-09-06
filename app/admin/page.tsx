@@ -2,8 +2,9 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { db } from "@/lib/db";
 import { requireAdmin } from "@/lib/require-admin";
-import { SectionHeader } from "@/components/ui/SectionHeader";
-import { StatCard } from "@/components/ui/StatCard";
+import { PageHeader, PageSection, PageShell } from "@/components/ui/PageLayout";
+import { StatCard, StatGroup } from "@/components/ui/StatCard";
+import { buttonVariants } from "@/components/ui/Button";
 import { formatBytes, formatCountLabel, formatDateTimeUtc, formatDateUtc, formatInteger, formatSeconds } from "@/lib/utils";
 import { getDeploymentInfo } from "@/lib/deployment-info";
 import { readUpstreamText } from "@/lib/upstream-response";
@@ -134,21 +135,18 @@ export default async function AdminPage() {
   const parserHealth = await parserHealthPromise;
 
   return (
-    <div className="page-shell">
-      <div className="flex items-start justify-between gap-4 flex-wrap">
-        <div>
-          <h1 className="heading-cinzel text-2xl font-bold text-gold-light text-glow-gold">
-            Admin / Diagnostics
-          </h1>
-          <p className="text-text-secondary text-sm mt-1">System health and database statistics</p>
-          <Link href="/admin/uploads" className="text-xs text-gold hover:text-gold-light uppercase tracking-wide mt-3 inline-block">
+    <PageShell>
+      <div className="space-y-4">
+        <PageHeader title="Admin / Diagnostics" description="System health and database statistics" />
+        <nav aria-label="Admin tools" className="flex flex-wrap items-center gap-2">
+          <Link href="/admin/uploads" className={buttonVariants({ variant: "gold", size: "sm" })}>
             View upload history &rarr;
           </Link>
-          <Link href="/admin/security" className="text-xs text-gold hover:text-gold-light uppercase tracking-wide mt-3 ml-4 inline-block">
+          <Link href="/admin/security" className={buttonVariants({ variant: "ghost", size: "sm" })}>
             Account security &rarr;
           </Link>
-        </div>
-        <ClearDatabaseButton />
+          <div className="w-full pt-2 sm:ml-auto sm:w-auto sm:pt-0"><ClearDatabaseButton /></div>
+        </nav>
       </div>
 
       {!databaseAvailable && (
@@ -162,8 +160,7 @@ export default async function AdminPage() {
       )}
 
       {/* 1. Service Health */}
-      <section>
-        <SectionHeader title="Service Health" />
+      <PageSection title="Service Health">
         <div className="grid sm:grid-cols-3 gap-3">
           <ServiceCard name="Next.js App"    status="ok"    detail="Running" />
           <ServiceCard
@@ -177,46 +174,50 @@ export default async function AdminPage() {
             detail={databaseAvailable ? `${formatCountLabel(bossCount, "boss", "bosses")} seeded` : "Unavailable"}
           />
         </div>
-      </section>
+      </PageSection>
 
       {/* 2. Configuration */}
-      <section>
-        <SectionHeader title="Configuration" />
-        <div className="break-all bg-bg-panel border border-gold-dim rounded-sm p-4 space-y-2 font-mono text-xs text-text-secondary">
-          <div><span className="text-text-dim">APP_VERSION</span>         = {deployment.version}</div>
-          <div><span className="text-text-dim">DEPLOY_COMMIT</span>       = {deployment.commitShort ?? "local / unavailable"}</div>
-          <div><span className="text-text-dim">DEPLOY_BRANCH</span>       = {deployment.branch ?? "local / unavailable"}</div>
-          <div><span className="text-text-dim">DEPLOYMENT_ID</span>       = {deployment.deploymentId ?? "local / unavailable"}</div>
-          <div><span className="text-text-dim">RAILWAY_ENVIRONMENT</span> = {deployment.environment}</div>
-          <div><span className="text-text-dim">RAILWAY_SERVICE</span>     = {deployment.service ?? "local / unavailable"}</div>
-          <div><span className="text-text-dim">PARSER_SERVICE_URL</span> = {process.env.PARSER_SERVICE_URL ?? "http://localhost:8000"}</div>
-          <div><span className="text-text-dim">NODE_ENV</span>           = {process.env.NODE_ENV}</div>
-          <div><span className="text-text-dim">UPLOAD_DIR</span>         = {process.env.UPLOAD_DIR ?? "./uploads"}</div>
-        </div>
-      </section>
+      <PageSection title="Configuration">
+        <dl className="grid gap-x-6 gap-y-4 md:grid-cols-3">
+          {[
+            ["APP_VERSION", deployment.version],
+            ["DEPLOY_COMMIT", deployment.commitShort ?? "local / unavailable"],
+            ["DEPLOY_BRANCH", deployment.branch ?? "local / unavailable"],
+            ["DEPLOYMENT_ID", deployment.deploymentId ?? "local / unavailable"],
+            ["RAILWAY_ENVIRONMENT", deployment.environment],
+            ["RAILWAY_SERVICE", deployment.service ?? "local / unavailable"],
+            ["PARSER_SERVICE_URL", process.env.PARSER_SERVICE_URL ?? "http://localhost:8000"],
+            ["NODE_ENV", process.env.NODE_ENV],
+            ["UPLOAD_DIR", process.env.UPLOAD_DIR ?? "./uploads"],
+          ].map(([label, value]) => (
+            <div key={label} className="min-w-0">
+              <dt className="text-xs font-semibold tracking-wide text-text-dim">{label}</dt>
+              <dd className="mt-1 break-all font-mono text-sm text-text-secondary">{value}</dd>
+            </div>
+          ))}
+        </dl>
+      </PageSection>
 
       {/* 3. Guild Roster */}
-      <section>
-        <SectionHeader title="Guild Roster" sub="First-party Warmane refresh for PizzaWarriors" />
+      <PageSection title="Guild Roster" description="First-party Warmane refresh for PizzaWarriors">
         <GuildRosterSyncPanel
           rosterCount={databaseAvailable ? rosterCount : null}
           available={databaseAvailable}
           latestSync={latestRosterSync?.lastSyncedAt ?? null}
         />
-      </section>
+      </PageSection>
 
       {/* 4. Warmane Gear Cache */}
-      <section>
-        <SectionHeader title="Warmane Gear Cache" sub="On-demand equipment snapshots for player quick looks" />
-        <div className="bg-bg-panel border border-gold-dim rounded-sm p-4 space-y-4">
-          <div className="grid gap-3 sm:grid-cols-2">
+      <PageSection title="Warmane Gear Cache" description="On-demand equipment snapshots for player quick looks">
+        <div className="space-y-4">
+          <StatGroup columns={2}>
             <StatCard label="Cached Snapshots" value={databaseAvailable ? gearCacheTotal : null} />
             <StatCard
               label="Latest Live Refresh"
-              value={!databaseAvailable ? "Unavailable" : latestGearRefresh?.lastSuccessAt
-                ? formatDateTimeUtc(latestGearRefresh.lastSuccessAt) : "Never"}
+              value={<span className="block text-base font-medium leading-relaxed">{!databaseAvailable ? "Unavailable" : latestGearRefresh?.lastSuccessAt
+                ? formatDateTimeUtc(latestGearRefresh.lastSuccessAt) : "Never"}</span>}
             />
-          </div>
+          </StatGroup>
           <div className="flex flex-wrap items-start justify-between gap-4">
             <p className="text-sm text-text-secondary max-w-3xl">
               Class avatars fetch current equipment directly through Pizza Logs when a gear quick
@@ -227,20 +228,19 @@ export default async function AdminPage() {
             <ClearGearCacheButton />
           </div>
         </div>
-      </section>
+      </PageSection>
 
       {/* 5. Item Template (AzerothCore) */}
-      <section>
-        <SectionHeader title="Item Template (AzerothCore)" sub="Read-only import status for WoW item metadata" />
-        <div className="bg-bg-panel border border-gold-dim rounded-sm p-4 space-y-4">
-          <div className="grid gap-3 sm:grid-cols-2">
+      <PageSection title="Item Template (AzerothCore)" description="Read-only import status for WoW item metadata">
+        <div className="space-y-4">
+          <StatGroup columns={2}>
             <StatCard label="Items Imported" value={databaseAvailable ? itemImportCount : null} />
             <StatCard
               label="Last Import"
-              value={!databaseAvailable ? "Unavailable" : latestItemImport?.importedAt
-                ? formatDateUtc(latestItemImport.importedAt) : "Never"}
+              value={<span className="block text-base font-medium leading-relaxed">{!databaseAvailable ? "Unavailable" : latestItemImport?.importedAt
+                ? formatDateUtc(latestItemImport.importedAt) : "Never"}</span>}
             />
-          </div>
+          </StatGroup>
           {databaseAvailable && itemImportCount === 0 && (
             <p className="text-sm text-text-secondary">
               No items imported yet. Run{" "}
@@ -251,41 +251,42 @@ export default async function AdminPage() {
             </p>
           )}
         </div>
-      </section>
+      </PageSection>
 
       {/* 6. Upload stats */}
-      <section>
-        <SectionHeader title="Upload Analytics" sub="Counts reset when upload data is cleared" />
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+      <PageSection title="Upload Analytics" description="Counts reset when upload data is cleared">
+        <StatGroup columns={4}>
           <StatCard label="Uploads"           value={databaseAvailable ? uploadsTotal : null} />
           <StatCard label="Encounters"        value={databaseAvailable ? encountersTotal : null} highlight />
           <StatCard label="Players"           value={databaseAvailable ? playersTotal : null} />
           <StatCard label="Active Milestones" value={databaseAvailable ? milestonesTotal : null} />
-        </div>
-      </section>
+        </StatGroup>
+      </PageSection>
 
       {/* 7. Top uploaders */}
-      <section>
-        <SectionHeader title="Most Active Uploaders" sub="Top 10 by uploads submitted; unnamed uploads excluded" />
-        <ol role="list" aria-label="Most active uploaders" className="bg-bg-panel border border-gold-dim rounded-sm divide-y divide-gold-dim">
-          {topUploaders.map((u, i) => (
-            <li key={u.uploaderName} className="flex items-center justify-between gap-3 px-4 py-2.5">
-              <div className="flex min-w-0 items-center gap-3">
-                <span className="text-text-dim text-sm shrink-0 tabular-nums"><span className="sr-only">Position </span><span aria-hidden="true">#</span>{formatInteger(i + 1)}</span>
-                <span className="break-words text-sm font-medium text-text-primary">{u.uploaderName}</span>
-              </div>
-              <span className="text-sm tabular-nums text-text-secondary">
-                {formatCountLabel(u._count.uploaderName, "upload")}
-              </span>
-            </li>
-          ))}
-        </ol>
-      </section>
+      <PageSection title="Most Active Uploaders" description="Top 10 by uploads submitted; unnamed uploads excluded">
+        {topUploaders.length === 0 ? (
+          <p className="text-sm text-text-secondary">{databaseAvailable ? "No named uploads yet." : "Uploader statistics are unavailable."}</p>
+        ) : (
+          <ol role="list" aria-label="Most active uploaders" className="bg-bg-panel border border-gold-dim rounded-sm divide-y divide-gold-dim">
+            {topUploaders.map((u, i) => (
+              <li key={u.uploaderName} className="flex items-center justify-between gap-3 px-4 py-2.5">
+                <div className="flex min-w-0 items-center gap-3">
+                  <span className="text-text-dim text-sm shrink-0 tabular-nums"><span className="sr-only">Position </span><span aria-hidden="true">#</span>{formatInteger(i + 1)}</span>
+                  <span className="break-words text-sm font-medium text-text-primary">{u.uploaderName}</span>
+                </div>
+                <span className="shrink-0 text-right text-sm tabular-nums text-text-secondary">
+                  {formatCountLabel(u._count.uploaderName, "upload")}
+                </span>
+              </li>
+            ))}
+          </ol>
+        )}
+      </PageSection>
 
       {/* 8. Recent upload timings */}
       {recentUploads.length > 0 && (
-        <section>
-          <SectionHeader title="Recent Upload Timings" sub="Latest 10 completed uploads · Time from upload creation to parse completion" />
+        <PageSection title="Recent Upload Timings" description="Latest 10 completed uploads · Time from upload creation to parse completion">
           <div className="bg-bg-panel border border-gold-dim rounded-sm divide-y divide-gold-dim">
             {recentUploads.map(u => {
               const elapsedMs  = u.parsedAt ? u.parsedAt.getTime() - u.createdAt.getTime() : null;
@@ -314,13 +315,12 @@ export default async function AdminPage() {
               );
             })}
           </div>
-        </section>
+        </PageSection>
       )}
 
       {/* 9. Failed uploads */}
       {recentErrors.length > 0 && (
-        <section>
-          <SectionHeader title="Recent Failures" sub="Latest 5 failed uploads" />
+        <PageSection title="Recent Failures" description="Latest 5 failed uploads">
           <div className="bg-bg-panel border border-danger/20 rounded-sm divide-y divide-gold-dim">
             {recentErrors.map(u => (
               <div key={u.id} className="break-words px-4 py-3">
@@ -332,9 +332,9 @@ export default async function AdminPage() {
               </div>
             ))}
           </div>
-        </section>
+        </PageSection>
       )}
-    </div>
+    </PageShell>
   );
 }
 
