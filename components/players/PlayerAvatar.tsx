@@ -348,7 +348,6 @@ export function PlayerAvatar({
   const closeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const pointerInPreviewRef = useRef(false);
   const suppressPointerOpenRef = useRef(false);
-  const pointerPositionRef = useRef<{ x: number; y: number } | null>(null);
   const requestIdRef = useRef(0);
   const identityRef = useRef<{ key: string; characterClass?: string | null; onClassResolved?: PlayerAvatarProps["onClassResolved"]; classOverride?: string | null }>({ key: "", characterClass, onClassResolved });
   const reportedClassRef = useRef<string | null>(null);
@@ -453,17 +452,11 @@ export function PlayerAvatar({
     const closeOnEscape = (event: KeyboardEvent) => {
       if (event.key === "Escape") {
         // Closing an overlapping tooltip can expose its trigger beneath a
-        // stationary pointer. Wait for a deliberate leave before hover opens it.
-        const pointer = pointerPositionRef.current;
-        const trigger = buttonRef.current?.getBoundingClientRect();
-        suppressPointerOpenRef.current = !!pointer && !!trigger
-          && pointer.x >= trigger.left && pointer.x < trigger.right
-          && pointer.y >= trigger.top && pointer.y < trigger.bottom;
+        // stationary pointer. Only real pointer movement or another deliberate
+        // interaction should reopen it, including after leaving the model iframe.
+        suppressPointerOpenRef.current = true;
         closePreview();
       }
-    };
-    const trackPointer = (event: PointerEvent) => {
-      if (event.pointerType === "mouse") pointerPositionRef.current = { x: event.clientX, y: event.clientY };
     };
     const closeOutside = (event: PointerEvent) => {
       if (buttonRef.current?.contains(event.target as Node) || tooltipRef.current?.contains(event.target as Node)) return;
@@ -472,13 +465,11 @@ export function PlayerAvatar({
     window.addEventListener("resize", updateTooltipPosition);
     window.addEventListener("scroll", updateTooltipPosition, true);
     window.addEventListener("keydown", closeOnEscape);
-    window.addEventListener("pointermove", trackPointer);
     window.addEventListener("pointerdown", closeOutside);
     return () => {
       window.removeEventListener("resize", updateTooltipPosition);
       window.removeEventListener("scroll", updateTooltipPosition, true);
       window.removeEventListener("keydown", closeOnEscape);
-      window.removeEventListener("pointermove", trackPointer);
       window.removeEventListener("pointerdown", closeOutside);
     };
   }, [closePreview, updateTooltipPosition, visible]);
@@ -505,14 +496,13 @@ export function PlayerAvatar({
       data-initials={initials}
       data-fallback-icon-url={resolvedFallbackIconUrl ?? ""}
       onPointerEnter={(event) => {
-        if (event.pointerType === "mouse") {
-          pointerPositionRef.current = { x: event.clientX, y: event.clientY };
-          if (!suppressPointerOpenRef.current) showPreview();
-        }
+        if (event.pointerType === "mouse" && !suppressPointerOpenRef.current) showPreview();
+      }}
+      onPointerMove={(event) => {
+        if (event.pointerType === "mouse" && suppressPointerOpenRef.current) showPreview();
       }}
       onPointerLeave={(event) => {
         if (event.pointerType === "mouse") {
-          pointerPositionRef.current = { x: event.clientX, y: event.clientY };
           suppressPointerOpenRef.current = false;
           scheduleClose();
         }

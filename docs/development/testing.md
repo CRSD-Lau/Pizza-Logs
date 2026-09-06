@@ -120,6 +120,8 @@ It also places the pointer in the overlap between the player-index avatar and it
 tooltip, checks that Escape remains closed after the exposed avatar receives
 pointer-enter, and verifies deliberate leave/re-enter, first hover after an
 outside-pointer Escape, and keyboard reopening.
+It also moves directly into the model iframe before Escape, then checks that the
+first return to the avatar reopens it without requiring a second pointer entry.
 
 The direct upload helper builds its sample in memory from synthetic constants; a
 unit test compares it with the canonical parser fixture without uploading file

@@ -347,6 +347,23 @@ export async function verifyPlayerQuickLooks({ browser, base, out, report, encou
           // Escape with the pointer outside must not suppress the next hover.
           await page.mouse.move(overlap.x, overlap.y);
           await visibleModel(page);
+          const modelPoint = await page.locator(FRAME).evaluate(element => {
+            const bounds = element.getBoundingClientRect();
+            return { x: bounds.x + bounds.width / 2, y: bounds.y + 8 };
+          });
+          const trigger = await avatar.boundingBox();
+          assert.ok(trigger);
+          assert.ok(modelPoint.x < trigger.x || modelPoint.x >= trigger.x + trigger.width
+            || modelPoint.y < trigger.y || modelPoint.y >= trigger.y + trigger.height,
+          "Model boundary check must move outside the trigger");
+          assert.equal(await page.evaluate(({ point, selector }) => document.elementFromPoint(point.x, point.y) === document.querySelector(selector), { point: modelPoint, selector: FRAME }), true);
+          // A direct move into the sandbox does not deliver its later pointer
+          // movement to the parent window. The first return must still reopen.
+          await page.mouse.move(modelPoint.x, modelPoint.y);
+          await page.keyboard.press("Escape");
+          await tooltip.waitFor({ state: "detached" });
+          await page.mouse.move(overlap.x, overlap.y);
+          await visibleModel(page);
           await page.mouse.move(0, 0);
           await page.keyboard.press("Escape");
           await tooltip.waitFor({ state: "detached" });
