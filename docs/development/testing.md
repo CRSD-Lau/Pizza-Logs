@@ -113,6 +113,11 @@ Player quick-look acceptance also covers all six existing avatar surfaces, cente
 
 The same command then runs `scripts/upload-journey-e2e.mjs` and `scripts/ux-navigation-e2e.mjs` against that stack. Upload acceptance exercises fresh and duplicate reports, explicit notification permission, first-screen form placement, and the opt-in intro dialog including reduced motion and media failure. Navigation acceptance checks 12 public routes at 375, 768, 1024 and 1440 pixels, full axe rules, horizontal overflow, duplicate IDs and readable leaderboard names. It also tests keyboard search with stale responses, mobile menu focus, directory and difficulty filters, dated weekly links, section shortcuts and missing-page recovery. These scripts reject non-loopback targets and save reports and screenshots under `.test-artifacts/ux-upload` and `.test-artifacts/ux-navigation`; `PIZZA_UX_UPLOAD_ARTIFACTS` and `PIZZA_UX_ARTIFACTS` override those paths. Review axe incomplete results and screenshots manually: a passing automated run is not a WCAG certification.
 
+The direct upload helper builds its sample in memory from synthetic constants; a
+unit test compares it with the canonical parser fixture without uploading file
+contents. It accepts only credential-free HTTP(S) loopback URLs and rejects every
+HTTP redirect so upload bodies cannot be forwarded to a different destination.
+
 ## CI and Security Gates
 
 The players-directory acceptance script can also run against the isolated, migrated and seeded loopback web/database stack:

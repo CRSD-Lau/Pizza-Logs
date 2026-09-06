@@ -28,6 +28,8 @@ This project follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) an
 
 - Show the short-pull disclaimer and inclusion control only on the individual raid session containing those pulls; remove repeated notices from other pages and raid-history cards without changing counting or stored attempts.
 - Refactor the players directory around one normalized class identity from matching, dated Warmane Armory and roster snapshots, with combat-log fallback. Keep class colours, icons, filters, counts and quick looks consistent, preserve realm-specific profile links, and support cached gear, short-screen scrolling and prompt retries after Armory failures.
+- Make parser upload-event logs explicitly single-line at the logging boundary, retaining JSON escaping and validated correlation IDs.
+- Generate headless upload samples from synthetic constants, restrict upload targets to credential-free HTTP(S) loopback URLs, and reject redirects before they can forward upload bytes.
 
 - Remove em dashes from site copy, page and social metadata, and missing-value displays. Simplify upload messages, directory descriptions and admin help text; retain canonical raid URLs and report calculations.
 - Compact the expandable boss directory into full-width raid rows with responsive boss-link grids, visible raid counts, and a clearer selection summary.

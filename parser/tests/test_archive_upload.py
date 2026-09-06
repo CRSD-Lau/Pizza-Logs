@@ -5,6 +5,7 @@ from __future__ import annotations
 import asyncio
 import io
 import json
+import logging
 import os
 import sys
 import threading
@@ -501,6 +502,21 @@ async def test_parser_error_logs_and_public_events_exclude_exception_content(tmp
     assert private_content not in "".join(chunks)
     assert private_content not in caplog.text
     assert '"exceptionType": "ValueError"' in caplog.text
+
+
+def test_upload_event_logging_preserves_fields_without_forging_lines(caplog):
+    payload = {
+        "event": 'upload\r\n{"event":"forged"}',
+        "uploadId": "untrusted\r\n\x1b[31m\u0085\u2028\u2029",
+        "exceptionType": 'Injected\n"event": "success"',
+    }
+    with caplog.at_level(logging.INFO, logger=main.logger.name):
+        main._log_upload_event(payload["event"], payload["uploadId"], exceptionType=payload["exceptionType"])
+    assert len(caplog.records) == 1
+    entry = caplog.records[0].getMessage()
+    assert len(entry.splitlines()) == 1
+    assert "\x1b" not in entry
+    assert json.loads(entry) == payload
 
 
 def test_sse_rejects_non_finite_values_before_emitting_invalid_json():
