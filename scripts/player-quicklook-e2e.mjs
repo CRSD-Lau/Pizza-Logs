@@ -271,7 +271,7 @@ export async function verifyPlayerQuickLooks({ browser, base, out, report, encou
         const tooltip = page.getByRole("tooltip");
         await tooltip.waitFor();
         if (index === 0) {
-          await tooltip.getByText("Pulling current gear from Warmane…", { exact: true }).waitFor();
+          await tooltip.getByText("Loading gear from Warmane…", { exact: true }).waitFor();
           await avatar.focus();
           assert.equal(await avatar.evaluate(element => element === document.activeElement), true);
           assert.equal(requests.gear, before.gear + 1, "Hover/focus share one in-flight gear request");
