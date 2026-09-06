@@ -137,11 +137,18 @@ Pet and absorb ownership are conservative. Summon or owner-exclusive spell evide
 
 The **Raid-over-raid performance** chart on a global player profile compares the
 same character across recorded raid sessions. Bosses run along the horizontal
-axis; each dated line represents a raid. Every recorded raid in the selected
-**Raid** and **Difficulty** appears by default, with no recent-history cutoff.
+axis; each dated line represents a raid. The default includes normal and heroic
+kills of the same raid size, so a mixed-mode ICC run can show all 12 recorded
+boss values together. Ten-player and 25-player raids remain separate. Every
+recorded raid in the selected **Raid** and **Difficulty** appears by default,
+with no recent-history cutoff. Normal-only and heroic-only filters remain
+available; unknown and other stored modes stay separate.
 Use **Highlight raid** to trace a particular dated run while the surrounding
 history stays visible. The highlighted run has a brighter gold line, and its
-tooltip shows the source value and available specialization for that boss.
+tooltip shows the source value, actual fight difficulty, and available
+specialization for that boss. All bosses retain their positions in raid order,
+including bosses without a qualifying kill. On narrow screens, scroll the plot
+horizontally to reach every boss label and point.
 Individual raid lines can be hidden, and **Show all raids** restores the complete
 history. Selecting a hidden raid to highlight reveals it again. The visible raid
 count states how many runs are currently shown.
@@ -155,12 +162,12 @@ This comparison uses the character's full stored kill history, independently of
 the latest-50 performance summary. Only successful boss kills count, including
 short successful kills. Each upload/session pair remains a separate recorded
 raid; same-day sessions receive distinct labels. Within a session, the earliest
-successful kill of each boss in the selected difficulty supplies its stored rate.
+successful kill of each boss in the selected size/mode supplies its stored rate.
 Missing kills and invalid-duration measurements leave gaps, while recorded zero
 output stays zero. Different difficulties are never pooled, and unknown modes
 remain explicitly separate. DPS and effective HPS are available; HPS excludes
 absorbs. The **View chart values** table gives exact displayed values, available
-spec evidence, and links to the source fights for every boss and recorded raid,
+actual fight difficulty, spec evidence, and links to the source fights for every boss and recorded raid,
 including hidden lines. Its pagination only changes the table rows; every raid
 remains available on the chart. Gear, buffs, kill time and raid
 assignments can affect these rates; they do not measure skill in isolation.

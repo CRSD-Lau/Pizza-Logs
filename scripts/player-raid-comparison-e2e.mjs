@@ -20,6 +20,7 @@ const names = ["Qzraidchart", "Qzraidone", "Qzraidempty", "Qzraiddense"];
 const dates = ["2026-07-26", "2026-08-16", "2026-08-30", "2026-09-06"];
 const previousDps = [12400, 11600, 6800, 12900, 11900, 12000, 10100, 9500, 10400, 0, 9100, 7300];
 const latestDps = [13900, 12400, 7920, 14100, 13600, 12900, 10900, 10500, 11000, 5500, 9600, 8800];
+const normalBossIndexes = new Set([1, 6, 8, 10, 11]);
 const errors = [];
 let database;
 let browser;
@@ -102,7 +103,8 @@ async function seed() {
       if (run === 3 && icc[index].slug === "the-lich-king") continue;
       const dps = run === 3 ? latestDps[index] : run === 2 ? previousDps[index] : 9000 + run * 1000 + index * 100;
       fights[run][index] = await fight({ uploadId, sessionIndex, boss: icc[index], date: dates[run], index, playerId, dps,
-        hps: 40 + run * 20 + index * 3, duration: run === 3 && icc[index].slug === "gunship-battle" ? 12 : 120 });
+        difficulty: normalBossIndexes.has(index) ? "25N" : "25H", hps: 40 + run * 20 + index * 3,
+        duration: run === 3 && icc[index].slug === "gunship-battle" ? 12 : 120 });
     }
   }
   // More than 50 later participant records ensure July's session cannot be
@@ -221,7 +223,8 @@ async function run() {
       const valueCell = cells.at(-1);
       return {
         date: cells[0].querySelector("time")?.getAttribute("datetime")?.slice(0, 10) ?? cells[0].textContent.trim(),
-        boss: cells[1].textContent.trim(),
+        boss: cells[1].querySelector('[data-testid="raid-value-boss-name"]')?.textContent.trim() ?? cells[1].textContent.trim(),
+        difficulty: cells[1].textContent.match(/(?:10|25)[NH]/)?.[0] ?? null,
         value: valueCell.querySelector(".tabular-nums")?.textContent ?? null,
         text: valueCell.textContent,
         href: valueCell.querySelector("a")?.getAttribute("href") ?? null,
@@ -263,6 +266,7 @@ async function run() {
   }
 
   await visit();
+  assert.equal(await section.getByLabel("Difficulty", { exact: true }).inputValue(), "25", "Default scope combines normal and heroic at the same raid size");
   assert.equal(await section.getByLabel("First raid", { exact: true }).count(), 0);
   assert.equal(await section.getByLabel("Second raid", { exact: true }).count(), 0);
   assert.equal(await highlight.inputValue(), fixture.sessions[3]);
@@ -271,6 +275,13 @@ async function run() {
   assert.equal(await section.getByRole("table").count(), 0, "Table is lazy-mounted");
   const dpsRows = await allValues();
   assert.equal(dpsRows.length, 48, "All raid/boss combinations are reachable");
+  assert.equal(dpsRows.filter(row => row.value !== null).length, 47, "Three complete mixed-mode raids and one incomplete raid have 47 actual observations");
+  assert.equal(await section.locator(".recharts-line-dot").count(), 47, "The chart draws each recorded normal and heroic observation");
+  assert.equal(await section.locator(".recharts-xAxis .recharts-cartesian-axis-tick").count(), 12, "All twelve canonical ICC boss labels are rendered");
+  for (const date of dates) {
+    assert.equal(dpsRows.filter(row => row.date === date && row.difficulty === "25N").length, date === dates[3] ? 4 : 5);
+    assert.equal(dpsRows.filter(row => row.date === date && row.difficulty === "25H").length, 7);
+  }
   assert.deepEqual(dpsRows.slice(0, 12).map(row => row.boss), fixture.bossNames);
   for (const [date, boss, value] of [[dates[3], "Lord Marrowgar", "13.90K"], [dates[2], "Lord Marrowgar", "12.40K"],
     [dates[0], "Lord Marrowgar", "9.00K"], [dates[3], "Gunship Battle", "7.92K"], [dates[2], "Valithria Dreamwalker", "0.00"]]) {
@@ -284,7 +295,24 @@ async function run() {
   assert.equal(entry(dpsRows, dates[3], "Lord Marrowgar").href, sourcePath);
   assert.equal((await context.request.get(new URL(sourcePath, base).href)).status(), 200);
   assert.ok(dpsRows.every(row => !["99.00M", "3.00M"].includes(row.value)));
-  observations.push("All four sessions drawn; 48 paginated values cover oldest history, short kills, zero, missing kills and source route; realm/wipe isolation passes");
+  observations.push("Default combines five normal and seven heroic bosses per raid: 47 actual points across four runs, 48 canonical slots and all 12 labels; table carries actual difficulty, zero/missing/source values and exact realm isolation");
+
+  for (const [mode, pointCount, perComplete] of [["25N", 19, 5], ["25H", 28, 7]]) {
+    await choose("Difficulty", mode);
+    const exactRows = await allValues();
+    assert.equal(exactRows.length, 48, "Exact difficulty retains all 12 canonical boss slots per raid");
+    assert.equal(exactRows.filter(row => row.value !== null).length, pointCount);
+    assert.equal(await section.locator(".recharts-line-dot").count(), pointCount);
+    assert.equal(await section.locator(".recharts-xAxis .recharts-cartesian-axis-tick").count(), 12);
+    assert.ok(exactRows.filter(row => row.value !== null).every(row => row.difficulty === mode));
+    for (const date of dates.slice(0, 3)) assert.equal(exactRows.filter(row => row.date === date && row.value !== null).length, perComplete);
+    await page.reload({ waitUntil: "networkidle" });
+    assert.equal(await section.getByLabel("Difficulty", { exact: true }).inputValue(), mode, "Explicit exact-mode URLs survive reload");
+    assert.equal(await section.locator(".recharts-line-dot").count(), pointCount);
+  }
+  await choose("Difficulty", "25");
+  assert.equal(await section.locator(".recharts-line-dot").count(), 47);
+  observations.push("Exact 25N/25H filters preserve five/seven measurements per complete raid and 12-slot gaps; explicit URLs reload without reverting to combined mode");
 
   await choose("Highlight raid", fixture.sessions[0]);
   assert.equal(await lineCount(), 4, "Highlight never filters history");
@@ -297,6 +325,7 @@ async function run() {
   assert.equal((await tooltip.locator("time").getAttribute("datetime")).slice(0, 10), dates[0]);
   assert.match(await tooltip.innerText(), /Lord Marrowgar/);
   assert.match(await tooltip.innerText(), /9\.00K DPS/);
+  assert.match(await tooltip.innerText(), /25H/, "Tooltip identifies the stored encounter difficulty");
   assert.doesNotMatch(await tooltip.innerText(), /13\.90K|12\.40K/);
   const tooltipBounds = await tooltip.boundingBox();
   assert.ok(tooltipBounds.width <= 260 && tooltipBounds.height <= 250 && (await tooltip.innerText()).length < 250, "Tooltip remains compact with all runs visible");
@@ -339,13 +368,20 @@ async function run() {
   await visit(names[0], `realm=Lordaeron&includeShortPulls=1&comparisonFirst=${encodeURIComponent(fixture.sessions[0])}&comparisonSecond=${encodeURIComponent(fixture.sessions[1])}`);
   assert.equal(await lineCount(), 4, "Old two-raid URL parameters never restrict history");
   await metric("HPS");
+  await choose("Difficulty", "10");
+  assert.equal(await highlight.locator("option").count(), 1, "Combined 10-player scope cannot include any 25-player session");
+  assert.equal(await section.locator(".recharts-line-dot").count(), 1);
+  const tenRows = await allValues("HPS", 1);
+  assert.equal(tenRows.length, 12);
+  assert.equal(tenRows.filter(row => row.value !== null).length, 1);
+  assert.equal(tenRows[0].difficulty, "10N");
   await choose("Difficulty", "10N");
   assert.equal(await highlight.locator("option").count(), 1);
   await section.getByRole("heading", { name: "HPS by successful boss fight", exact: true }).waitFor();
   assert.equal(new URL(page.url()).searchParams.get("comparisonMetric"), "HPS");
   assert.equal((await allValues("HPS", 1))[0].value, "0.00");
   await choose("Raid", "ruby-sanctum");
-  assert.equal(await section.getByLabel("Difficulty", { exact: true }).inputValue(), "25H");
+  assert.equal(await section.getByLabel("Difficulty", { exact: true }).inputValue(), "25");
   await section.getByRole("heading", { name: "HPS by successful boss fight", exact: true }).waitFor();
   assert.equal(new URL(page.url()).searchParams.get("comparisonMetric"), "HPS");
   assert.equal((await allValues("HPS", 1))[0].value, "0.00");
@@ -374,6 +410,47 @@ async function run() {
     assert.equal(entry(await allValues(), dates[3], "Gunship Battle").value, "7.92K");
     await section.getByRole("button", { name: "Previous values page", exact: true }).click();
     await assertLayout(width);
+    const plot = section.getByRole("region", { name: "DPS boss chart", exact: true });
+    assert.equal(await plot.locator(".recharts-xAxis .recharts-cartesian-axis-tick").count(), 12);
+    const scrolls = await plot.evaluate(element => element.scrollWidth > element.clientWidth + 1);
+    if (width < 1000) {
+      assert.equal(scrolls, true, "Narrow plots provide contained horizontal scrolling rather than omit bosses");
+      assert.equal(await plot.getAttribute("tabindex"), "0", "Scrollable chart is keyboard reachable");
+      await choose("Highlight raid", fixture.sessions[0]);
+      await plot.focus();
+      await page.keyboard.press("ArrowRight");
+      await page.waitForFunction(() => document.querySelector('[aria-label="DPS boss chart"]').scrollLeft > 0);
+      await plot.hover({ position: { x: 100, y: 20 } });
+      await page.mouse.wheel(2000, 0);
+      await page.waitForFunction(() => {
+        const element = document.querySelector('[aria-label="DPS boss chart"]');
+        return element.scrollLeft + element.clientWidth >= element.scrollWidth - 2;
+      });
+      const lastTick = plot.locator(".recharts-xAxis .recharts-cartesian-axis-tick").last();
+      assert.match(await lastTick.textContent(), /Lich King/);
+      const tickBounds = await lastTick.boundingBox(), plotBounds = await plot.boundingBox();
+      assert.ok(tickBounds.x >= plotBounds.x && tickBounds.x + tickBounds.width <= plotBounds.x + plotBounds.width + 1, "Last boss label is reachable within the scroll viewport");
+      await plot.locator(`.recharts-line-dot[data-run-key="${fixture.sessions[0]}"][data-boss-index="11"]`).hover();
+      const scrolledTooltip = section.getByTestId("highlighted-raid-tooltip");
+      await scrolledTooltip.waitFor({ state: "visible" });
+      assert.match(await scrolledTooltip.innerText(), /The Lich King/);
+      assert.match(await scrolledTooltip.innerText(), /10\.10K DPS/);
+      assert.match(await scrolledTooltip.innerText(), /25N/);
+      assert.equal(await scrolledTooltip.locator("time").count(), 1);
+      const bounds = await scrolledTooltip.boundingBox();
+      assert.ok(bounds.x >= plotBounds.x - 1 && bounds.x + bounds.width <= plotBounds.x + plotBounds.width + 1, "Tooltip remains visible after horizontal scrolling");
+      await chart.screenshot({ path: path.join(out, `comparison-scrolled-chart-${width}.png`) });
+      await page.mouse.move(0, 0);
+      await plot.evaluate(element => element.scrollTo({ left: 0, behavior: "instant" }));
+      await choose("Highlight raid", fixture.sessions[3]);
+    } else {
+      assert.equal(scrolls, false, "Desktop shows all twelve labels without scrolling");
+      const plotBounds = await plot.boundingBox();
+      assert.ok(await plot.locator(".recharts-xAxis .recharts-cartesian-axis-tick").evaluateAll((ticks, bounds) => ticks.every(tick => {
+        const rect = tick.getBoundingClientRect();
+        return rect.left >= bounds.x - 1 && rect.right <= bounds.x + bounds.width + 1;
+      }), plotBounds), "Every desktop boss label fits the visible plot");
+    }
     await page.addScriptTag({ content: axe });
     const audit = await page.evaluate(() => window.axe.run(document.querySelector("#raid-progress")));
     assert.deepEqual(audit.violations.map(issue => ({ id: issue.id, nodes: issue.nodes.map(node => node.target) })), [], `Scoped accessibility at ${width}px`);
@@ -381,7 +458,7 @@ async function run() {
     await page.screenshot({ path: path.join(out, `comparison-${width}.png`), fullPage: true });
     await section.screenshot({ path: path.join(out, `comparison-section-${width}.png`) });
   }
-  observations.push("375/768/1440px accessibility, overflow, selectors, numeric fitting and screenshots pass");
+  observations.push("375/768px keyboard/horizontal scrolling reaches the last boss and its correctly positioned difficulty tooltip; desktop shows all 12 labels, with no page overflow and scoped accessibility/screenshots passing");
 
   for (const width of [375, 1440]) {
     await page.setViewportSize({ width, height: 1000 });
@@ -394,14 +471,16 @@ async function run() {
     const dots = await section.locator(".recharts-line-dot").count();
     assert.ok(dots >= 3 && dots < 100, "Ordinary dense dots are suppressed while isolated observations remain");
     const domNodes = await section.locator("*").count();
-    assert.ok(domNodes < 8000, "Dense chart has bounded DOM without a 750-row table");
-    denseMeasurements.push({ width, raids: 250, bosses: 3, initialDomNodes: domNodes, initialDots: dots, decodedDocumentBytes: (await response.body()).length });
+    assert.ok(domNodes < 8000, "Dense chart has bounded DOM without a 3000-row table");
+    assert.equal(await section.locator(".recharts-xAxis .recharts-cartesian-axis-tick").count(), 12);
+    denseMeasurements.push({ width, raids: 250, recordedBosses: 3, canonicalBossSlots: 12, initialDomNodes: domNodes, initialDots: dots, decodedDocumentBytes: (await response.body()).length });
     await measure(`250 raids highlight at ${width}px`, 10000, () => choose("Highlight raid", fixture.denseSessions[125]));
     assert.equal(await lineCount(), 250);
     await measure(`250 raids HPS switch at ${width}px`, 10000, () => metric("HPS"));
     assert.equal(await lineCount(), 250, "All-zero HPS still plots all raids");
     await values("HPS");
     assert.equal(await section.locator("tbody tr").count(), 25);
+    assert.match(await section.innerText(), /of 3,000/, "Dense values retain 250 raids × 12 canonical boss slots");
     assert.ok((await pageValues()).every(row => row.value === "0.00" || row.value === null));
     await section.getByRole("button", { name: "Next values page", exact: true }).click();
     assert.equal(await lineCount(), 250);

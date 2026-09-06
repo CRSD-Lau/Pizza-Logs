@@ -5,14 +5,16 @@ import {
   buildRaidComparisonRuns,
   buildRaidComparisonSessions,
   raidComparisonSessionKey,
+  raidComparisonDifficultyLabel,
   type RaidComparisonParticipantSource,
 } from "../lib/player-raid-comparison";
+import { WOTLK_BOSSES } from "../lib/constants/bosses";
 
 const source = (uploadId: string, sessionIndex: number, startedAt: string) => ({ uploadId, sessionIndex, startedAt });
 const participant = (id: string, overrides: Partial<RaidComparisonParticipantSource["encounter"]> = {}, rates: Partial<RaidComparisonParticipantSource> = {}): RaidComparisonParticipantSource => ({
   dps: 12500, hps: 0, spec: "Combat", ...rates,
   encounter: {
-    id, uploadId: "upload", sessionIndex: 0, startedAt: "2026-09-06T18:00:00Z", outcome: "KILL",
+    id, uploadId: "upload", sessionIndex: 0, startedAt: "2026-09-06T18:00:00Z", outcome: "KILL", difficulty: "25H",
     durationMs: 60_000, durationSeconds: 60,
     boss: { slug: "marrowgar", name: "Lord Marrowgar", sortOrder: 1 }, ...overrides,
   },
@@ -68,7 +70,7 @@ test("earliest successful boss kill wins, including short kills and stable times
   assert.equal(runs[0].fights.length, 1);
   assert.deepEqual(runs[0].fights[0], {
     encounterId: "same-time-a", bossSlug: "marrowgar", bossName: "Lord Marrowgar", bossOrder: 1,
-    dps: 1000, hps: 25, spec: "Combat",
+    difficulty: "25H", dps: 1000, hps: 25, spec: "Combat",
   });
   assert.deepEqual(buildRaidComparisonRuns(sessions, [...participants].reverse()), runs);
 });
@@ -114,4 +116,50 @@ test("chart aligns raid-order bosses across runs without turning missing kills i
   assert.equal(chart[2].values["upload:0"], null);
   assert.equal(chart[2].values["upload:1"]?.encounterId, "new-festergut");
   assert.deepEqual(buildRaidComparisonChart([]), []);
+});
+
+test("known raid charts retain every canonical boss slot while missing kills remain null", () => {
+  const icc = WOTLK_BOSSES.filter(boss => boss.raidSlug === "icecrown-citadel");
+  const sessions = buildRaidComparisonSessions([source("upload", 0, "2026-09-06T18:00:00Z")]);
+  const runs = buildRaidComparisonRuns(sessions, [
+    participant("deathwhisper-normal", {
+      difficulty: "25N", boss: { slug: icc[1].slug, name: icc[1].name, sortOrder: icc[1].sortOrder },
+    }, { dps: 0 }),
+    participant("sindragosa-heroic", {
+      difficulty: "25H", boss: { slug: icc[10].slug, name: icc[10].name, sortOrder: icc[10].sortOrder },
+    }),
+  ]);
+  const chart = buildRaidComparisonChart(runs, "icecrown-citadel");
+  assert.equal(chart.length, 12);
+  assert.deepEqual(chart.map(row => row.bossSlug), icc.map(boss => boss.slug));
+  assert.equal(chart[0].values["upload:0"], null);
+  assert.equal(chart[1].values["upload:0"]?.dps, 0);
+  assert.equal(chart[1].values["upload:0"]?.difficulty, "25N");
+  assert.equal(chart[10].values["upload:0"]?.difficulty, "25H");
+  assert.equal(chart[11].values["upload:0"], null);
+  assert.equal(buildRaidComparisonChart([], "icecrown-citadel").length, 12);
+  assert.equal(buildRaidComparisonChart(runs, "custom-raid").length, 2);
+  assert.equal(buildRaidComparisonChart(runs).length, 2, "Without a known raid, observed boss data remains intact");
+});
+
+test("mixed-mode representatives keep the earliest kill's actual difficulty and stored rates", () => {
+  const sessions = buildRaidComparisonSessions([source("upload", 0, "2026-09-06T18:00:00Z")]);
+  const runs = buildRaidComparisonRuns(sessions, [
+    participant("later-heroic", { startedAt: "2026-09-06T19:00:00Z", difficulty: "25H" }, { dps: 25000 }),
+    participant("first-normal", { difficulty: "25N" }, { dps: 5000 }),
+  ]);
+  assert.equal(runs[0].fights.length, 1);
+  assert.equal(runs[0].fights[0].encounterId, "first-normal");
+  assert.equal(runs[0].fights[0].difficulty, "25N");
+  assert.equal(runs[0].fights[0].dps, 5000);
+  assert.equal(buildRaidComparisonChart(runs)[0].values["upload:0"]?.difficulty, "25N");
+});
+
+test("comparison scope labels distinguish combined sizes, exact modes, and unknown or custom evidence", () => {
+  assert.equal(raidComparisonDifficultyLabel("25"), "25-player · Normal + heroic");
+  assert.equal(raidComparisonDifficultyLabel("10"), "10-player · Normal + heroic");
+  assert.equal(raidComparisonDifficultyLabel("25N"), "25-player normal (25N)");
+  assert.equal(raidComparisonDifficultyLabel("25H"), "25-player heroic (25H)");
+  assert.equal(raidComparisonDifficultyLabel("UNKNOWN"), "Unknown difficulty");
+  assert.equal(raidComparisonDifficultyLabel("25H_LEGACY"), "25H_LEGACY");
 });

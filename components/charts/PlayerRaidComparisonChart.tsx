@@ -1,6 +1,6 @@
 "use client";
 
-import { useId, useMemo, useState } from "react";
+import { useEffect, useId, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { CartesianGrid, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import { NumericValue } from "@/components/ui/NumericValue";
@@ -36,6 +36,7 @@ function RaidTooltip({ active, payload, label, rows, run, metric }: {
       <p className="mb-2 font-semibold text-gold-light">{row.bossName}</p>
       <p className="text-xs text-text-secondary">Highlighted raid</p>
       <p className="text-text-secondary"><time dateTime={run.startedAt}>{run.label}</time></p>
+      {fight && <span className={cn("diff-badge mt-1", fight.difficulty.endsWith("H") ? "heroic" : "normal")}>{fight.difficulty}</span>}
       <p className="font-semibold text-text-primary">{value == null ? "Unavailable" : `${formatRate(value)} ${metric}`}</p>
       {!fight && <p className="text-xs text-text-secondary">No recorded kill</p>}
       {fight && value == null && <p className="text-xs text-text-secondary">No valid recorded rate</p>}
@@ -82,7 +83,7 @@ function RaidValuesTable({ runs, rows, playerName, scopeLabel, metric, includeSh
           const value = fight?.[metricKey];
           return <tr key={`${run.key}:${row.bossSlug}`} className="border-t border-gold-dim">
             <th scope="row" className="break-words px-2 py-3 text-left align-top font-medium text-text-primary"><time dateTime={run.startedAt}>{run.label}</time></th>
-            <td className="break-words px-2 py-3 text-left align-top text-text-primary">{row.bossName}</td>
+            <td className="break-words px-2 py-3 text-left align-top text-text-primary"><span data-testid="raid-value-boss-name">{row.bossName}</span>{fight && <span className="mt-1 block"><span className={cn("diff-badge", fight.difficulty.endsWith("H") ? "heroic" : "normal")}>{fight.difficulty}</span></span>}</td>
             <td className="break-words px-2 py-1 text-right align-top">
               {fight ? <>
                 <Link href={`/encounters/${encodeURIComponent(fight.encounterId)}${encounterSuffix}`} className="inline-flex min-h-11 max-w-full items-center justify-end rounded-sm py-2 text-gold-light hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-gold" aria-label={`${row.bossName}, ${run.label}, ${value == null ? "unavailable" : formatRate(value)} ${metric}. View encounter.`}><NumericValue value={value} kind="rate" /></Link>
@@ -102,24 +103,40 @@ function RaidValuesTable({ runs, rows, playerName, scopeLabel, metric, includeSh
   );
 }
 
-export function PlayerRaidComparisonChart({ runs, playerName, metric, scopeLabel, includeShortPulls }: {
+export function PlayerRaidComparisonChart({ runs, raidSlug, playerName, metric, scopeLabel, includeShortPulls }: {
   runs: RaidComparisonRun[];
+  raidSlug: string;
   playerName: string;
   metric: Metric;
   scopeLabel: string;
   includeShortPulls: boolean;
 }) {
   const id = useId();
-  const rows = useMemo(() => buildRaidComparisonChart(runs), [runs]);
+  const rows = useMemo(() => buildRaidComparisonChart(runs, raidSlug), [runs, raidSlug]);
   const newestFirst = useMemo(() => [...runs].sort((left, right) =>
     right.startedAt.localeCompare(left.startedAt, "en") || (left.key < right.key ? -1 : left.key > right.key ? 1 : 0)), [runs]);
   const [hidden, setHidden] = useState<Record<string, boolean>>({});
   const [highlightedKey, setHighlightedKey] = useState(newestFirst[0]?.key ?? "");
   const [visibilityOpen, setVisibilityOpen] = useState(false);
   const [valuesOpen, setValuesOpen] = useState(false);
+  const chartViewportRef = useRef<HTMLDivElement>(null);
+  const [plotViewport, setPlotViewport] = useState({ width: 0, scrollLeft: 0 });
+  const plotMinWidth = rows.length * 85 + 96;
+  const chartNeedsScroll = plotViewport.width > 0 && plotMinWidth > plotViewport.width;
   const metricKey = metric === "DPS" ? "dps" : "hps";
   const visibleRuns = runs.filter(run => !hidden[run.key]);
   const hasValues = rows.some(row => visibleRuns.some(run => row.values[run.key]?.[metricKey] != null));
+  useEffect(() => {
+    const viewport = chartViewportRef.current;
+    if (!viewport) return;
+    const observer = new ResizeObserver(() => {
+      const width = viewport.clientWidth;
+      const scrollLeft = viewport.scrollLeft;
+      setPlotViewport(current => current.width === width && current.scrollLeft === scrollLeft ? current : { width, scrollLeft });
+    });
+    observer.observe(viewport);
+    return () => observer.disconnect();
+  }, [hasValues, plotMinWidth]);
   const highlightedRun = newestFirst.find(run => run.key === highlightedKey && !hidden[run.key]);
   const newestKey = newestFirst[0]?.key;
   const dense = runs.length > DENSE_RUN_COUNT;
@@ -159,13 +176,20 @@ export function PlayerRaidComparisonChart({ runs, playerName, metric, scopeLabel
       <p className="mb-3 text-sm text-text-secondary">Highlighting a raid keeps the other lines visible. Hover a boss for the highlighted raid&apos;s value.</p>
 
       <figure aria-labelledby={`${id}-title`} aria-describedby={`${id}-description`} className="m-0 min-w-0">
-        <p id={`${id}-description`} className="sr-only">{playerName}&apos;s {metric} on successful boss fights in {scopeLabel}. Every recorded raid is shown by default. Bosses follow raid order. Each dated line is one raid; unavailable values leave gaps. The highlighted raid uses a thicker line. The values disclosure includes every value, specialization, and source encounter.</p>
-        {hasValues ? <ResponsiveContainer width="100%" height={300} minWidth={0}>
-          <LineChart data={rows} margin={{ top: 8, right: 20, left: 0, bottom: 12 }} accessibilityLayer>
+        <p id={`${id}-description`} className="sr-only">{playerName}&apos;s {metric} on successful boss fights in {scopeLabel}. Every recorded raid is shown by default. Every boss has a labelled position in raid order. Each dated line is one raid; unavailable values leave gaps. The highlighted raid uses a thicker line. Tooltips and the values disclosure include each recorded fight&apos;s difficulty. The values disclosure includes every value, specialization, and source encounter.</p>
+        {hasValues ? <>
+          {chartNeedsScroll && <p id={`${id}-scroll-hint`} className="mb-2 text-sm text-text-secondary">Scroll horizontally to see every boss.</p>}
+          <div ref={chartViewportRef} role="region" aria-label={`${metric} boss chart`} aria-describedby={chartNeedsScroll ? `${id}-scroll-hint` : undefined} tabIndex={chartNeedsScroll ? 0 : undefined} className="min-w-0 max-w-full overflow-x-auto pb-1 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-gold" onScroll={event => {
+            const { clientWidth: width, scrollLeft } = event.currentTarget;
+            setPlotViewport(current => current.width === width && current.scrollLeft === scrollLeft ? current : { width, scrollLeft });
+          }}>
+          <div style={{ minWidth: plotMinWidth }}>
+          <ResponsiveContainer width="100%" height={300} minWidth={0}>
+          <LineChart data={rows} margin={{ top: 8, right: 32, left: 0, bottom: 12 }} accessibilityLayer>
             <CartesianGrid strokeDasharray="3 3" stroke="var(--color-gold-dim)" strokeOpacity={0.4} />
-            <XAxis dataKey="bossName" tick={{ fill: "var(--color-text-secondary)", fontSize: 12, fontWeight: 600 }} tickLine={false} axisLine={{ stroke: "var(--color-gold-dim)" }} interval="preserveStartEnd" minTickGap={22} tickMargin={10} tickFormatter={shortBossName} />
+            <XAxis dataKey="bossName" tick={{ fill: "var(--color-text-secondary)", fontSize: 12, fontWeight: 600 }} tickLine={false} axisLine={{ stroke: "var(--color-gold-dim)" }} interval={0} tickMargin={10} tickFormatter={shortBossName} />
             <YAxis width={64} domain={[0, "auto"]} tick={{ fill: "var(--color-text-secondary)", fontSize: 12, fontWeight: 600 }} tickLine={false} axisLine={false} tickFormatter={formatCompactNumber} />
-            <Tooltip content={<RaidTooltip rows={rows} run={highlightedRun} metric={metric} />} filterNull={false} />
+            <Tooltip content={<RaidTooltip rows={rows} run={highlightedRun} metric={metric} />} position={chartNeedsScroll ? { x: plotViewport.scrollLeft + 8 } : undefined} filterNull={false} />
             {drawOrder.map(run => {
               const highlighted = run.key === highlightedRun?.key;
               const newest = run.key === newestKey;
@@ -177,7 +201,10 @@ export function PlayerRaidComparisonChart({ runs, playerName, metric, scopeLabel
               }} activeDot={highlighted ? { r: 6, fill: color, stroke: "var(--color-text-primary)", strokeWidth: 1.25 } : false} connectNulls={false} isAnimationActive={false} />;
             })}
           </LineChart>
-        </ResponsiveContainer> : <div className="flex min-h-60 flex-col items-center justify-center gap-3 px-4 text-center">
+          </ResponsiveContainer>
+          </div>
+          </div>
+        </> : <div className="flex min-h-60 flex-col items-center justify-center gap-3 px-4 text-center">
           <p role="status" className="text-sm text-text-secondary">{visibleRuns.length === 0 ? "All raid lines are hidden." : `No valid recorded ${metric} values for the visible raids.`}</p>
           {visibleRuns.length === 0 && <button type="button" className={actionClass} onClick={() => setHidden({})}>Show all raids</button>}
         </div>}

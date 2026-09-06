@@ -8,7 +8,7 @@ This project follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) an
 
 ### Added
 
-- Raid-over-raid comparison on global player profiles shows every recorded raid in the selected raid and exact difficulty, with dated lines across bosses, individual highlighting and visibility controls, DPS/effective HPS controls, and paginated source values. Uses stored successful kills independently of the latest-50 summary, preserving missing values and recorded zeros.
+- Raid-over-raid comparison on global player profiles shows every recorded raid, with dated lines across the complete boss roster, individual highlighting and visibility controls, DPS/effective HPS controls, and paginated source values. The default combines normal and heroic kills of the same raid size to show complete mixed-mode runs; exact-mode filters remain available, and every recorded value identifies its actual difficulty. Uses stored successful kills independently of the latest-50 summary, preserving missing values and recorded zeros.
 - Top-three all-time average DPS and effective HPS panels on leaderboards, using equally weighted logged boss attempts (including wipes and short pulls), at least 10 valid-duration appearances, visible fight counts, and boss/difficulty filters.
 - Private administrator account provisioning, authenticator enrollment, single-use recovery codes and an account security page, with no paid authentication service.
 - Public third-party license notices and owner-confirmed Veo/ChatGPT media provenance with Git introduction dates; sale or transfer clearance is outside the current site's scope.
