@@ -119,48 +119,50 @@ async function run() {
   }
   async function disclosure(scope, label) {
     const summary = scope.locator("summary").filter({ hasText: label });
+    await summary.waitFor({ state: "visible" });
     if (!await summary.evaluate(element => element.parentElement.open)) await summary.click();
   }
   async function assertDefault(subject, isSession) {
     const summary = page.getByRole("region", { name: "Player performance summary", exact: true });
     await summary.waitFor();
+    await summary.getByRole("link", { name: "Show all metrics", exact: true }).waitFor({ state: "visible" });
     const text = await summary.innerText();
     if (subject === subjects[0]) {
-      assert.match(text, /Best DPS/);
-      assert.doesNotMatch(text, /Best (?:HPS|APS)|Healing \+ absorbs|Effective healing/,
+      assert.match(text, /Best DPS/i);
+      assert.doesNotMatch(text, /Best (?:HPS|APS)|Healing \+ absorbs|Effective healing/i,
         "Small self-healing does not turn a damage role into a healer or crowd its summary");
     } else if (subject === subjects[1]) {
-      assert.match(text, /Effective healing/);
-      assert.match(text, /Absorbs/);
-      assert.match(text, /Healing \+ absorbs/);
+      assert.match(text, /Effective healing/i);
+      assert.match(text, /Absorbs/i);
+      assert.match(text, /Healing \+ absorbs/i);
       assert.match(text, /5\.00K/, "Absorb-heavy healer retains APS separately");
       assert.match(text, /5\.40K/, "Combined healing is effective healing plus absorbs");
     } else if (subject === subjects[2]) {
-      assert.match(text, /Damage taken/);
-      assert.match(text, /DTPS/);
-      assert.match(text, /Deaths/);
-      assert.match(text, /DPS/);
+      assert.match(text, /Damage taken/i);
+      assert.match(text, /DTPS/i);
+      assert.match(text, /Deaths/i);
+      assert.match(text, /DPS/i);
     } else {
-      assert.match(text, /DPS/);
-      assert.match(text, /HPS/);
-      assert.match(text, /APS/);
+      assert.match(text, /DPS/i);
+      assert.match(text, /HPS/i);
+      assert.match(text, /APS/i);
     }
     if (isSession) {
       const rows = page.locator('#encounters a[href^="/encounters/"]');
       assert.equal(await rows.count(), 2, "Both recorded fights remain in their original order");
       if (subject === subjects[0]) {
-        assert.match(await rows.nth(1).innerText(), /0\.00\s*DPS/, "Recorded zero-output DPS is displayed as zero");
-        assert.doesNotMatch(await rows.nth(0).innerText(), /\bHPS\b|\bAPS\b/, "Self-healing stays available through all metrics");
+        assert.match(await rows.nth(1).innerText(), /0\.00\s*DPS/i, "Recorded zero-output DPS is displayed as zero");
+        assert.doesNotMatch(await rows.nth(0).innerText(), /\bHPS\b|\bAPS\b/i, "Self-healing stays available through all metrics");
       }
       if (subject === subjects[3]) {
         const healerFight = await rows.nth(0).innerText();
         const damageFight = await rows.nth(1).innerText();
-        assert.match(healerFight, /Restoration/);
-        assert.match(healerFight, /\bHPS\b/);
-        assert.doesNotMatch(healerFight, /\bDPS\b/, "Mixed-role scope keeps the individual healing fight focused");
-        assert.match(damageFight, /Feral/);
-        assert.match(damageFight, /\bDPS\b/);
-        assert.doesNotMatch(damageFight, /\bHPS\b|\bAPS\b/, "Mixed-role scope keeps the individual damage fight focused");
+        assert.match(healerFight, /Restoration/i);
+        assert.match(healerFight, /\bHPS\b/i);
+        assert.doesNotMatch(healerFight, /\bDPS\b/i, "Mixed-role scope keeps the individual healing fight focused");
+        assert.match(damageFight, /Feral/i);
+        assert.match(damageFight, /\bDPS\b/i);
+        assert.doesNotMatch(damageFight, /\bHPS\b|\bAPS\b/i, "Mixed-role scope keeps the individual damage fight focused");
       }
     }
     return summary;
@@ -178,23 +180,25 @@ async function run() {
           await page.getByRole("link", { name: "Show all metrics", exact: true }).click();
           await page.waitForURL(url => url.searchParams.get("metrics") === "all");
           await waitForPageContent(page);
-          assert.match(await summary.innerText(), /HPS/);
-          assert.match(await summary.innerText(), /APS/);
+          await summary.getByRole("link", { name: "Show relevant metrics", exact: true }).waitFor({ state: "visible" });
+          assert.match(await summary.innerText(), /HPS/i);
+          assert.match(await summary.innerText(), /APS/i);
           const chosen = page.url();
           await page.reload({ waitUntil: "load" });
           await waitForPageContent(page);
+          await summary.getByRole("link", { name: "Show relevant metrics", exact: true }).waitFor({ state: "visible" });
           assert.equal(page.url(), chosen, "Explicit all metrics survives reload");
-          assert.match(await summary.innerText(), /HPS/);
+          assert.match(await summary.innerText(), /HPS/i);
           assert.equal(new URL(page.url()).searchParams.get("includeShortPulls"), "1");
           if (isSession) {
             assert.equal(new URL(page.url()).searchParams.get("scope"), "kills");
             const fights = page.locator('#encounters a[href^="/encounters/"]');
-            if (subject === subjects[0]) assert.match(await fights.first().innerText(), /10\.00\s*HPS/);
+            if (subject === subjects[0]) assert.match(await fights.first().innerText(), /10\.00\s*HPS/i);
             else for (let index = 0; index < 2; index++) {
               const text = await fights.nth(index).innerText();
-              assert.match(text, /\bDPS\b/);
-              assert.match(text, /\bHPS\b/);
-              assert.match(text, /\bAPS\b/, "Explicit all metrics restores every rate on mixed-role fights");
+              assert.match(text, /\bDPS\b/i);
+              assert.match(text, /\bHPS\b/i);
+              assert.match(text, /\bAPS\b/i, "Explicit all metrics restores every rate on mixed-role fights");
             }
           }
           await page.getByRole("link", { name: "Show relevant metrics", exact: true }).click();
@@ -203,8 +207,9 @@ async function run() {
           await assertDefault(subject, isSession);
           await page.goBack({ waitUntil: "load" });
           await waitForPageContent(page);
+          await summary.getByRole("link", { name: "Show relevant metrics", exact: true }).waitFor({ state: "visible" });
           assert.equal(new URL(page.url()).searchParams.get("metrics"), "all", "Back restores the explicit all-metric view");
-          assert.match(await summary.innerText(), /APS/);
+          assert.match(await summary.innerText(), /APS/i);
           await page.goForward({ waitUntil: "load" });
           await waitForPageContent(page);
           await assertDefault(subject, isSession);
@@ -228,9 +233,9 @@ async function run() {
       await page.locator(`[data-metric-view="${mode.toLowerCase()}"]`).first().waitFor();
       assert.deepEqual((await names()).sort(), subjects.map(subject => subject.name).sort(), `${mode} keeps all participants, including recorded zeros`);
       const columns = (await headings()).join(" ");
-      if (mode === "Damage") assert.doesNotMatch(columns, /Healing|HPS|APS/);
-      if (mode === "Healing") assert.match(columns, /Healing/);
-      if (mode === "All") assert.match(columns, /Damage.*DPS.*Healing.*DTPS/);
+      if (mode === "Damage") assert.doesNotMatch(columns, /Healing|HPS|APS/i);
+      if (mode === "Healing") assert.match(columns, /Healing/i);
+      if (mode === "All") assert.match(columns, /Damage.*DPS.*Healing.*DTPS/i);
       await assertLayout(`${mode} raid ${width}`);
     }
     await page.reload({ waitUntil: "load" });
