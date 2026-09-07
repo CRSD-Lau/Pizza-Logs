@@ -3,6 +3,7 @@ import { randomInt } from "node:crypto";
 import fs from "node:fs/promises";
 import path from "node:path";
 import { chromium } from "playwright";
+import { waitForPageContent } from "./browser-page-ready.mjs";
 
 const base = new URL(process.env.PIZZA_TEST_BASE_URL ?? "http://127.0.0.1:3000");
 assert.ok(["http:", "https:"].includes(base.protocol) && ["127.0.0.1", "localhost", "[::1]"].includes(base.hostname), "Use an isolated loopback test stack");
@@ -32,6 +33,7 @@ try {
   const page = await context.newPage();
   const response = await page.goto(base.href, { waitUntil: "networkidle" });
   assert.equal(response.status(), 200);
+  await waitForPageContent(page);
   const modal = page.getByRole("dialog", { name: "Pizza Logs guild intro", includeHidden: true });
   assert.equal(await modal.isVisible(), false, "A first visit is never covered by the cinematic");
   assert.equal(mediaRequests.length, 0, "A first visit downloads no intro video or poster");
@@ -110,6 +112,7 @@ try {
   assert.deepEqual(await page.evaluate(() => window.uploadNotifications), ["Upload complete"]);
   await viewReport.click();
   await page.waitForURL(new URL(reportPath, base).href);
+  await waitForPageContent(page);
   assert.ok(await page.getByRole("heading", { level: 1 }).isVisible());
   observations.push({ check: "fresh and duplicate upload links, explicit notification request once, existing grant used, report navigation", reportPath });
   await context.close();
@@ -119,6 +122,7 @@ try {
   await failedContext.route("**/animations/**/*.mp4", route => route.abort());
   const failedPage = await failedContext.newPage();
   await failedPage.goto(base.href);
+  await waitForPageContent(failedPage);
   await failedPage.getByRole("button", { name: "Watch guild intro", exact: true }).click();
   await failedPage.getByText("The intro could not play. You can close this preview and keep browsing.", { exact: true }).waitFor();
   await failedPage.getByRole("button", { name: "Close intro", exact: true }).click();

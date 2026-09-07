@@ -1,4 +1,6 @@
 import Link from "next/link";
+import { Suspense } from "react";
+import { PageLoading } from "@/components/ui/PageLoading";
 import { ChevronDown, ChevronLeft, ChevronRight } from "lucide-react";
 import { DatabaseUnavailable } from "@/components/ui/DatabaseUnavailable";
 import { EmptyState } from "@/components/ui/EmptyState";
@@ -24,7 +26,15 @@ interface Props {
   searchParams: Promise<{ q?: DirectoryQueryValue; class?: DirectoryQueryValue; page?: DirectoryQueryValue; includeShortPulls?: DirectoryQueryValue }>;
 }
 
-export default async function PlayersPage({ searchParams }: Props) {
+export default function PlayersPage(props: Props) {
+  return (
+    <Suspense fallback={<PageLoading message="Loading players..." />}>
+      <PlayersPageContent {...props} />
+    </Suspense>
+  );
+}
+
+async function PlayersPageContent({ searchParams }: Props) {
   const params = await searchParams;
   const { query, classFilter } = parseDirectoryFilters(params);
   const includeShortPulls = parseIncludeShortPulls(params.includeShortPulls);

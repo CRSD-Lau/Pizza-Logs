@@ -5,6 +5,7 @@ import { randomUUID } from "node:crypto";
 import { createRequire } from "node:module";
 import { Client } from "pg";
 import { chromium } from "playwright";
+import { waitForPageContent } from "./browser-page-ready.mjs";
 
 // Author: Neil Mitchell
 // Synthetic records are owned by this invocation and only written to loopback.
@@ -80,6 +81,7 @@ try {
   const visit = async suffix => {
     const response = await page.goto(new URL(`/players${suffix}`, base).href, { waitUntil: "networkidle" });
     assert.equal(response.status(), 200);
+    await waitForPageContent(page);
   };
   await visit("?q=Qzref");
   assert.equal(requests.length, 0, "Directory rendering must not fan out gear fetches");
@@ -90,11 +92,13 @@ try {
   assert.equal(await page.locator('[data-player-row="Qzrefpal"][data-player-realm="Icecrown"]').getAttribute("data-player-class"), "Mage");
   await page.getByRole("link", { name: "Next", exact: true }).click();
   await page.waitForURL(/page=2/);
+  await waitForPageContent(page);
   assert.equal(await page.locator("[data-player-row]").count(), rows.length - 30);
   await visit("?q=Qzref&class=Paladin&includeShortPulls=1");
   assert.equal(await page.locator("[data-player-row]").count(), 1, "Canonical class filter agrees with displayed identity");
   await page.getByRole("button", { name: "Find players", exact: true }).click();
   await page.waitForLoadState("networkidle");
+  await waitForPageContent(page);
   assert.equal(new URL(page.url()).searchParams.get("class"), "Paladin");
   assert.equal(new URL(page.url()).searchParams.get("includeShortPulls"), "1");
   observations.push("Canonical cache/log resolution, cross-realm isolation, pagination and filter preservation");
@@ -115,6 +119,7 @@ try {
   await avatar.focus();
   await page.waitForFunction(() => document.querySelector('[data-player-row="Qzrefnone"]')?.getAttribute("data-player-class") === "Shaman");
   await page.waitForLoadState("networkidle");
+  await waitForPageContent(page);
   assert.equal(await avatar.evaluate(el => el === document.activeElement), true, "Server class reconciliation retains keyboard focus");
   assert.equal(await page.getByRole("tooltip").isVisible(), true, "Class reconciliation keeps the quick look open");
   assert.match(await unknown.locator("img").first().getAttribute("src"), /classicon_shaman/);
@@ -147,6 +152,7 @@ try {
   await page.getByRole("button", { name: "View live gear for Qzrefmage" }).focus();
   await page.waitForFunction(() => document.querySelector('[data-player-row="Qzrefmage"]')?.getAttribute("data-player-class") === "Unknown");
   await page.waitForLoadState("networkidle");
+  await waitForPageContent(page);
   assert.equal(await page.locator('[data-player-row="Qzrefmage"] [data-pizza-avatar]').getAttribute("data-character-class"), "");
   assert.match(await page.getByRole("tooltip").innerText(), /Unknown class/);
   await page.keyboard.press("Escape");

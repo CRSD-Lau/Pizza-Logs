@@ -5,6 +5,7 @@ import { randomUUID } from "node:crypto";
 import { createRequire } from "node:module";
 import { Client } from "pg";
 import { chromium } from "playwright";
+import { waitForPageContent } from "./browser-page-ready.mjs";
 
 // Author: Neil Mitchell
 // Last Modified By: Neil Mitchell
@@ -190,6 +191,7 @@ async function run() {
   async function visit(name = names[0], query = "realm=Lordaeron&includeShortPulls=1") {
     const response = await page.goto(new URL(`/players/${name}?${query}`, base).href, { waitUntil: "networkidle", timeout: 30000 });
     assert.equal(response.status(), 200);
+    await waitForPageContent(page);
     await section.getByRole("heading", { name: "DPS by successful boss fight", exact: true }).waitFor();
     await twoFrames();
     return response;
@@ -198,15 +200,18 @@ async function run() {
     await section.getByLabel(label, { exact: true }).selectOption(value);
     await page.waitForFunction(({ label, value }) => {
       const root = document.querySelector("#raid-progress");
+      if (!root) return false;
       const field = [...root.querySelectorAll("label")].find(element => element.textContent === label);
       const select = field && document.getElementById(field.htmlFor);
       return select?.value === value && root.querySelector('[aria-busy="false"]');
     }, { label, value });
     if (label !== "Highlight raid") await page.waitForLoadState("networkidle");
+    await waitForPageContent(page);
     await twoFrames();
   }
   async function metric(value) {
     await section.getByRole("group", { name: "Metric", exact: true }).getByRole("button", { name: value, exact: true }).click();
+    await waitForPageContent(page);
     await section.getByRole("heading", { name: `${value} by successful boss fight`, exact: true }).waitFor();
     await twoFrames();
   }
@@ -309,6 +314,7 @@ async function run() {
     assert.ok(exactRows.filter(row => row.value !== null).every(row => row.difficulty === mode));
     for (const date of dates.slice(0, 3)) assert.equal(exactRows.filter(row => row.date === date && row.value !== null).length, perComplete);
     await page.reload({ waitUntil: "networkidle" });
+    await waitForPageContent(page);
     assert.equal(await section.getByLabel("Difficulty", { exact: true }).inputValue(), mode, "Explicit exact-mode URLs survive reload");
     assert.equal(await section.locator(".recharts-line-dot").count(), pointCount);
   }
@@ -361,6 +367,7 @@ async function run() {
   for (const [date, value] of [[dates[3], "100.00"], [dates[2], "80.00"], [dates[0], "40.00"]]) assert.equal(entry(hpsRows, date, "Lord Marrowgar").value, value);
   assert.ok(hpsRows.every(row => !["580.00", "600.00"].includes(row.value)), "HPS excludes separate APS");
   await page.reload({ waitUntil: "networkidle" });
+  await waitForPageContent(page);
   await section.getByRole("heading", { name: "HPS by successful boss fight", exact: true }).waitFor();
   assert.equal(await lineCount(), 4);
   await choose("Highlight raid", fixture.sessions[1]);
@@ -398,6 +405,7 @@ async function run() {
   assert.equal(await highlight.locator("option").count(), 1);
   assert.equal((await allValues("DPS", 1))[0].value, "15.00K");
   assert.equal((await page.goto(new URL(`/players/${names[2]}?realm=Lordaeron`, base).href, { waitUntil: "networkidle" })).status(), 200);
+  await waitForPageContent(page);
   assert.match(await section.innerText(), /No successful boss kills recorded/);
   assert.equal(await section.getByRole("combobox").count(), 0);
   await visit(names[0], "realm=Icecrown");

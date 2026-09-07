@@ -5,6 +5,8 @@ import { getAverageLeaderboards } from "@/lib/average-leaderboards";
 import { DatabaseUnavailable } from "@/components/ui/DatabaseUnavailable";
 import { EmptyState } from "@/components/ui/EmptyState";
 import Link from "next/link";
+import { Suspense } from "react";
+import { PageLoading } from "@/components/ui/PageLoading";
 import { isDatabaseConnectionError } from "@/lib/database-errors";
 import { sortBossesByICCOrder } from "@/lib/constants/bosses";
 import { PageHeader, PageShell } from "@/components/ui/PageLayout";
@@ -91,7 +93,19 @@ async function getLeaderboardBoards(difficulty: DifficultyFilterValue, requested
   return { averages, bosses: orderedBosses, selectedBoss, boards: boards.filter(b => b.dpsEntries.length > 0 || b.hpsEntries.length > 0) };
 }
 
-export default async function LeaderboardsPage({ searchParams }: { searchParams: Promise<ReportSearchParams> }) {
+interface Props {
+  searchParams: Promise<ReportSearchParams>;
+}
+
+export default function LeaderboardsPage(props: Props) {
+  return (
+    <Suspense fallback={<PageLoading message="Loading leaderboards..." />}>
+      <LeaderboardsPageContent {...props} />
+    </Suspense>
+  );
+}
+
+async function LeaderboardsPageContent({ searchParams }: Props) {
   const query = await searchParams;
   const difficulty = parseDifficultyFilter(query.difficulty);
   const requestedBoss = Array.isArray(query.boss) ? query.boss[0] : query.boss;

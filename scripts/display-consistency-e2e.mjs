@@ -4,6 +4,7 @@ import fs from "node:fs/promises";
 import path from "node:path";
 import { chromium } from "playwright";
 import { UPLOAD_POLICY_HEADER, UPLOAD_POLICY_VERSION } from "../lib/upload-policy.ts";
+import { waitForPageContent } from "./browser-page-ready.mjs";
 
 // Synthetic uploads only, against the same disposable loopback stack as test:e2e.
 const base = new URL(process.env.PIZZA_TEST_BASE_URL ?? "http://127.0.0.1:3000");
@@ -63,6 +64,7 @@ try {
     await page.setViewportSize({ width, height: 1000 });
     for (const route of [`/encounters/${encounter.id}`, report, `${report}/players/Numbermage`, "/players/Numbermage", "/leaderboards?boss=lord-marrowgar", "/bosses/lord-marrowgar", "/bosses"]) {
       await page.goto(new URL(route, base).href, { waitUntil: "load" });
+      await waitForPageContent(page);
       await page.evaluate(() => document.fonts.ready);
       if (route === report) {
         const year = new Date(encounter.startedAt).getUTCFullYear();

@@ -1,4 +1,6 @@
 import Link from "next/link";
+import { Suspense } from "react";
+import { PageLoading } from "@/components/ui/PageLoading";
 import { db } from "@/lib/db";
 import { SectionHeader } from "@/components/ui/SectionHeader";
 import { DatabaseUnavailable } from "@/components/ui/DatabaseUnavailable";
@@ -88,9 +90,19 @@ async function getBossStats(includeShortPulls: boolean, difficulty: DifficultyFi
   });
 }
 
-export default async function BossesPage({ searchParams }: {
+interface Props {
   searchParams: Promise<ReportSearchParams>;
-}) {
+}
+
+export default function BossesPage(props: Props) {
+  return (
+    <Suspense fallback={<PageLoading message="Loading bosses..." />}>
+      <BossesPageContent {...props} />
+    </Suspense>
+  );
+}
+
+async function BossesPageContent({ searchParams }: Props) {
   const query = await searchParams;
   const includeShortPulls = parseIncludeShortPulls(query.includeShortPulls);
   const difficulty = parseDifficultyFilter(query.difficulty);

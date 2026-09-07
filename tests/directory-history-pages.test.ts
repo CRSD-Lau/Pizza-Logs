@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import fs from "node:fs";
 import Module from "node:module";
 import path from "node:path";
-import { renderToStaticMarkup } from "react-dom/server";
+import { renderPage } from "./helpers/render-page";
 
 const players = Array.from({ length: 65 }, (_, index) => ({
   id: `player-${index}`, name: `Player${String(index + 1).padStart(2, "0")}`,
@@ -80,7 +80,7 @@ async function main() {
   global.fetch = async () => { throw new Error("Page render must not fetch upstream data in this fixture"); };
   try {
     const { default: PlayersPage } = require("../app/players/page") as typeof import("../app/players/page");
-    const directory = renderToStaticMarkup(await PlayersPage({ searchParams: Promise.resolve({ q: "player", class: "rogue", page: "2", includeShortPulls: "1" }) }));
+    const directory = await renderPage(await PlayersPage({ searchParams: Promise.resolve({ q: "player", class: "rogue", page: "2", includeShortPulls: "1" }) }));
     assert.match(directory, /Player61/); assert.match(directory, /Player63/); assert.match(directory, /Player65/);
     assert.doesNotMatch(directory, /Player59|Player62|👑|Best DPS|Best HPS|Rank #/);
     assert.match(directory, /31–33 of 33 players · Page 2 of 2/);
@@ -92,7 +92,7 @@ async function main() {
     assert.deepEqual(playerQueries[0].orderBy, [{ name: "asc" }, { id: "asc" }]);
     assert.deepEqual(playerQueries[1].where, { id: { in: ["player-60", "player-62", "player-64"] } }, "Only paginated identities load pull counts");
     assert.ok(!("milestones" in (playerQueries[0].include ?? {})), "Directory data must not use awards as current standing");
-    const narrow = renderToStaticMarkup(await PlayersPage({ searchParams: Promise.resolve({ q: "Player6", class: "Rogue", page: "99" }) }));
+    const narrow = await renderPage(await PlayersPage({ searchParams: Promise.resolve({ q: "Player6", class: "Rogue", page: "99" }) }));
     assert.match(narrow, /1–3 of 3 players · Page 1 of 1/);
     assert.equal(playerQueries[3].where?.id?.in.length, 3);
 
@@ -102,7 +102,7 @@ async function main() {
     let pageParams = { includeShortPulls: "1" } as { page?: string; includeShortPulls: string };
     let oldestPageLinks: string[] = [];
     for (let page = 1; page <= 4; page++) {
-      const markup = renderToStaticMarkup(await RaidsPage({ searchParams: Promise.resolve(pageParams) }));
+      const markup = await renderPage(await RaidsPage({ searchParams: Promise.resolve(pageParams) }));
       const start = (page - 1) * 20;
       const pageUploads = uploads.slice(start, start + 20);
       const expectedLinks = pageUploads.flatMap(upload => upload.encounters.map(({ sessionIndex }) =>
@@ -132,7 +132,7 @@ async function main() {
     assert.equal(allSessionLinks.length, 72);
     assert.equal(new Set(allSessionLinks.map(href => href.split("/")[2])).size, 61, "History must reach uploads beyond the previous latest-50 limit");
     assert.ok(oldestPageLinks.every(href => href.startsWith("/raids/synthetic-60/")));
-    const clamped = renderToStaticMarkup(await RaidsPage({ searchParams: Promise.resolve({ page: "99", includeShortPulls: "1" }) }));
+    const clamped = await renderPage(await RaidsPage({ searchParams: Promise.resolve({ page: "99", includeShortPulls: "1" }) }));
     assert.match(clamped, /3 raid sessions from 1 upload on this page/);
     assert.match(clamped, /Uploads 61–61 of 61/); assert.match(clamped, /Page 4 of 4/);
     assert.deepEqual(sessionLinks(clamped), oldestPageLinks);
@@ -144,7 +144,7 @@ async function main() {
     }
 
     const { default: PlayerPage } = require("../app/players/[playerName]/page") as typeof import("../app/players/[playerName]/page");
-    const profile = renderToStaticMarkup(await PlayerPage({ params: Promise.resolve({ playerName: "Player01" }), searchParams: Promise.resolve({ includeShortPulls: "1" }) }));
+    const profile = await renderPage(await PlayerPage({ params: Promise.resolve({ playerName: "Player01" }), searchParams: Promise.resolve({ includeShortPulls: "1" }) }));
     assert.match(profile, /Rank when achieved:/); assert.match(profile, /Historical all-time ranks when achieved, not current standings/);
     assert.match(profile, /dateTime="2026-08-15T14:00:00.000Z"/);
     assert.match(profile, /href="\/bosses\/lord-marrowgar\?difficulty=25H&amp;includeShortPulls=1#boss-hps"/);
@@ -154,7 +154,7 @@ async function main() {
 
     unavailable = true;
     for (const page of [PlayersPage, RaidsPage]) {
-      const markup = renderToStaticMarkup(await page({ searchParams: Promise.resolve({}) }));
+      const markup = await renderPage(await page({ searchParams: Promise.resolve({}) }));
       assert.match(markup, /temporarily unavailable/); assert.doesNotMatch(markup, /localhost|Postgres|Start local/);
     }
   } finally {

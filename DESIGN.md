@@ -53,6 +53,7 @@ The existing `gold`, `gold-light`, and `gold-dim` utility names remain compatibi
 - Short-pull counting rules use a compact disclosure; their count and included/excluded state remain visible.
 - The full desktop navigation appears only when the logo, search and links fit without overlapping. Narrower viewports use a named menu, with current-page and Escape/focus behavior.
 - Numeric comparisons state boss/difficulty/time scope. Weekly attempt rows retain their actual date and a link to the source fight.
+- Pending page content uses `PageLoading`: the guild crest, a short status message, two heading placeholders and eight pulsing rows, matching the guild roster. Keep navigation and the footer interactive. Show it only during real pending work; do not add a minimum display delay. Place loading boundaries after authentication, missing-record and canonical-redirect checks so response status codes remain intact. Skeletons remain still for reduced-motion users.
 
 ## Numbers, units, time and lists
 

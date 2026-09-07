@@ -1,10 +1,12 @@
 import type { Metadata } from "next";
+import { Suspense } from "react";
 import Link from "next/link";
 import { db } from "@/lib/db";
 import { requireAdmin } from "@/lib/require-admin";
 import { Badge } from "@/components/ui/Badge";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { DataPanel, PageHeader, PageSection, PageShell } from "@/components/ui/PageLayout";
+import { PageLoading } from "@/components/ui/PageLoading";
 import { buttonVariants } from "@/components/ui/Button";
 import { buildRaidSessionRoutesWithAnalytics, getRaidSessionPath } from "@/lib/raid-session-slug";
 import { cn, formatBytes, formatCountLabel, formatDateTimeUtc, formatInteger } from "@/lib/utils";
@@ -15,10 +17,20 @@ export const dynamic = "force-dynamic";
 
 const PAGE_SIZE = 30;
 
-export default async function AdminUploadsPage({ searchParams }: {
+interface Props {
   searchParams: Promise<{ page?: DirectoryQueryValue }>;
-}) {
+}
+
+export default async function AdminUploadsPage(props: Props) {
   await requireAdmin();
+  return (
+    <Suspense fallback={<PageLoading message="Loading upload history..." />}>
+      <AdminUploadsContent {...props} />
+    </Suspense>
+  );
+}
+
+async function AdminUploadsContent({ searchParams }: Props) {
   const totalUploads = await db.upload.count();
   const pagination = getDirectoryPagination(totalUploads, parseDirectoryPage((await searchParams).page), PAGE_SIZE);
   const uploads = await db.upload.findMany({

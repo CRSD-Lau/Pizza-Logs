@@ -3,6 +3,7 @@ import { randomUUID } from "node:crypto";
 import fs from "node:fs/promises";
 import path from "node:path";
 import { chromium } from "playwright";
+import { waitForPageContent } from "./browser-page-ready.mjs";
 import { localTestBase } from "./e2e-upload.mjs";
 import { BUG_REPORT_URL, SECURITY_REPORT_URL, UPLOAD_POLICY_HEADER, UPLOAD_POLICY_VERSION } from "../lib/upload-policy.ts";
 
@@ -33,6 +34,7 @@ try {
   const context = await browser.newContext({ viewport: { width: 375, height: 812 }, reducedMotion: "reduce" });
   const page = await context.newPage();
   await page.goto(base.href, { waitUntil: "networkidle" });
+  await waitForPageContent(page);
   const choose = page.getByRole("button", { name: "Choose File", exact: true });
   const agreement = page.getByRole("checkbox", { name: /I have permission to share this log/ });
   await page.getByRole("textbox", { name: "Character (required)", exact: true }).fill("Audit");
@@ -75,6 +77,7 @@ try {
   await page.screenshot({ path: path.join(out, "375-policy.png"), fullPage: true });
   await page.setViewportSize({ width: 1440, height: 1000 });
   await page.goto(base.href, { waitUntil: "networkidle" });
+  await waitForPageContent(page);
   await page.screenshot({ path: path.join(out, "1440-agreement.png"), fullPage: true });
   assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), true);
   observations.push("policy content and 1440px upload layout");

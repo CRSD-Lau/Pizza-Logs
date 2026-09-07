@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import fs from "node:fs";
 import Module from "node:module";
 import path from "node:path";
-import { renderToStaticMarkup } from "react-dom/server";
+import { renderPage } from "./helpers/render-page";
 
 const failingModel = {
   count: async () => {
@@ -93,7 +93,7 @@ async function main() {
   try {
     const { default: AdminPage } = require("../app/admin/page") as typeof import("../app/admin/page");
     const element = await AdminPage();
-    const markup = renderToStaticMarkup(element);
+    const markup = await renderPage(element);
 
     assert.match(markup, /Admin \/ Diagnostics/);
     assert.match(markup, /Database unavailable/);
@@ -107,17 +107,17 @@ async function main() {
       start(controller) { controller.enqueue(new Uint8Array(16 * 1024 + 1)); },
       cancel() { cancelled = true; },
     }));
-    assert.match(renderToStaticMarkup(await AdminPage()), /Unreachable/);
+    assert.match(await renderPage(await AdminPage()), /Unreachable/);
     assert.equal(cancelled, true, "Oversized diagnostics must cancel the upstream body");
 
     global.fetch = async () => Response.json({ status: { invalid: true } });
-    assert.match(renderToStaticMarkup(await AdminPage()), /Unreachable/);
+    assert.match(await renderPage(await AdminPage()), /Unreachable/);
 
     cancelled = false;
     global.fetch = async () => new Response(new ReadableStream({
       cancel() { cancelled = true; },
     }), { status: 503 });
-    assert.match(renderToStaticMarkup(await AdminPage()), /Unreachable/);
+    assert.match(await renderPage(await AdminPage()), /Unreachable/);
     assert.equal(cancelled, true, "Failed diagnostics must cancel the upstream body");
   } finally {
     global.fetch = originalFetch;

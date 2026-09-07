@@ -16,6 +16,7 @@ This project follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) an
 
 - Add an unchecked per-upload agreement, upload rules/public-data notice, and site-wide bug-report guidance linked to the repository, with separate private security reporting and honest service/security limitations.
 - Document the upload security audit, confirmed fixes, regression coverage and remaining anonymous-abuse, antivirus and worker-isolation limits.
+- Share the guild roster's crest and skeleton loading state across public navigation, report pages and authenticated diagnostics/history, with reduced-motion support and preserved redirect/not-found checks.
 
 ### Changed
 

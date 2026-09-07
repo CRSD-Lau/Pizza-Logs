@@ -4,6 +4,7 @@ import Module from "node:module";
 import path from "node:path";
 import React from "react";
 import { renderToStaticMarkup } from "react-dom/server";
+import { renderPage } from "./helpers/render-page";
 
 let attempts: Array<{ id: string; dps: number; hps: number; aps: number; deaths: number; spec: null; encounter: {
   id: string; startedAt: Date; outcome: string; difficulty: string; durationSeconds: number; durationMs: number;
@@ -72,7 +73,7 @@ async function main() {
 
     const { default: PlayerPage } = require("../app/players/[playerName]/page") as typeof import("../app/players/[playerName]/page");
     const profile = () => PlayerPage({ params: Promise.resolve({ playerName: "Synthetic" }), searchParams: Promise.resolve({}) });
-    const empty = renderToStaticMarkup(await profile());
+    const empty = await renderPage(await profile());
     assert.equal((empty.match(/Unavailable/g) ?? []).length, 3);
     assert.match(empty, /No recorded attempts/);
     assert.match(empty, /No boss kills/);
@@ -80,17 +81,17 @@ async function main() {
       id: "zero", startedAt: new Date("2026-09-04T20:00:00Z"), outcome: "KILL", difficulty: "25N", durationSeconds: 80, durationMs: 80000,
       boss: { name: "Lord Marrowgar", slug: "lord-marrowgar", raid: "Icecrown Citadel" }, participants: [{ deaths: 0 }],
     } }];
-    const zero = renderToStaticMarkup(await profile());
+    const zero = await renderPage(await profile());
     assert.doesNotMatch(zero, /Unavailable|No recorded attempts|No boss kills/);
     assert.match(zero, />0\.00<\/span>/);
     assert.match(textContent(zero), /Best DPS: 0\.00 Best HPS: 0\.00/);
     assert.match(textContent(zero), /0\.00 DPS 0\.00 HPS 0\.00 APS/);
     attempts[0].hps = 50;
-    const lowHealing = renderToStaticMarkup(await profile());
+    const lowHealing = await renderPage(await profile());
     assert.match(textContent(lowHealing), /Best HPS: 50\.00/);
     assert.match(textContent(lowHealing), /0\.00 DPS 50\.00 HPS 0\.00 APS/);
     attempts[0].encounter.outcome = "WIPE";
-    const noKills = renderToStaticMarkup(await profile());
+    const noKills = await renderPage(await profile());
     assert.equal((noKills.match(/Unavailable/g) ?? []).length, 1, "Only the kill average is unavailable when a recorded zero-output wipe exists");
     assert.match(noKills, /No boss kills/);
 
@@ -99,24 +100,24 @@ async function main() {
     const { default: BossesPage } = require("../app/bosses/page") as typeof import("../app/bosses/page");
     const bossPage = () => BossPage({ params: Promise.resolve({ bossSlug: boss.slug }), searchParams: Promise.resolve({}) });
     const bossesPage = () => BossesPage({ searchParams: Promise.resolve({}) });
-    assert.match(textContent(renderToStaticMarkup(await bossPage())), /Fastest Kill - Unavailable No boss kills/);
+    assert.match(textContent(await renderPage(await bossPage())), /Fastest Kill - Unavailable No boss kills/);
     const unknownKill = { id: "unknown-time", outcome: "KILL", difficulty: "25N", startedAt: new Date("2026-09-04T20:00:00Z"), durationSeconds: 0, durationMs: 0, participants: [] as never[] };
     bossEncounters.push(unknownKill);
-    const unknownBoss = textContent(renderToStaticMarkup(await bossPage()));
+    const unknownBoss = textContent(await renderPage(await bossPage()));
     assert.match(unknownBoss, /Fastest Kill - Unavailable Kill duration unavailable/);
     assert.match(unknownBoss, /Unavailable duration/);
     assert.doesNotMatch(unknownBoss, /Fastest Kill 0:00|0:00 duration/);
-    assert.match(textContent(renderToStaticMarkup(await bossesPage())), /Kill duration unavailable/);
+    assert.match(textContent(await renderPage(await bossesPage())), /Kill duration unavailable/);
 
     bossEncounters.push({ ...unknownKill, id: "precise-time", durationMs: 125_500, durationSeconds: 0 });
     bossEncounters.push({ ...unknownKill, id: "legacy-time", durationMs: null, durationSeconds: 180 });
     bossEncounters.push({ ...unknownKill, id: "invalid-time", durationMs: -1, durationSeconds: 1 });
-    const mixedBoss = textContent(renderToStaticMarkup(await bossPage()));
+    const mixedBoss = textContent(await renderPage(await bossPage()));
     assert.match(mixedBoss, /Fastest Kill 2:05 From known kill durations/);
     assert.match(mixedBoss, /2:05 duration/);
     assert.match(mixedBoss, /3:00 duration/);
     assert.doesNotMatch(mixedBoss, /(?:0:00|0:01) duration/);
-    const mixedDirectory = textContent(renderToStaticMarkup(await bossesPage()));
+    const mixedDirectory = textContent(await renderPage(await bossesPage()));
     assert.match(mixedDirectory, /2:05/);
     assert.doesNotMatch(mixedDirectory, /Kill duration unavailable|0:00|0:01/);
     assert.equal(bossEncounters[1].durationSeconds, 0, "Presentation must not rewrite recorded duration fields");

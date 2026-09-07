@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import fs from "node:fs";
 import Module from "node:module";
 import path from "node:path";
-import { renderToStaticMarkup } from "react-dom/server";
+import { renderPage } from "./helpers/render-page";
 
 const uploads = Array.from({ length: 105 }, (_, index) => ({
   id: `synthetic-${String(105 - index).padStart(3, "0")}`,
@@ -48,7 +48,7 @@ async function main() {
   } } } as NodeModule;
   try {
     const { default: Page } = require("../app/admin/uploads/page") as typeof import("../app/admin/uploads/page");
-    const first = renderToStaticMarkup(await Page({ searchParams: Promise.resolve({}) }));
+    const first = await renderPage(await Page({ searchParams: Promise.resolve({}) }));
     assert.match(first, /105 uploads stored/);
     assert.match(first, /1–30 of 105 uploads · Page 1 of 4/);
     assert.match(first, /synthetic-105\.txt/);
@@ -59,7 +59,7 @@ async function main() {
     assert.match(first, /<span aria-disabled="true"[^>]*>Previous<\/span>/);
     assert.deepEqual(lastQuery?.orderBy, [{ createdAt: "desc" }, { id: "desc" }], "Equal timestamps must have deterministic pagination order");
 
-    const last = renderToStaticMarkup(await Page({ searchParams: Promise.resolve({ page: "999" }) }));
+    const last = await renderPage(await Page({ searchParams: Promise.resolve({ page: "999" }) }));
     assert.match(last, /91–105 of 105 uploads · Page 4 of 4/);
     assert.match(last, /synthetic-001\.txt/);
     assert.doesNotMatch(last, /synthetic-016\.txt/);
@@ -68,11 +68,11 @@ async function main() {
     assert.match(last, /<span aria-disabled="true"[^>]*>Next<\/span>/);
     assert.equal(lastQuery?.skip, 90);
     assert.equal(lastQuery?.take, 30);
-    const invalid = renderToStaticMarkup(await Page({ searchParams: Promise.resolve({ page: "NaN" }) }));
+    const invalid = await renderPage(await Page({ searchParams: Promise.resolve({ page: "NaN" }) }));
     assert.match(invalid, /Page 1 of 4/);
 
     total = 0;
-    const empty = renderToStaticMarkup(await Page({ searchParams: Promise.resolve({ page: "99" }) }));
+    const empty = await renderPage(await Page({ searchParams: Promise.resolve({ page: "99" }) }));
     assert.match(empty, /No uploads yet/);
     assert.match(empty, /0–0 of 0 uploads · Page 1 of 1/);
     deny = true;
