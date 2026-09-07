@@ -41,8 +41,8 @@
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "dotenv": "^17.4.2",
-    "lucide-react": "^1.35.0",
-    "next": "16.3.3",
+    "lucide-react": "^1.41.0",
+    "next": "16.3.4",
     "pg": "^8.23.0",
     "prisma": "^7.10.0",
     "react": "19.2.8",
@@ -50,28 +50,28 @@
     "react-dropzone": "^20.1.1",
     "recharts": "^3.10.1",
     "tailwind-merge": "^3.6.0",
-    "zod": "^4.4.3"
+    "zod": "^4.5.4"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4.3.3",
     "@types/node": "^24.13.3",
     "@types/pg": "^8.23.1",
     "@types/react": "19.2.18",
-    "@types/react-dom": "19.2.5",
+    "@types/react-dom": "19.2.7",
     "@typescript/native": "npm:typescript@^7.0.2",
     "axe-core": "4.13.0",
     "eslint": "^9.39.5",
-    "eslint-config-next": "16.3.3",
+    "eslint-config-next": "16.3.4",
     "playwright": "1.62.1",
-    "postcss": "^8.5.26",
+    "postcss": "^8.5.28",
     "tailwindcss": "^4.3.3",
-    "tsx": "^4.23.12",
+    "tsx": "^4.23.13",
     "typescript": "^6.0.3"
   },
   "overrides": {
     "deepmerge-ts": "8.0.2",
     "@types/react": "19.2.18",
-    "@types/react-dom": "19.2.5",
+    "@types/react-dom": "19.2.7",
     "prisma": {
       "mysql2": "3.24.3"
     }
