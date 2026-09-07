@@ -6,6 +6,8 @@ This project follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) an
 
 ## [Unreleased]
 
+- Share the guild roster's crest and skeleton loading state across public navigation, report pages and authenticated diagnostics/history, with reduced-motion support and preserved redirect/not-found checks.
+
 ### Changed
 
 - Apply the approved Molten Charcoal palette across public and admin pages, reports, charts, loading states and the optional intro: warm charcoal surfaces, ember-orange accents and cream text, preserving WoW class, spell-school and status colors.

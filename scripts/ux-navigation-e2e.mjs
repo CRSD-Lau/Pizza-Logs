@@ -3,6 +3,7 @@ import fs from "node:fs/promises";
 import path from "node:path";
 import { createRequire } from "node:module";
 import { chromium } from "playwright";
+import { waitForPageContent } from "./browser-page-ready.mjs";
 
 // Read-only browser checks. Run test:e2e first to create the synthetic fixtures.
 const base = new URL(process.env.PIZZA_TEST_BASE_URL ?? "http://127.0.0.1:3000");
@@ -76,6 +77,7 @@ async function visit(route, expectedStatus = 200) {
   }
   await page.locator("main").waitFor();
   await page.waitForLoadState("load");
+  await waitForPageContent(page);
   await page.evaluate(() => document.fonts.ready);
 }
 async function check(name, run, recordPass = true) {
@@ -100,6 +102,7 @@ async function applyDifficulty(value) {
     page.waitForURL(url => url.searchParams.get("difficulty") === value),
     page.getByRole("button", { name: "Apply filters", exact: true }).click(),
   ]);
+  await waitForPageContent(page);
   await page.evaluate(() => document.fonts.ready);
 }
 async function audit(route, width, screenshotName) {
@@ -166,6 +169,7 @@ try {
     assert.equal(await page.getByText("Week view", { exact: true }).count(), 0);
     await links.filter({ hasText: "View" }).first().click();
     await page.waitForURL(/\/encounters\//);
+    await waitForPageContent(page);
     assert.ok(await page.getByRole("heading", { level: 1 }).innerText());
     return { evidence };
   });
@@ -219,6 +223,7 @@ try {
     }
     await page.getByRole("link", { name: `View ${policy.boss.name} history`, exact: false }).click();
     await page.waitForURL(url => url.pathname === bossPath && url.hash === "#boss-history");
+    await waitForPageContent(page);
     assert.equal(new URL(page.url()).searchParams.get("difficulty"), policy.difficulty);
     assert.equal(new URL(page.url()).searchParams.get("context"), "ux");
     await visit("/leaderboards?boss=invalid-boss&difficulty=invalid-mode");
@@ -234,6 +239,7 @@ try {
     const bossLink = page.locator(`main a[href^="${bossPath}?"]`).first();
     await bossLink.click();
     await page.waitForURL(url => url.pathname === bossPath);
+    await waitForPageContent(page);
     assert.equal(new URL(page.url()).searchParams.get("difficulty"), policy.difficulty);
     const history = await encounterLinks(page.locator("#boss-history"));
     assert.ok(history.length > 0);
@@ -278,6 +284,7 @@ try {
     await visit(`${bossPath}?difficulty=${policy.difficulty}&includeShortPulls=1&context=ux`);
     await page.locator(`#boss-history a[href^="/encounters/${policy.id}?"]`).click();
     await page.waitForURL(url => url.pathname === `/encounters/${policy.id}`);
+    await waitForPageContent(page);
     const bossLink = page.locator(`main a[href^="${bossPath}?"]`).first();
     const back = new URL(await bossLink.getAttribute("href"), base);
     assert.equal(back.searchParams.get("difficulty"), policy.difficulty);
@@ -291,6 +298,7 @@ try {
     }
     await bossLink.click();
     await page.waitForURL(url => url.pathname === bossPath);
+    await waitForPageContent(page);
     assert.equal(await page.getByLabel("Difficulty", { exact: true }).inputValue(), policy.difficulty);
 
     const short = encounters.filter(encounter => encounter.upload.filename === "synthetic-short-pulls.txt" && encounter.outcome === "WIPE")
@@ -335,6 +343,7 @@ try {
     await input.press("ArrowDown");
     await input.press("Enter");
     await page.waitForURL(url => url.pathname === "/players/Phyre");
+    await waitForPageContent(page);
   });
 
   await check("pending and superseded search requests cannot navigate or restore stale results", async () => {
@@ -371,6 +380,7 @@ try {
       await input.press("ArrowDown");
       await input.press("Enter");
       await page.waitForURL(url => url.pathname === "/players/SyntheticFirst");
+      await waitForPageContent(page);
     } finally {
       for (const release of releases.values()) release();
       await context.unroute("**/api/players/search?**", handler);
@@ -437,9 +447,11 @@ try {
     await page.getByRole("heading", { name: "Page not found", exact: true }).waitFor();
     await page.locator("main").getByRole("link", { name: "Browse raids", exact: true }).click();
     await page.waitForURL(url => url.pathname === "/raids");
+    await waitForPageContent(page);
     await visit("/synthetic-ux-missing-page", 404);
     await page.locator("main").getByRole("link", { name: "Find a player", exact: true }).click();
     await page.waitForURL(url => url.pathname === "/players");
+    await waitForPageContent(page);
   });
 
   // Twelve representative public routes; private admin and upload submission

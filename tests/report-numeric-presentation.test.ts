@@ -4,6 +4,7 @@ import Module from "node:module";
 import path from "node:path";
 import React from "react";
 import { renderToStaticMarkup } from "react-dom/server";
+import { renderPage } from "./helpers/render-page";
 
 const stamp = new Date("2026-09-04T23:04:10Z");
 const route = { sessionIndex: 0, startedAt: stamp, dateSlug: "2026-09-04", slug: "2026-09-04", dateOrdinal: 1 };
@@ -106,34 +107,34 @@ async function main() {
 
     const { default: EncounterPage } = require("../app/encounters/[id]/page") as typeof import("../app/encounters/[id]/page");
     const encounterProps = { params: Promise.resolve({ id: encounter.id }), searchParams: Promise.resolve({}) };
-    const missing = renderToStaticMarkup(await EncounterPage(encounterProps));
+    const missing = await renderPage(await EncounterPage(encounterProps));
     contains(missing, "Raid rates are unavailable because the recorded fight duration is missing or invalid");
     contains(missing, "13.93K DPS"); contains(missing, "1 application"); contains(missing, "1 event");
     contains(missing, "Sep 4, 2026, 23:04:10 UTC");
     assert.ok(!missing.includes("1 applications") && !missing.includes("1 events"));
 
     encounter.durationMs = 50_000;
-    const precise = renderToStaticMarkup(await EncounterPage(encounterProps));
+    const precise = await renderPage(await EncounterPage(encounterProps));
     contains(precise, "Damage 1.39M 27.86K raid DPS");
     assert.ok(!precise.includes("Raid rates are unavailable"), "Positive precise milliseconds work even when legacy seconds are zero");
     encounter.durationMs = -1; encounter.durationSeconds = 100;
-    const invalid = renderToStaticMarkup(await EncounterPage(encounterProps));
+    const invalid = await renderPage(await EncounterPage(encounterProps));
     contains(invalid, "Raid rates are unavailable");
     encounter.durationMs = null;
-    const legacy = renderToStaticMarkup(await EncounterPage(encounterProps));
+    const legacy = await renderPage(await EncounterPage(encounterProps));
     contains(legacy, "Damage 1.39M 13.93K raid DPS");
     assert.equal(participant.dps, 13_931.2, "Display-derived rates must not rewrite stored participant rates");
 
     encounter.durationMs = 0; encounter.durationSeconds = 0;
     const { default: SessionPage } = require("../app/uploads/[id]/sessions/[sessionIdx]/page") as typeof import("../app/uploads/[id]/sessions/[sessionIdx]/page");
     const sessionProps = { params: Promise.resolve({ id: "synthetic-report", sessionIdx: route.slug }), searchParams: Promise.resolve({}) };
-    const session = renderToStaticMarkup(await SessionPage(sessionProps));
+    const session = await renderPage(await SessionPage(sessionProps));
     contains(session, "0 kills / 1 wipe"); contains(session, "Healing + absorbs"); contains(session, "Unavailable raid DPS");
     contains(session, "Sep 4, 2026, 23:04 – Sep 5, 2026, 00:05 UTC");
     assert.ok(!session.includes("0K / 1W"));
 
     const { default: SessionPlayerPage } = require("../app/uploads/[id]/sessions/[sessionIdx]/players/[playerName]/page") as typeof import("../app/uploads/[id]/sessions/[sessionIdx]/players/[playerName]/page");
-    const detail = renderToStaticMarkup(await SessionPlayerPage({ ...sessionProps, params: Promise.resolve({ id: "synthetic-report", sessionIdx: route.slug, playerName: player.name }) }));
+    const detail = await renderPage(await SessionPlayerPage({ ...sessionProps, params: Promise.resolve({ id: "synthetic-report", sessionIdx: route.slug, playerName: player.name }) }));
     contains(detail, "The average on kills is unavailable"); contains(detail, "Avg DPS - Unavailable on kills");
     contains(detail, "Best DPS 13.93K single pull");
     contains(detail, "15.50 HPS"); contains(detail, "0.00 APS"); contains(detail, "1 death");

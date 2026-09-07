@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { Suspense } from "react";
 import { notFound, permanentRedirect } from "next/navigation";
+import { PageLoading } from "@/components/ui/PageLoading";
 import { db } from "@/lib/db";
 import { MobBreakdown, type MobEntry } from "@/components/meter/MobBreakdown";
 import { PlayerAvatar } from "@/components/players/PlayerAvatar";
@@ -89,7 +91,7 @@ export async function generateMetadata({ params, searchParams }: Props): Promise
   return buildPageMetadata({ title, description, path: canonical, type: "article" });
 }
 
-export default async function SessionDetailPage({ params, searchParams }: Props) {
+async function getSessionPageContext({ params, searchParams }: Props) {
   const { id, sessionIdx } = await params;
   const query = await searchParams;
   const includeShortPulls = parseIncludeShortPulls(query.includeShortPulls);
@@ -105,12 +107,6 @@ export default async function SessionDetailPage({ params, searchParams }: Props)
   if (resolution.isLegacyUploadId || resolution.isLegacyIndex) permanentRedirect(viewPath);
 
   const sessionIndex = sessionRoute.sessionIndex;
-  const sessionRoutes = await getRaidSessionRoutes(uploadId);
-  const sessionPosition = sessionRoutes.findIndex(route => route.sessionIndex === sessionIndex);
-  const previousSession = sessionPosition > 0 ? sessionRoutes[sessionPosition - 1] : null;
-  const nextSession = sessionPosition >= 0 && sessionPosition < sessionRoutes.length - 1
-    ? sessionRoutes[sessionPosition + 1]
-    : null;
 
   const upload = await db.upload.findUnique({
     where: { id: uploadId },
@@ -135,6 +131,27 @@ export default async function SessionDetailPage({ params, searchParams }: Props)
   });
 
   if (encounters.length === 0) notFound();
+
+  return { sessionRoute, uploadId, publicSlug, sessionPath, querySuffix, viewPath, sessionIndex, upload, encounters, includeShortPulls, scope, isKills };
+}
+
+export default async function SessionDetailPage(props: Props) {
+  const data = await getSessionPageContext(props);
+  return (
+    <Suspense fallback={<PageLoading message="Loading raid session..." />}>
+      <SessionContent data={data} />
+    </Suspense>
+  );
+}
+
+async function SessionContent({ data }: { data: Awaited<ReturnType<typeof getSessionPageContext>> }) {
+  const { sessionRoute, uploadId, publicSlug, sessionPath, querySuffix, viewPath, sessionIndex, upload, encounters, includeShortPulls, scope, isKills } = data;
+  const sessionRoutes = await getRaidSessionRoutes(uploadId);
+  const sessionPosition = sessionRoutes.findIndex(route => route.sessionIndex === sessionIndex);
+  const previousSession = sessionPosition > 0 ? sessionRoutes[sessionPosition - 1] : null;
+  const nextSession = sessionPosition >= 0 && sessionPosition < sessionRoutes.length - 1
+    ? sessionRoutes[sessionPosition + 1]
+    : null;
 
   const orderedEncounters = orderBossDisplayEntries(
     encounters,

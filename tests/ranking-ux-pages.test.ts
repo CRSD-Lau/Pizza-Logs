@@ -4,6 +4,7 @@ import Module from "node:module";
 import path from "node:path";
 import React from "react";
 import { renderToStaticMarkup } from "react-dom/server";
+import { renderPage } from "./helpers/render-page";
 import { formatShortDateUtc, getWeekBounds } from "../lib/utils";
 
 const boss = { id: "marrowgar", name: "Lord Marrowgar", slug: "lord-marrowgar", raid: "Icecrown Citadel", raidSlug: "icecrown-citadel", sortOrder: 1 };
@@ -64,7 +65,7 @@ async function main() {
   require.cache[dbPath] = { id: dbPath, filename: dbPath, loaded: true, exports: { db } } as NodeModule;
   try {
     const { default: WeeklyPage } = require("../app/weekly/page") as typeof import("../app/weekly/page");
-    const weekly = renderToStaticMarkup(await WeeklyPage({ searchParams: Promise.resolve({ difficulty: "10N", includeShortPulls: "1" }) }));
+    const weekly = await renderPage(await WeeklyPage({ searchParams: Promise.resolve({ difficulty: "10N", includeShortPulls: "1" }) }));
     assert.match(weekly, /Top DPS Attempts This Week/);
     assert.match(weekly, /href="\/encounters\/normal-high\?/);
     assert.match(weekly, /href="\/encounters\/normal-low\?/);
@@ -75,7 +76,7 @@ async function main() {
 
     calls.length = 0;
     const { default: LeaderboardsPage } = require("../app/leaderboards/page") as typeof import("../app/leaderboards/page");
-    const leaders = renderToStaticMarkup(await LeaderboardsPage({ searchParams: Promise.resolve({ difficulty: "25H", boss: boss.slug, includeShortPulls: "1" }) }));
+    const leaders = await renderPage(await LeaderboardsPage({ searchParams: Promise.resolve({ difficulty: "25H", boss: boss.slug, includeShortPulls: "1" }) }));
     assert.match(leaders, /Heroicplayer/);
     assert.doesNotMatch(leaders, /Normalplayer|Otherbossplayer/);
     assert.match(leaders, /name="boss"/);
@@ -84,11 +85,11 @@ async function main() {
     assert.match(leaders, /No qualifying players yet/);
     assert.ok(calls.every(query => query.where.encounter.bossId === boss.id && query.where.encounter.difficulty === "25H" && query.where.encounter.outcome === "KILL" && query.distinct?.[0] === "playerId" && query.take === 10));
     calls.length = 0;
-    await LeaderboardsPage({ searchParams: Promise.resolve({}) });
+    await renderPage(await LeaderboardsPage({ searchParams: Promise.resolve({}) }));
     assert.ok(calls.every(query => query.where.encounter.difficulty === undefined), "All difficulties keeps the original pooled ranking query");
 
     const { default: BossPage } = require("../app/bosses/[bossSlug]/page") as typeof import("../app/bosses/[bossSlug]/page");
-    const detail = renderToStaticMarkup(await BossPage({ params: Promise.resolve({ bossSlug: boss.slug }), searchParams: Promise.resolve({ difficulty: "10N", includeShortPulls: "1" }) }));
+    const detail = await renderPage(await BossPage({ params: Promise.resolve({ bossSlug: boss.slug }), searchParams: Promise.resolve({ difficulty: "10N", includeShortPulls: "1" }) }));
     assert.match(detail, /href="#boss-history"/);
     assert.match(detail, /href="#boss-dps"/);
     assert.match(detail, /href="#boss-hps"/);
@@ -98,7 +99,7 @@ async function main() {
     assert.match(detail, /includeShortPulls=1/);
 
     const { default: BossesPage } = require("../app/bosses/page") as typeof import("../app/bosses/page");
-    const directory = renderToStaticMarkup(await BossesPage({ searchParams: Promise.resolve({ difficulty: "25H" }) }));
+    const directory = await renderPage(await BossesPage({ searchParams: Promise.resolve({ difficulty: "25H" }) }));
     assert.match(directory, />Bosses<\/h1>/);
     assert.doesNotMatch(directory, /Boss Rankings/);
     assert.match(directory, /value="25H" selected/);

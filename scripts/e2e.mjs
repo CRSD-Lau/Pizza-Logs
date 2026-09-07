@@ -6,6 +6,7 @@ import { chromium } from "playwright";
 import { createRequire } from "node:module";
 import { spawnSync } from "node:child_process";
 import { verifyPlayerQuickLooks } from "./player-quicklook-e2e.mjs";
+import { waitForPageContent } from "./browser-page-ready.mjs";
 import { localTestBase, syntheticCombatLog, uploadSyntheticLog } from "./e2e-upload.mjs";
 
 const require = createRequire(import.meta.url);
@@ -143,6 +144,7 @@ try {
     for (const route of routes) {
       const started = performance.now();
       const response = await page.goto(new URL(route, base).href, { waitUntil: "domcontentloaded", timeout: 60000 });
+      await waitForPageContent(page);
       await page.evaluate(() => document.fonts.ready);
       assert.equal(response.status(), 200, route);
       const overflow = await page.evaluate(() => document.documentElement.scrollWidth > innerWidth);
@@ -161,6 +163,7 @@ try {
     }
   }
   await page.goto(new URL(report, base).href);
+  await waitForPageContent(page);
   assert.match(await page.locator("main").innerText(), /54\.00K/, "UI must display the same damage primitive in compact two-decimal form");
   const metricColumns = [
     ["name", "Player"], ["totalDamage", "Total Damage"], ["dps", "DPS"],
@@ -292,6 +295,7 @@ try {
   for (const width of [390, 1440]) {
     await page.setViewportSize({ width, height: 1000 });
     await page.goto(new URL(policyReport, base).href);
+    await waitForPageContent(page);
     await assertScopeSelection("All Boss Attempts");
     await assertAllCards();
     const allView = playerView("All boss attempt player metrics", width);
@@ -312,12 +316,14 @@ try {
     await page.screenshot({ path: path.join(out, `${width}-all-boss-attempts.png`), fullPage: true });
     await toggleShortPulls(page, "Include short pulls");
     await page.waitForURL(new URL(`${policyReport}?includeShortPulls=1`, base).href);
+    await waitForPageContent(page);
     await assertAllCards();
     await assertAllPlayerValues(width);
     await assertScopeSelection("All Boss Attempts");
     assert.equal(await page.locator('a[href^="/encounters/"]').count(), 3);
     await toggleShortPulls(page, "Exclude short pulls");
     await page.waitForURL(new URL(policyReport, base).href);
+    await waitForPageContent(page);
     await assertAllCards();
     await assertAllPlayerValues(width);
     // Both scope links must support native keyboard navigation on mobile and desktop.
@@ -327,6 +333,7 @@ try {
     assert.equal(await scopeNavigation.getByRole("link", { name: "Successful Boss Fights", exact: true }).evaluate(element => document.activeElement === element), true);
     await page.keyboard.press("Enter");
     await page.waitForURL(new URL(`${policyReport}?scope=kills`, base).href);
+    await waitForPageContent(page);
     await assertScopeSelection("Successful Boss Fights");
     const defaultText = await page.locator("main").innerText();
     assert.match(defaultText, /1 short pull excluded/);
@@ -375,6 +382,7 @@ try {
     await page.screenshot({ path: path.join(out, `${width}-short-pulls-default.png`), fullPage: true });
     await toggleShortPulls(page, "Include short pulls");
     await page.waitForURL(new URL(`${policyReport}?scope=kills&includeShortPulls=1`, base).href);
+    await waitForPageContent(page);
     const includedText = await page.locator("main").innerText();
     assert.match(includedText, /1 short pull included/);
     await assertKillCards();
@@ -386,23 +394,30 @@ try {
     await page.screenshot({ path: path.join(out, `${width}-short-pulls-included.png`), fullPage: true });
     await includedKillView.getByRole("link", { name: "View SyntheticFirst's all-attempt raid report", exact: true }).click();
     await page.waitForURL(new URL(scopedPlayerPath, base).href);
+    await waitForPageContent(page);
     await page.locator(`a[href="${policyReport}?scope=kills&includeShortPulls=1"]`).first().click();
     await page.waitForURL(new URL(`${policyReport}?scope=kills&includeShortPulls=1`, base).href);
+    await waitForPageContent(page);
     await assertKillCards();
     const scopedEncounterPath = `/encounters/${policyKill.id}?scope=kills&includeShortPulls=1`;
     await page.locator(`a[href="${scopedEncounterPath}"]`).click();
     await page.waitForURL(new URL(scopedEncounterPath, base).href);
+    await waitForPageContent(page);
     await page.locator(`a[href="${policyReport}?scope=kills&includeShortPulls=1"]`).first().click();
     await page.waitForURL(new URL(`${policyReport}?scope=kills&includeShortPulls=1`, base).href);
+    await waitForPageContent(page);
     await assertKillCards();
     await page.getByRole("navigation", { name: "Boss fight scope", exact: true }).getByRole("link", { name: "All Boss Attempts", exact: true }).click();
     await page.waitForURL(new URL(`${policyReport}?includeShortPulls=1`, base).href);
+    await waitForPageContent(page);
     await assertAllCards();
     await assertAllPlayerValues(width);
     await page.getByRole("navigation", { name: "Boss fight scope", exact: true }).getByRole("link", { name: "Successful Boss Fights", exact: true }).click();
     await page.waitForURL(new URL(`${policyReport}?scope=kills&includeShortPulls=1`, base).href);
+    await waitForPageContent(page);
     await toggleShortPulls(page, "Exclude short pulls");
     await page.waitForURL(new URL(`${policyReport}?scope=kills`, base).href);
+    await waitForPageContent(page);
     await assertKillCards();
     assert.equal(await page.locator('a[href^="/encounters/"]').count(), 2);
   }
@@ -410,21 +425,25 @@ try {
   for (const suffix of ["", "?scope=kills", "?includeShortPulls=1", "?scope=kills&includeShortPulls=1"]) {
     await page.goto(new URL(`${legacyPolicyReport}${suffix}`, base).href);
     await page.waitForURL(new URL(`${policyReport}${suffix}`, base).href);
+    await waitForPageContent(page);
     if (suffix.includes("scope=kills")) await assertKillCards();
     else await assertAllCards();
     await page.goto(new URL(`${legacyPolicyReport}/players/SyntheticFirst${suffix}`, base).href);
     await page.waitForURL(new URL(`${policyReport}/players/SyntheticFirst${suffix}`, base).href);
+    await waitForPageContent(page);
     assert.equal(await page.locator(`a[href="${policyReport}${suffix}"]`).count(), 1, "Legacy player redirects retain report scope and short-pull preferences in the return link");
   }
   const briefAttempt = policyEncounters.find(value => value.outcome === "WIPE" && value.durationMs < 10000);
   assert.ok(briefAttempt);
   assert.equal((await page.goto(new URL(`/encounters/${briefAttempt.id}`, base).href)).status(), 200);
+  await waitForPageContent(page);
   for (const route of ["/", "/raids", "/bosses", "/bosses/lord-marrowgar", "/weekly", "/players?class=Rogue", "/players/SyntheticFirst", `${policyReport}/players/SyntheticFirst`, `/encounters/${briefAttempt.id}`]) {
     const original = new URL(route, base);
     for (const included of [false, true]) {
       if (included) original.searchParams.set("includeShortPulls", "1");
       else original.searchParams.delete("includeShortPulls");
       await page.goto(original.href);
+      await waitForPageContent(page);
       assert.equal(await page.getByRole("link", { name: /^(Include|Exclude) short pulls$/, includeHidden: true }).count(), 0, `Short-pull controls belong only on the raid session page: ${original.pathname}`);
       assert.doesNotMatch(await page.locator("main").innerText(), /\d+ short pulls? (included|excluded)/, `Short-pull disclaimers belong only on the raid session page: ${original.pathname}`);
     }
@@ -433,9 +452,11 @@ try {
   observations.push({ check: "short-pull list toggles preserve both aggregate scopes; scope selection preserves short-pull preferences; player/encounter return links and legacy redirects retain scope", status: "pass" });
   observations.push({ check: "short-pull controls and exclusion disclaimers appear only on individual raid session pages, with either query preference", status: "pass" });
   await page.goto(new URL(report, base).href);
+  await waitForPageContent(page);
   await page.keyboard.press("Tab");
   assert.notEqual(await page.evaluate(() => document.activeElement?.tagName), "BODY");
   await page.goto(base.href);
+  await waitForPageContent(page);
   await page.getByLabel("Character", { exact: false }).fill("Synthetic Auditor");
   await context.route("**/api/upload?**", async route => {
     await new Promise(resolve => setTimeout(resolve, 400));
@@ -449,9 +470,11 @@ try {
   await page.getByText("Report Already Exists", { exact: true }).waitFor();
   await page.getByRole("link", { name: "View raid report", exact: true }).click();
   await page.waitForURL(new URL(report, base).href);
+  await waitForPageContent(page);
   assert.match(await page.locator("main").innerText(), /54\.00K/);
   observations.push({ check: "native file chooser, announced progress and duplicate report navigation", status: "pass" });
   await page.goto(base.href);
+  await waitForPageContent(page);
   await page.getByLabel("Character", { exact: false }).fill("Synthetic Auditor");
   const invalidChooser = page.waitForEvent("filechooser");
   await page.getByRole("button", { name: "Choose File", exact: true }).click();
@@ -469,6 +492,7 @@ try {
   const credentials = JSON.parse(fixture.stdout);
   const loginPassword = async () => {
     await page.goto(new URL("/admin/login", base).href);
+    await waitForPageContent(page);
     await page.getByLabel("Email address", { exact: true }).fill(credentials.email);
     await page.getByLabel("Password", { exact: true }).fill(credentials.password);
     await page.getByRole("button", { name: "Continue", exact: true }).click();
@@ -491,6 +515,7 @@ try {
   })).status, 404);
   await loginPassword();
   await page.waitForURL(new URL("/admin/enroll", base).href);
+  await waitForPageContent(page);
   const enrollmentCookie = await cookieHeader();
   await assertPrivateDenied(enrollmentCookie);
   await page.getByLabel("Password", { exact: true }).fill(credentials.password);
@@ -506,11 +531,13 @@ try {
   await page.getByRole("checkbox", { name: "I have saved these recovery codes somewhere safe." }).check();
   await page.getByRole("button", { name: "Finish and sign in", exact: true }).click();
   await page.waitForURL(new URL("/admin/login", base).href);
+  await waitForPageContent(page);
   await loginPassword();
   await page.getByRole("button", { name: "Use a recovery code", exact: true }).click();
   await page.getByLabel("Recovery code", { exact: true }).fill(recoveryCodes[0]);
   await page.getByRole("button", { name: "Sign in", exact: true }).click();
   await page.waitForURL(new URL("/admin", base).href);
+  await waitForPageContent(page);
   assert.match(await page.locator("main").innerText(), /Diagnostics/i);
   await page.evaluate(axe);
   const adminViolations = await page.evaluate(async () => (await window.axe.run(document,
@@ -522,6 +549,7 @@ try {
     await page.setViewportSize({ width, height: 1000 });
     for (const route of ["/admin", "/admin/uploads", `/admin/uploads/${first.uploadId}`, "/admin/security"]) {
       await page.goto(new URL(route, base).href, { waitUntil: "load" });
+      await waitForPageContent(page);
       await page.evaluate(() => document.fonts.ready);
       assert.equal(new URL(page.url()).pathname, route, "Authenticated admin route remains accessible");
       assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth), false, `Admin overflow: ${width} ${route}`);
@@ -536,8 +564,10 @@ try {
   }
   const fullCookie = await cookieHeader();
   await page.goto(new URL("/admin/security", base).href);
+  await waitForPageContent(page);
   await page.getByRole("button", { name: "Sign out all devices", exact: true }).click();
   await page.waitForURL(new URL("/admin/login", base).href);
+  await waitForPageContent(page);
   await assertPrivateDenied(fullCookie);
   await loginPassword();
   await page.getByRole("button", { name: "Use a recovery code", exact: true }).click();
@@ -548,9 +578,12 @@ try {
   await page.getByLabel("Recovery code", { exact: true }).fill(recoveryCodes[1]);
   await page.getByRole("button", { name: "Sign in", exact: true }).click();
   await page.waitForURL(new URL("/admin", base).href);
+  await waitForPageContent(page);
   await page.goto(new URL("/admin/security", base).href);
+  await waitForPageContent(page);
   await page.getByRole("button", { name: "Sign out this device", exact: true }).click();
   await page.waitForURL(new URL("/admin/login", base).href);
+  await waitForPageContent(page);
   observations.push({ check: "admin diagnostics, revoked-session denial, one-use recovery codes and logout; no raid mutations", status: "pass" });
 } finally {
   await browser.close();

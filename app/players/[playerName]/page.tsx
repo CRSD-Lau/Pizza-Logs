@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { Suspense } from "react";
+import { PageLoading } from "@/components/ui/PageLoading";
 import { notFound } from "next/navigation";
 import { db } from "@/lib/db";
 import { StatCard, StatGroup } from "@/components/ui/StatCard";
@@ -49,7 +50,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   });
 }
 
-export default async function PlayerPage({ params, searchParams }: Props) {
+async function getPlayerPageContext({ params, searchParams }: Props) {
   const { playerName } = await params;
   const name = playerName;
   const search = await searchParams;
@@ -101,6 +102,21 @@ export default async function PlayerPage({ params, searchParams }: Props) {
 
   const profile = resolvePlayerProfile({ player, rosterMember });
   if (!profile) notFound();
+  return { profile, player, includeShortPulls, querySuffix, search };
+}
+
+export default async function PlayerPage(props: Props) {
+  const data = await getPlayerPageContext(props);
+  return (
+    <Suspense fallback={<PageLoading message="Loading player..." />}>
+      <PlayerContent data={data} />
+    </Suspense>
+  );
+}
+
+async function PlayerContent({ data }: { data: Awaited<ReturnType<typeof getPlayerPageContext>> }) {
+  const { player, includeShortPulls, querySuffix, search } = data;
+  const profile = { ...data.profile };
   const identity = await getStoredPlayerIdentity(profile.name, profile.realmName, profile.className);
   profile.className = identity.className;
   profile.raceName = identity.raceName ?? profile.raceName;

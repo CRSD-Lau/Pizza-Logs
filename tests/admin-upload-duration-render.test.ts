@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import fs from "node:fs";
 import Module from "node:module";
 import path from "node:path";
-import { renderToStaticMarkup } from "react-dom/server";
+import { renderPage } from "./helpers/render-page";
 
 const encounter = (id: string, sessionIndex: number, durationMs: number | null, durationSeconds: number, totalDamage = 2_000) => ({
   id, sessionIndex, durationMs, durationSeconds, totalDamage,
@@ -44,7 +44,7 @@ async function main() {
     const { default: Page } = require("../app/admin/uploads/[id]/page") as typeof import("../app/admin/uploads/[id]/page");
     const render = async () => {
       authorized = false;
-      return renderToStaticMarkup(await Page({ params: Promise.resolve({ id: "synthetic-upload" }) }));
+      return await renderPage(await Page({ params: Promise.resolve({ id: "synthetic-upload" }) }));
     };
     const precise = await render();
     assert.equal((precise.match(/>2:02</g) ?? []).length, 2, "Upload and session totals must sum milliseconds before formatting");

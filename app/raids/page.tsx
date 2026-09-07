@@ -1,4 +1,6 @@
 import Link from "next/link";
+import { Suspense } from "react";
+import { PageLoading } from "@/components/ui/PageLoading";
 import { db } from "@/lib/db";
 import { DatabaseUnavailable } from "@/components/ui/DatabaseUnavailable";
 import { EmptyState } from "@/components/ui/EmptyState";
@@ -53,9 +55,19 @@ async function getRaidUploads(requestedPage: number) {
   return { uploads, totalUploads, pagination };
 }
 
-export default async function RaidsPage({ searchParams }: {
+interface Props {
   searchParams: Promise<{ page?: DirectoryQueryValue; includeShortPulls?: DirectoryQueryValue }>;
-}) {
+}
+
+export default function RaidsPage(props: Props) {
+  return (
+    <Suspense fallback={<PageLoading message="Loading raids..." />}>
+      <RaidsPageContent {...props} />
+    </Suspense>
+  );
+}
+
+async function RaidsPageContent({ searchParams }: Props) {
   const params = await searchParams;
   const includeShortPulls = parseIncludeShortPulls(params.includeShortPulls);
   const querySuffix = includeShortPulls ? "?includeShortPulls=1" : "";

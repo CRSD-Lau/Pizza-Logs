@@ -15,6 +15,14 @@ The gate runs ESLint with zero warnings, TypeScript 7 native checking, TypeScrip
 
 Database integration tests skip explicitly when `TEST_DATABASE_URL` is absent. The Python-to-web contract test skips when `PARSER_CONTRACT_PYTHON` is absent. A passing local gate with those skips does not prove database behavior or the cross-service contract. CI supplies both variables.
 
+Page-render fixtures await the complete React stream before checking page values,
+filters and links. The loading-state fixture separately holds the existing home
+statistics queries pending, verifies that the shared fallback streams first, then
+releases the queries and checks that the real page follows without extra queries.
+For visual acceptance, inspect initial loading and navigation at mobile and desktop
+widths, including reduced motion; keep the existing redirect and missing-page
+status checks enabled.
+
 Run one TypeScript test with:
 
 ```bash
@@ -157,6 +165,12 @@ node scripts/players-directory-e2e.mjs
 ```
 
 Set `PIZZA_TEST_BASE_URL` and `DATABASE_URL` explicitly. The script creates and removes its own synthetic characters and Armory snapshots, tests class corrections, cross-realm isolation, pagination and filter preservation, and checks keyboard previews, short-screen scrolling, accessibility and overflow at 375, 768 and 1440 pixels. Screenshots and its result report are saved under `.test-artifacts/players-directory`. Class images and gear responses are controlled fixtures; actual Warmane data and icon availability require a separate live check.
+
+Browser acceptance waits for the visible page heading after navigation before
+checking report values, missing controls, layout or accessibility. The shared
+loading shell has no heading, so an updated URL or DOM-ready event alone does
+not establish that the page content has arrived. This semantic wait has a
+12-second limit and retains the existing content and HTTP-status assertions.
 
 The navigation audit allows up to 12 seconds for React's streamed fallback/content
 swap to settle before reporting duplicate IDs. It still examines hidden elements;
