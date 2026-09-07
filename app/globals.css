@@ -266,7 +266,7 @@
 @utility outcome-kill {
   /* ── Outcome badge ── */
   @apply inline-block text-xs font-bold px-2 py-0.5 rounded-xs;
-  background: rgba(80, 160, 80, 0.15);
+  background: rgba(80, 160, 80, 0.05);
   border: 1px solid rgba(80, 160, 80, 0.3);
   color: #50a050;
 }
