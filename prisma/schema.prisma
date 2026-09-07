@@ -268,6 +268,20 @@ model Player {
   @@map("players")
 }
 
+// Independent public Armory sections; failures never replace a healthy payload.
+model ArmoryProfileCache {
+  id            String   @id @default(cuid())
+  characterKey  String
+  realm         String
+  sectionKey    String
+  payload       Json?
+  fetchedAt     DateTime?
+  lastAttemptAt DateTime @default(now())
+
+  @@unique([characterKey, realm, sectionKey])
+  @@map("armory_profile_cache")
+}
+
 model ArmoryGearCache {
   id            String   @id @default(cuid())
   characterName String
