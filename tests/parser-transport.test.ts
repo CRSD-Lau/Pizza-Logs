@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 import { ParserResponseError, readBoundedJson, readParserResult, sanitizeParserStatus } from "../lib/parser-transport";
 import { parserPayload, testUploadId } from "./helpers/parser-payload";
+import { MAX_UPLOAD_BYTES } from "../lib/upload-security";
 
 const encode = (value: unknown) => `data: ${JSON.stringify(value)}\n\n`;
 function stream(value: string, chunkSize = 13) {
@@ -56,6 +57,23 @@ test("status payloads redact unknown errors and cannot expose arbitrary upstream
   assert.equal(result.errorCode, "PROCESSING_ERROR");
   assert.equal("debug" in result, false);
   assert.throws(() => sanitizeParserStatus({ detail: "private path" }, testUploadId), ParserResponseError);
+});
+
+test("parser completion and status accept the upload ceiling and reject one byte over", async () => {
+  const status = {
+    uploadId: testUploadId, state: "uploading",
+    createdAt: "2026-09-07T12:00:00Z", updatedAt: "2026-09-07T12:00:01Z",
+  };
+  for (const receivedBytes of [101 * 1024 * 1024, MAX_UPLOAD_BYTES]) {
+    const payload = { ...parserPayload(), receivedBytes };
+    const result = await readParserResult(stream(encode({ type: "done", data: payload })).body, testUploadId, () => undefined);
+    assert.equal(result.receivedBytes, receivedBytes);
+    assert.equal(sanitizeParserStatus({ ...status, receivedBytes }, testUploadId).receivedBytes, receivedBytes);
+  }
+  const receivedBytes = MAX_UPLOAD_BYTES + 1;
+  await assert.rejects(readParserResult(stream(encode({ type: "done", data: { ...parserPayload(), receivedBytes } })).body,
+    testUploadId, () => undefined), ParserResponseError);
+  assert.throws(() => sanitizeParserStatus({ ...status, receivedBytes }, testUploadId), ParserResponseError);
 });
 
 test("JSON status reader enforces byte limits", async () => {

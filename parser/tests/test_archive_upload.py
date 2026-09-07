@@ -7,6 +7,7 @@ import io
 import json
 import logging
 import os
+import subprocess
 import sys
 import threading
 import time
@@ -83,6 +84,60 @@ def test_magic_byte_mismatch_is_rejected(tmp_path: Path):
     assert exc_info.value.code == "MAGIC_MISMATCH"
 
 
+@pytest.mark.parametrize("configured_bytes", [None, "4096"])
+def test_upload_defaults_to_one_gib_and_preserves_configured_ceiling(configured_bytes: str | None):
+    environment = os.environ.copy()
+    environment.pop("UPLOAD_MAX_COMPRESSED_BYTES", None)
+    environment.pop("UPLOAD_MAX_UNCOMPRESSED_BYTES", None)
+    if configured_bytes is not None:
+        environment["UPLOAD_MAX_COMPRESSED_BYTES"] = configured_bytes
+    result = subprocess.run(
+        [sys.executable, "-c", "import archive_upload as a; print(a.MAX_COMPRESSED_BYTES, a.MAX_UNCOMPRESSED_BYTES)"],
+        cwd=Path(archive_upload.__file__).parent,
+        env=environment,
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+    assert list(map(int, result.stdout.split())) == [int(configured_bytes or 1024 ** 3), 1024 ** 3]
+
+
+@pytest.mark.parametrize("suffix", ["txt", "zip"])
+@pytest.mark.parametrize("extra_bytes", [0, 1])
+def test_one_gib_archive_admission_boundary_without_allocating_gib(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, suffix: str, extra_bytes: int,
+):
+    path = tmp_path / f"combat.{suffix}"
+    if suffix == "zip":
+        _zip(path, {"combat.txt": VALID_LOG})
+    else:
+        path.write_text(VALID_LOG, encoding="utf-8")
+    maximum = 1024 ** 3
+    monkeypatch.setattr(archive_upload, "MAX_COMPRESSED_BYTES", maximum)
+    monkeypatch.setattr(archive_upload, "MAX_UNCOMPRESSED_BYTES", maximum)
+    original_stat = Path.stat
+
+    def reported_stat(candidate: Path, *args, **kwargs):
+        actual = original_stat(candidate, *args, **kwargs)
+        if candidate != path:
+            return actual
+        # Exercise the real file-size admission check, then validate small real
+        # text/ZIP contents. This is boundary evidence, not a GiB load test.
+        values = list(actual)
+        values[6] = maximum + extra_bytes
+        return os.stat_result(values)
+
+    monkeypatch.setattr(Path, "stat", reported_stat)
+    if extra_bytes:
+        with pytest.raises(ArchiveValidationError) as result:
+            validate_upload(path, path.name)
+        assert result.value.code == "COMPRESSED_SIZE_LIMIT"
+    else:
+        selection = validate_upload(path, path.name)
+        assert selection.compressed_bytes == maximum
+        assert selection.uncompressed_bytes <= maximum
+
+
 def test_compressed_uncompressed_member_and_ratio_limits(tmp_path: Path, monkeypatch: pytest.MonkeyPatch):
     text_path = tmp_path / "combat.txt"
     text_path.write_text(VALID_LOG, encoding="utf-8")
@@ -90,7 +145,7 @@ def test_compressed_uncompressed_member_and_ratio_limits(tmp_path: Path, monkeyp
     with pytest.raises(ArchiveValidationError, match="compressed-size"):
         validate_upload(text_path, text_path.name)
 
-    monkeypatch.setattr(archive_upload, "MAX_COMPRESSED_BYTES", 100 * 1024 * 1024)
+    monkeypatch.setattr(archive_upload, "MAX_COMPRESSED_BYTES", 1024 * 1024 * 1024)
     archive = _zip(tmp_path / "limits.zip", {"one.txt": VALID_LOG, "two.txt": VALID_LOG})
     monkeypatch.setattr(archive_upload, "MAX_ARCHIVE_MEMBERS", 1)
     with pytest.raises(ArchiveValidationError) as exc_info:
@@ -200,6 +255,32 @@ async def test_upload_rejects_non_uuid_and_oversize_content_length():
     with pytest.raises(Exception) as too_large:
         await main.upload_archive_stream(str(uuid.uuid4()), request, "combat.txt", 2026)  # type: ignore[arg-type]
     assert getattr(too_large.value, "status_code", None) == 413
+
+
+@pytest.mark.anyio
+@pytest.mark.parametrize("extra_bytes", [0, 1])
+async def test_chunked_receive_enforces_exact_byte_ceiling_and_cleans_up(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, extra_bytes: int,
+):
+    body = VALID_LOG.encode()
+    slots = asyncio.Semaphore(1)
+    monkeypatch.setattr(main, "MAX_COMPRESSED_BYTES", len(body))
+    monkeypatch.setattr(main, "UPLOAD_TEMP_DIR", tmp_path)
+    monkeypatch.setattr(main, "_upload_slots", slots)
+    request = _StreamingRequest(body + b"\n" * extra_bytes, chunk_size=64)
+    request.headers.pop("content-length")
+    upload_id = str(uuid.uuid4())
+    if extra_bytes:
+        with pytest.raises(main.HTTPException) as result:
+            await main.upload_archive_stream(upload_id, request, "combat.txt", 2026)
+        assert result.value.status_code == 413
+    else:
+        response = await main.upload_archive_stream(upload_id, request, "combat.txt", 2026)
+        chunks = [event async for event in response.body_iterator]
+        done = next(event for event in _sse_events("".join(chunks)) if event["type"] == "done")
+        assert done["data"]["receivedBytes"] == len(body)
+    assert not slots.locked()
+    assert not list(tmp_path.iterdir())
 
 
 @pytest.mark.anyio

@@ -15,9 +15,9 @@ Enable advanced combat logging in the WoW client and start logging with `/combat
 
 The home page puts uploading before site statistics. **Watch guild intro** opens the optional cinematic; reduced-motion users choose whether to play it. Browser notification permission is requested only through the explicit notification control, and uploads work without it.
 
-The uploaded file may be at most 100 MiB; a ZIP may expand to at most 1 GiB. ZIPs must contain exactly one `.txt` or `.log` combat log and may include safe empty folders, up to 32 total entries. Programs, scripts, unrelated files, multiple logs, encryption, nested archives and unsupported compression are rejected. Archive contents are streamed without extracting a directory tree.
+The uploaded TXT, LOG or ZIP file may be at most 1 GiB; a ZIP may expand to at most 1 GiB. ZIP is recommended for faster transfer. ZIPs must contain exactly one `.txt` or `.log` combat log and may include safe empty folders, up to 32 total entries. Programs, scripts, unrelated files, multiple logs, encryption, nested archives and unsupported compression are rejected. Archive contents are streamed without extracting a directory tree.
 
-The complete file must contain recognizable combat-log records in UTF-8 or Windows-1252. Binary data, malformed records and logs that exceed processing complexity limits are rejected. Finish recording before uploading, keep the original file, and split very long logs into shorter valid recordings if needed. These checks reduce risk but do not constitute an antivirus scan or verify that combat events are authentic.
+The complete file must contain recognizable combat-log records in UTF-8 or Windows-1252. Binary data, malformed records and logs that exceed processing complexity limits are rejected. Being within the byte limit does not guarantee completion within processing or transfer time limits. Finish recording before uploading, keep the original file, and split very long logs into shorter valid recordings if needed. These checks reduce risk but do not constitute an antivirus scan or verify that combat events are authentic.
 
 ## Duplicate Uploads
 

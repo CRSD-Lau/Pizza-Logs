@@ -20,7 +20,7 @@ from combat_log_events import parse_combat_log_line
 
 
 MIB = 1024 * 1024
-MAX_COMPRESSED_BYTES = int(os.getenv("UPLOAD_MAX_COMPRESSED_BYTES", str(100 * MIB)))
+MAX_COMPRESSED_BYTES = int(os.getenv("UPLOAD_MAX_COMPRESSED_BYTES", str(1024 * MIB)))
 MAX_UNCOMPRESSED_BYTES = int(os.getenv("UPLOAD_MAX_UNCOMPRESSED_BYTES", str(1024 * MIB)))
 MAX_ARCHIVE_MEMBERS = int(os.getenv("UPLOAD_MAX_ARCHIVE_MEMBERS", "32"))
 MAX_COMPRESSION_RATIO = float(os.getenv("UPLOAD_MAX_COMPRESSION_RATIO", "200"))

@@ -8,7 +8,7 @@ The public upload path sends one bounded raw-byte request and receives Server-Se
 POST /api/upload?filename=raid.zip&fileSize=31621979&uploaderName=Name
 Content-Type: application/octet-stream
 X-Upload-ID: <lowercase UUIDv4 from crypto.randomUUID()>
-X-Upload-Policy-Version: 2026-09-06
+X-Upload-Policy-Version: 2026-09-07
 
 <raw file bytes>
 ```
@@ -17,7 +17,7 @@ The current policy version is defined in `lib/upload-policy.ts`. Missing/stale a
 
 Browser `Origin` must match the trusted `ADMIN_AUTH_URL` origin; cross-site/same-site Fetch Metadata is rejected. Missing Origin is allowed for non-browser clients carrying the policy header. Development permits loopback origins without configured auth; production browsers fail closed without a trusted origin. Host and forwarded-IP headers do not establish trust.
 
-The web route sanitizes the base filename, validates declared/content length against the 100 MiB ceiling, validates visible-text metadata, and requires a UUIDv4 plus octet-stream body. HTTP content encodings other than identity are rejected. Actual streamed bytes must exactly match the declared size and parser receipt before persistence. The stream retains backpressure; it is not buffered in memory. The web admits four active requests and 12 starts per 60 seconds per process, including failed admitted attempts, and returns 429 with `Retry-After: 60` when busy. It does not expose parser exception text.
+The web route sanitizes the base filename, validates declared/content length against the 1 GiB uploaded-file ceiling, validates visible-text metadata, and requires a UUIDv4 plus octet-stream body. HTTP content encodings other than identity are rejected. Actual streamed bytes must exactly match the declared size and parser receipt before persistence. The stream retains backpressure; it is not buffered in memory. The web admits four active requests and 12 starts per 60 seconds per process, including failed admitted attempts, and returns 429 with `Retry-After: 60` when busy. It does not expose parser exception text.
 
 ## Web to Parser
 
@@ -76,7 +76,7 @@ The additive upload provenance columns are nullable: `parserVersion`, `metricSch
 
 | Control | Default | Environment variable |
 | --- | ---: | --- |
-| Compressed bytes | 100 MiB | `UPLOAD_MAX_COMPRESSED_BYTES` |
+| Uploaded bytes (TXT, LOG or ZIP) | 1 GiB | `UPLOAD_MAX_COMPRESSED_BYTES` |
 | Selected/total uncompressed bytes | 1 GiB | `UPLOAD_MAX_UNCOMPRESSED_BYTES` |
 | Archive entries, including directories | 32 | `UPLOAD_MAX_ARCHIVE_MEMBERS` |
 | ZIP directory metadata read | 1 MiB | `UPLOAD_MAX_ARCHIVE_METADATA_BYTES` |
@@ -90,6 +90,8 @@ The additive upload provenance columns are nullable: `parserVersion`, `metricSch
 | Retained progress states | 256, at least upload concurrency | `UPLOAD_STATE_LIMIT` |
 | Abandoned-file retention | 1 hour | `UPLOAD_ABANDONED_SECONDS` |
 
+The uploaded-file default was raised from 100 MiB to 1 GiB after inspecting the [live UwU upload page](https://uwu-logs.xyz/upload) and its [deployed upload script](https://uwu-logs.xyz/static/upload.js?v=240928-1) on 2026-09-07. UwU's browser archive cap was `1024 ** 4` bytes (1 TiB); that is not evidence of tested backend capacity at that size. Pizza Logs uses a bounded 1 GiB upload limit aligned with its existing expanded-log limit, rather than claiming literal limit parity. ZIP is recommended for faster transfer. A file within the byte limit can still exceed complexity or time limits.
+
 The web request has a 270-second total parser deadline and a 300-second route budget. The parser phase limits are individual upper bounds, not a promise that their sum fits the caller deadline. Slow receive, validation or classification can therefore cause the web caller to cancel before the parser's later phase timeout. Disconnects cancel the upstream request; worker ownership and cleanup still finish in the parser. PostgreSQL persistence uses a 60-second transaction limit and 10-second acquisition limit per attempt. A successful parser response near the web deadline can leave insufficient time for persistence; no durable job queue or resumable guarantee is claimed.
 
 Accepted suffixes are `.txt`, `.log`, and `.zip`, case-insensitively. ZIP magic must match, and a ZIP must contain exactly one regular `.txt` or `.log` combat log plus optional safe empty folders. Multiple logs, unrelated files and nonempty directory entries are rejected. ZIP members must use stored (uncompressed) or deflate compression; other methods are rejected before decompression because their Python readers do not provide the same bounded-output guarantees. Re-save an unsupported ZIP using standard deflate compression or upload the text log directly. Validation also rejects unsafe paths (including directories), symlinks/special files, encrypted members, duplicate member names, nested archives, excess entries/metadata, excess size, and excess per-member/total compression ratio. Archive paths are never extracted.
@@ -98,7 +100,7 @@ Admission validates the entire text as UTF-8 (optional BOM) or Windows-1252 befo
 
 ## Operational Signals
 
-`GET /health` reports event-loop liveness. `GET /ready` returns 503 when the temporary directory is unavailable, not writable, or lacks space for one maximum-size upload. This checks local storage only; it does not assert web/database health or guarantee a later allocation. Saturated upload admission returns 429 independently of readiness.
+`GET /health` reports event-loop liveness. `GET /ready` returns 503 when the temporary directory is unavailable, not writable, or lacks space for one maximum-size upload. Four concurrent uploads can hold up to 4 GiB of input files with the defaults; readiness checks space for only one, not the full concurrent allocation. This checks local storage only; it does not assert web/database health or guarantee a later allocation. Saturated upload admission returns 429 independently of readiness.
 
 Structured parser logs correlate completion/rejection/timeout/error events using the validated upload UUID. Completion includes byte count, encounter count and stage timings. Logs omit original filenames, raw log lines, player names, exception messages and filesystem paths. Operational counters remain process-local; fleet metrics and durable tracing require external collection.
 

@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { PageHeader, PageSection, PageShell } from "@/components/ui/PageLayout";
 import { buildPageMetadata } from "@/lib/page-metadata";
+import { MAX_UPLOAD_SIZE_LABEL } from "@/lib/upload-security";
 import { BUG_REPORT_URL, PRIVACY_NOTICE_URL, SECURITY_REPORT_URL, UPLOAD_POLICY_VERSION } from "@/lib/upload-policy";
 
 export const metadata = buildPageMetadata({ title: "Upload rules and reporting", description: "Combat-log upload rules, public data notice and how to report a bug in Pizza Logs.", path: "/upload-policy" });
@@ -13,7 +14,7 @@ export default function UploadPolicyPage() {
         <PageSection title="Only upload combat logs">
           <ul className="list-disc space-y-2 pl-5">
             <li>Upload a genuine WoW/Warmane combat log you have permission to share: a plain <code>.txt</code> or <code>.log</code> file, or a ZIP containing exactly one such log.</li>
-            <li>The uploaded file must be at most 100 MiB. A ZIP may expand to at most 1 GiB. Split longer recordings into separate valid logs before uploading.</li>
+            <li>The uploaded file must be at most {MAX_UPLOAD_SIZE_LABEL}. A ZIP may expand to at most 1 GiB. ZIP is recommended for faster uploads. Processing limits still apply; split longer recordings into separate valid logs if needed.</li>
             <li>Do not include programs, scripts, malware, unrelated files, nested archives or password-protected content. Do not send fabricated logs, injection payloads, spam or repeated requests intended to disrupt the service.</li>
             <li>Do not upload account credentials, chat exports, personal documents or other private information. A renamed file is still subject to content checks.</li>
           </ul>

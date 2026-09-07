@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useDropzone } from "react-dropzone";
 import { Button } from "@/components/ui/Button";
 import type { UploadResponse } from "@/lib/schema";
-import { MAX_UPLOAD_BYTES } from "@/lib/upload-security";
+import { MAX_UPLOAD_BYTES, MAX_UPLOAD_SIZE_LABEL, UPLOAD_SIZE_ERROR } from "@/lib/upload-security";
 import { BUG_REPORT_URL, SECURITY_REPORT_URL, UPLOAD_POLICY_HEADER, UPLOAD_POLICY_VERSION } from "@/lib/upload-policy";
 import { cn, formatCountLabel, formatInteger, formatPercent, formatRate, formatSeconds } from "@/lib/utils";
 import { requestUploadNotifications, sendUploadNotification } from "./notifications";
@@ -57,7 +57,7 @@ export function UploadZone({ onComplete }: UploadZoneProps) {
         message: "",
         elapsed: 0,
         stalled: false,
-        error: "File exceeds the 100 MiB compressed upload limit.",
+        error: UPLOAD_SIZE_ERROR,
       });
       return;
     }
@@ -112,7 +112,7 @@ export function UploadZone({ onComplete }: UploadZoneProps) {
         const messages: Record<number, string> = {
           400: "The upload request is invalid. Check the file and upload rules, then try again.",
           403: "This upload could not be verified. Reload Pizza Logs and try again.",
-          413: "File exceeds the 100 MiB upload limit.",
+          413: UPLOAD_SIZE_ERROR,
           428: "The upload rules have changed. Reload this page and review them before uploading.",
           429: "Upload capacity is busy. Wait a minute before trying again.",
         };
@@ -216,7 +216,7 @@ export function UploadZone({ onComplete }: UploadZoneProps) {
     },
     multiple: false,
     maxSize: MAX_UPLOAD_BYTES,
-    onDropRejected: () => setState({ stage: "error", progress: 0, message: "", elapsed: 0, stalled: false, error: "Choose one TXT, LOG or ZIP combat log, at most 100 MiB." }),
+    onDropRejected: () => setState({ stage: "error", progress: 0, message: "", elapsed: 0, stalled: false, error: `Choose one TXT, LOG or ZIP combat log, at most ${MAX_UPLOAD_SIZE_LABEL}.` }),
     disabled: state.stage === "uploading" || isLocked,
   });
 
@@ -304,7 +304,8 @@ export function UploadZone({ onComplete }: UploadZoneProps) {
             <Button variant="solid" size="md" onClick={(event) => { event.stopPropagation(); open(); }} disabled={isLocked}>
               Choose File
             </Button>
-            <p className="text-xs text-text-secondary mt-3">TXT, LOG, or ZIP with one log · up to 100 MiB</p>
+            <p className="text-xs text-text-secondary mt-3">TXT, LOG, or ZIP with one log · up to {MAX_UPLOAD_SIZE_LABEL}</p>
+            <p className="text-xs text-text-secondary mt-1">ZIP recommended for faster uploads · up to 1 GiB uncompressed</p>
           </div>
         </div>
       )}

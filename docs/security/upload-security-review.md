@@ -29,7 +29,7 @@ Other changes require the current policy version server-side before processing, 
 ## Controls Verified
 
 - Upload bytes are never executed, imported as code or served for public download. Archive paths are not extracted. Server-generated file tokens determine temporary paths.
-- Existing 100 MiB upload, 1 GiB expansion, 200:1 ratio, 32-entry, 1 MiB ZIP-directory and bounded-line controls remain in force. Both services count bytes; declared metadata is not trusted.
+- At the 2026-09-06 review, the upload ceiling was 100 MiB, with 1 GiB expansion, 200:1 ratio, 32-entry, 1 MiB ZIP-directory and bounded-line controls. Both services count bytes; declared metadata is not trusted. The 2026-09-07 change raises only the uploaded-file default to 1 GiB for TXT, LOG and ZIP; the other controls remain unchanged. See the [upload protocol](../archive-upload-protocol.md#limits) for the live UwU comparison and bounded-limit rationale.
 - Queued work can be cancelled; actual parser worker ownership holds the admission slot and file until work ends. Cleanup does not unlink a file still owned by a worker.
 - The public status proxy separately limits eight active requests and 600 starts per minute per process, with a five-second upstream deadline and an 8 MiB response cap.
 - Prisma persistence uses parameterized operations, schema validation and atomic transactions. No upload-to-shell/eval/unsafe-deserialization or injectable raw-SQL path was found. React escapes displayed names; raw upload text is not rendered as HTML.
@@ -44,6 +44,7 @@ Other changes require the current policy version server-side before processing, 
 3. **Long-term storage is not capped.** Parsed reports remain until a maintainer removes them. Rate limits slow growth but do not set a lifetime database/billing ceiling. Monitoring, retention and a storage quota remain operational decisions; no automatic deletion or plan upgrade was introduced.
 4. **Compatibility is stricter.** ZIPs containing multiple logs or extra files now fail. Malformed, truncated, unknown-event or exceptionally complex logs can be rejected. Finish recording, preserve originals, and report a sanitized example of a rejected genuine log. Existing stored reports are not reparsed or rewritten. The existing direct-streaming restart/reupload boundary remains unchanged.
 5. **Disclaimers are explanatory.** The upload acknowledgement explains permitted content, permission to share and public visibility. The bug notice explains possible errors and reporting. Neither is represented as a legally reviewed waiver, an authenticated consent record, or a security guarantee.
+6. **Larger input capacity needs disk headroom.** With the 2026-09-07 default, four concurrent uploads can hold up to 4 GiB of temporary input files. `/ready` checks space for one maximum-size upload only, without reserving capacity. The unchanged complexity and time limits can still reject a file below 1 GiB; the dated benchmark below does not validate worst-case or maximum-size uploads.
 
 ## Validation and Release Gate
 

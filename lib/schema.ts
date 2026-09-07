@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { MAX_UPLOAD_BYTES } from "./upload-security";
 
 const label = z.string().min(1).max(256);
 const amount = z.number().nonnegative().max(Number.MAX_SAFE_INTEGER);
@@ -177,7 +178,7 @@ export const ParseResultSchema = z.object({
   sessionDamage: z.record(sessionKey, combatAmount).optional().default({}),
   sessionAnalytics: z.record(sessionKey, SessionAnalyticsSchema).optional().default({}),
   uploadId:      z.string().uuid().optional(),
-  receivedBytes: count.max(100 * 1024 * 1024).optional(),
+  receivedBytes: count.max(MAX_UPLOAD_BYTES).optional(),
   uploadTimings: z.record(label, amount).optional(),
   provenance: ParserProvenanceSchema.optional(),
 });

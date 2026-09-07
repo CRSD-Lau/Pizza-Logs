@@ -5,6 +5,7 @@ import path from "node:path";
 import { test } from "node:test";
 import { NextRequest } from "next/server";
 import { UPLOAD_POLICY_HEADER, UPLOAD_POLICY_VERSION } from "../lib/upload-policy";
+import { MAX_UPLOAD_BYTES } from "../lib/upload-security";
 import { parserPayload, testUploadId } from "./helpers/parser-payload";
 
 test("public upload boundary rejects abuse before parser/database access and validates complete streaming", async context => {
@@ -74,7 +75,7 @@ test("public upload boundary rejects abuse before parser/database access and val
       { input: { headers: { "content-encoding": "gzip" } }, status: 400 },
       { input: { headers: { "content-length": "4" } }, status: 400 },
       { input: { params: { fileSize: "0" } }, status: 400 },
-      { input: { params: { fileSize: "104857601" } }, status: 413 },
+      { input: { params: { fileSize: String(MAX_UPLOAD_BYTES + 1) } }, status: 413 },
       { input: { params: { uploaderName: "<script>" } }, status: 400 },
       { input: { params: { filename: "malware.exe" } }, status: 400 },
     ];
