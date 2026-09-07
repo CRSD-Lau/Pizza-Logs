@@ -12,6 +12,7 @@ import {
 } from "recharts";
 import { formatCompactNumber, formatRate } from "@/lib/utils";
 import { NumericValue } from "@/components/ui/NumericValue";
+import type { SessionPlayerMetric } from "@/lib/session-player-chart";
 
 export interface ChartPoint {
   bossName: string;
@@ -27,7 +28,7 @@ export interface PlayerLine {
 interface Props {
   data:    ChartPoint[];
   players: PlayerLine[];
-  metric:  "DPS" | "HPS";
+  metric:  SessionPlayerMetric;
 }
 
 type TooltipPayload = {
@@ -55,7 +56,7 @@ function CustomTooltip({
   active?: boolean;
   payload?: TooltipPayload[];
   label?: string;
-  metric: "DPS" | "HPS";
+  metric: SessionPlayerMetric;
 }) {
   if (!active || !payload?.length) return null;
   return (

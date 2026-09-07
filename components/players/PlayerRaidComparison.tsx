@@ -3,7 +3,7 @@
 import { useId, useTransition } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { PlayerRaidComparisonChart } from "@/components/charts/PlayerRaidComparisonChart";
-import { raidComparisonDifficultyLabel, type RaidComparisonData } from "@/lib/player-raid-comparison";
+import { RAID_COMPARISON_METRICS, resolveRaidComparisonMetric, raidComparisonDifficultyLabel, type RaidComparisonData, type RaidComparisonMetric } from "@/lib/player-raid-comparison";
 import { cn, formatCountLabel } from "@/lib/utils";
 
 const fieldClass = "min-h-11 w-full min-w-0 max-w-full rounded-sm border border-gold-dim bg-bg-card px-3 py-2 text-base text-text-primary focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-gold disabled:cursor-wait disabled:opacity-60";
@@ -17,14 +17,13 @@ export function PlayerRaidComparison({ data, playerName }: {
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const [pending, startTransition] = useTransition();
-  const metric = searchParams.get("comparisonMetric") === "HPS" ? "HPS" : "DPS";
+  const metric = resolveRaidComparisonMetric(searchParams.get("comparisonMetric"), data.runs);
   const raids = data.scopes.filter((scope, index, scopes) => scopes.findIndex(other => other.raidSlug === scope.raidSlug) === index);
   const difficulties = data.scopes.filter(scope => scope.raidSlug === data.raidSlug);
   const scope = data.scopes.find(item => item.raidSlug === data.raidSlug && item.difficulty === data.difficulty);
 
   function navigate(changes: Record<string, string | null>) {
     const query = new URLSearchParams(searchParams.toString());
-    query.set("comparisonMetric", metric);
     if (data.raidSlug) query.set("comparisonRaid", data.raidSlug);
     if (data.difficulty) query.set("comparisonDifficulty", data.difficulty);
     query.delete("comparisonFirst");
@@ -36,12 +35,12 @@ export function PlayerRaidComparison({ data, playerName }: {
     startTransition(() => router.replace(`${pathname}?${query}`, { scroll: false }));
   }
 
-  function chooseMetric(value: "DPS" | "HPS") {
+  function chooseMetric(value: RaidComparisonMetric) {
     const query = new URLSearchParams(searchParams.toString());
     query.set("comparisonMetric", value);
     query.delete("comparisonFirst");
     query.delete("comparisonSecond");
-    // Both rates are already loaded. Next syncs this with useSearchParams
+    // All rates are already loaded. Next syncs this with useSearchParams
     // without another database request, and reloads/shared URLs keep the metric.
     window.history.replaceState(null, "", `${pathname}?${query}${window.location.hash}`);
   }
@@ -76,11 +75,11 @@ export function PlayerRaidComparison({ data, playerName }: {
 
       <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
         <p className="text-sm text-text-secondary">{data.runs.length === 1 ? "" : "All "}{formatCountLabel(data.runs.length, "recorded raid")} in this scope · Dates in UTC</p>
-        <div role="group" aria-label="Metric" className="inline-flex gap-1">
-          {(["DPS", "HPS"] as const).map(value => <button key={value} type="button" aria-pressed={metric === value} disabled={pending} onClick={() => chooseMetric(value)} className={cn(
-            "min-h-11 min-w-14 rounded-sm border px-3 py-2 text-sm font-semibold focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-gold disabled:opacity-60",
-            metric === value ? "border-gold bg-bg-panel text-gold-light" : "border-gold-dim text-text-secondary hover:border-gold hover:text-gold-light",
-          )}>{value}</button>)}
+        <div className="grid min-w-0 max-w-full gap-1.5">
+          <label htmlFor={`${id}-metric`} className="text-sm font-semibold text-text-secondary">Comparison metric</label>
+          <select id={`${id}-metric`} value={metric} disabled={pending} onChange={event => chooseMetric(event.target.value as RaidComparisonMetric)} className={fieldClass}>
+            {Object.entries(RAID_COMPARISON_METRICS).map(([value, item]) => <option key={value} value={value}>{item.label}</option>)}
+          </select>
         </div>
       </div>
 

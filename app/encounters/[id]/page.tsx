@@ -21,11 +21,11 @@ import { NumericValue } from "@/components/ui/NumericValue";
 import { buildPageMetadata } from "@/lib/page-metadata";
 import { parseIncludeShortPulls } from "@/lib/attempt-policy";
 import { parseDifficultyFilter, reportQueryString } from "@/lib/difficulty-filter";
-import { buildRaidSummaryQuery, parseRaidSummaryScope } from "@/lib/raid-summary-scope";
+import { buildRaidSummaryQuery, parseRaidSummaryScope, parseRaidMetricView } from "@/lib/raid-summary-scope";
 
 interface Props {
   params: Promise<{ id: string }>;
-  searchParams: Promise<{ includeShortPulls?: string | string[]; difficulty?: string | string[]; scope?: string | string[] }>;
+  searchParams: Promise<{ includeShortPulls?: string | string[]; difficulty?: string | string[]; scope?: string | string[]; raidMetrics?: string | string[] }>;
 }
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
@@ -51,7 +51,7 @@ async function getEncounterPageContext({ params, searchParams }: Props) {
   const includeShortPulls = parseIncludeShortPulls(query.includeShortPulls);
   const querySuffix = includeShortPulls ? "?includeShortPulls=1" : "";
   const scope = parseRaidSummaryScope(query.scope);
-  const raidQuerySuffix = buildRaidSummaryQuery(scope, includeShortPulls);
+  const raidQuerySuffix = buildRaidSummaryQuery(scope, includeShortPulls, parseRaidMetricView(query.raidMetrics));
   const difficulty = parseDifficultyFilter(query.difficulty);
   const comparisonQuerySuffix = reportQueryString({
     scope: scope === "kills" ? "kills" : undefined,
@@ -480,4 +480,3 @@ async function EncounterContent({ data }: { data: Awaited<ReturnType<typeof getE
     </div>
   );
 }
-

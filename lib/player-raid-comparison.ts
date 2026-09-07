@@ -1,6 +1,22 @@
 import { formatDateUtc, getRecordedDurationSeconds } from "@/lib/utils";
 import { WOTLK_BOSSES } from "@/lib/constants/bosses";
 import { DIFFICULTY_FILTERS } from "@/lib/difficulty-filter";
+import { getReportMetricView } from "@/lib/report-metric-view";
+
+export const RAID_COMPARISON_METRICS = {
+  DPS: { key: "dps", label: "DPS", description: "Damage per second" },
+  HPS: { key: "hps", label: "HPS", description: "Effective healing per second, excluding absorbs" },
+  APS: { key: "aps", label: "APS", description: "Attributed absorbs per second" },
+  HA: { key: "ha", label: "Healing + absorbs /s", description: "Effective healing plus attributed absorbs per second" },
+  DTPS: { key: "dtps", label: "DTPS", description: "Damage taken per second; assignments and fight conditions affect this value" },
+} as const;
+export type RaidComparisonMetric = keyof typeof RAID_COMPARISON_METRICS;
+
+export function resolveRaidComparisonMetric(value: string | null, runs: RaidComparisonRun[]): RaidComparisonMetric {
+  if (value && Object.hasOwn(RAID_COMPARISON_METRICS, value)) return value as RaidComparisonMetric;
+  const view = getReportMetricView(runs.flatMap(run => run.fights));
+  return view === "healing" ? "HA" : view === "tank" ? "DTPS" : "DPS";
+}
 
 export interface RaidComparisonScope {
   raidSlug: string;
@@ -22,6 +38,10 @@ export interface RaidComparisonFight {
   difficulty: string;
   dps: number | null;
   hps: number | null;
+  aps?: number | null;
+  ha?: number | null;
+  dtps?: number | null;
+  role?: string | null;
   spec: string | null;
 }
 
@@ -51,6 +71,9 @@ export interface RaidComparisonSessionSource {
 export interface RaidComparisonParticipantSource {
   dps: number | null;
   hps: number | null;
+  aps?: number | null;
+  damageTaken?: number | null;
+  role?: string | null;
   spec: string | null;
   encounter: {
     id: string;
@@ -69,6 +92,10 @@ export interface RaidComparisonChartValue {
   difficulty: string;
   dps: number | null;
   hps: number | null;
+  aps?: number | null;
+  ha?: number | null;
+  dtps?: number | null;
+  role?: string | null;
   encounterId: string;
   spec: string | null;
 }
@@ -148,7 +175,10 @@ export function buildRaidComparisonRuns(
     const encounter = participant.encounter;
     const fights = fightsBySession.get(raidComparisonSessionKey(encounter.uploadId, encounter.sessionIndex));
     if (!fights || fights.has(encounter.boss.slug)) continue;
-    const hasDuration = getRecordedDurationSeconds(encounter) !== null;
+    const duration = getRecordedDurationSeconds(encounter);
+    const hasDuration = duration !== null;
+    const hps = storedRate(participant.hps, hasDuration);
+    const aps = storedRate(participant.aps ?? null, hasDuration);
     fights.set(encounter.boss.slug, {
       encounterId: encounter.id,
       bossSlug: encounter.boss.slug,
@@ -156,7 +186,12 @@ export function buildRaidComparisonRuns(
       bossOrder: encounter.boss.sortOrder,
       difficulty: encounter.difficulty,
       dps: storedRate(participant.dps, hasDuration),
-      hps: storedRate(participant.hps, hasDuration),
+      hps,
+      aps,
+      ha: hps !== null && aps !== null ? hps + aps : null,
+      dtps: duration !== null && participant.damageTaken != null
+        ? storedRate(participant.damageTaken / duration, true) : null,
+      role: participant.role ?? null,
       spec: participant.spec,
     });
   }
@@ -189,7 +224,8 @@ export function buildRaidComparisonChart(runs: RaidComparisonRun[], raidSlug?: s
       values: Object.fromEntries(runs.map(run => {
         const fight = fightsByRun.get(run.key)!.get(boss.bossSlug);
         return [run.key, fight ? {
-          difficulty: fight.difficulty, dps: fight.dps, hps: fight.hps, encounterId: fight.encounterId, spec: fight.spec,
+          difficulty: fight.difficulty, dps: fight.dps, hps: fight.hps, aps: fight.aps,
+          ha: fight.ha, dtps: fight.dtps, role: fight.role, encounterId: fight.encounterId, spec: fight.spec,
         } : null];
       })),
     }));

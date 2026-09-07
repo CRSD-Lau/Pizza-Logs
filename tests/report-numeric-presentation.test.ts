@@ -34,7 +34,16 @@ const contains = (markup: string, value: string) => assert.ok(plainText(markup).
 async function main() {
   const loader = Module as typeof Module & { _resolveFilename: (request: string, parent: NodeModule | undefined, isMain: boolean, options?: unknown) => string };
   const originalResolve = loader._resolveFilename;
+  let navigationPath = "/raids/synthetic-report/sessions/2026-09-04";
+  let navigationSearch = new URLSearchParams();
   const exportsByName: Record<string, unknown> = {
+    "next/navigation": {
+      usePathname: () => navigationPath,
+      useSearchParams: () => navigationSearch,
+      useRouter: () => ({ replace: () => { throw new Error("Static numeric fixture must not navigate"); } }),
+      notFound: () => { throw new Error("Unexpected notFound in numeric fixture"); },
+      permanentRedirect: () => { throw new Error("Unexpected redirect in numeric fixture"); },
+    },
     "@/lib/db": { db },
     "@/lib/raid-session-routing.server": {
       getRaidSessionRouteByIndex: async () => route,
@@ -98,12 +107,14 @@ async function main() {
     assert.ok(targets.includes("&lt;0.01%"));
 
     const { SessionPlayerTable } = require("../components/reports/SessionPlayerTable") as typeof import("../components/reports/SessionPlayerTable");
+    navigationSearch = new URLSearchParams({ raidMetrics: "all" });
     const table = renderToStaticMarkup(React.createElement(SessionPlayerTable, { label: "Synthetic player metrics", rows: [
       { name: player.name, href: null, color: "var(--color-text-primary)", totalDamage: 1_393_100, dps: 13_931.2, heal: 0, healPerSecond: null, damageTaken: 0, dtps: 0 },
     ] }));
     contains(table, "1.39M"); contains(table, "13.93K"); contains(table, "Healing + absorbs /s");
     assert.ok(table.includes('<span class="sr-only">Unavailable</span>'));
     assert.ok(table.includes('<span class="tabular-nums">0.00</span>'), "Actual zero remains a measured value");
+    navigationSearch = new URLSearchParams();
 
     const { default: EncounterPage } = require("../app/encounters/[id]/page") as typeof import("../app/encounters/[id]/page");
     const encounterProps = { params: Promise.resolve({ id: encounter.id }), searchParams: Promise.resolve({}) };
@@ -134,7 +145,13 @@ async function main() {
     assert.ok(!session.includes("0K / 1W"));
 
     const { default: SessionPlayerPage } = require("../app/uploads/[id]/sessions/[sessionIdx]/players/[playerName]/page") as typeof import("../app/uploads/[id]/sessions/[sessionIdx]/players/[playerName]/page");
-    const detail = await renderPage(await SessionPlayerPage({ ...sessionProps, params: Promise.resolve({ id: "synthetic-report", sessionIdx: route.slug, playerName: player.name }) }));
+    navigationPath += `/players/${player.name}`;
+    const detailParams = Promise.resolve({ id: "synthetic-report", sessionIdx: route.slug, playerName: player.name });
+    const relevantDetail = await renderPage(await SessionPlayerPage({ ...sessionProps, params: detailParams }));
+    contains(relevantDetail, "13.93K DPS");
+    assert.ok(!plainText(relevantDetail).includes("15.50 HPS"), "Incidental healing stays secondary for a recorded damage role");
+    navigationSearch = new URLSearchParams({ metrics: "all" });
+    const detail = await renderPage(await SessionPlayerPage({ ...sessionProps, params: detailParams, searchParams: Promise.resolve({ metrics: "all" }) }));
     contains(detail, "The average on kills is unavailable"); contains(detail, "Avg DPS - Unavailable on kills");
     contains(detail, "Best DPS 13.93K single pull");
     contains(detail, "15.50 HPS"); contains(detail, "0.00 APS"); contains(detail, "1 death");

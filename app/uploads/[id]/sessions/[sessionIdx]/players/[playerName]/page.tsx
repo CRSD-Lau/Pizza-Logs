@@ -7,6 +7,8 @@ import { db } from "@/lib/db";
 import { AccordionSection } from "@/components/ui/AccordionSection";
 import { SectionNav } from "@/components/ui/SectionNav";
 import { PlayerAvatar } from "@/components/players/PlayerAvatar";
+import { PlayerMetricControls } from "@/components/players/PlayerMetricControls";
+import { SessionPlayerChartControls } from "@/components/players/SessionPlayerChartControls";
 import { SessionLineChart } from "@/components/charts/SessionLineChart";
 import type { ChartPoint, PlayerLine } from "@/components/charts/SessionLineChart";
 import { StatCard, StatGroup } from "@/components/ui/StatCard";
@@ -21,16 +23,18 @@ import { resolveRaidSession } from "@/lib/raid-session-routing.server";
 import { PIZZA_LOGS_ORIGIN } from "@/lib/site";
 import { buildPageMetadata } from "@/lib/page-metadata";
 import { getRevealClassName, getRevealStyle, orderBossDisplayEntries } from "@/lib/ui-animation";
-import { buildSessionPlayerMetricChart } from "@/lib/session-player-chart";
+import { buildSessionPlayerMetricChart, getSessionPlayerMetricLabel, resolveSessionPlayerMetric, SESSION_PLAYER_METRICS } from "@/lib/session-player-chart";
+import { getReportMetricView, getReportRoleLabel, parseShowAllMetrics } from "@/lib/report-metric-view";
+import { getSessionPlayerSummaryMetrics } from "@/lib/session-player-metrics";
 import { cn, formatCountLabel, formatDateTimeUtc, formatDuration, getRecordedDurationSeconds } from "@/lib/utils";
 import { NumericValue } from "@/components/ui/NumericValue";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { countAttempts, isShortPull, parseIncludeShortPulls } from "@/lib/attempt-policy";
-import { buildRaidSummaryQuery, parseRaidSummaryScope } from "@/lib/raid-summary-scope";
+import { buildRaidSummaryQuery, parseRaidMetricView, parseRaidSummaryScope } from "@/lib/raid-summary-scope";
 
 interface Props {
   params: Promise<{ id: string; sessionIdx: string; playerName: string }>;
-  searchParams: Promise<{ includeShortPulls?: string | string[]; scope?: string | string[] }>;
+  searchParams: Promise<{ includeShortPulls?: string | string[]; scope?: string | string[]; metrics?: string | string[]; chartMetric?: string | string[]; raidMetrics?: string | string[] }>;
 }
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
@@ -52,8 +56,17 @@ async function getSessionPlayerPageContext({ params, searchParams }: Props) {
   const { id, sessionIdx, playerName } = await params;
   const query = await searchParams;
   const includeShortPulls = parseIncludeShortPulls(query.includeShortPulls);
-  const querySuffix = includeShortPulls ? "?includeShortPulls=1" : "";
-  const raidQuerySuffix = buildRaidSummaryQuery(parseRaidSummaryScope(query.scope), includeShortPulls);
+  const showAll = parseShowAllMetrics(query.metrics);
+  const profileParams = new URLSearchParams();
+  if (includeShortPulls) profileParams.set("includeShortPulls", "1");
+  if (showAll) profileParams.set("metrics", "all");
+  const querySuffix = profileParams.size ? `?${profileParams.toString()}` : "";
+  const raidParams = new URLSearchParams(buildRaidSummaryQuery(parseRaidSummaryScope(query.scope), includeShortPulls, parseRaidMetricView(query.raidMetrics)));
+  if (showAll) raidParams.set("metrics", "all");
+  const raidQuerySuffix = raidParams.size ? `?${raidParams.toString()}` : "";
+  const chartChoice = Array.isArray(query.chartMetric) ? query.chartMetric[0] : query.chartMetric;
+  if (chartChoice && SESSION_PLAYER_METRICS.some(metric => metric === chartChoice)) raidParams.set("chartMetric", chartChoice);
+  const pageQuerySuffix = raidParams.size ? `?${raidParams.toString()}` : "";
   const name = playerName;
   const resolution = await resolveRaidSession(id, sessionIdx);
 
@@ -62,7 +75,7 @@ async function getSessionPlayerPageContext({ params, searchParams }: Props) {
   const { route: sessionRoute, uploadId, publicSlug } = resolution;
   const sessionPath = getRaidSessionPath(publicSlug, sessionRoute);
   if (resolution.isLegacyUploadId || resolution.isLegacyIndex) {
-    permanentRedirect(`${sessionPath}/players/${encodeURIComponent(name)}${raidQuerySuffix}`);
+    permanentRedirect(`${sessionPath}/players/${encodeURIComponent(name)}${pageQuerySuffix}`);
   }
 
   const sessionIndex = sessionRoute.sessionIndex;
@@ -112,6 +125,8 @@ async function getSessionPlayerPageContext({ params, searchParams }: Props) {
         totalDamage: p.totalDamage,
         totalHealing: p.totalHealing,
         totalAbsorbs: p.totalAbsorbs,
+        damageTaken: p.damageTaken,
+        role: p.role,
         spec: p.spec,
         deaths: p.deaths,
         critPct: p.critPct,
@@ -121,7 +136,7 @@ async function getSessionPlayerPageContext({ params, searchParams }: Props) {
 
   if (myStats.length === 0) notFound();
 
-  return { name, includeShortPulls, querySuffix, raidQuerySuffix, sessionRoute, uploadId, sessionPath, encounters, orderedEncounters, myStats, playerClass, classColor };
+  return { name, includeShortPulls, showAll, chartChoice, querySuffix, raidQuerySuffix, sessionRoute, uploadId, sessionPath, encounters, orderedEncounters, myStats, playerClass, classColor };
 }
 
 export default async function SessionPlayerPage(props: Props) {
@@ -134,7 +149,7 @@ export default async function SessionPlayerPage(props: Props) {
 }
 
 async function SessionPlayerContent({ data }: { data: Awaited<ReturnType<typeof getSessionPlayerPageContext>> }) {
-  const { name, includeShortPulls, querySuffix, raidQuerySuffix, sessionRoute, uploadId, sessionPath, encounters, orderedEncounters, myStats, playerClass, classColor } = data;
+  const { name, includeShortPulls, showAll, chartChoice, querySuffix, raidQuerySuffix, sessionRoute, uploadId, sessionPath, encounters, orderedEncounters, myStats, playerClass, classColor } = data;
   const upload = await db.upload.findUnique({
     where: { id: uploadId },
     select: {
@@ -161,20 +176,14 @@ async function SessionPlayerContent({ data }: { data: Awaited<ReturnType<typeof 
   const visibleStats = myStats.filter(entry => includeShortPulls || !shortPullIds.has(entry.encounterId));
 
   const kills = myStats.filter(e => e.outcome === "KILL");
-  const bestDps = Math.max(0, ...myStats.map(e => e.dps));
-  const bestHps = Math.max(0, ...myStats.map(e => e.hps));
-  const bestAps = Math.max(0, ...myStats.map(e => e.aps));
-  const bestHealAndAbsorbPs = Math.max(0, ...myStats.map(e => e.hps + e.aps));
-  const latestSpec = myStats.find((entry) => entry.spec)?.spec ?? null;
+  const latestSpec = myStats.toSorted((a, b) => b.startedAt.getTime() - a.startedAt.getTime()).find(entry => entry.spec)?.spec ?? null;
   const totalDeaths = myStats.reduce((sum, e) => sum + e.deaths, 0);
-
-  const isHealer = bestHps > bestDps * 0.7 && bestHps > 200;
-  const metric: "DPS" | "HPS" = isHealer ? "HPS" : "DPS";
-
-  const avgKillMetric = kills.length > 0
-    ? kills.reduce((sum, e) => sum + (metric === "DPS" ? e.dps : e.hps), 0) / kills.length
-    : null;
-  const bestMetric = metric === "DPS" ? bestDps : bestHps;
+  const defaultView = getReportMetricView(myStats);
+  const view = showAll ? "all" : defaultView;
+  const summaryMetrics = getSessionPlayerSummaryMetrics(myStats, view);
+  const metric = resolveSessionPlayerMetric(chartChoice, defaultView);
+  const metricLabel = getSessionPlayerMetricLabel(metric);
+  const showTank = view === "tank" || view === "all";
 
   const classmateNames = new Set<string>();
   for (const enc of encounters) {
@@ -244,36 +253,38 @@ async function SessionPlayerContent({ data }: { data: Awaited<ReturnType<typeof 
       ]} />
 
       <section aria-label="Player performance summary" className="space-y-4">
+        <PlayerMetricControls showAll={showAll} defaultView={defaultView} />
         <div className="flex flex-wrap items-baseline gap-x-5 gap-y-1 text-sm text-text-secondary">
           <span>Pulls <span className="ml-1 font-semibold tabular-nums text-text-primary"><NumericValue value={counts.totalPulls} /></span></span>
           <span>Kills <span className="ml-1 font-semibold tabular-nums text-text-primary"><NumericValue value={kills.length} /></span></span>
+          {view === "all" && <span>Deaths <span className="ml-1 font-semibold tabular-nums text-text-primary"><NumericValue value={totalDeaths} /></span></span>}
         </div>
-        <StatGroup columns={4}>
-          <StatCard label={`Best ${metric}`} value={<NumericValue value={bestMetric} kind="rate" />} sub="single pull" />
-          <StatCard label={`Avg ${metric}`} value={<NumericValue value={avgKillMetric} kind="rate" />} sub="on kills" />
-          <StatCard label="Best APS" value={<NumericValue value={bestAps} kind="rate" />} sub="single pull" />
-          <StatCard label="Best Healing + absorbs /s" value={<NumericValue value={bestHealAndAbsorbPs} kind="rate" />} sub="single pull" />
+        <StatGroup columns={view === "tank" ? 3 : 4}>
+          {summaryMetrics.filter(summary => view !== "all" || summary.label !== "Deaths").map(summary => <StatCard key={summary.label} label={summary.label} value={<NumericValue value={summary.value} kind={summary.kind} />} sub={summary.sub} />)}
         </StatGroup>
-        <p className="text-sm text-text-secondary">Best values use all recorded pulls in this session, including short pulls. The average gives each successful fight equal weight.</p>
+        <p className="text-sm text-text-secondary">Totals and best values use all recorded pulls in this session, including short pulls. Average DPS and HPS give each successful fight equal weight.</p>
+        {showTank && <p className="text-sm text-text-secondary">DTPS uses recorded damage taken divided by recorded encounter duration; the session value weights pulls by duration. Pulls without a valid duration are excluded from DTPS. Damage taken depends on assignment and encounter context.</p>}
         {kills.length === 0 && <p className="text-sm text-text-secondary">No successful fights were recorded for this player. The average on kills is unavailable.</p>}
       </section>
 
       {chartData.length > 1 && (
         <AccordionSection
           id="performance"
-          title={`${metric} by Successful Boss Fight`}
+          title={`${metricLabel} by Successful Boss Fight`}
           sub={
             classmateNames.size > 0
               ? `Winning boss fights, earliest first · Comparing ${name} vs ${[...classmateNames].join(", ")} (${playerClass})`
-              : `Winning boss fights, earliest first · ${name}'s ${metric}`
+              : `Winning boss fights, earliest first · ${name}'s ${metricLabel}`
           }
           defaultOpen
         >
           <div className="data-panel p-4">
+            <SessionPlayerChartControls metric={metric} />
             {counts.shortPulls > 0 && (
               <p className="mb-3 text-xs text-text-dim">This chart includes winning boss fights only, including short successful kills. Wipes are excluded.</p>
             )}
             <SessionLineChart data={chartData} players={chartPlayers} metric={metric} />
+            {metric === "DTPS" && <p className="mt-3 text-sm text-text-secondary">DTPS reflects damage taken during each fight. Compare assignments and encounter context; a lower value alone does not establish better tank performance.</p>}
           </div>
         </AccordionSection>
       )}
@@ -281,7 +292,12 @@ async function SessionPlayerContent({ data }: { data: Awaited<ReturnType<typeof 
       <AccordionSection id="encounters" title="Encounter Breakdown" sub="Earliest fight first · Times in UTC" count={visibleStats.length} defaultOpen>
         {visibleStats.length === 0 && <EmptyState title="No counted encounters" />}
         <div className="data-panel divide-y divide-gold-dim">
-          {visibleStats.map((e, index) => (
+          {visibleStats.map((e, index) => {
+            const rowView = showAll ? "all" : getReportMetricView([e]);
+            const showDamage = rowView !== "healing";
+            const showHealing = rowView === "healing" || rowView === "all";
+            const showTaken = rowView === "tank" || rowView === "all";
+            return (
             <Link
               key={e.encounterId}
               href={`/encounters/${e.encounterId}${raidQuerySuffix}`}
@@ -311,23 +327,29 @@ async function SessionPlayerContent({ data }: { data: Awaited<ReturnType<typeof 
                 <span className={cn("diff-badge", e.difficulty.endsWith("H") ? "heroic" : "normal")}>
                   {e.difficulty}
                 </span>
+                <span className="text-sm text-text-secondary">{e.spec ? `${e.spec} · ` : ""}{getReportRoleLabel(e)}</span>
               </div>
 
               <div className="space-y-2 tabular-nums text-text-secondary">
-                <div className="grid grid-cols-3 gap-3 text-sm lg:text-right">
-                  <span><NumericValue value={e.dps} kind="rate" /> DPS</span>
-                  <span><NumericValue value={e.hps} kind="rate" /> HPS</span>
-                  <span><NumericValue value={e.aps} kind="rate" /> APS</span>
+                <div className="grid grid-cols-2 gap-3 text-sm lg:text-right">
+                  {showDamage && <div><span className="block text-xs text-text-secondary">Damage</span><span className="block"><NumericValue value={e.totalDamage} kind="number" /></span><span className="block"><NumericValue value={e.dps} kind="rate" /> DPS</span></div>}
+                  {showHealing && <>
+                    <div><span className="block text-xs text-text-secondary">Effective healing</span><span className="block"><NumericValue value={e.totalHealing} kind="number" /></span><span className="block"><NumericValue value={e.hps} kind="rate" /> HPS</span></div>
+                    <div><span className="block text-xs text-text-secondary">Absorbs</span><span className="block"><NumericValue value={e.totalAbsorbs} kind="number" /></span><span className="block"><NumericValue value={e.aps} kind="rate" /> APS</span></div>
+                    <div><span className="block text-xs text-text-secondary">Healing + absorbs</span><span className="block"><NumericValue value={e.totalHealing + e.totalAbsorbs} kind="number" /></span><span className="block"><NumericValue value={e.hps + e.aps} kind="rate" /> Healing + absorbs /s</span></div>
+                  </>}
+                  {showTaken && <div><span className="block text-xs text-text-secondary">Damage taken</span><span className="block"><NumericValue value={e.damageTaken} kind="number" /></span><span className="block"><NumericValue value={e.duration !== null ? e.damageTaken / e.duration : null} kind="rate" /> DTPS</span></div>}
                 </div>
                 <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs lg:justify-end">
                   <span><NumericValue value={e.critPct} kind="percent" /> overall crit</span>
-                  {e.deaths > 0 && <span className="text-danger">{formatCountLabel(e.deaths, "death")}</span>}
+                  <span className={e.deaths > 0 ? "text-danger" : undefined}>{formatCountLabel(e.deaths, "death")}</span>
                   <span className="text-text-dim">{formatDuration(e.duration)} duration</span>
                   <span className="text-text-dim">{formatDateTimeUtc(e.startedAt)}</span>
                 </div>
               </div>
             </Link>
-          ))}
+            );
+          })}
         </div>
       </AccordionSection>
 

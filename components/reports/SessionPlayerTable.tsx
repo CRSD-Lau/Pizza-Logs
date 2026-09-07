@@ -1,7 +1,9 @@
 "use client";
 
-import { useId, useState } from "react";
+import { useId, useState, useTransition } from "react";
 import Link from "next/link";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { parseRaidMetricView, type RaidMetricView } from "@/lib/raid-summary-scope";
 import {
   nextSessionPlayerSort,
   sortSessionPlayers,
@@ -12,7 +14,7 @@ import {
 import { cn } from "@/lib/utils";
 import { NumericValue } from "@/components/ui/NumericValue";
 
-const columns: readonly { key: SessionPlayerSortKey; label: string; rate?: boolean }[] = [
+const allColumns: readonly { key: SessionPlayerSortKey; label: string; rate?: boolean }[] = [
   { key: "name", label: "Player" },
   { key: "totalDamage", label: "Total Damage" },
   { key: "dps", label: "DPS", rate: true },
@@ -46,21 +48,45 @@ function PlayerName({ row }: { row: SessionPlayerRow }) {
 }
 
 export function SessionPlayerTable({ rows, label }: { rows: SessionPlayerRow[]; label: string }) {
+  const pathname = usePathname();
+  const router = useRouter();
+  const [pending, startTransition] = useTransition();
+  const searchParams = useSearchParams();
+  const view = parseRaidMetricView(searchParams.get("raidMetrics"));
+  const columns = allColumns.filter(column => view === "all" || column.key === "name"
+    || (view === "damage" ? ["totalDamage", "dps"].includes(column.key) : ["heal", "healPerSecond"].includes(column.key)));
   const instanceId = useId();
   const selectId = `${instanceId}-sort`;
   const statusId = `${instanceId}-status`;
-  const [sort, setSort] = useState<SessionPlayerSort>({ key: "totalDamage", direction: "desc" });
+  const [chosenSort, setSort] = useState<SessionPlayerSort>({ key: "totalDamage", direction: "desc" });
+  const sort: SessionPlayerSort = columns.some(column => column.key === chosenSort.key) ? chosenSort
+    : { key: view === "healing" ? "heal" : "totalDamage", direction: "desc" };
   const sortedRows = sortSessionPlayers(rows, sort);
   const sortLabel = columns.find(column => column.key === sort.key)!.label;
   const directionLabel = sort.direction === "asc" ? "ascending" : "descending";
   const nextDirectionLabel = sort.direction === "asc" ? "descending" : "ascending";
 
   function chooseSort(key: SessionPlayerSortKey) {
-    setSort(current => nextSessionPlayerSort(current, key));
+    setSort(nextSessionPlayerSort(sort, key));
+  }
+
+  function chooseView(value: RaidMetricView) {
+    const query = new URLSearchParams(searchParams.toString());
+    if (value === "damage") query.delete("raidMetrics");
+    else query.set("raidMetrics", value);
+    setSort({ key: value === "healing" ? "heal" : "totalDamage", direction: "desc" });
+    startTransition(() => router.replace(`${pathname}${query.size ? `?${query}` : ""}${window.location.hash}`, { scroll: false }));
   }
 
   return (
-    <div className="space-y-2">
+    <div className="space-y-2" data-metric-view={view}>
+      <div role="group" aria-label={`${label}: metric view`} className="flex flex-wrap gap-1 px-4">
+        {(["damage", "healing", "all"] as const).map(value => <button
+          key={value} type="button" aria-pressed={view === value} disabled={pending} onClick={() => chooseView(value)}
+          className={cn("min-h-11 min-w-14 rounded-sm border px-3 py-2 text-sm font-semibold", focusClasses,
+            view === value ? "border-gold bg-bg-panel text-gold-light" : "border-gold-dim text-text-secondary hover:border-gold")}
+        >{value === "damage" ? "Damage" : value === "healing" ? "Healing" : "All"}</button>)}
+      </div>
       <div className="flex flex-wrap items-end gap-2 px-4 xl:hidden">
         <label htmlFor={selectId} className="min-w-0 flex-1 text-xs font-semibold text-text-secondary">
           Sort by

@@ -6,6 +6,7 @@ import {
   buildRaidComparisonSessions,
   raidComparisonSessionKey,
   raidComparisonDifficultyLabel,
+  resolveRaidComparisonMetric,
   type RaidComparisonParticipantSource,
 } from "../lib/player-raid-comparison";
 import { WOTLK_BOSSES } from "../lib/constants/bosses";
@@ -18,6 +19,27 @@ const participant = (id: string, overrides: Partial<RaidComparisonParticipantSou
     durationMs: 60_000, durationSeconds: 60,
     boss: { slug: "marrowgar", name: "Lord Marrowgar", sortOrder: 1 }, ...overrides,
   },
+});
+
+test("healing and tank comparison rates preserve zero, missing evidence and exact duration", () => {
+  const sessions = buildRaidComparisonSessions([source("upload", 0, "2026-09-06T18:00:00Z")]);
+  const run = (rates: Partial<RaidComparisonParticipantSource>, durationMs = 60_000) => buildRaidComparisonRuns(sessions, [
+    participant("fight", { durationMs, durationSeconds: 0 }, rates),
+  ]);
+  const healer = run({ role: "HEALER", spec: "Discipline Priest", hps: 100, aps: 500, damageTaken: 3000 });
+  assert.equal(healer[0].fights[0].ha, 600);
+  assert.equal(healer[0].fights[0].dtps, 50);
+  assert.equal(resolveRaidComparisonMetric(null, healer), "HA");
+  assert.equal(resolveRaidComparisonMetric("DPS", healer), "DPS", "An explicit choice always wins over role defaults");
+  const tank = run({ role: "TANK", spec: "Blood", hps: 0, aps: 0, damageTaken: 0 });
+  assert.equal(resolveRaidComparisonMetric(null, tank), "DTPS");
+  assert.equal(tank[0].fights[0].ha, 0);
+  assert.equal(tank[0].fights[0].dtps, 0);
+  assert.equal(buildRaidComparisonChart(tank)[0].values["upload:0"]?.dtps, 0);
+  assert.equal(resolveRaidComparisonMetric("bogus", run({ role: "DPS" })), "DPS");
+  const invalid = run({ hps: 100, aps: 500, damageTaken: 3000 }, 0)[0].fights[0];
+  assert.deepEqual([invalid.hps, invalid.aps, invalid.ha, invalid.dtps], [null, null, null, null]);
+  assert.equal(run({ hps: 100, aps: null })[0].fights[0].ha, null, "Missing absorbs cannot be silently treated as zero");
 });
 
 test("raid sessions retain upload and session identity with stable same-date labels", () => {
@@ -70,7 +92,7 @@ test("earliest successful boss kill wins, including short kills and stable times
   assert.equal(runs[0].fights.length, 1);
   assert.deepEqual(runs[0].fights[0], {
     encounterId: "same-time-a", bossSlug: "marrowgar", bossName: "Lord Marrowgar", bossOrder: 1,
-    difficulty: "25H", dps: 1000, hps: 25, spec: "Combat",
+    difficulty: "25H", dps: 1000, hps: 25, spec: "Combat", aps: null, ha: null, dtps: null, role: null,
   });
   assert.deepEqual(buildRaidComparisonRuns(sessions, [...participants].reverse()), runs);
 });

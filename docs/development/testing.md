@@ -68,10 +68,18 @@ while explicit exact-mode filters retain their original boundaries.
 The final `test:e2e` step runs `scripts/player-raid-comparison-e2e.mjs` against the
 disposable loopback stack. It creates UUID-owned synthetic raid/player/cache rows,
 checks all-raid defaults, highlighting without filtering, visibility recovery,
-DPS/HPS controls, mixed-mode full runs, all boss labels, gaps, paginated source
+metric selection, mixed-mode full runs, all boss labels, gaps, paginated source
 values with fight difficulty, realm isolation, and responsive accessibility,
 including the plot's contained horizontal scrolling, then removes only its own rows. Dense synthetic history exercises
 rendering and interaction without truncating plotted raids.
+
+`scripts/report-metrics-e2e.mjs` adds invocation-owned damage, healer, tank,
+mixed-role and unknown-role fixtures on the same disposable loopback stack.
+It checks focused defaults, Show all metrics, raid table views, URL persistence,
+all five comparison rates, measured zeros versus missing fights, and mobile and
+desktop accessibility. It removes only the records it created. The focused
+role/metric helpers and comparison integration tests cover conservative evidence,
+explicit preference precedence, exact durations and separate healing primitives.
 It supports the default test schema or a validated isolated schema, and records
 screenshots and results under `.test-artifacts/player-raid-comparison`.
 

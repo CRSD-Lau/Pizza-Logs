@@ -6,7 +6,7 @@ import React from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { renderPage } from "./helpers/render-page";
 
-let attempts: Array<{ id: string; dps: number; hps: number; aps: number; deaths: number; spec: null; encounter: {
+let attempts: Array<{ id: string; dps: number; hps: number; aps: number; totalDamage: number; totalHealing: number; totalAbsorbs: number; damageTaken: number; deaths: number; role: string; spec: string | null; encounter: {
   id: string; startedAt: Date; outcome: string; difficulty: string; durationSeconds: number; durationMs: number;
   boss: { name: string; slug: string; raid: string }; participants: Array<{ deaths: number }>;
 } }> = [];
@@ -16,7 +16,13 @@ const bossEncounters: Array<{
 }> = [];
 const boss = { id: "synthetic-boss", name: "Lord Marrowgar", slug: "lord-marrowgar", raid: "Icecrown Citadel", raidSlug: "icecrown-citadel", encounters: bossEncounters };
 const textContent = (markup: string) => markup.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim();
+let profileSearch: Record<string, string> = {};
 const mocks: Record<string, unknown> = {
+  "next/navigation": {
+    usePathname: () => "/players/Synthetic",
+    useSearchParams: () => new URLSearchParams(profileSearch),
+    notFound: () => { throw new Error("not found"); },
+  },
   "@/components/players/PlayerRaidComparisonSection": { PlayerRaidComparisonSection: () => null, PlayerRaidComparisonSkeleton: () => null },
   "@/lib/db": { db: {
     player: { findFirst: async () => ({ name: "Synthetic", class: "Mage", realm: { name: "Lordaeron" }, milestones: [] }) },
@@ -72,28 +78,56 @@ async function main() {
     assert.equal((chart.match(/scope="row"/g) ?? []).length, 4, "Every chart point has an accessible row using the same compact two-decimal format, including zero and missing data");
 
     const { default: PlayerPage } = require("../app/players/[playerName]/page") as typeof import("../app/players/[playerName]/page");
-    const profile = () => PlayerPage({ params: Promise.resolve({ playerName: "Synthetic" }), searchParams: Promise.resolve({}) });
+    const profile = () => PlayerPage({ params: Promise.resolve({ playerName: "Synthetic" }), searchParams: Promise.resolve(profileSearch) });
     const empty = await renderPage(await profile());
-    assert.equal((empty.match(/Unavailable/g) ?? []).length, 3);
+    assert.match(textContent(empty), /Best DPS - Unavailable/);
+    assert.match(textContent(empty), /Effective healing - Unavailable/);
     assert.match(empty, /No recorded attempts/);
     assert.match(empty, /No boss kills/);
-    attempts = [{ id: "recorded-zero", dps: 0, hps: 0, aps: 0, deaths: 0, spec: null, encounter: {
+    attempts = [{ id: "recorded-zero", dps: 0, hps: 0, aps: 0, totalDamage: 0, totalHealing: 0, totalAbsorbs: 0, damageTaken: 0, deaths: 0, role: "UNKNOWN", spec: null, encounter: {
       id: "zero", startedAt: new Date("2026-09-04T20:00:00Z"), outcome: "KILL", difficulty: "25N", durationSeconds: 80, durationMs: 80000,
       boss: { name: "Lord Marrowgar", slug: "lord-marrowgar", raid: "Icecrown Citadel" }, participants: [{ deaths: 0 }],
     } }];
     const zero = await renderPage(await profile());
     assert.doesNotMatch(zero, /Unavailable|No recorded attempts|No boss kills/);
     assert.match(zero, />0\.00<\/span>/);
-    assert.match(textContent(zero), /Best DPS: 0\.00 Best HPS: 0\.00/);
-    assert.match(textContent(zero), /0\.00 DPS 0\.00 HPS 0\.00 APS/);
+    assert.match(textContent(zero), /Best DPS: 0\.00/);
+    assert.match(textContent(zero), /Best HPS: 0\.00/);
+    assert.match(textContent(zero), /0\.00 DPS Effective healing: 0\.00 · 0\.00 HPS Absorbs: 0\.00 · 0\.00 APS/);
     attempts[0].hps = 50;
     const lowHealing = await renderPage(await profile());
     assert.match(textContent(lowHealing), /Best HPS: 50\.00/);
-    assert.match(textContent(lowHealing), /0\.00 DPS 50\.00 HPS 0\.00 APS/);
+    assert.match(textContent(lowHealing), /0\.00 DPS Effective healing: 0\.00 · 50\.00 HPS Absorbs: 0\.00 · 0\.00 APS/);
     attempts[0].encounter.outcome = "WIPE";
     const noKills = await renderPage(await profile());
-    assert.equal((noKills.match(/Unavailable/g) ?? []).length, 1, "Only the kill average is unavailable when a recorded zero-output wipe exists");
+    assert.equal((noKills.match(/Unavailable/g) ?? []).length, 2, "Only the DPS/HPS kill averages are unavailable when a recorded zero-output wipe exists");
     assert.match(noKills, /No boss kills/);
+
+    attempts[0].role = "DPS";
+    attempts[0].spec = "Combat";
+    const damageProfile = textContent(await renderPage(await profile()));
+    assert.doesNotMatch(damageProfile, /Best HPS:|Best APS:|Effective healing:/, "Self-healing does not change a recorded damage role's focused display");
+    assert.match(damageProfile, /Recorded role: Damage · Spec: Combat/);
+    profileSearch = { metrics: "all", comparisonMetric: "aps", comparisonDifficulty: "25H", realm: "Lordaeron" };
+    const allProfile = await renderPage(await profile());
+    assert.match(textContent(allProfile), /Best HPS: 50\.00/);
+    assert.match(allProfile, /href="\/players\/Synthetic\?comparisonMetric=aps&amp;comparisonDifficulty=25H&amp;realm=Lordaeron"/, "Returning to relevant metrics preserves the explicit chart metric and scope");
+    profileSearch = {};
+    attempts[0].role = "HEALER";
+    attempts[0].spec = "Discipline";
+    const healerProfile = textContent(await renderPage(await profile()));
+    assert.match(healerProfile, /Best HPS: 50\.00/);
+    assert.match(healerProfile, /Best APS: 0\.00/);
+    assert.doesNotMatch(healerProfile, /Best DPS/, "Healers lead with effective healing and explicit absorbs");
+    attempts[0].role = "TANK";
+    attempts[0].spec = "Protection";
+    attempts[0].encounter.durationMs = 0;
+    attempts[0].encounter.durationSeconds = 0;
+    const tankProfile = textContent(await renderPage(await profile()));
+    assert.match(tankProfile, /Damage taken 0\.00 - Unavailable DTPS/);
+    assert.match(tankProfile, /Best DPS/);
+    assert.match(tankProfile, /0 deaths/);
+    assert.doesNotMatch(tankProfile, /Best DTPS/);
 
     attempts = [];
     const { default: BossPage } = require("../app/bosses/[bossSlug]/page") as typeof import("../app/bosses/[bossSlug]/page");

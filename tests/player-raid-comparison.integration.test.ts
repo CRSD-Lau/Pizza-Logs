@@ -149,7 +149,7 @@ test("player raid comparison loads every complete run in the isolated player's e
       },
     }, "One lean detail query loads all runs for the player, raid, difficulty and successful outcome");
     assert.equal(detailQueries[0].take, undefined, "Recorded history is never truncated by an encounter cap");
-    assert.deepEqual(Object.keys(detailQueries[0].select!).sort(), ["dps", "encounter", "hps", "spec"]);
+    assert.deepEqual(Object.keys(detailQueries[0].select!).sort(), ["aps", "damageTaken", "dps", "encounter", "hps", "role", "spec"]);
     assert.doesNotMatch(JSON.stringify(detailQueries[0]), /spellBreakdown|targetBreakdown|absorbBreakdown|sessionAnalytics/);
 
     const normal = await getPlayerRaidComparison(observedDatabase, "subject", { raid: "icecrown-citadel", difficulty: "25N" });

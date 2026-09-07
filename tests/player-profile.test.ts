@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import {
   buildPlayerPerBossSummary,
+  buildPlayerPerformanceSummary,
   buildPlayerRecentEncounters,
   resolvePlayerProfile,
 } from "../lib/player-profile";
@@ -119,6 +120,48 @@ assert.deepEqual(
 assert.equal(perBossSummary[0].kills, 1);
 assert.equal(perBossSummary[0].bestDps, 2180);
 assert.equal(perBossSummary[3].bestHps, 1230);
+
+const roleHistory = [
+  {
+    role: "HEALER", spec: "Discipline Priest", dps: 5, hps: 100, aps: 0,
+    totalDamage: 15, totalHealing: 300, totalAbsorbs: 0, damageTaken: 60, deaths: 0,
+    encounter: { outcome: "KILL", durationMs: 3000, durationSeconds: 3, boss: { name: "Lord Marrowgar", slug: "lord-marrowgar" } },
+  },
+  {
+    role: "HEALER", spec: "Discipline Priest", dps: 10, hps: 0, aps: 80,
+    totalDamage: 70, totalHealing: 0, totalAbsorbs: 560, damageTaken: 140, deaths: 1,
+    encounter: { outcome: "KILL", durationMs: 7000, durationSeconds: 7, boss: { name: "Lord Marrowgar", slug: "lord-marrowgar" } },
+  },
+];
+const roleSummary = buildPlayerPerformanceSummary(roleHistory);
+assert.equal(roleSummary.metricView, "healing");
+assert.equal(roleSummary.avgHps, 50, "Retain equal-weight stored-rate averages on kills");
+assert.equal(roleSummary.totalHealingAbsorbs, 860);
+assert.equal(roleSummary.bestHealingAbsorbsPerSecond, 100, "Best combined rate is from one encounter, not best HPS plus best APS from separate fights");
+assert.equal(roleSummary.damageTakenPerSecond, 20, "DTPS uses total taken divided by total recorded duration");
+assert.equal(roleSummary.deaths, 1);
+const zeroSummary = buildPlayerPerformanceSummary([{
+  ...roleHistory[0], role: "DPS", spec: "Combat Rogue", dps: 0, hps: 0, aps: 0,
+  totalDamage: 0, totalHealing: 0, totalAbsorbs: 0, damageTaken: 0,
+}]);
+assert.equal(zeroSummary.bestDps, 0);
+assert.equal(zeroSummary.bestHps, 0);
+assert.equal(zeroSummary.bestAps, 0);
+assert.equal(zeroSummary.totalHealingAbsorbs, 0);
+assert.equal(zeroSummary.damageTakenPerSecond, 0);
+assert.equal(zeroSummary.deaths, 0);
+const missingDuration = buildPlayerPerformanceSummary(roleHistory.map((row, index) => index ? { ...row, encounter: { ...row.encounter, durationMs: 0, durationSeconds: 0 } } : row));
+assert.equal(missingDuration.damageTaken, 200, "Keep totals when a rate lacks complete duration evidence");
+assert.equal(missingDuration.damageTakenPerSecond, null);
+const emptySummary = buildPlayerPerformanceSummary([]);
+assert.equal(emptySummary.bestDps, null);
+assert.equal(emptySummary.totalDamage, null);
+assert.equal(emptySummary.deaths, null);
+assert.equal(emptySummary.avgHps, null);
+const mixedBoss = buildPlayerPerBossSummary([roleHistory[0], { ...roleHistory[1], role: "DPS", spec: "Shadow Priest" }])[0];
+assert.equal(mixedBoss.metricView, "all");
+assert.deepEqual(mixedBoss.roles, ["Healing", "Damage"]);
+assert.deepEqual(mixedBoss.specs, ["Discipline Priest", "Shadow Priest"]);
 
 const recentEncounters = buildPlayerRecentEncounters(
   [

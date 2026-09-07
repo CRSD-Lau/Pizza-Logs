@@ -49,6 +49,7 @@ The existing `gold`, `gold-light`, and `gold-dim` utility names remain compatibi
 - Dense analytics collapse to a two-column summary on small screens. Desktop-only columns may be hidden when their values remain available in the primary or expanded view.
 - The cinematic intro is an optional **Watch guild intro** action on the homepage. It must not block browsing, request media before activation, or autoplay for reduced-motion users.
 - Directories sort alphabetically and expose search/filter controls before results. Historical award ranks must never masquerade as current overall player rankings.
+- Raid player tables offer Damage, Healing and All views with consistent columns and all rows retained. Individual player summaries prioritize recorded role/spec evidence; unknown or mixed evidence keeps all metrics visible. Show all metrics reveals secondary output without discarding self-healing, off-healing or measured zero values. Remember explicit metric choices in the URL. Clearly separate effective HPS, APS and Healing + absorbs /s; DTPS is descriptive, not a tank performance score.
 - Report shortcuts lead to stable section IDs, open the relevant disclosure and move keyboard focus to its heading control. Every major disclosure exposes a real heading.
 - Short-pull counting rules use a compact disclosure; their count and included/excluded state remain visible.
 - The full desktop navigation appears only when the logo, search and links fit without overlapping. Narrower viewports use a named menu, with current-page and Escape/focus behavior.
