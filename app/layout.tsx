@@ -52,7 +52,7 @@ export const metadata: Metadata = {
     ],
     apple: [{ url: "/brand/apple-touch-icon.png?v=molten-1", sizes: "180x180", type: "image/png" }],
   },
-  manifest: "/manifest.webmanifest?v=molten-1",
+  manifest: "/manifest.webmanifest",
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

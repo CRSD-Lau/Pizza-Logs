@@ -15,7 +15,7 @@ const checks = [
   {
     path: "/",
     status: 200,
-    contains: ["Pizza Logs", "social-preview.jpg?v=molten-1", "rel=\"canonical\"", "manifest.webmanifest?v=molten-1"],
+    contains: ["Pizza Logs", "social-preview.jpg?v=molten-1", "rel=\"canonical\"", "manifest.webmanifest"],
     headers: securityHeaders,
     absentHeaders: ["x-powered-by"],
   },

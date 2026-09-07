@@ -105,8 +105,10 @@ occurred. Repository settings are not synchronized by the application deployment
 
 ## Cache and release validation
 
-Current metadata references use `?v=molten-1` on the manifest and changed brand
-image URLs. The shared crest component retains the unchanged
+Current metadata references use `?v=molten-1` on changed brand image URLs.
+Next.js emits its file-based manifest at `/manifest.webmanifest`; verify the
+served manifest's theme and versioned icon URLs rather than expecting a query
+on the manifest link itself. The shared crest component retains the unchanged
 `/brand/guild-crest-v1.png` for CSS blending. Its solid icon uses the filename
 `/brand/intro-crest-molten-1.png`, refreshing the image-optimizer cache without
 query strings or a build-tool-specific image import. It contains the exact same
