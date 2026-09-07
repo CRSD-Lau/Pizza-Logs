@@ -73,7 +73,7 @@ export async function getPlayerRaidComparison(
       },
     },
     select: {
-      dps: true, hps: true, spec: true,
+      dps: true, hps: true, aps: true, damageTaken: true, role: true, spec: true,
       encounter: { select: {
         id: true, uploadId: true, sessionIndex: true, startedAt: true, outcome: true, difficulty: true,
         durationMs: true, durationSeconds: true,

@@ -42,6 +42,12 @@ and a boss count; links retain the selected difficulty and short-pull setting.
 
 A canonical report URL identifies the public report and raid date. One uploaded file can contain multiple dated sessions; a second session on the same date receives a numeric suffix.
 
+Player tables start in **Damage** view. Choose **Healing** for effective healing
+plus attributed absorbs, or **All** to include damage taken and all existing
+columns. The selected view uses the same columns for every player and retains
+all rows, including zero output. The choice is stored in the URL and survives
+refreshes, short-pull changes and switching between all attempts and boss kills.
+
 Use **On this page** to jump to player totals, boss fights, targets, the full session or the roster. Shortcuts open collapsed sections and support keyboard navigation. Similar shortcuts appear on encounter, boss and player reports.
 
 Choose the scope above the main summary:
@@ -154,7 +160,7 @@ history. Selecting a hidden raid to highlight reveals it again. The visible raid
 count states how many runs are currently shown.
 
 Raid and difficulty filters are shareable in the page URL and retain the
-player's realm. The chosen DPS/HPS metric stays selected when switching scope
+player's realm. The chosen comparison metric stays selected when switching scope
 or refreshing. Older links containing two-raid selections now open the full
 history instead of limiting the chart to those two raids.
 
@@ -165,8 +171,14 @@ raid; same-day sessions receive distinct labels. Within a session, the earliest
 successful kill of each boss in the selected size/mode supplies its stored rate.
 Missing kills and invalid-duration measurements leave gaps, while recorded zero
 output stays zero. Different difficulties are never pooled, and unknown modes
-remain explicitly separate. DPS and effective HPS are available; HPS excludes
-absorbs. The **View chart values** table gives exact displayed values, available
+remain explicitly separate. **Comparison metric** offers DPS, effective HPS,
+APS, Healing + absorbs /s, and DTPS. HPS excludes absorbs; the combined healing
+rate adds attributed absorbs explicitly. Without an explicit choice, consistent
+recorded healer evidence selects combined healing, tank evidence selects DTPS,
+and other histories start with DPS. Missing or conflicting roles do not hide
+any comparison option. DTPS describes incoming damage and is affected by raid
+assignments and fight conditions; it is not a tank performance rank.
+The **View chart values** table gives exact displayed values, available
 actual fight difficulty, spec evidence, and links to the source fights for every boss and recorded raid,
 including hidden lines. Its pagination only changes the table rows; every raid
 remains available on the chart. Gear, buffs, kill time and raid
@@ -181,6 +193,20 @@ Leaderboards and boss views default to all difficulties combined. Select a diffi
 The **All-time averages** section above the per-boss records shows the top three average DPS and HPS players for the selected boss and difficulty. Each player's score is the arithmetic mean of their stored per-fight rate, not total output divided by total time. Every stored boss appearance counts equally, including kills, wipes, unknown outcomes, short pulls, zero-output fights and role changes. Fights require a positive recorded duration (milliseconds, falling back to seconds only when milliseconds are zero). At least 10 appearances in the selection and a positive average are required. HPS means effective healing only, excluding absorbs; this ranks recorded healing output without a role restriction. Players are grouped by their stored identity, keeping realms separate, and exact score ties are ordered by fight count then stable player ID. Fight counts are shown alongside each average. Existing encounter fingerprint and per-encounter participant uniqueness prevent stored duplicate appearances; this view does not infer additional matches. Boss mix, difficulty and healing demand affect the comparison, so these averages are not a normalized skill rating. The per-boss top-10 lists below remain personal-best kill records.
 
 Player pages and report detail can show per-spell/target output, role/spec evidence, aura uptime, consumables, power gains, deaths with the preceding incoming-damage window, class peers, records, and cached Warmane gear.
+
+Global and single-raid player summaries and histories use **Relevant metrics**
+by default. Consistent recorded damage roles emphasize damage/DPS; healers show
+effective healing/HPS, attributed absorbs/APS and their explicitly labelled
+combined output; tanks show damage taken/DTPS and deaths alongside damage/DPS.
+Mixed, unknown or contradictory role/spec evidence keeps all metrics available
+in the default view. Unambiguous recorded specializations can supply missing
+role evidence; class names and output thresholds do not decide a player's role.
+Each history row retains its recorded role/spec context. **Show all metrics**
+reveals secondary output, including self-healing and off-healing, and persists
+in the page URL. These controls do not remove recorded zero values or change
+the existing latest-50 summary window, kill/count rules, or stored combat data.
+Single-raid charts also offer all five metrics and retain an explicit choice
+on refresh. Invalid durations remain unavailable rather than becoming zero.
 
 Spell-detail bars compare each ability's damage or healing volume with the largest ability in that expanded row. DPS rows use damage volume; effective-healing and combined-healing rows use healing volume, with absorbs shown separately. **Overall crit** is the participant's critical-hit percentage across recorded output events. Spell rows label their combined stored damage/healing event count and critical percentage as total events and overall crit rather than using the older `%c` abbreviation.
 

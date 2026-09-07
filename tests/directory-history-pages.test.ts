@@ -47,14 +47,21 @@ const db = {
   guildRosterMember: { findFirst: async () => null },
   participant: { findMany: async ({ take }: { take: number }) => {
     assert.equal(take, 50);
-    return Array.from({ length: 50 }, (_, index) => ({ id: `participation-${index}`, dps: 1000, hps: 200, aps: 0, deaths: 0, spec: null, encounter: encounter(0, index) }));
+    return Array.from({ length: 50 }, (_, index) => ({ id: `participation-${index}`, dps: 1000, hps: 200, aps: 0, totalDamage: 80000, totalHealing: 16000, totalAbsorbs: 0, damageTaken: 0, deaths: 0, role: "DPS", spec: "Combat", encounter: encounter(0, index) }));
   } },
 };
 
 async function main() {
   const loader = Module as typeof Module & { _resolveFilename: (request: string, parent: NodeModule | undefined, isMain: boolean, options?: unknown) => string };
   const originalResolve = loader._resolveFilename;
+  let navigationPath = "/players";
+  let navigationSearch = new URLSearchParams();
   const mockExports: Record<string, unknown> = {
+    "next/navigation": {
+      usePathname: () => navigationPath,
+      useSearchParams: () => navigationSearch,
+      notFound: () => { throw new Error("Unexpected notFound in directory/history fixture"); },
+    },
     "@/lib/db": { db },
     "@/lib/warmane-armory": { getWarmaneCharacterGear: async () => ({ ok: false }) },
     "@/lib/warmane-guild-roster": { DEFAULT_GUILD_NAME: "Synthetic Guild", DEFAULT_GUILD_REALM: "Lordaeron" },
@@ -144,6 +151,8 @@ async function main() {
     }
 
     const { default: PlayerPage } = require("../app/players/[playerName]/page") as typeof import("../app/players/[playerName]/page");
+    navigationPath = "/players/Player01";
+    navigationSearch = new URLSearchParams({ includeShortPulls: "1" });
     const profile = await renderPage(await PlayerPage({ params: Promise.resolve({ playerName: "Player01" }), searchParams: Promise.resolve({ includeShortPulls: "1" }) }));
     assert.match(profile, /Rank when achieved:/); assert.match(profile, /Historical all-time ranks when achieved, not current standings/);
     assert.match(profile, /dateTime="2026-08-15T14:00:00.000Z"/);
@@ -151,6 +160,7 @@ async function main() {
     assert.match(profile, /Performance summary and per-boss bests use the latest 50 recorded encounters/);
     assert.equal((profile.match(/href="\/encounters\/encounter-/g) ?? []).length, 50, "The recent encounter count and rendered rows must agree");
     assert.match(profile, /href="#recent-encounters"/);
+    assert.match(profile, /href="\/players\/Player01\?includeShortPulls=1&amp;metrics=all"/, "Metric disclosure preserves the history's short-pull setting");
 
     unavailable = true;
     for (const page of [PlayersPage, RaidsPage]) {

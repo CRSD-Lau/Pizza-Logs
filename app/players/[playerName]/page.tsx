@@ -8,11 +8,13 @@ import { StatCard, StatGroup } from "@/components/ui/StatCard";
 import { AccordionSection } from "@/components/ui/AccordionSection";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { PlayerProfileIdentity } from "@/components/players/PlayerProfileIdentity";
+import { PlayerMetricControls } from "@/components/players/PlayerMetricControls";
 import { PlayerRaidComparisonSection, PlayerRaidComparisonSkeleton } from "@/components/players/PlayerRaidComparisonSection";
 import { PlayerGearSection, PlayerGearSectionSkeleton } from "@/components/players/PlayerGearSection";
 import { getWarmaneCharacterGear } from "@/lib/warmane-armory";
 import { DEFAULT_GUILD_NAME, DEFAULT_GUILD_REALM } from "@/lib/warmane-guild-roster";
-import { buildPlayerPerBossSummary, buildPlayerRecentEncounters, resolvePlayerProfile } from "@/lib/player-profile";
+import { buildPlayerPerformanceSummary, buildPlayerPerBossSummary, buildPlayerRecentEncounters, resolvePlayerProfile, type PlayerPerformanceSummary } from "@/lib/player-profile";
+import { getReportDamageTakenPerSecond, getReportMetricView, getReportRoleLabel, parseShowAllMetrics, type ReportMetricView } from "@/lib/report-metric-view";
 import { formatDps, formatCountLabel, formatDateUtc, formatDateTimeUtc, formatInteger } from "@/lib/utils";
 import { NumericValue } from "@/components/ui/NumericValue";
 import { getStoredPlayerIdentity } from "@/lib/player-directory";
@@ -32,12 +34,47 @@ interface Props {
     comparisonRaid?: string | string[];
     comparisonDifficulty?: string | string[];
     comparisonMetric?: string | string[];
+    metrics?: string | string[];
   }>;
 }
 
 async function PlayerGear({ name, realm, playerClass }: { name: string; realm?: string; playerClass?: string | null }) {
   const result = await getWarmaneCharacterGear(name, realm ?? "Lordaeron");
   return <PlayerGearSection result={result} playerClass={playerClass} />;
+}
+
+function PerformanceStats({ summary, view, hasAttempts, hasKills }: {
+  summary: PlayerPerformanceSummary;
+  view: ReportMetricView;
+  hasAttempts: boolean;
+  hasKills: boolean;
+}) {
+  const bestScope = hasAttempts ? "single encounter" : "No recorded attempts";
+  const killScope = hasKills ? "on kills" : "No boss kills";
+  const damage = <StatCard key="damage" label="Damage" value={<NumericValue value={summary.totalDamage} kind="number" />}
+    sub={view === "tank" ? <>Best DPS: <NumericValue value={summary.bestDps} kind="rate" /> · {bestScope}</> : "latest 50 recorded encounters"} />;
+  const bestDps = <StatCard key="best-dps" label="Best DPS" value={<NumericValue value={summary.bestDps} kind="rate" />} sub={bestScope} />;
+  const avgDps = <StatCard key="avg-dps" label="Avg DPS" value={<NumericValue value={summary.avgDps} kind="rate" />} sub={killScope} />;
+  const healing = <StatCard key="healing" label="Effective healing" value={<NumericValue value={summary.totalHealing} kind="number" />} sub={<>Best HPS: <NumericValue value={summary.bestHps} kind="rate" /> · {bestScope}<br />Avg HPS: <NumericValue value={summary.avgHps} kind="rate" /> · {killScope}</>} />;
+  const absorbs = <StatCard key="absorbs" label="Absorbs" value={<NumericValue value={summary.totalAbsorbs} kind="number" />} sub={<>Best APS: <NumericValue value={summary.bestAps} kind="rate" /> · {bestScope}</>} />;
+  const combined = <StatCard key="combined" label="Healing + absorbs" value={<NumericValue value={summary.totalHealingAbsorbs} kind="number" />} sub={<>Best Healing + absorbs /s: <NumericValue value={summary.bestHealingAbsorbsPerSecond} kind="rate" /> · {bestScope}</>} />;
+  const taken = <StatCard key="taken" label="Damage taken" value={<NumericValue value={summary.damageTaken} kind="number" />} sub={<><NumericValue value={summary.damageTakenPerSecond} kind="rate" /> DTPS · {summary.damageTakenPerSecond === null ? "Valid duration required for every recorded encounter" : "total / recorded fight time"}</>} />;
+  const deaths = <StatCard key="deaths" label="Deaths" value={<NumericValue value={summary.deaths} kind="integer" />} sub={hasAttempts ? "latest 50 recorded encounters" : "No recorded attempts"} />;
+  const cards = view === "damage" ? [damage, bestDps, avgDps, deaths]
+    : view === "healing" ? [healing, absorbs, combined, deaths]
+      : view === "tank" ? [taken, deaths, damage, avgDps]
+        : [damage, bestDps, avgDps, healing, absorbs, combined, taken, deaths];
+  return <StatGroup columns={4}>{cards}</StatGroup>;
+}
+
+function BossMetricSummary({ summary, view }: { summary: PlayerPerformanceSummary; view: ReportMetricView }) {
+  const damage = <div key="damage">Damage: <NumericValue value={summary.totalDamage} kind="number" /> · Best DPS: <NumericValue value={summary.bestDps} kind="rate" /></div>;
+  const healing = <div key="healing">Effective healing: <NumericValue value={summary.totalHealing} kind="number" /> · Best HPS: <NumericValue value={summary.bestHps} kind="rate" /></div>;
+  const absorbs = <div key="absorbs">Absorbs: <NumericValue value={summary.totalAbsorbs} kind="number" /> · Best APS: <NumericValue value={summary.bestAps} kind="rate" /></div>;
+  const combined = <div key="combined">Healing + absorbs: <NumericValue value={summary.totalHealingAbsorbs} kind="number" /> · Best Healing + absorbs /s: <NumericValue value={summary.bestHealingAbsorbsPerSecond} kind="rate" /></div>;
+  const taken = <div key="taken">Damage taken: <NumericValue value={summary.damageTaken} kind="number" /> · <NumericValue value={summary.damageTakenPerSecond} kind="rate" /> DTPS{summary.damageTakenPerSecond === null && <span> · valid duration required for every encounter</span>}</div>;
+  const fields = view === "damage" ? [damage] : view === "healing" ? [healing, absorbs, combined] : view === "tank" ? [taken, damage] : [damage, healing, absorbs, combined, taken];
+  return <div className="space-y-1 text-sm tabular-nums text-text-secondary">{fields}<div>{summary.deaths === null ? <><NumericValue value={null} /> deaths</> : formatCountLabel(summary.deaths, "death")}</div></div>;
 }
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
@@ -144,10 +181,9 @@ async function PlayerContent({ data }: { data: Awaited<ReturnType<typeof getPlay
   const visibleParticipants = participants.filter(p => includeShortPulls || !isShortPull(p.encounter));
 
   const kills       = participants.filter(p => p.encounter.outcome === "KILL");
-  const avgDps      = kills.length > 0
-    ? kills.reduce((a, p) => a + p.dps, 0) / kills.length : null;
-  const bestDps     = participants.length > 0 ? Math.max(0, ...participants.map(p => p.dps)) : null;
-  const bestAps     = participants.length > 0 ? Math.max(0, ...participants.map(p => p.aps)) : null;
+  const summary = buildPlayerPerformanceSummary(participants);
+  const showAll = parseShowAllMetrics(search.metrics);
+  const metricView = showAll ? "all" : summary.metricView;
   const latestSpec  = participants.find((participant) => participant.spec)?.spec ?? null;
 
   const milestones = player?.milestones ?? [];
@@ -175,15 +211,12 @@ async function PlayerContent({ data }: { data: Awaited<ReturnType<typeof getPlay
       ]} />
 
       {/* Stats */}
-      <div className="space-y-3">
+      <section aria-label="Player performance summary" className="space-y-3">
         <p className="text-sm text-text-secondary">Performance summary and per-boss bests use the latest 50 recorded encounters. Ranked achievements below are historical records.</p>
-        <StatGroup columns={4}>
-          <StatCard label="Encounters" value={formatInteger(counts.totalPulls)} sub={<><span className="text-text-primary">{formatCountLabel(kills.length, "kill")}</span> · latest 50 recorded</>} />
-          <StatCard label="Best DPS" value={<NumericValue value={bestDps} kind="rate" />} sub={participants.length ? "single encounter" : "No recorded attempts"} />
-          <StatCard label="Avg DPS" value={<NumericValue value={avgDps} kind="rate" />} sub={kills.length ? "on kills" : "No boss kills"} />
-          <StatCard label="Best APS" value={<NumericValue value={bestAps} kind="rate" />} sub={participants.length ? "single encounter" : "No recorded attempts"} />
-        </StatGroup>
-      </div>
+        <p className="text-sm text-text-secondary">{formatCountLabel(counts.totalPulls, "encounter")} · <span className="text-text-primary">{formatCountLabel(kills.length, "kill")}</span> · latest 50 recorded</p>
+        <PlayerMetricControls showAll={showAll} defaultView={summary.metricView} />
+        <PerformanceStats summary={summary} view={metricView} hasAttempts={participants.length > 0} hasKills={kills.length > 0} />
+      </section>
 
       <Suspense fallback={<PlayerRaidComparisonSkeleton />}>
         <PlayerRaidComparisonSection playerId={player?.id} playerName={profile.name} search={search} />
@@ -235,7 +268,7 @@ async function PlayerContent({ data }: { data: Awaited<ReturnType<typeof getPlay
 
       {/* Per-boss bests */}
       {perBoss.length > 0 && (
-        <AccordionSection id="boss-summary" title="Per-Boss Summary" sub="Best values within the latest 50 recorded encounters" count={perBoss.length} defaultOpen>
+        <AccordionSection id="boss-summary" title="Per-Boss Summary" sub="Totals and best output rates within the latest 50 recorded encounters · DTPS is total damage taken / recorded fight time, not a performance rank" count={perBoss.length} defaultOpen>
           <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-2">
             {perBoss.map((b, index) => (
               <Link
@@ -251,12 +284,8 @@ async function PlayerContent({ data }: { data: Awaited<ReturnType<typeof getPlay
                   <span className="text-sm font-semibold text-text-primary">{b.bossName}</span>
                   <span className="text-xs text-success font-bold">{formatCountLabel(b.kills, "kill")}</span>
                 </div>
-                <div className="text-xs text-text-secondary">
-                  Best DPS: <NumericValue value={b.bestDps} kind="rate" className="font-bold text-text-primary" />
-                </div>
-                <div className="text-xs text-text-secondary">
-                  Best HPS: <NumericValue value={b.bestHps} kind="rate" className="font-bold text-text-primary" />
-                </div>
+                <p className="mb-2 text-sm text-text-secondary">Recorded roles: {b.roles.join(", ")} · Specs: {b.specs.length ? b.specs.join(", ") : "Unknown"}</p>
+                <BossMetricSummary summary={b} view={showAll ? "all" : b.metricView} />
               </Link>
             ))}
           </div>
@@ -267,7 +296,13 @@ async function PlayerContent({ data }: { data: Awaited<ReturnType<typeof getPlay
       <AccordionSection id="recent-encounters" title="Recent Encounters" sub="Latest 50 recorded encounters, newest first · UTC" count={recentEncounters.length} defaultOpen={false}>
         {visibleParticipants.length > 0 ? (
           <ul aria-label="Recent encounters, newest first" className="list-none bg-bg-panel border border-gold-dim rounded-sm divide-y divide-gold-dim">
-            {recentEncounters.map((p, index) => (
+            {recentEncounters.map((p, index) => {
+              const view = showAll ? "all" : getReportMetricView([p]);
+              const showDamage = view !== "healing";
+              const showHealing = view === "healing" || view === "all";
+              const showTaken = view === "tank" || view === "all";
+              const dtps = getReportDamageTakenPerSecond(p.damageTaken, p.encounter);
+              return (
               <li key={p.id}>
               <Link
                 href={`/encounters/${p.encounter.id}${querySuffix}`}
@@ -285,17 +320,23 @@ async function PlayerContent({ data }: { data: Awaited<ReturnType<typeof getPlay
                   <span className={cn("diff-badge", p.encounter.difficulty.endsWith("H") ? "heroic" : "normal")}>
                     {p.encounter.difficulty}
                   </span>
+                  <span className="text-sm text-text-secondary">Recorded role: {getReportRoleLabel(p)} · Spec: {p.spec || "Unknown"}</span>
                 </div>
                 <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-sm tabular-nums text-text-secondary">
-                  <span><NumericValue value={p.dps} kind="rate" /> DPS</span>
-                  <span><NumericValue value={p.hps} kind="rate" /> HPS</span>
-                  <span><NumericValue value={p.aps} kind="rate" /> APS</span>
-                  {p.deaths > 0 && <span className="text-danger">{formatCountLabel(p.deaths, "death")}</span>}
+                  {showTaken && <span>Damage taken: <NumericValue value={p.damageTaken} kind="number" /> · <NumericValue value={dtps} kind="rate" /> DTPS{dtps === null && " · valid duration required"}</span>}
+                  {showDamage && <span>Damage: <NumericValue value={p.totalDamage} kind="number" /> · <NumericValue value={p.dps} kind="rate" /> DPS</span>}
+                  {showHealing && <>
+                    <span>Effective healing: <NumericValue value={p.totalHealing} kind="number" /> · <NumericValue value={p.hps} kind="rate" /> HPS</span>
+                    <span>Absorbs: <NumericValue value={p.totalAbsorbs} kind="number" /> · <NumericValue value={p.aps} kind="rate" /> APS</span>
+                    <span>Healing + absorbs: <NumericValue value={p.totalHealing + p.totalAbsorbs} kind="number" /> · <NumericValue value={p.hps + p.aps} kind="rate" /> Healing + absorbs /s</span>
+                  </>}
+                  <span className={p.deaths > 0 ? "text-danger" : undefined}>{formatCountLabel(p.deaths, "death")}</span>
                   <time dateTime={p.encounter.startedAt.toISOString()}>{formatDateTimeUtc(p.encounter.startedAt)}</time>
                 </div>
               </Link>
               </li>
-            ))}
+              );
+            })}
           </ul>
         ) : (
           <EmptyState title={counts.shortPulls > 0 ? "No counted encounters" : "No encounters recorded"} />

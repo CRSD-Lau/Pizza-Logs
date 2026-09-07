@@ -20,6 +20,7 @@ This project follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) an
 
 ### Changed
 
+- Default player summaries and histories to metrics relevant to recorded roles/specs, with Show all metrics for secondary output and full detail for mixed or uncertain roles. Add Damage, Healing and All raid-table views and role-based chart defaults with explicit DPS, HPS, APS, Healing + absorbs /s and DTPS choices; preserve zero values, source links and URL preferences.
 - Apply the approved Molten Charcoal palette across public and admin pages, reports, charts, loading states and the optional intro: warm charcoal surfaces, ember-orange accents and cream text, preserving WoW class, spell-school and status colors.
 - Refresh the README banner, shared-link artwork, browser and install icons, notification icons and page metadata with matching branding and versioned image references. Keep the original Pizza Warriors crest and existing site/report URLs.
 

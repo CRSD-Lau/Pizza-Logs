@@ -210,7 +210,7 @@ async function run() {
     await twoFrames();
   }
   async function metric(value) {
-    await section.getByRole("group", { name: "Metric", exact: true }).getByRole("button", { name: value, exact: true }).click();
+    await section.getByLabel("Comparison metric", { exact: true }).selectOption(value);
     await waitForPageContent(page);
     await section.getByRole("heading", { name: `${value} by successful boss fight`, exact: true }).waitFor();
     await twoFrames();

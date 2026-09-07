@@ -28,7 +28,7 @@
     "db:import-items": "tsx scripts/import-item-template.ts",
     "gear-sync:uninstall-task": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/gear-sync/uninstall-windows-task.ps1",
     "guild-roster-sync:uninstall-task": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/guild-roster-sync/uninstall-windows-task.ps1",
-    "test:e2e": "node scripts/upload-security-e2e.mjs && node scripts/e2e.mjs && node scripts/upload-journey-e2e.mjs && node scripts/ux-navigation-e2e.mjs && node scripts/display-consistency-e2e.mjs && node scripts/players-directory-e2e.mjs && node scripts/player-raid-comparison-e2e.mjs",
+    "test:e2e": "node scripts/upload-security-e2e.mjs && node scripts/e2e.mjs && node scripts/upload-journey-e2e.mjs && node scripts/ux-navigation-e2e.mjs && node scripts/display-consistency-e2e.mjs && node scripts/players-directory-e2e.mjs && node scripts/player-raid-comparison-e2e.mjs && node scripts/report-metrics-e2e.mjs",
     "test:integration": "tsx --test tests/*.integration.test.ts"
   },
   "dependencies": {

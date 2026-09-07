@@ -1,6 +1,18 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { buildRaidSummaryQuery, parseRaidSummaryScope } from "../lib/raid-summary-scope";
+import { buildRaidSummaryQuery, parseRaidSummaryScope, parseRaidMetricView } from "../lib/raid-summary-scope";
+
+test("raid metric choices survive independent scope and short-pull selections", () => {
+  assert.equal(parseRaidMetricView("healing"), "healing");
+  assert.equal(parseRaidMetricView("all"), "all");
+  assert.equal(parseRaidMetricView(["healing", "damage"]), "healing");
+  for (const invalid of [null, undefined, "HPS", [], "all&scope=kills"]) {
+    assert.equal(parseRaidMetricView(invalid), "damage");
+  }
+  assert.equal(buildRaidSummaryQuery("kills", true, "healing"), "?scope=kills&includeShortPulls=1&raidMetrics=healing");
+  assert.equal(buildRaidSummaryQuery("all", false, "all"), "?raidMetrics=all");
+  assert.equal(buildRaidSummaryQuery("all", false, "damage"), "");
+});
 
 test("only the explicit kills query value selects successful fights", () => {
   assert.equal(parseRaidSummaryScope("kills"), "kills");

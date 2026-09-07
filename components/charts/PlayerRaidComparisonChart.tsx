@@ -4,10 +4,11 @@ import { useEffect, useId, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { CartesianGrid, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import { NumericValue } from "@/components/ui/NumericValue";
-import { buildRaidComparisonChart, type RaidComparisonRun } from "@/lib/player-raid-comparison";
+import { getReportRoleLabel } from "@/lib/report-metric-view";
+import { RAID_COMPARISON_METRICS, buildRaidComparisonChart, type RaidComparisonMetric, type RaidComparisonRun } from "@/lib/player-raid-comparison";
 import { cn, formatCompactNumber, formatCountLabel, formatInteger, formatRate } from "@/lib/utils";
 
-type Metric = "DPS" | "HPS";
+type Metric = RaidComparisonMetric;
 type ChartRow = ReturnType<typeof buildRaidComparisonChart>[number];
 const VALUES_PAGE_SIZE = 25;
 const DENSE_RUN_COUNT = 12;
@@ -27,20 +28,21 @@ function RaidTooltip({ active, payload, label, rows, run, metric }: {
   run?: RaidComparisonRun;
   metric: Metric;
 }) {
+  const metricLabel = RAID_COMPARISON_METRICS[metric].label;
   const row = payload?.find(entry => entry.payload)?.payload ?? rows.find(item => item.bossName === label);
   if (!active || !row || !run) return null;
   const fight = row.values[run.key];
-  const value = fight?.[metric === "DPS" ? "dps" : "hps"];
+  const value = fight?.[RAID_COMPARISON_METRICS[metric].key];
   return (
     <div className="max-w-52 rounded-sm border border-gold-dim bg-bg-card px-3 py-2 text-sm shadow-lg sm:max-w-60" data-testid="highlighted-raid-tooltip" data-run-key={run.key}>
       <p className="mb-2 font-semibold text-gold-light">{row.bossName}</p>
       <p className="text-xs text-text-secondary">Highlighted raid</p>
       <p className="text-text-secondary"><time dateTime={run.startedAt}>{run.label}</time></p>
       {fight && <span className={cn("diff-badge mt-1", fight.difficulty.endsWith("H") ? "heroic" : "normal")}>{fight.difficulty}</span>}
-      <p className="font-semibold text-text-primary">{value == null ? "Unavailable" : `${formatRate(value)} ${metric}`}</p>
+      <p className="font-semibold text-text-primary">{value == null ? "Unavailable" : `${formatRate(value)} ${metricLabel}`}</p>
       {!fight && <p className="text-xs text-text-secondary">No recorded kill</p>}
       {fight && value == null && <p className="text-xs text-text-secondary">No valid recorded rate</p>}
-      {fight?.spec && <p className="text-xs text-text-secondary">{fight.spec}</p>}
+      {fight && <p className="text-xs text-text-secondary">{getReportRoleLabel(fight)}{fight.spec ? ` · ${fight.spec}` : ""}</p>}
     </div>
   );
 }
@@ -53,13 +55,14 @@ function RaidValuesTable({ runs, rows, playerName, scopeLabel, metric, includeSh
   metric: Metric;
   includeShortPulls: boolean;
 }) {
+  const metricLabel = RAID_COMPARISON_METRICS[metric].label;
   const [page, setPage] = useState(0);
   const total = runs.length * rows.length;
   const pageCount = Math.max(1, Math.ceil(total / VALUES_PAGE_SIZE));
   const currentPage = Math.min(page, pageCount - 1);
   const start = currentPage * VALUES_PAGE_SIZE;
   const end = Math.min(total, start + VALUES_PAGE_SIZE);
-  const metricKey = metric === "DPS" ? "dps" : "hps";
+  const metricKey = RAID_COMPARISON_METRICS[metric].key;
   const encounterSuffix = includeShortPulls ? "?includeShortPulls=1" : "";
   // Only the current page becomes table rows. The chart still uses every run.
   const pageRows = Array.from({ length: end - start }, (_, offset) => {
@@ -72,11 +75,11 @@ function RaidValuesTable({ runs, rows, playerName, scopeLabel, metric, includeSh
     <div className="space-y-3">
       <p className="text-sm text-text-secondary">All recorded raids, newest first, then boss order. Table pages do not change the chart or hide raids.</p>
       <table className="w-full table-fixed text-sm" data-testid="raid-comparison-values-table">
-        <caption className="sr-only">{playerName} · {scopeLabel}. {metric} for every raid and boss, including hidden lines. Dates are UTC. Missing kills and invalid rates remain unavailable; measured zero is shown.</caption>
+        <caption className="sr-only">{playerName} · {scopeLabel}. {metricLabel} for every raid and boss, including hidden lines. Dates are UTC. Missing kills and invalid rates remain unavailable; measured zero is shown.</caption>
         <thead><tr>
           <th scope="col" className="w-[35%] px-2 py-3 text-left align-bottom text-text-secondary">Raid</th>
           <th scope="col" className="w-[32%] px-2 py-3 text-left align-bottom text-text-secondary">Boss</th>
-          <th scope="col" className="px-2 py-3 text-right align-bottom text-text-secondary">{metric}</th>
+          <th scope="col" className="px-2 py-3 text-right align-bottom text-text-secondary">{metricLabel}</th>
         </tr></thead>
         <tbody>{pageRows.map(({ run, row }) => {
           const fight = row.values[run.key];
@@ -86,9 +89,9 @@ function RaidValuesTable({ runs, rows, playerName, scopeLabel, metric, includeSh
             <td className="break-words px-2 py-3 text-left align-top text-text-primary"><span data-testid="raid-value-boss-name">{row.bossName}</span>{fight && <span className="mt-1 block"><span className={cn("diff-badge", fight.difficulty.endsWith("H") ? "heroic" : "normal")}>{fight.difficulty}</span></span>}</td>
             <td className="break-words px-2 py-1 text-right align-top">
               {fight ? <>
-                <Link href={`/encounters/${encodeURIComponent(fight.encounterId)}${encounterSuffix}`} className="inline-flex min-h-11 max-w-full items-center justify-end rounded-sm py-2 text-gold-light hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-gold" aria-label={`${row.bossName}, ${run.label}, ${value == null ? "unavailable" : formatRate(value)} ${metric}. View encounter.`}><NumericValue value={value} kind="rate" /></Link>
+                <Link href={`/encounters/${encodeURIComponent(fight.encounterId)}${encounterSuffix}`} className="inline-flex min-h-11 max-w-full items-center justify-end rounded-sm py-2 text-gold-light hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-gold" aria-label={`${row.bossName}, ${run.label}, ${value == null ? "unavailable" : formatRate(value)} ${metricLabel}. View encounter.`}><NumericValue value={value} kind="rate" /></Link>
                 {value == null && <span className="block text-xs text-text-secondary">No valid rate</span>}
-                {fight.spec && <span className="block pb-2 text-xs text-text-secondary">{fight.spec}</span>}
+                <span className="block pb-2 text-xs text-text-secondary">{getReportRoleLabel(fight)}{fight.spec ? ` · ${fight.spec}` : ""}</span>
               </> : <div className="py-2"><NumericValue value={null} kind="rate" /><span className="mt-1 block text-xs text-text-secondary">No recorded kill</span></div>}
             </td>
           </tr>;
@@ -112,6 +115,7 @@ export function PlayerRaidComparisonChart({ runs, raidSlug, playerName, metric, 
   includeShortPulls: boolean;
 }) {
   const id = useId();
+  const metricLabel = RAID_COMPARISON_METRICS[metric].label;
   const rows = useMemo(() => buildRaidComparisonChart(runs, raidSlug), [runs, raidSlug]);
   const newestFirst = useMemo(() => [...runs].sort((left, right) =>
     right.startedAt.localeCompare(left.startedAt, "en") || (left.key < right.key ? -1 : left.key > right.key ? 1 : 0)), [runs]);
@@ -123,7 +127,7 @@ export function PlayerRaidComparisonChart({ runs, raidSlug, playerName, metric, 
   const [plotViewport, setPlotViewport] = useState({ width: 0, scrollLeft: 0 });
   const plotMinWidth = rows.length * 85 + 96;
   const chartNeedsScroll = plotViewport.width > 0 && plotMinWidth > plotViewport.width;
-  const metricKey = metric === "DPS" ? "dps" : "hps";
+  const metricKey = RAID_COMPARISON_METRICS[metric].key;
   const visibleRuns = runs.filter(run => !hidden[run.key]);
   const hasValues = rows.some(row => visibleRuns.some(run => row.values[run.key]?.[metricKey] != null));
   useEffect(() => {
@@ -159,9 +163,9 @@ export function PlayerRaidComparisonChart({ runs, raidSlug, playerName, metric, 
 
   return (
     <div className="min-w-0 rounded-sm border border-gold-dim bg-bg-panel p-3 sm:p-4" data-testid="player-raid-comparison-chart" data-total-run-count={runs.length} data-visible-run-count={visibleRuns.length} data-highlighted-run-key={highlightedRun?.key ?? ""}>
-      <h3 id={`${id}-title`} className="heading-cinzel text-sm font-semibold tracking-wide text-gold">{metric} by successful boss fight</h3>
+      <h3 id={`${id}-title`} className="heading-cinzel text-sm font-semibold tracking-wide text-gold">{metricLabel} by successful boss fight</h3>
       <p className="mt-1 text-sm text-text-secondary">{playerName} · {scopeLabel}</p>
-      <p className="mt-1 text-xs text-text-secondary">{metric === "HPS" ? "Effective healing per second" : "Damage per second"} · Wipes excluded · Two decimals: K thousands, M millions</p>
+      <p className="mt-1 text-xs text-text-secondary">{RAID_COMPARISON_METRICS[metric].description} · Wipes excluded · Two decimals: K thousands, M millions</p>
 
       <div className="my-4 flex min-w-0 flex-wrap items-end justify-between gap-3">
         <div className="grid min-w-0 flex-1 gap-1.5 sm:max-w-sm">
@@ -176,10 +180,10 @@ export function PlayerRaidComparisonChart({ runs, raidSlug, playerName, metric, 
       <p className="mb-3 text-sm text-text-secondary">Highlighting a raid keeps the other lines visible. Hover a boss for the highlighted raid&apos;s value.</p>
 
       <figure aria-labelledby={`${id}-title`} aria-describedby={`${id}-description`} className="m-0 min-w-0">
-        <p id={`${id}-description`} className="sr-only">{playerName}&apos;s {metric} on successful boss fights in {scopeLabel}. Every recorded raid is shown by default. Every boss has a labelled position in raid order. Each dated line is one raid; unavailable values leave gaps. The highlighted raid uses a thicker line. Tooltips and the values disclosure include each recorded fight&apos;s difficulty. The values disclosure includes every value, specialization, and source encounter.</p>
+        <p id={`${id}-description`} className="sr-only">{playerName}&apos;s {metricLabel} on successful boss fights in {scopeLabel}. Every recorded raid is shown by default. Every boss has a labelled position in raid order. Each dated line is one raid; unavailable values leave gaps. The highlighted raid uses a thicker line. Tooltips and the values disclosure include each recorded fight&apos;s difficulty. The values disclosure includes every value, specialization, and source encounter.</p>
         {hasValues ? <>
           {chartNeedsScroll && <p id={`${id}-scroll-hint`} className="mb-2 text-sm text-text-secondary">Scroll horizontally to see every boss.</p>}
-          <div ref={chartViewportRef} role="region" aria-label={`${metric} boss chart`} aria-describedby={chartNeedsScroll ? `${id}-scroll-hint` : undefined} tabIndex={chartNeedsScroll ? 0 : undefined} className="min-w-0 max-w-full overflow-x-auto pb-1 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-gold" onScroll={event => {
+          <div ref={chartViewportRef} role="region" aria-label={`${metricLabel} boss chart`} aria-describedby={chartNeedsScroll ? `${id}-scroll-hint` : undefined} tabIndex={chartNeedsScroll ? 0 : undefined} className="min-w-0 max-w-full overflow-x-auto pb-1 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-gold" onScroll={event => {
             const { clientWidth: width, scrollLeft } = event.currentTarget;
             setPlotViewport(current => current.width === width && current.scrollLeft === scrollLeft ? current : { width, scrollLeft });
           }}>
@@ -205,7 +209,7 @@ export function PlayerRaidComparisonChart({ runs, raidSlug, playerName, metric, 
           </div>
           </div>
         </> : <div className="flex min-h-60 flex-col items-center justify-center gap-3 px-4 text-center">
-          <p role="status" className="text-sm text-text-secondary">{visibleRuns.length === 0 ? "All raid lines are hidden." : `No valid recorded ${metric} values for the visible raids.`}</p>
+          <p role="status" className="text-sm text-text-secondary">{visibleRuns.length === 0 ? "All raid lines are hidden." : `No valid recorded ${metricLabel} values for the visible raids.`}</p>
           {visibleRuns.length === 0 && <button type="button" className={actionClass} onClick={() => setHidden({})}>Show all raids</button>}
         </div>}
       </figure>
@@ -228,7 +232,7 @@ export function PlayerRaidComparisonChart({ runs, raidSlug, playerName, metric, 
       </details>
 
       <details className="border-t border-gold-dim text-sm" onToggle={event => setValuesOpen(event.currentTarget.open)}>
-        <summary className="min-h-11 cursor-pointer py-3 font-semibold text-gold">View {metric} chart values</summary>
+        <summary className="min-h-11 cursor-pointer py-3 font-semibold text-gold">View {metricLabel} chart values</summary>
         {valuesOpen && <RaidValuesTable runs={newestFirst} rows={rows} playerName={playerName} scopeLabel={scopeLabel} metric={metric} includeShortPulls={includeShortPulls} />}
       </details>
     </div>

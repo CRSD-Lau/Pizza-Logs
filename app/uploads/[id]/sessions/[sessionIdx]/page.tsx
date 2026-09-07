@@ -13,7 +13,7 @@ import { ShortPullNotice } from "@/components/reports/ShortPullNotice";
 import { SessionPlayerTable } from "@/components/reports/SessionPlayerTable";
 import type { SessionPlayerRow } from "@/lib/session-player-sort";
 import { buildRaidSummary, raidMetricRate } from "@/lib/raid-kill-summary";
-import { buildRaidSummaryQuery, parseRaidSummaryScope } from "@/lib/raid-summary-scope";
+import { buildRaidSummaryQuery, parseRaidSummaryScope, parseRaidMetricView } from "@/lib/raid-summary-scope";
 import { countAttempts, isShortPull, parseIncludeShortPulls } from "@/lib/attempt-policy";
 import { getClassColor } from "@/lib/constants/classes";
 import { getClassIconUrl } from "@/lib/class-icons";
@@ -31,7 +31,7 @@ import { NumericValue } from "@/components/ui/NumericValue";
 
 interface Props {
   params: Promise<{ id: string; sessionIdx: string }>;
-  searchParams: Promise<{ includeShortPulls?: string | string[]; scope?: string | string[] }>;
+  searchParams: Promise<{ includeShortPulls?: string | string[]; scope?: string | string[]; raidMetrics?: string | string[] }>;
 }
 
 interface SessionPlayerAnalytics {
@@ -96,13 +96,14 @@ async function getSessionPageContext({ params, searchParams }: Props) {
   const query = await searchParams;
   const includeShortPulls = parseIncludeShortPulls(query.includeShortPulls);
   const scope = parseRaidSummaryScope(query.scope);
+  const metricView = parseRaidMetricView(query.raidMetrics);
   const isKills = scope === "kills";
   const resolution = await resolveRaidSession(id, sessionIdx);
   if (!resolution) notFound();
 
   const { route: sessionRoute, uploadId, publicSlug } = resolution;
   const sessionPath = getRaidSessionPath(publicSlug, sessionRoute);
-  const querySuffix = buildRaidSummaryQuery(scope, includeShortPulls);
+  const querySuffix = buildRaidSummaryQuery(scope, includeShortPulls, metricView);
   const viewPath = `${sessionPath}${querySuffix}`;
   if (resolution.isLegacyUploadId || resolution.isLegacyIndex) permanentRedirect(viewPath);
 
@@ -132,7 +133,7 @@ async function getSessionPageContext({ params, searchParams }: Props) {
 
   if (encounters.length === 0) notFound();
 
-  return { sessionRoute, uploadId, publicSlug, sessionPath, querySuffix, viewPath, sessionIndex, upload, encounters, includeShortPulls, scope, isKills };
+  return { sessionRoute, uploadId, publicSlug, sessionPath, querySuffix, viewPath, sessionIndex, upload, encounters, includeShortPulls, scope, isKills, metricView };
 }
 
 export default async function SessionDetailPage(props: Props) {
@@ -340,7 +341,7 @@ async function SessionContent({ data }: { data: Awaited<ReturnType<typeof getSes
           {(["all", "kills"] as const).map(value => (
             <Link
               key={value}
-              href={`${sessionPath}${buildRaidSummaryQuery(value, includeShortPulls)}`}
+              href={`${sessionPath}${buildRaidSummaryQuery(value, includeShortPulls, data.metricView)}`}
               scroll={false}
               aria-current={scope === value ? "page" : undefined}
               className={cn("inline-flex min-h-11 items-center rounded-sm border px-4 py-2 text-sm font-semibold transition-colors",

@@ -294,7 +294,8 @@ try {
   };
   for (const width of [390, 1440]) {
     await page.setViewportSize({ width, height: 1000 });
-    await page.goto(new URL(policyReport, base).href);
+    // Sorting/value coverage deliberately opts into all seven metric columns.
+    await page.goto(new URL(`${policyReport}?raidMetrics=all`, base).href);
     await waitForPageContent(page);
     await assertScopeSelection("All Boss Attempts");
     await assertAllCards();
@@ -315,14 +316,14 @@ try {
     await auditOpenMetrics(width, policyReport, allMobToggle);
     await page.screenshot({ path: path.join(out, `${width}-all-boss-attempts.png`), fullPage: true });
     await toggleShortPulls(page, "Include short pulls");
-    await page.waitForURL(new URL(`${policyReport}?includeShortPulls=1`, base).href);
+    await page.waitForURL(new URL(`${policyReport}?includeShortPulls=1&raidMetrics=all`, base).href);
     await waitForPageContent(page);
     await assertAllCards();
     await assertAllPlayerValues(width);
     await assertScopeSelection("All Boss Attempts");
     assert.equal(await page.locator('a[href^="/encounters/"]').count(), 3);
     await toggleShortPulls(page, "Exclude short pulls");
-    await page.waitForURL(new URL(policyReport, base).href);
+    await page.waitForURL(new URL(`${policyReport}?raidMetrics=all`, base).href);
     await waitForPageContent(page);
     await assertAllCards();
     await assertAllPlayerValues(width);
@@ -332,7 +333,7 @@ try {
     await page.keyboard.press("Tab");
     assert.equal(await scopeNavigation.getByRole("link", { name: "Successful Boss Fights", exact: true }).evaluate(element => document.activeElement === element), true);
     await page.keyboard.press("Enter");
-    await page.waitForURL(new URL(`${policyReport}?scope=kills`, base).href);
+    await page.waitForURL(new URL(`${policyReport}?scope=kills&raidMetrics=all`, base).href);
     await waitForPageContent(page);
     await assertScopeSelection("Successful Boss Fights");
     const defaultText = await page.locator("main").innerText();
@@ -344,7 +345,7 @@ try {
     await assertPlayerValues(killView, width, killPlayers.map(player => [
       fixtureDecimal.format(player.damage), rate(player.damage), fixtureDecimal.format(player.heal), rate(player.heal), fixtureDecimal.format(player.taken), rate(player.taken),
     ]));
-    assert.equal(await killView.getByRole("link", { name: "View SyntheticFirst's all-attempt raid report", exact: true }).getAttribute("href"), `${policyReport}/players/SyntheticFirst?scope=kills`);
+    assert.equal(await killView.getByRole("link", { name: "View SyntheticFirst's all-attempt raid report", exact: true }).getAttribute("href"), `${policyReport}/players/SyntheticFirst?scope=kills&raidMetrics=all`);
     await assertSorting("Boss kill player metrics", width, killAscending);
     const fullToggle = page.getByRole("button", { name: /^Full Session Breakdown/ });
     const fullContent = page.locator(`[id="${await fullToggle.getAttribute("aria-controls")}"]`);
@@ -381,42 +382,42 @@ try {
     await auditOpenMetrics(width, `${policyReport}?scope=kills`, mobToggle);
     await page.screenshot({ path: path.join(out, `${width}-short-pulls-default.png`), fullPage: true });
     await toggleShortPulls(page, "Include short pulls");
-    await page.waitForURL(new URL(`${policyReport}?scope=kills&includeShortPulls=1`, base).href);
+    await page.waitForURL(new URL(`${policyReport}?scope=kills&includeShortPulls=1&raidMetrics=all`, base).href);
     await waitForPageContent(page);
     const includedText = await page.locator("main").innerText();
     assert.match(includedText, /1 short pull included/);
     await assertKillCards();
     const includedKillView = playerView("Boss kill player metrics", width);
     assert.deepEqual((await playerNames(includedKillView, width)).sort(), killPlayers.map(player => player.name).sort(), "Including short pulls cannot add wipe-only players to kill metrics");
-    const scopedPlayerPath = `${policyReport}/players/SyntheticFirst?scope=kills&includeShortPulls=1`;
+    const scopedPlayerPath = `${policyReport}/players/SyntheticFirst?scope=kills&includeShortPulls=1&raidMetrics=all`;
     assert.equal(await includedKillView.getByRole("link", { name: "View SyntheticFirst's all-attempt raid report", exact: true }).getAttribute("href"), scopedPlayerPath);
     assert.equal(await page.locator('a[href^="/encounters/"]').count(), 3);
     await page.screenshot({ path: path.join(out, `${width}-short-pulls-included.png`), fullPage: true });
     await includedKillView.getByRole("link", { name: "View SyntheticFirst's all-attempt raid report", exact: true }).click();
     await page.waitForURL(new URL(scopedPlayerPath, base).href);
     await waitForPageContent(page);
-    await page.locator(`a[href="${policyReport}?scope=kills&includeShortPulls=1"]`).first().click();
-    await page.waitForURL(new URL(`${policyReport}?scope=kills&includeShortPulls=1`, base).href);
+    await page.locator(`a[href="${policyReport}?scope=kills&includeShortPulls=1&raidMetrics=all"]`).first().click();
+    await page.waitForURL(new URL(`${policyReport}?scope=kills&includeShortPulls=1&raidMetrics=all`, base).href);
     await waitForPageContent(page);
     await assertKillCards();
-    const scopedEncounterPath = `/encounters/${policyKill.id}?scope=kills&includeShortPulls=1`;
+    const scopedEncounterPath = `/encounters/${policyKill.id}?scope=kills&includeShortPulls=1&raidMetrics=all`;
     await page.locator(`a[href="${scopedEncounterPath}"]`).click();
     await page.waitForURL(new URL(scopedEncounterPath, base).href);
     await waitForPageContent(page);
-    await page.locator(`a[href="${policyReport}?scope=kills&includeShortPulls=1"]`).first().click();
-    await page.waitForURL(new URL(`${policyReport}?scope=kills&includeShortPulls=1`, base).href);
+    await page.locator(`a[href="${policyReport}?scope=kills&includeShortPulls=1&raidMetrics=all"]`).first().click();
+    await page.waitForURL(new URL(`${policyReport}?scope=kills&includeShortPulls=1&raidMetrics=all`, base).href);
     await waitForPageContent(page);
     await assertKillCards();
     await page.getByRole("navigation", { name: "Boss fight scope", exact: true }).getByRole("link", { name: "All Boss Attempts", exact: true }).click();
-    await page.waitForURL(new URL(`${policyReport}?includeShortPulls=1`, base).href);
+    await page.waitForURL(new URL(`${policyReport}?includeShortPulls=1&raidMetrics=all`, base).href);
     await waitForPageContent(page);
     await assertAllCards();
     await assertAllPlayerValues(width);
     await page.getByRole("navigation", { name: "Boss fight scope", exact: true }).getByRole("link", { name: "Successful Boss Fights", exact: true }).click();
-    await page.waitForURL(new URL(`${policyReport}?scope=kills&includeShortPulls=1`, base).href);
+    await page.waitForURL(new URL(`${policyReport}?scope=kills&includeShortPulls=1&raidMetrics=all`, base).href);
     await waitForPageContent(page);
     await toggleShortPulls(page, "Exclude short pulls");
-    await page.waitForURL(new URL(`${policyReport}?scope=kills`, base).href);
+    await page.waitForURL(new URL(`${policyReport}?scope=kills&raidMetrics=all`, base).href);
     await waitForPageContent(page);
     await assertKillCards();
     assert.equal(await page.locator('a[href^="/encounters/"]').count(), 2);
