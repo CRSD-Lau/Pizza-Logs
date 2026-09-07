@@ -42,7 +42,7 @@ async function main() {
     const shell = decoder.decode(first.value);
     assert.match(shell, /role="status"/);
     assert.match(shell, /Loading upload page\.\.\./, "The loading screen must stream before the database finishes");
-    assert.match(shell, /guild-crest-v1/);
+    assert.match(shell, /intro-crest-molten-1/);
     assert.match(shell, /motion-reduce:animate-none/);
     assert.doesNotMatch(shell, /Upload controls ready|Upload a raid log/);
     assert.equal(countCalls, 3, "Existing homepage queries should be pending without added work");
