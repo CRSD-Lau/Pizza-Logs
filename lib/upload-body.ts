@@ -1,4 +1,4 @@
-import { MAX_UPLOAD_BYTES, UploadRequestError } from "@/lib/upload-security";
+import { MAX_UPLOAD_BYTES, UPLOAD_SIZE_ERROR, UploadRequestError } from "@/lib/upload-security";
 
 /** Count actual bytes while preserving streaming and backpressure. */
 export function boundedUploadBody(source: ReadableStream<Uint8Array>, declaredSize: number, signal: AbortSignal) {
@@ -31,7 +31,7 @@ export function boundedUploadBody(source: ReadableStream<Uint8Array>, declaredSi
           return;
         }
         receivedBytes += next.value.byteLength;
-        if (receivedBytes > MAX_UPLOAD_BYTES) throw new UploadRequestError("File exceeds the 100 MiB compressed upload limit.", 413);
+        if (receivedBytes > MAX_UPLOAD_BYTES) throw new UploadRequestError(UPLOAD_SIZE_ERROR, 413);
         if (receivedBytes > declaredSize) throw new UploadRequestError("The uploaded bytes do not match the declared file size.");
         value.enqueue(next.value);
       } catch (error) {

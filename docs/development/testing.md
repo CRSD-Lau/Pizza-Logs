@@ -83,6 +83,8 @@ explicit preference precedence, exact durations and separate healing primitives.
 It supports the default test schema or a validated isolated schema, and records
 screenshots and results under `.test-artifacts/player-raid-comparison`.
 
+`scripts/upload-limit-e2e.mjs` finishes the container acceptance suite with a generated combat log above 100 MiB, streamed through the web service and parser into the isolated database. It checks completion and the saved report route, then removes its temporary fixture. The base URL must be loopback; this is not a production load test or proof that every 1 GiB log completes within the processing limits.
+
 ## Parser Gate
 
 With the Python 3.14 virtual environment active:

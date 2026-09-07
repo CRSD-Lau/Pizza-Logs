@@ -61,6 +61,8 @@ async function main() {
     const uploadForm = renderToStaticMarkup(React.createElement(UploadZone));
     assert.match(uploadForm, /type="checkbox"/);
     assert.match(uploadForm, /I have permission to share this log/);
+    assert.match(uploadForm, /up to (?:<!-- -->)?1 GiB/);
+    assert.match(uploadForm, /ZIP recommended for faster uploads/);
     assert.match(uploadForm, /href="\/upload-policy"/);
     assert.doesNotMatch(uploadForm, /checked=""/, "Agreement must never be pre-accepted");
     sendUploadNotification("Upload complete", "One encounter saved");

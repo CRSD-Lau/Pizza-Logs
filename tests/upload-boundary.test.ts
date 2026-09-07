@@ -51,12 +51,26 @@ test("web counts bytes across chunks, matches parser size, and rejects incomplet
   upload.dispose();
 });
 
+test("web streams the full 1 GiB ceiling without buffering the file", async () => {
+  const chunk = new Uint8Array(1024 * 1024);
+  const input = source(Array<Uint8Array>(MAX_UPLOAD_BYTES / chunk.byteLength).fill(chunk));
+  const upload = boundedUploadBody(input.stream, MAX_UPLOAD_BYTES, new AbortController().signal);
+  const reader = upload.body.getReader();
+  let received = 0;
+  for (let next = await reader.read(); !next.done; next = await reader.read()) {
+    received += next.value.byteLength;
+  }
+  assert.equal(received, 1024 ** 3);
+  assert.equal(upload.assertComplete(received), received);
+  upload.dispose();
+});
+
 test("web rejects chunked overflow, truncation and physical bytes over the ceiling", async () => {
   for (const item of [
     { chunks: [new Uint8Array(3), new Uint8Array(3)], declared: 5, status: 400 },
     { chunks: [new Uint8Array(3)], declared: 5, status: 400 },
     // Reuse a small allocation; the counter must enforce cumulative physical bytes.
-    { chunks: Array<Uint8Array>(101).fill(new Uint8Array(1024 * 1024)), declared: MAX_UPLOAD_BYTES + 1, status: 413 },
+    { chunks: [...Array<Uint8Array>(MAX_UPLOAD_BYTES / (1024 * 1024)).fill(new Uint8Array(1024 * 1024)), new Uint8Array(1)], declared: MAX_UPLOAD_BYTES + 1, status: 413 },
   ]) {
     const input = source(item.chunks);
     const upload = boundedUploadBody(input.stream, item.declared, new AbortController().signal);

@@ -1,4 +1,6 @@
-export const MAX_UPLOAD_BYTES = 100 * 1024 * 1024;
+export const MAX_UPLOAD_BYTES = 1024 * 1024 * 1024;
+export const MAX_UPLOAD_SIZE_LABEL = "1 GiB";
+export const UPLOAD_SIZE_ERROR = `File exceeds the ${MAX_UPLOAD_SIZE_LABEL} upload limit.`;
 
 const UPLOAD_ID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/;
 
@@ -7,7 +9,7 @@ const SAFE_PARSER_ERRORS: Readonly<Record<string, string>> = {
   NO_USABLE_COMBAT_LOG: "The upload does not contain a usable combat log.",
   UNSUPPORTED_FORMAT: "Only .txt, .log, and .zip uploads are supported.",
   EMPTY_UPLOAD: "The uploaded file is empty.",
-  COMPRESSED_SIZE_LIMIT: "File exceeds the 100 MiB compressed upload limit.",
+  COMPRESSED_SIZE_LIMIT: UPLOAD_SIZE_ERROR,
   MAGIC_MISMATCH: "The file contents do not match the filename extension.",
   MEMBER_COUNT_LIMIT: "The archive contains too many files.",
   UNSAFE_MEMBER_PATH: "The archive contains an unsafe file path.",
@@ -47,7 +49,7 @@ export function parseUploadSize(value: string | null, field: string): number {
     throw new UploadRequestError(`${field} is outside the supported range.`);
   }
   if (size > MAX_UPLOAD_BYTES) {
-    throw new UploadRequestError("File exceeds the 100 MiB compressed upload limit.", 413);
+    throw new UploadRequestError(UPLOAD_SIZE_ERROR, 413);
   }
   return size;
 }
@@ -87,7 +89,7 @@ export function parserHttpErrorMessage(status: number): string {
   if (status === 400) return "The parser rejected the upload as invalid.";
   if (status === 408) return "Upload processing timed out. Please try again.";
   if (status === 409) return "The upload identifier is already in use. Please retry.";
-  if (status === 413) return "File exceeds the 100 MiB compressed upload limit.";
+  if (status === 413) return UPLOAD_SIZE_ERROR;
   if (status === 429) return "Upload capacity is busy. Please retry shortly.";
   return "The parser could not process this upload. Please try again.";
 }

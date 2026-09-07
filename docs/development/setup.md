@@ -91,7 +91,7 @@ The stop launcher may need elevation to stop a Windows PostgreSQL service. The s
 | `PORT` | Both | Web 3000, parser 8000 by deployment config |
 | `ENABLE_LEGACY_PARSER_ROUTES` | Parser | Disabled |
 | `ENABLE_PARSER_DOCS` | Parser | Disabled; local-only interactive API docs |
-| `UPLOAD_MAX_COMPRESSED_BYTES` | Parser | 100 MiB |
+| `UPLOAD_MAX_COMPRESSED_BYTES` | Parser | 1 GiB uploaded file (TXT, LOG or ZIP) |
 | `UPLOAD_MAX_UNCOMPRESSED_BYTES` | Parser | 1 GiB |
 | `UPLOAD_MAX_ARCHIVE_MEMBERS` | Parser | 32 |
 | `UPLOAD_MAX_COMPRESSION_RATIO` | Parser | 200 |

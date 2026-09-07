@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 import { ParseResultSchema } from "../lib/schema";
 import { parserPayload } from "./helpers/parser-payload";
+import { MAX_UPLOAD_BYTES } from "../lib/upload-security";
 
 test("parser contract accepts fractional durations and explicit unknown provenance", () => {
   const payload = parserPayload();
@@ -25,7 +26,7 @@ test("parser contract rejects malformed persistence primitives before database w
     p => { p.encounters.push(p.encounters[0]); },
     p => { p.encounters[0].sessionIndex = -1; },
     p => { p.encounters[0].durationMs = 2 ** 31; },
-    p => { p.receivedBytes = 101 * 1024 * 1024; },
+    p => { p.receivedBytes = MAX_UPLOAD_BYTES + 1; },
     p => { p.provenance!.referenceSha = "current"; },
   ];
   for (const change of changes) {
