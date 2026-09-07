@@ -21,11 +21,11 @@ const config = {
         },
       },
       boxShadow: {
-        "gold-glow": "0 0 20px rgba(200,168,75,0.25)",
+        "gold-glow": "0 0 20px color-mix(in srgb, var(--color-flame) 25%, transparent)",
         card: "0 2px 12px rgba(0,0,0,0.4)",
       },
       borderColor: {
-        DEFAULT: "rgba(180,140,60,0.2)",
+        DEFAULT: "var(--color-line)",
       },
     },
   },

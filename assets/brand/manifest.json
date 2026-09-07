@@ -1,9 +1,23 @@
 {
   "author": "Neil Mitchell",
+  "creator": "Neil Mitchell",
   "lastModifiedBy": "Neil Mitchell",
   "source": "assets/brand/pizza-warriors-source.png",
   "sourceSha256": "1fea4b90c299620227bfec21a73b6a41b807da39e7059fe49a1d6a3cc152a70b",
-  "background": "#0a0c10",
+  "background": "#100d0b",
+  "palette": {
+    "name": "Molten Charcoal",
+    "background": "#100d0b",
+    "panel": "#1d1815",
+    "border": "#49352a",
+    "text": "#fff3e8",
+    "muted": "#bba99b",
+    "accent": "#ffa363",
+    "flame": "#ff812f",
+    "heading": "#ffe0bf",
+    "halo": "#382017"
+  },
+  "cacheVersion": "molten-1",
   "method": "Browser-rendered existing artwork, CSS lighten background blend, native-size exports; no generated replacement logo.",
   "outputs": [
     {
@@ -17,29 +31,36 @@
       "file": "public/brand/icon-192.png",
       "width": 192,
       "height": 192,
-      "bytes": 47921,
-      "sha256": "e8397f23d28dbb86ad58e3ef693207d6a0153ba9cfaaabe4a0816cfcd585cf39"
+      "bytes": 46945,
+      "sha256": "ceb50e853d7285f9904d205dbaa875db7865711b9f1e77880deb506730dfc019"
     },
     {
       "file": "public/brand/icon-512.png",
       "width": 512,
       "height": 512,
-      "bytes": 308999,
-      "sha256": "f25d9e9c310b208da3e09afaf9797b3428fd0ef861e72c359587672787cff35a"
+      "bytes": 301306,
+      "sha256": "f3eae390b8cf10496e40908a413c4aaa401f7c932ff47d836f10d5af78615d23"
+    },
+    {
+      "file": "public/brand/intro-crest-molten-1.png",
+      "width": 512,
+      "height": 512,
+      "bytes": 301306,
+      "sha256": "f3eae390b8cf10496e40908a413c4aaa401f7c932ff47d836f10d5af78615d23"
     },
     {
       "file": "public/brand/icon-maskable-512.png",
       "width": 512,
       "height": 512,
-      "bytes": 217013,
-      "sha256": "6c76c2d23865ee17e4b211c755e8a47942b758cd9a2ca73c8814bb41085763b2"
+      "bytes": 211406,
+      "sha256": "e76d11e4dd9f4ca9d9bbfa25c1c9856188b676e254bc5adb83be3d5d2102c960"
     },
     {
       "file": "public/brand/apple-touch-icon.png",
       "width": 180,
       "height": 180,
-      "bytes": 36540,
-      "sha256": "cdadb7e005a3794c5ef37518611403604ab1341a720be3912f4a617084667ee0"
+      "bytes": 35671,
+      "sha256": "143dd651c29e25faad1ab9fa7e2ebe7bc75038828c67e0ebc3571d75acb06bdb"
     },
     {
       "file": "public/favicon.ico",
@@ -48,22 +69,22 @@
         32,
         48
       ],
-      "bytes": 7859,
-      "sha256": "6ff0b4dde0c0f269de044efdc5c713602b5683a5a2850bf2e66ac0f52472ecfb"
+      "bytes": 7835,
+      "sha256": "77f29e8c19550bfdc449eac345e95728f5ed03130024c5dcc8acaca0230a4637"
     },
     {
       "file": "app/icon.svg",
       "width": 192,
       "height": 192,
-      "bytes": 77889,
-      "sha256": "d5167391196d6849972b3f12e13f2e0081af321bec874c9c9891fd414ce2ba1c"
+      "bytes": 76649,
+      "sha256": "4ae5ed59ad825813215ec5c993bf1cf446b0a80e05809cef85606cd53f1ed4c8"
     },
     {
       "file": "public/social-preview.jpg",
       "width": 1280,
       "height": 640,
-      "bytes": 172542,
-      "sha256": "db10143b266b000703538d7edb45abfd6db0277f17538047007f43a19b3a16dd"
+      "bytes": 171481,
+      "sha256": "36377e12b3365b31576faad38e71168c01f1da7c79d1928f4ea728b82c529284"
     }
   ]
 }

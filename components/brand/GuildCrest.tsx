@@ -14,7 +14,7 @@ export function GuildCrest({
 }) {
   return (
     <Image
-      src={surface === "solid" ? "/brand/icon-512.png" : "/brand/guild-crest-v1.png"}
+      src={surface === "solid" ? "/brand/intro-crest-molten-1.png" : "/brand/guild-crest-v1.png"}
       alt={alt}
       width={size}
       height={size}

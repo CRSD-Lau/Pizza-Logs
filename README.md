@@ -1,6 +1,6 @@
 # Pizza Logs
 
-![Pizza Logs: WotLK raid analytics](public/social-preview.jpg)
+[![Pizza Logs: WotLK raid analytics with the Pizza Warriors crest and Molten Charcoal palette](public/social-preview.jpg)](https://pizza-logs-production.up.railway.app)
 
 [![CI](https://github.com/CRSD-Lau/Pizza-Logs/actions/workflows/ci.yml/badge.svg)](https://github.com/CRSD-Lau/Pizza-Logs/actions/workflows/ci.yml)
 [![CodeQL](https://github.com/CRSD-Lau/Pizza-Logs/actions/workflows/codeql.yml/badge.svg)](https://github.com/CRSD-Lau/Pizza-Logs/actions/workflows/codeql.yml)
@@ -8,6 +8,8 @@
 [![MIT License](https://img.shields.io/github/license/CRSD-Lau/Pizza-Logs)](LICENSE)
 
 Pizza Logs turns Wrath of the Lich King combat logs into readable raid sessions, boss pulls, DPS/HPS records, player profiles, gear snapshots, and progression summaries. It is built for PizzaWarriors on Warmane Lordaeron, while remaining useful for compatible WotLK 3.3.5a logs.
+
+The [Molten Charcoal identity](docs/branding.md) pairs warm charcoal surfaces, ember-orange accents and cream text with the original Pizza Warriors crest. The site, install icons and shared-link previews use the same branding.
 
 [Open the live app](https://pizza-logs-production.up.railway.app) · [Read the docs](docs/README.md) · [Report a bug](https://github.com/CRSD-Lau/Pizza-Logs/issues/new/choose) · [Report a vulnerability privately](https://github.com/CRSD-Lau/Pizza-Logs/security/advisories/new)
 

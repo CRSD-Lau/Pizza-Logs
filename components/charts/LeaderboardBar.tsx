@@ -39,7 +39,7 @@ export function LeaderboardBar({ entries, metric, className, querySuffix = "", s
             key={`${e.rank}-${e.playerName}`}
             className={cn(
               getRevealClassName(),
-              "relative overflow-hidden rounded-sm bg-bg-card border border-transparent hover:border-gold-dim transition-colors group"
+              "relative overflow-hidden rounded-sm bg-bg-meter border border-transparent hover:border-gold-dim transition-colors group"
             )}
             style={getRevealStyle(index)}
           >

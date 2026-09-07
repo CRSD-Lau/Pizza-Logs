@@ -19,7 +19,8 @@ Neil confirmed that the intro was generated with Google Veo and the previous soc
 preview with ChatGPT image generation. On 2026-09-06 he approved using his existing
 Pizza Warriors crest across the site, installed-app icons and social previews. The
 current brand exports are browser-rendered derivatives of that exact approved PNG;
-this update did not generate replacement artwork. Owner statements establish the
+the Molten Charcoal palette refresh changes the surrounding surfaces and typography
+colors while preserving the source artwork. This update did not generate replacement artwork. Owner statements establish the
 recorded creation sources; no account screenshots or private generation receipts
 are required to repeat them here. Exact original generation dates, inputs and any
 separate audio sources were not independently inspected. Historical dates below
@@ -42,8 +43,8 @@ Git history, SHA-256, FFprobe stream/container metadata, and visual inspection o
 the current social preview and desktop poster. Commit authorship records who
 introduced or changed a file; it does not independently prove creative authorship,
 assignment, or permission. Owner-attested origins are distinguished from these
-technical observations. The 2026-09-06 brand update replaces the site icon and social
-card and adds install-icon exports. The approved source PNG, existing intro video,
+technical observations. The Molten Charcoal refresh updates the site icon, social
+card and install-icon exports on the approved warm charcoal backing. The approved source PNG, existing intro video,
 posters, audio and Git history are preserved.
 
 ## Local asset groups
@@ -53,7 +54,7 @@ posters, audio and Git history are preserved.
 | M01 | `animations/source/Veo.mp4` | Neil identifies this as his Google Veo intro. Introduced in `47f4f68` (2026-05-06), commit author Neil Mitchell. H.264 1280x720 with AAC audio; container encoder is `Google`. [Pipeline documentation](../intro-animation.md) identifies it as the current source. | Owner-attested generated media. The Git date is not an exact generation date. Specific Veo service/account terms, reference inputs and any separate voice/music source were not independently inspected; the encoder is not a rights grant. This is a recorded limit, not an acquisition-document request. |
 | M02 | Twelve `public/animations/` video variants and two posters; [FrozenLogbookIntro](../../components/intro/FrozenLogbookIntro.tsx) | [PowerShell renderer](../../scripts/render-intro-videos.ps1) and [Bash renderer](../../scripts/render-intro-videos.sh) derive these from M01. Posters last changed in `47f4f68`; videos in `d7e7727` (2026-05-06), which restored audio. All twelve videos contain audio: AAC in MP4, Opus in WebM. | Derivatives of the identified Veo source. The documented recipe crops the visible source watermark and retains audio. Permission for that transformation has not been independently established. A visible crop does not establish that invisible SynthID was removed. Preserve the original source and applicable service conditions. |
 | M03 | `public/social-preview.jpg`; [page metadata](../../lib/page-metadata.ts), [layout](../../app/layout.tsx), README and repository social preview | Current 1280x640 card is rendered by the [brand renderer](../../scripts/render-brand-assets.mjs) from the exact M04 crest, local Cinzel/Rajdhani fonts and project CSS. Approved on 2026-09-06. It replaces the owner-attested ChatGPT card introduced in `0045566` (2026-08-15); no new AI artwork was generated for this refresh. | A reproducible composition of the approved guild artwork and fonts. The source hash establishes which artwork was used, not independent trademark or third-party rights clearance. Repository social preview is a separate GitHub setting; committing this file alone does not change that setting. |
-| M04 | `assets/brand/pizza-warriors-source.png`, `public/brand/*.png`, `app/icon.svg`, `public/favicon.ico`; [GuildCrest](../../components/brand/GuildCrest.tsx), [manifest](../../app/manifest.ts) and layout | Neil approved this existing Pizza Warriors crest for the refresh on 2026-09-06. The 1024x1024 source PNG is copied unchanged; its SHA-256 is recorded below and in the [brand manifest](../../assets/brand/manifest.json). The [renderer](../../scripts/render-brand-assets.mjs) sizes the existing artwork and applies the approved CSS `lighten` blend against `#0a0c10` for static exports. The SVG embeds a rendered PNG; ICO contains 16/32/48px PNG images. [Brand maintenance](../branding.md) identifies all consumers. | Owner-supplied, approved artwork with an exact preserved source and reproducible derivatives. Original generation tool/date and third-party inputs were not independently established by this refresh. No recoloring, redrawing or substitute logo is authorized by the rendering recipe. The geometric source mark introduced in `527c883` (2026-05-03) is retired from current consumers; Git history is preserved. Buyer assignment clearance remains out of scope. |
+| M04 | `assets/brand/pizza-warriors-source.png`, `public/brand/*.png`, `app/icon.svg`, `public/favicon.ico`; [GuildCrest](../../components/brand/GuildCrest.tsx), [manifest](../../app/manifest.ts) and layout | Neil approved this existing Pizza Warriors crest for the refresh on 2026-09-06. The 1024x1024 source PNG is copied unchanged; its SHA-256 is recorded below and in the [brand manifest](../../assets/brand/manifest.json). The [renderer](../../scripts/render-brand-assets.mjs) sizes the existing artwork and applies the approved CSS `lighten` blend against `#100d0b` for static exports. The Molten Charcoal refresh changes only the surrounding palette and typography colors. The SVG embeds a rendered PNG; ICO contains 16/32/48px PNG images. [Brand maintenance](../branding.md) identifies all consumers. | Owner-supplied, approved artwork with an exact preserved source and reproducible derivatives. Original generation tool/date and third-party inputs were not independently established by this refresh. No recoloring, redrawing or substitute logo is authorized by the rendering recipe. The geometric source mark introduced in `527c883` (2026-05-03) is retired from current consumers; Git history is preserved. Buyer assignment clearance remains out of scope. |
 | M05 | Cinzel and Rajdhani font packages imported by the app | Installed package licenses and upstream OFL-1.1 grants were checked. Copyright notices and full license text are retained in [public notices](../../public/third-party-notices.txt), [LICENSE.LIST](../../LICENSE.LIST) and [third-party notices](../../THIRD_PARTY_NOTICES.md). | Known third-party font software with retained notices. The Dockerfile copies `public/` and the production dependency tree. Preserve these notices when packaging web assets; this font grant does not cover M01-M04. |
 
 The source video's `Google` encoder and generated variants' `Lavf62.12.101` encoder
@@ -73,7 +74,7 @@ of native source resolution or creative ownership.
 |---|---|---|---:|---|
 | `animations/source/Veo.mp4` | M01 | 1280x720 | 6,023,459 | `08dc25057a0cd1bc458704beaa87c7cee54fd692d3c8cc411988999a77cac503` |
 | `assets/brand/pizza-warriors-source.png` | M04 | 1024x1024 | 2,137,406 | `1fea4b90c299620227bfec21a73b6a41b807da39e7059fe49a1d6a3cc152a70b` |
-| `app/icon.svg` | M04 | 192x192 (SVG viewBox) | 77,889 | `d5167391196d6849972b3f12e13f2e0081af321bec874c9c9891fd414ce2ba1c` |
+| `app/icon.svg` | M04 | 192x192 (SVG viewBox) | 76,649 | `4ae5ed59ad825813215ec5c993bf1cf446b0a80e05809cef85606cd53f1ed4c8` |
 | `public/animations/desktop/intro-1080p.mp4` | M02 | 1920x1080 | 7,814,170 | `59d87ca574a445af3d66c10b26704de927ae6a2c9425d21e124139efb4beb417` |
 | `public/animations/desktop/intro-1080p.webm` | M02 | 1920x1080 | 5,980,366 | `f42ddf2973934188d50c45d61284d7ddebb5b8fb93f028d2393c560d6e3af0fb` |
 | `public/animations/desktop/intro-1440p.mp4` | M02 | 2560x1440 | 10,593,964 | `af4121873e71cc4859bccbcdef600109fa4420e7202e5496c677716cbf8b6faf` |
@@ -89,16 +90,19 @@ of native source resolution or creative ownership.
 | `public/animations/posters/desktop-poster.jpg` | M02 | 1920x1080 | 173,501 | `15436af1a86f17bdbb56a6a6a71fe823ed888f2c1af01cf242ed0c3b80ba6809` |
 | `public/animations/posters/mobile-poster.jpg` | M02 | 720x1280 | 114,747 | `47ada1fd33452f5fe09b40eaab3a698dfb473feb78db626322505c0b92345a12` |
 | `public/brand/guild-crest-v1.png` | M04 | 512x512 | 460,831 | `08dd89f65b0849892feefe0e269f4bd7000729217860fdc25c5c7328b8a4cb5d` |
-| `public/brand/icon-192.png` | M04 | 192x192 | 47,921 | `e8397f23d28dbb86ad58e3ef693207d6a0153ba9cfaaabe4a0816cfcd585cf39` |
-| `public/brand/icon-512.png` | M04 | 512x512 | 308,999 | `f25d9e9c310b208da3e09afaf9797b3428fd0ef861e72c359587672787cff35a` |
-| `public/brand/icon-maskable-512.png` | M04 | 512x512 | 217,013 | `6c76c2d23865ee17e4b211c755e8a47942b758cd9a2ca73c8814bb41085763b2` |
-| `public/brand/apple-touch-icon.png` | M04 | 180x180 | 36,540 | `cdadb7e005a3794c5ef37518611403604ab1341a720be3912f4a617084667ee0` |
-| `public/favicon.ico` | M04 | 16x16 / 32x32 / 48x48 | 7,859 | `6ff0b4dde0c0f269de044efdc5c713602b5683a5a2850bf2e66ac0f52472ecfb` |
-| `public/social-preview.jpg` | M03 | 1280x640 | 172,542 | `db10143b266b000703538d7edb45abfd6db0277f17538047007f43a19b3a16dd` |
+| `public/brand/icon-192.png` | M04 | 192x192 | 46,945 | `ceb50e853d7285f9904d205dbaa875db7865711b9f1e77880deb506730dfc019` |
+| `public/brand/icon-512.png` | M04 | 512x512 | 301,306 | `f3eae390b8cf10496e40908a413c4aaa401f7c932ff47d836f10d5af78615d23` |
+| `public/brand/intro-crest-molten-1.png` | M04 | 512x512 | 301,306 | `f3eae390b8cf10496e40908a413c4aaa401f7c932ff47d836f10d5af78615d23` |
+| `public/brand/icon-maskable-512.png` | M04 | 512x512 | 211,406 | `e76d11e4dd9f4ca9d9bbfa25c1c9856188b676e254bc5adb83be3d5d2102c960` |
+| `public/brand/apple-touch-icon.png` | M04 | 180x180 | 35,671 | `143dd651c29e25faad1ab9fa7e2ebe7bc75038828c67e0ebc3571d75acb06bdb` |
+| `public/favicon.ico` | M04 | 16x16 / 32x32 / 48x48 | 7,835 | `77f29e8c19550bfdc449eac345e95728f5ed03130024c5dcc8acaca0230a4637` |
+| `public/social-preview.jpg` | M03 | 1280x640 | 171,481 | `36377e12b3365b31576faad38e71168c01f1da7c79d1928f4ea728b82c529284` |
 
 The [brand manifest](../../assets/brand/manifest.json) records the renderer's source
 digest, export dimensions, sizes and hashes. Refresh these rows from that manifest
-when regenerating the assets. `GuildCrest` supplies shared presentation behavior;
+when regenerating the assets. The versioned intro crest is a byte-identical copy
+of the 512px install icon for cache refresh with the default local-image policy.
+`GuildCrest` supplies shared presentation behavior;
 its component source is not a separately shipped image file.
 
 ## Remote media and runtime code

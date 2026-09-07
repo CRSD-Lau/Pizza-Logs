@@ -14,7 +14,7 @@ import { PIZZA_LOGS_ORIGIN } from "@/lib/site";
 import { SOCIAL_IMAGE } from "@/lib/page-metadata";
 
 export const viewport: Viewport = {
-  themeColor: "#0a0c10",
+  themeColor: "#100d0b",
 };
 
 export const metadata: Metadata = {
@@ -43,14 +43,14 @@ export const metadata: Metadata = {
     card: "summary_large_image",
     title: "Pizza Logs | WotLK Raid Analytics",
     description: "Upload a Warmane combat log to review boss fights, damage and healing.",
-    images: [SOCIAL_IMAGE.url],
+    images: [SOCIAL_IMAGE],
   },
   icons: {
     icon: [
-      { url: "/favicon.ico?v=guild-1" },
-      { url: "/icon.svg?v=guild-1", type: "image/svg+xml" },
+      { url: "/favicon.ico?v=molten-1" },
+      { url: "/icon.svg?v=molten-1", type: "image/svg+xml" },
     ],
-    apple: [{ url: "/brand/apple-touch-icon.png?v=guild-1", sizes: "180x180", type: "image/png" }],
+    apple: [{ url: "/brand/apple-touch-icon.png?v=molten-1", sizes: "180x180", type: "image/png" }],
   },
   manifest: "/manifest.webmanifest",
 };

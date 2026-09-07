@@ -5,9 +5,32 @@ Author: Neil Mitchell
 Last modified by: Neil Mitchell
 
 The Pizza Logs identity uses the existing Pizza Warriors crest, approved for this
-site on 2026-09-06. The header uses a 44px crest alongside the existing Pizza Logs
-wordmark and gold/navy palette. Keep the crest's colors, proportions and detail;
+site on 2026-09-06. The header uses a 44px crest alongside the Pizza Logs
+wordmark and approved Molten Charcoal palette. Keep the crest's colors, proportions and detail;
 do not redraw it, recolor it or replace it with newly generated artwork.
+
+## Molten Charcoal palette
+
+The warm charcoal surfaces and orange highlights follow the approved palette
+mockup. The logo's existing blue lettering remains part of the original artwork.
+
+| Role | Color |
+|---|---|
+| Page and installed-app background | `#100D0B` |
+| Panels | `#1D1815` |
+| Fields | `#27201B` |
+| Borders | `#49352A` |
+| Primary text | `#FFF3E8` |
+| Secondary text | `#BBA99B` |
+| Links and accents | `#FFA363` |
+| Primary buttons and wordmark highlight | `#FF812F` |
+| Primary button text | `#1A100A` |
+| Headings | `#FFE0BF` |
+| Background halo | `#382017` |
+
+The [design contract](../DESIGN.md) defines the shared application tokens and
+semantic colors. Brand surfaces use this palette; class, school, status and chart
+colors retain their analytical meaning.
 
 ## Source and rendering
 
@@ -21,9 +44,9 @@ each exported asset's dimensions, byte size and SHA-256. The
 The shared [GuildCrest](../components/brand/GuildCrest.tsx) normally displays the
 exported 512px crest with CSS `mix-blend-mode: lighten`, allowing its black surround
 to blend into the dark page behind it. The intro uses the component's solid variant:
-the precomposed 512px icon is clipped to a circle on a matching navy backing, so
+the precomposed 512px icon is clipped to a circle on a matching warm charcoal backing, so
 the animated overlay does not depend on backdrop blending. Static install icons,
-favicon and social card use the same browser blend against `#0a0c10`; their backgrounds are already
+favicon and social card use the same browser blend against `#100d0b`; their backgrounds are already
 composited because external consumers cannot use the site's CSS. The SVG icon
 embeds a raster export of the exact artwork; it is not a traced replacement.
 
@@ -52,8 +75,8 @@ font or encoder updates can change exported bytes even when the source is unchan
 |---|---|---|
 | Desktop and mobile header | [Nav](../components/layout/Nav.tsx) through `GuildCrest` | 44px crest; preserve the wordmark and responsive navigation space. |
 | Guild roster loading state | [Existing roster loading UI](../app/guild-roster/loading.tsx) through `GuildCrest` | Crest and accessible loading status alongside the existing roster skeleton. |
-| Optional guild intro | [FrozenLogbookIntro](../components/intro/FrozenLogbookIntro.tsx) through `GuildCrest` | Responsive solid crest on a circular navy backing and wordmark overlay; inspect normal playback, reduced motion and failed-video fallback. |
-| Installed-app icon and supported mobile startup screen | [Manifest](../app/manifest.ts) | 192/512px PNG icons, a separate 512px maskable icon with inset artwork, and `#0a0c10` background/theme. The operating system controls startup presentation. |
+| Optional guild intro | [FrozenLogbookIntro](../components/intro/FrozenLogbookIntro.tsx) through `GuildCrest` | Responsive solid crest on a circular warm charcoal backing and wordmark overlay; inspect normal playback, reduced motion and failed-video fallback. |
+| Installed-app icon and supported mobile startup screen | [Manifest](../app/manifest.ts) | 192/512px PNG icons, a separate 512px maskable icon with inset artwork, and `#100d0b` background/theme. The operating system controls startup presentation. |
 | Apple home-screen icon | [Root metadata](../app/layout.tsx) | 180px `public/brand/apple-touch-icon.png`. |
 | Browser tabs and bookmarks | Root metadata, [SVG route](../app/icon.svg), [favicon](../public/favicon.ico) | SVG plus ICO containing 16/32/48px artwork. |
 | Upload notifications | [Notification helper](../components/upload/notifications.ts) | 192px PNG icon; retain the existing explicit notification opt-in. |
@@ -82,11 +105,17 @@ occurred. Repository settings are not synchronized by the application deployment
 
 ## Cache and release validation
 
-Current metadata references use `?v=guild-1` on the brand image URLs. The shared
-crest component uses the versioned filename `/brand/guild-crest-v1.png`, which
-works with the image optimizer's default local-image policy.
-When changing the approved artwork later, update the version consistently across
-the crest filename, manifest, notification helper and root/page metadata.
+Current metadata references use `?v=molten-1` on changed brand image URLs.
+Next.js emits its file-based manifest at `/manifest.webmanifest`; verify the
+served manifest's theme and versioned icon URLs rather than expecting a query
+on the manifest link itself. The shared crest component retains the unchanged
+`/brand/guild-crest-v1.png` for CSS blending. Its solid icon uses the filename
+`/brand/intro-crest-molten-1.png`, refreshing the image-optimizer cache without
+query strings or a build-tool-specific image import. It contains the exact same
+bytes as the 512px install icon. Next.js also adds a
+content-derived query to the file-based SVG metadata entry.
+When changing the approved palette or artwork later, update the cache version
+consistently across the brand manifest, notification helper and root/page metadata.
 Preserve the unversioned favicon, SVG and social-card paths for existing consumers.
 
 External sharing services may cache a preview for an already shared page even after

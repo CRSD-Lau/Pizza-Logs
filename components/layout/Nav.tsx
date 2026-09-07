@@ -36,8 +36,8 @@ export function Nav() {
           <Link href="/" className="group flex min-h-11 shrink-0 items-center gap-3 rounded-sm" onClick={() => setMobileOpen(false)}>
             <GuildCrest />
             <div className="min-w-0">
-              <div className="heading-cinzel text-lg font-bold text-gold-light text-glow-gold leading-none">
-                Pizza<span className="text-text-secondary font-normal">Logs</span>
+              <div className="heading-cinzel text-lg font-bold text-text-primary leading-none">
+                Pizza<span className="text-flame">Logs</span>
               </div>
               <div className="mt-0.5 text-xs uppercase leading-none tracking-widest text-text-dim">
                 WoW Raid Analytics

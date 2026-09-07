@@ -49,7 +49,7 @@ export function StatCard({ label, value, sub, highlight, className }: StatCardPr
       </div>
       <div className={cn(
         "break-words text-2xl font-bold leading-tight tabular-nums sm:text-3xl",
-        highlight ? "text-gold-light" : "text-text-primary"
+        highlight ? "text-flame" : "text-text-primary"
       )}>
         {typeof value === "number" ? <NumericValue value={value} /> : value === "-" || value === null || value === undefined ? <NumericValue value={null} /> : value}
       </div>
