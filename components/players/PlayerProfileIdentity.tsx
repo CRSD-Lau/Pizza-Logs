@@ -12,7 +12,7 @@ export function PlayerProfileIdentity({ profile, latestSpec }: {
   const [correction, setCorrection] = useState<{ initial: string | null; value: string | null } | null>(null);
   const meta = getPlayerClassMeta(correction?.initial === profile.className ? correction.value : profile.className);
   return (
-    <div className="flex items-center gap-4">
+    <div className="flex items-center gap-4 border-b border-gold-dim pb-5 sm:gap-5">
       <PlayerAvatar
         name={profile.name} realmName={profile.realmName} characterClass={meta.className}
         raceName={profile.raceName} guildName={profile.guildName} color={meta.color} size="lg"
@@ -22,10 +22,11 @@ export function PlayerProfileIdentity({ profile, latestSpec }: {
         }}
       />
       <div className="min-w-0">
-        <h1 className="heading-cinzel break-words text-2xl font-bold" style={{ color: meta.textColor }}>{profile.name}</h1>
+        <p className="mb-1 text-xs font-semibold uppercase tracking-widest text-text-dim">{profile.realmName} · Player profile</p>
+        <h1 className="heading-cinzel break-words text-2xl font-bold sm:text-4xl" style={{ color: meta.textColor }}>{profile.name}</h1>
         <div className="mt-1 flex flex-wrap items-center gap-2">
           <span className="text-sm text-text-secondary">{meta.label}</span>
-          {latestSpec && <span className="text-sm text-gold">{latestSpec}</span>}
+          {latestSpec && <span className="text-sm text-gold">Last recorded spec: {latestSpec}</span>}
           {profile.raceName && <span className="text-sm text-text-dim">{profile.raceName}</span>}
           {profile.level && <span className="text-xs text-text-dim">Level {profile.level}</span>}
           <span className="text-xs text-text-dim">{profile.realmName}</span>

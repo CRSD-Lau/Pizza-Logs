@@ -64,6 +64,7 @@ async function main() {
     },
     "@/lib/db": { db },
     "@/lib/warmane-armory": { getWarmaneCharacterGear: async () => ({ ok: false }) },
+    "@/lib/armory-profile.server": { getArmoryProfileSection: async () => ({ data: null, fetchedAt: null, stale: false, sourceUrl: "https://armory.warmane.com" }) },
     "@/lib/warmane-guild-roster": { DEFAULT_GUILD_NAME: "Synthetic Guild", DEFAULT_GUILD_REALM: "Lordaeron" },
     "@/components/players/PlayerGearSection": { PlayerGearSection: () => null, PlayerGearSectionSkeleton: () => null },
     "@/components/players/PlayerRaidComparisonSection": { PlayerRaidComparisonSection: () => null, PlayerRaidComparisonSkeleton: () => null },

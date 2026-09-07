@@ -4,6 +4,77 @@ Author: Neil Mitchell
 
 Last modified by: Neil Mitchell
 
+## Main player character sheet
+
+The main `/players/[playerName]` page includes a Warmane Armory character sheet
+in the site's Molten Charcoal design. The overview streams independently of raid
+analytics. Other sections load on selection, with searchable, paginated lists:
+
+| Section | Imported public data |
+| --- | --- |
+| Overview | Level, race, class, faction, gender, guild, snapshot online status, achievement points, honorable kills, both specialization point summaries, professions, secondary skills, PvP summary and recent activity |
+| Character stats | Attributes, melee, ranged, spell, defense and resistances, preserving every reported field and measured zero |
+| Talents and glyphs | Both builds, all three trees per build, every allocated and unallocated node, tier, column, current/max rank, and major/minor glyphs |
+| Achievements | Completion totals and all allowlisted Wrath categories/subcategories, including names, descriptions, points and earned/unearned status |
+| Statistics | Warmane's category-based lifetime statistics, including explicit unavailable values |
+| Reputation | Listed factions, standings and progress |
+| Mounts and companions | Both public collection lists with item references |
+| Arena history | Public match rows: team, outcome, rating, time, duration and map |
+
+Equipment retains the existing gear section and quick look. Armory values describe
+independent snapshots, not the equipment or talents used in past combat logs. The
+header explicitly labels its combat-log spec as **Last recorded spec**. Build
+order does not establish which spec is active. Relative activity times are those
+shown at retrieval; achievement dates retain Warmane's displayed date format.
+Unavailable/hidden fields (for example health or mana when absent upstream) are
+not inferred. Achievement criteria drilldowns and per-match participant details
+remain on Warmane; the imported category lists are not a claim to hidden data.
+
+Selecting a talent loads its name and description from the same WotLK Cavern of
+Time spell reference linked by Warmane. Zero-point nodes reference the first
+rank. When that reference is unavailable, the viewer retains the verified tree
+position, spell ID and point allocation. The server validates that the requested
+spell belongs to the character's parsed builds before retrieving it. No external
+tooltip script or upstream page markup is executed in Pizza Logs. Desktop shows
+all three trees; smaller screens offer a tree selector with 44px controls.
+
+### Profile cache and request bounds
+
+`GET /api/players/[name]/armory?realm=...&section=...&category=...` serves only
+known players or roster members in the requested realm. A separate, additive
+`armory_profile_cache` table stores versioned JSON by normalized character,
+realm, section and category. A healthy section lasts 12 hours; failed refreshes
+retain its original snapshot timestamp and display **Cached fallback**. Failures
+retry after one minute. Sections do not overwrite gear or combat-log records.
+Immutable WotLK spell descriptions share a validated cache in the same table.
+
+Every character HTML page must identify the requested character and realm.
+Achievements/statistics use Warmane's observed read-only category POST after
+validating the page identity and a finite category allowlist. Their fragments
+do not contain their own identity; this limitation is explicit. No recursive
+crawl or arbitrary destination URL is accepted. New upstream categories require
+an allowlist/parser update. Each section uses at most two requests, a shared
+12-second deadline, 2 MiB response limits and rejected redirects. Spell lookups
+use an eight-second deadline. A process allows six concurrent refreshes and
+coalesces identical requests. A 429 response starts a shared upstream-host
+cooldown (at least one minute, honoring a bounded Retry-After); switching
+categories during it does not issue more requests. Browsing directories and gear quick looks does not
+load the expanded profile sections.
+
+The migration creates only this cache table and its unique index. It does not
+rewrite or backfill existing data. Rollback can retain the unused cache table;
+do not delete historical migrations. Production still requires the normal
+Railway deployment and smoke gates.
+
+Validation includes sanitized public Paladin and Druid fixtures, parser drift,
+identity mismatch, zero/missing values, invalid categories, independent cache
+fallback, coalescing and request guards. `npm run test:armory` exercises the actual
+profile on a loopback server using invocation-owned fixture rows and removes
+only those rows afterward. Set `PIZZA_ARMORY_E2E_URL` for the local server origin
+(default `http://127.0.0.1:3000`) and supply its local `DATABASE_URL`.
+
+## Gear quick look
+
 Pizza Logs exposes current Warmane equipment from the class avatar shown beside a player. The avatar is a 44px button with a small shield badge. Hover it with a mouse, focus it with the keyboard, or tap it to load the quick look.
 
 The same `PlayerAvatar` quick look supplies the guild roster, raid-session roster, encounter roster, player directory, player profile and session-player profile. Its centered model and fallback behavior are shared across these pages.

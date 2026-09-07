@@ -2,6 +2,11 @@
 
 Author: Neil Mitchell
 Last Modified By: Neil Mitchell
+
+Cheerio 1.2.0 added and verified from its installed MIT license on 2026-09-07.
+This adds one MIT runtime dependency to the historical inventory below (43 direct
+packages total, 26 MIT). Its transitive packages remain covered by the lockfile
+and packaged dependency licenses.
 Verified: 2026-09-04; Better Auth and font/jQuery notice update: 2026-09-05
 
 Scope: the 42 direct runtime and development dependencies declared in `package.json`, `parser/requirements.txt`, and `parser/requirements-dev.txt`. Versions and license identifiers were read from installed npm packages and the Python 3.14 environment installed from the hash-locked development requirements, then checked against the lockfiles. Better Auth 1.7.2 was added on 2026-09-05 and checked against its installed package metadata, `LICENSE.md` and lockfile entry. Better Call 1.4.0 was promoted from the existing transitive dependency to a direct dependency on 2026-09-05; its installed MIT LICENSE was checked. This is a dependency metadata inventory, not a complete software bill of materials or clearance of project assets.
@@ -24,6 +29,7 @@ Scope: the 42 direct runtime and development dependencies declared in `package.j
 
 | Package | Resolved version | License |
 | --- | ---: | --- |
+| `cheerio` | 1.2.0 | MIT |
 | `@fontsource/cinzel` | 5.3.0 | OFL-1.1 |
 | `@fontsource/rajdhani` | 5.3.0 | OFL-1.1 |
 | `@prisma/adapter-pg` | 7.10.0 | Apache-2.0 |

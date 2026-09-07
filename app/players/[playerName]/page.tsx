@@ -8,6 +8,8 @@ import { StatCard, StatGroup } from "@/components/ui/StatCard";
 import { AccordionSection } from "@/components/ui/AccordionSection";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { PlayerProfileIdentity } from "@/components/players/PlayerProfileIdentity";
+import { PlayerArmoryProfile } from "@/components/players/PlayerArmoryProfile";
+import { getArmoryProfileSection } from "@/lib/armory-profile.server";
 import { PlayerMetricControls } from "@/components/players/PlayerMetricControls";
 import { PlayerRaidComparisonSection, PlayerRaidComparisonSkeleton } from "@/components/players/PlayerRaidComparisonSection";
 import { PlayerGearSection, PlayerGearSectionSkeleton } from "@/components/players/PlayerGearSection";
@@ -41,6 +43,11 @@ interface Props {
 async function PlayerGear({ name, realm, playerClass }: { name: string; realm?: string; playerClass?: string | null }) {
   const result = await getWarmaneCharacterGear(name, realm ?? "Lordaeron");
   return <PlayerGearSection result={result} playerClass={playerClass} />;
+}
+
+async function PlayerArmory({ name, realm }: { name: string; realm: string }) {
+  const initial = await getArmoryProfileSection(name, realm, "summary");
+  return <PlayerArmoryProfile key={`${name}@${realm}`} name={name} realm={realm} initial={initial} />;
 }
 
 function PerformanceStats({ summary, view, hasAttempts, hasKills }: {
@@ -82,7 +89,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const name = playerName;
   return buildPageMetadata({
     title: name,
-    description: `${name}'s WotLK raid history, damage and healing records, and latest saved Warmane gear.`,
+    description: `${name}'s Warmane stats, gear, talent builds, glyphs, achievements and WotLK raid history.`,
     path: `/players/${encodeURIComponent(name)}`,
   });
 }
@@ -203,12 +210,17 @@ async function PlayerContent({ data }: { data: Awaited<ReturnType<typeof getPlay
       }} latestSpec={latestSpec} />
 
       <SectionNav items={[
+        { id: "armory", label: "Character sheet" },
         { id: "raid-progress", label: "Raid progress" },
         { id: "gear", label: "Gear" },
         ...(milestones.length > 0 ? [{ id: "achievements", label: "Achievements" }] : []),
         ...(perBoss.length > 0 ? [{ id: "boss-summary", label: "Boss summary" }] : []),
         { id: "recent-encounters", label: "Recent encounters" },
       ]} />
+
+      <Suspense fallback={<section id="armory" aria-label="Loading Armory" className="border-t border-gold-dim py-6"><p className="text-sm text-text-secondary" role="status">Loading character sheet…</p></section>}>
+        <PlayerArmory name={profile.name} realm={profile.realmName} />
+      </Suspense>
 
       {/* Stats */}
       <section aria-label="Player performance summary" className="space-y-3">
