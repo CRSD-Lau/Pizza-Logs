@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { Suspense } from "react";
 import { notFound, permanentRedirect } from "next/navigation";
+import { PageLoading } from "@/components/ui/PageLoading";
 import { db } from "@/lib/db";
 import { AccordionSection } from "@/components/ui/AccordionSection";
 import { SectionNav } from "@/components/ui/SectionNav";
@@ -46,7 +48,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   return buildPageMetadata({ title, description, path: canonical, type: "article" });
 }
 
-export default async function SessionPlayerPage({ params, searchParams }: Props) {
+async function getSessionPlayerPageContext({ params, searchParams }: Props) {
   const { id, sessionIdx, playerName } = await params;
   const query = await searchParams;
   const includeShortPulls = parseIncludeShortPulls(query.includeShortPulls);
@@ -91,25 +93,6 @@ export default async function SessionPlayerPage({ params, searchParams }: Props)
 
   const playerClass = firstParticipation.player.class ?? null;
   const classColor = getClassColor(playerClass ?? name);
-  const upload = await db.upload.findUnique({
-    where: { id: uploadId },
-    select: {
-      realm: { select: { name: true } },
-      guild: { select: { name: true } },
-    },
-  });
-  const realmName = upload?.realm?.name ?? "Lordaeron";
-  const rosterMember = await db.guildRosterMember.findFirst({
-    where: {
-      normalizedCharacterName: name.toLowerCase(),
-      realm: realmName,
-    },
-    select: {
-      raceName: true,
-      guildName: true,
-      className: true,
-    },
-  });
 
   const myStats = orderedEncounters
     .map((enc) => {
@@ -137,6 +120,40 @@ export default async function SessionPlayerPage({ params, searchParams }: Props)
     .filter((e): e is NonNullable<typeof e> => e !== null);
 
   if (myStats.length === 0) notFound();
+
+  return { name, includeShortPulls, querySuffix, raidQuerySuffix, sessionRoute, uploadId, sessionPath, encounters, orderedEncounters, myStats, playerClass, classColor };
+}
+
+export default async function SessionPlayerPage(props: Props) {
+  const data = await getSessionPlayerPageContext(props);
+  return (
+    <Suspense fallback={<PageLoading message="Loading player report..." />}>
+      <SessionPlayerContent data={data} />
+    </Suspense>
+  );
+}
+
+async function SessionPlayerContent({ data }: { data: Awaited<ReturnType<typeof getSessionPlayerPageContext>> }) {
+  const { name, includeShortPulls, querySuffix, raidQuerySuffix, sessionRoute, uploadId, sessionPath, encounters, orderedEncounters, myStats, playerClass, classColor } = data;
+  const upload = await db.upload.findUnique({
+    where: { id: uploadId },
+    select: {
+      realm: { select: { name: true } },
+      guild: { select: { name: true } },
+    },
+  });
+  const realmName = upload?.realm?.name ?? "Lordaeron";
+  const rosterMember = await db.guildRosterMember.findFirst({
+    where: {
+      normalizedCharacterName: name.toLowerCase(),
+      realm: realmName,
+    },
+    select: {
+      raceName: true,
+      guildName: true,
+      className: true,
+    },
+  });
 
   const playerEncounters = orderedEncounters.filter(encounter => encounter.participants.some(p => p.player.name === name));
   const counts = countAttempts(playerEncounters, { includeShortPulls });

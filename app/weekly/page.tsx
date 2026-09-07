@@ -1,4 +1,6 @@
 import Link from "next/link";
+import { Suspense } from "react";
+import { PageLoading } from "@/components/ui/PageLoading";
 import { SectionHeader } from "@/components/ui/SectionHeader";
 import { StatCard, StatGroup } from "@/components/ui/StatCard";
 import { LeaderboardBar } from "@/components/charts/LeaderboardBar";
@@ -92,9 +94,19 @@ async function getWeeklyData(includeShortPulls: boolean, difficulty: DifficultyF
   };
 }
 
-export default async function WeeklyPage({ searchParams }: {
+interface Props {
   searchParams: Promise<ReportSearchParams>;
-}) {
+}
+
+export default function WeeklyPage(props: Props) {
+  return (
+    <Suspense fallback={<PageLoading message="Loading weekly stats..." />}>
+      <WeeklyPageContent {...props} />
+    </Suspense>
+  );
+}
+
+async function WeeklyPageContent({ searchParams }: Props) {
   const query = await searchParams;
   const includeShortPulls = parseIncludeShortPulls(query.includeShortPulls);
   const difficulty = parseDifficultyFilter(query.difficulty);

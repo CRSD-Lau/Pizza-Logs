@@ -1,4 +1,6 @@
 import Link from "next/link";
+import { Suspense } from "react";
+import { PageLoading } from "@/components/ui/PageLoading";
 import { db } from "@/lib/db";
 import { UploadZoneWithRefresh } from "@/components/upload/UploadZoneWithRefresh";
 import { FrozenLogbookIntro } from "@/components/intro/FrozenLogbookIntro";
@@ -38,9 +40,19 @@ async function getHomeStats(includeShortPulls: boolean) {
   }
 }
 
-export default async function HomePage({ searchParams }: {
+interface Props {
   searchParams: Promise<{ includeShortPulls?: string | string[] }>;
-}) {
+}
+
+export default function HomePage(props: Props) {
+  return (
+    <Suspense fallback={<PageLoading message="Loading upload page..." />}>
+      <HomePageContent {...props} />
+    </Suspense>
+  );
+}
+
+async function HomePageContent({ searchParams }: Props) {
   const includeShortPulls = parseIncludeShortPulls((await searchParams).includeShortPulls);
   const stats = await getHomeStats(includeShortPulls);
 

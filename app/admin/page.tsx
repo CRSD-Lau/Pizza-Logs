@@ -1,8 +1,10 @@
 import type { Metadata } from "next";
+import { Suspense } from "react";
 import Link from "next/link";
 import { db } from "@/lib/db";
 import { requireAdmin } from "@/lib/require-admin";
 import { PageHeader, PageSection, PageShell } from "@/components/ui/PageLayout";
+import { PageLoading } from "@/components/ui/PageLoading";
 import { StatCard, StatGroup } from "@/components/ui/StatCard";
 import { buttonVariants } from "@/components/ui/Button";
 import { formatBytes, formatCountLabel, formatDateTimeUtc, formatDateUtc, formatInteger, formatSeconds } from "@/lib/utils";
@@ -33,6 +35,14 @@ type LatestGearRefreshRow = { lastSuccessAt: Date | null } | null;
 
 export default async function AdminPage() {
   await requireAdmin();
+  return (
+    <Suspense fallback={<PageLoading message="Loading diagnostics..." />}>
+      <AdminContent />
+    </Suspense>
+  );
+}
+
+async function AdminContent() {
   const deployment = getDeploymentInfo();
   const parserHealthPromise = fetch(`${process.env.PARSER_SERVICE_URL ?? "http://localhost:8000"}/health`, {
     cache: "no-store",

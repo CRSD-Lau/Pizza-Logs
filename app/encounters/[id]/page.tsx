@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { Suspense } from "react";
 import { notFound } from "next/navigation";
+import { PageLoading } from "@/components/ui/PageLoading";
 import { db } from "@/lib/db";
 import { DamageMeter } from "@/components/meter/DamageMeter";
 import { MobBreakdown, type MobEntry } from "@/components/meter/MobBreakdown";
@@ -43,7 +45,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   });
 }
 
-export default async function EncounterPage({ params, searchParams }: Props) {
+async function getEncounterPageContext({ params, searchParams }: Props) {
   const { id } = await params;
   const query = await searchParams;
   const includeShortPulls = parseIncludeShortPulls(query.includeShortPulls);
@@ -82,6 +84,20 @@ export default async function EncounterPage({ params, searchParams }: Props) {
 
   if (!encounter) notFound();
 
+  return { encounter, querySuffix, raidQuerySuffix, comparisonQuerySuffix };
+}
+
+export default async function EncounterPage(props: Props) {
+  const data = await getEncounterPageContext(props);
+  return (
+    <Suspense fallback={<PageLoading message="Loading encounter..." />}>
+      <EncounterContent data={data} />
+    </Suspense>
+  );
+}
+
+async function EncounterContent({ data }: { data: Awaited<ReturnType<typeof getEncounterPageContext>> }) {
+  const { encounter, querySuffix, raidQuerySuffix, comparisonQuerySuffix } = data;
   const raidSessionRoute = await getRaidSessionRouteByIndex(
     encounter.upload.id,
     encounter.sessionIndex,

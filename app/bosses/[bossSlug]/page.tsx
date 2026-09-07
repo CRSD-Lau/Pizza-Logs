@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { Suspense } from "react";
 import { notFound } from "next/navigation";
+import { PageLoading } from "@/components/ui/PageLoading";
 import { db } from "@/lib/db";
 import { SectionHeader } from "@/components/ui/SectionHeader";
 import { StatCard, StatGroup } from "@/components/ui/StatCard";
@@ -37,8 +39,8 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   });
 }
 
-async function getBossData(slug: string, includeShortPulls: boolean, difficulty: DifficultyFilterValue) {
-  const boss = await db.boss.findUnique({
+async function getBoss(slug: string, difficulty: DifficultyFilterValue) {
+  return db.boss.findUnique({
     where: { slug },
     include: {
       encounters: {
@@ -54,8 +56,9 @@ async function getBossData(slug: string, includeShortPulls: boolean, difficulty:
       },
     },
   });
-  if (!boss) return null;
+}
 
+async function getBossData(boss: NonNullable<Awaited<ReturnType<typeof getBoss>>>, includeShortPulls: boolean, difficulty: DifficultyFilterValue) {
   const wipeEvidence = await db.encounter.findMany({
     where: { bossId: boss.id, outcome: "WIPE", ...difficultyFilterWhere(difficulty) },
     select: { id: true, participants: { select: { deaths: true } } },
@@ -108,10 +111,25 @@ export default async function BossPage({ params, searchParams }: Props) {
   const includeShortPulls = parseIncludeShortPulls(query.includeShortPulls);
   const difficulty = parseDifficultyFilter(query.difficulty);
   const querySuffix = reportQueryString(query, { difficulty: difficulty === "all" ? null : difficulty });
-  const data = await getBossData(bossSlug, includeShortPulls, difficulty);
-  if (!data) notFound();
+  const boss = await getBoss(bossSlug, difficulty);
+  if (!boss) notFound();
 
-  const { boss, dpsLeaders, hpsLeaders, counts, visibleEncounters } = data;
+  return (
+    <Suspense fallback={<PageLoading message="Loading boss..." />}>
+      <BossContent boss={boss} bossSlug={bossSlug} includeShortPulls={includeShortPulls} difficulty={difficulty} querySuffix={querySuffix} query={query} />
+    </Suspense>
+  );
+}
+
+async function BossContent({ boss, bossSlug, includeShortPulls, difficulty, querySuffix, query }: {
+  boss: NonNullable<Awaited<ReturnType<typeof getBoss>>>;
+  bossSlug: string;
+  includeShortPulls: boolean;
+  difficulty: DifficultyFilterValue;
+  querySuffix: string;
+  query: ReportSearchParams;
+}) {
+  const { dpsLeaders, hpsLeaders, counts, visibleEncounters } = await getBossData(boss, includeShortPulls, difficulty);
 
   const kills = boss.encounters.filter(e => e.outcome === "KILL");
   const fastestKill = kills.reduce<number | null>((fastest, encounter) => {

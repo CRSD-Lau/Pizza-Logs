@@ -15,6 +15,14 @@ The gate runs ESLint with zero warnings, TypeScript 7 native checking, TypeScrip
 
 Database integration tests skip explicitly when `TEST_DATABASE_URL` is absent. The Python-to-web contract test skips when `PARSER_CONTRACT_PYTHON` is absent. A passing local gate with those skips does not prove database behavior or the cross-service contract. CI supplies both variables.
 
+Page-render fixtures await the complete React stream before checking page values,
+filters and links. The loading-state fixture separately holds the existing home
+statistics queries pending, verifies that the shared fallback streams first, then
+releases the queries and checks that the real page follows without extra queries.
+For visual acceptance, inspect initial loading and navigation at mobile and desktop
+widths, including reduced motion; keep the existing redirect and missing-page
+status checks enabled.
+
 Run one TypeScript test with:
 
 ```bash
