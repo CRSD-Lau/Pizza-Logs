@@ -47,5 +47,5 @@ export const ArmorySpellSchema = z.object({ id: z.number().int().positive(), nam
 export type ArmorySpell = z.infer<typeof ArmorySpellSchema>;
 export function armorySectionUrl(name: string, realm: string, section: ArmorySection): string {
   const tab = section === "collections" ? "mounts-and-companions" : section === "pvp" ? "match-history" : section;
-  return `https://armory.warmane.com/character/${encodeURIComponent(name)}/${encodeURIComponent(realm)}/${tab}`;
+  return `https://armory.warmane.com/character/${encodeURIComponent(name)}/${encodeURIComponent(realm)}/${encodeURIComponent(tab)}`;
 }

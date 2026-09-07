@@ -11,9 +11,18 @@ const MAX_REFRESHES = 6;
 const cooldowns = new Map<string, number>();
 
 async function upstream(url: string, signal: AbortSignal, category?: string): Promise<string> {
-  const host = new URL(url).hostname;
+  // Enforce destinations at the network boundary, independently of callers.
+  const parsed = new URL(url);
+  if (parsed.protocol !== "https:" || parsed.username || parsed.password || parsed.port || parsed.search || parsed.hash) throw new Error("Invalid upstream destination");
+  let requestUrl: string;
+  if (parsed.hostname === "armory.warmane.com" && /^\/(?:api\/)?character\/[A-Za-z]{2,12}\/[A-Za-z]{2,24}\/(?:summary|talents|achievements|statistics|reputation|mounts-and-companions|match-history)$/.test(parsed.pathname)) {
+    requestUrl = `https://armory.warmane.com/${parsed.pathname.slice(1)}`;
+  } else if (parsed.hostname === "wotlk.cavernoftime.com" && /^\/spell=\d{1,7}$/.test(parsed.pathname)) {
+    requestUrl = `https://wotlk.cavernoftime.com/${parsed.pathname.slice(1)}`;
+  } else throw new Error("Invalid upstream destination");
+  const host = parsed.hostname;
   if ((cooldowns.get(host) ?? 0) > Date.now()) throw new Error("UPSTREAM_RATE_LIMITED");
-  const response = await fetch(url, {
+  const response = await fetch(requestUrl, {
     redirect: "error", cache: "no-store", signal,
     headers: { "User-Agent": "PizzaLogsBot/1.0 (+https://pizza-logs-production.up.railway.app)",
       ...(category ? { "Content-Type": "application/x-www-form-urlencoded", "X-Requested-With": "XMLHttpRequest" } : {}) },

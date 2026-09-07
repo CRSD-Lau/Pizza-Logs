@@ -71,6 +71,11 @@ async function main() {
     const otherSection = await getArmoryProfileSection("Mothrmonster", "Lordaeron", "reputation");
     assert.equal(otherSection.data, null, "One unavailable section cannot borrow another payload");
     await assert.rejects(() => getArmoryProfileSection("Mothrmonster", "Lordaeron", "achievements", "999999"));
+    let destinationRequests = 0;
+    globalThis.fetch = async () => { destinationRequests++; return new Response(fixture); };
+    await assert.rejects(() => fetchArmorySection("Bad/Path", "Lordaeron", "talents", "summary"));
+    await assert.rejects(() => fetchArmorySection("Mothrmonster", "evil.invalid", "talents", "summary"));
+    assert.equal(destinationRequests, 0, "Network boundary rejects destinations outside the fixed path grammar");
 
     let posted = false;
     globalThis.fetch = async (_, init) => {

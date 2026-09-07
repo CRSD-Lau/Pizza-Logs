@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { ARMORY_SECTIONS, ARMORY_SECTION_LABELS, ArmorySectionDataSchema, ArmorySpellSchema,
+import { ARMORY_SECTIONS, ARMORY_SECTION_LABELS, ArmorySectionDataSchema, ArmorySpellSchema, armorySectionUrl,
   type ArmorySection, type ArmorySectionData, type ArmorySectionResult, type ArmoryTalent, type ArmorySpell } from "@/lib/armory-profile";
 import { cn, formatDateTimeUtc, formatInteger, formatPercent } from "@/lib/utils";
 
@@ -102,13 +102,13 @@ function TalentBuilds({ data, endpoint }: { data: ArmorySectionData; endpoint: s
         <h3 className="font-semibold text-text-primary">{detail?.spell?.name ?? `Spell ${selected.node.spellId}`} <span className="font-normal text-gold">· {selected.node.rank}/{selected.node.maxRank} points</span></h3>
         <p className="mt-1 text-sm text-text-secondary">{selected.tree} · Row {selected.node.row + 1}{selected.node.rank === 0 && " · Unallocated; description shows the first rank"}</p>
         <p className="mt-3 text-sm text-text-secondary">{detail ? detail.spell?.description ?? "Spell details are unavailable. The talent position and points above come from Warmane." : "Loading spell description…"}</p>
-        <a href={`https://wotlk.cavernoftime.com/spell=${selected.node.spellId}`} target="_blank" rel="noreferrer" className="mt-2 inline-flex min-h-11 items-center text-sm text-gold">Spell reference: Cavern of Time ↗</a>
+        <a href={`https://wotlk.cavernoftime.com/spell=${encodeURIComponent(String(selected.node.spellId))}`} target="_blank" rel="noreferrer" className="mt-2 inline-flex min-h-11 items-center text-sm text-gold">Spell reference: Cavern of Time ↗</a>
       </> : <p className="text-sm text-text-secondary">Select a talent above to inspect it.</p>}
     </div>
     <div className="grid gap-5 sm:grid-cols-2">{(["Major", "Minor"] as const).map(kind => <div key={kind}>
       <h3 className="mb-2 font-semibold text-text-primary">{kind} glyphs</h3>
       <ul className="divide-y divide-gold-dim">{spec.glyphs.filter(glyph => glyph.kind === kind).map(glyph => <li key={glyph.spellId}>
-        <a href={`https://wotlk.cavernoftime.com/spell=${glyph.spellId}`} target="_blank" rel="noreferrer" className="inline-flex min-h-11 items-center text-sm text-gold hover:text-gold-light">{glyph.name} ↗</a>
+        <a href={`https://wotlk.cavernoftime.com/spell=${encodeURIComponent(String(glyph.spellId))}`} target="_blank" rel="noreferrer" className="inline-flex min-h-11 items-center text-sm text-gold hover:text-gold-light">{glyph.name} ↗</a>
       </li>)}</ul>
       {!spec.glyphs.some(glyph => glyph.kind === kind) && <p className="text-sm text-text-dim">None listed.</p>}
     </div>)}</div>
@@ -148,7 +148,7 @@ export function PlayerArmoryProfile({ name, realm, initial }: { name: string; re
         <h2 id="armory-heading" className="mt-1 text-xl font-semibold text-text-primary">Warmane Armory</h2>
         <p className="mt-1 max-w-2xl text-sm text-text-secondary">Current character snapshots, separate from the gear and talents used in recorded raids.</p>
       </div>
-      <a href={result?.sourceUrl ?? initial.sourceUrl} target="_blank" rel="noreferrer" className={`${control} inline-flex items-center text-gold`}>View on Warmane ↗</a>
+      <a href={armorySectionUrl(name, realm, section)} target="_blank" rel="noreferrer" className={`${control} inline-flex items-center text-gold`}>View on Warmane ↗</a>
     </div>
     <div className="flex flex-wrap gap-2" role="group" aria-label="Armory sections">
       {ARMORY_SECTIONS.map(value => <button key={value} type="button" aria-pressed={section === value}
