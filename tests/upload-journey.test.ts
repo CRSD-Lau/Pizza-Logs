@@ -58,7 +58,11 @@ async function main() {
     return 0;
   }) as unknown as typeof setTimeout;
   try {
-    renderToStaticMarkup(React.createElement(UploadZone));
+    const uploadForm = renderToStaticMarkup(React.createElement(UploadZone));
+    assert.match(uploadForm, /type="checkbox"/);
+    assert.match(uploadForm, /I have permission to share this log/);
+    assert.match(uploadForm, /href="\/upload-policy"/);
+    assert.doesNotMatch(uploadForm, /checked=""/, "Agreement must never be pre-accepted");
     sendUploadNotification("Upload complete", "One encounter saved");
     assert.equal(permissionRequests, 0, "Rendering and completion must never request notification permission");
     assert.equal(shown.length, 0);

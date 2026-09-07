@@ -8,12 +8,16 @@ The public upload path sends one bounded raw-byte request and receives Server-Se
 POST /api/upload?filename=raid.zip&fileSize=31621979&uploaderName=Name
 Content-Type: application/octet-stream
 X-Upload-ID: <lowercase UUIDv4 from crypto.randomUUID()>
-X-Filename: raid.zip
+X-Upload-Policy-Version: 2026-09-06
 
 <raw file bytes>
 ```
 
-The web route sanitizes the base filename, validates declared/content length against the 100 MiB ceiling, validates metadata, and requires a UUIDv4 plus octet-stream body. It does not expose parser exception text.
+The current policy version is defined in `lib/upload-policy.ts`. Missing/stale acknowledgement returns 428 before reading the body or contacting the parser/database. This is a per-request acknowledgement, not an authenticated identity or durable consent record. The browser starts unchecked and resets acceptance for every new upload. Older open tabs must reload after a policy-version change; API clients must deliberately supply the current version.
+
+Browser `Origin` must match the trusted `ADMIN_AUTH_URL` origin; cross-site/same-site Fetch Metadata is rejected. Missing Origin is allowed for non-browser clients carrying the policy header. Development permits loopback origins without configured auth; production browsers fail closed without a trusted origin. Host and forwarded-IP headers do not establish trust.
+
+The web route sanitizes the base filename, validates declared/content length against the 100 MiB ceiling, validates visible-text metadata, and requires a UUIDv4 plus octet-stream body. HTTP content encodings other than identity are rejected. Actual streamed bytes must exactly match the declared size and parser receipt before persistence. The stream retains backpressure; it is not buffered in memory. The web admits four active requests and 12 starts per 60 seconds per process, including failed admitted attempts, and returns 429 with `Retry-After: 60` when busy. It does not expose parser exception text.
 
 ## Web to Parser
 
@@ -30,6 +34,8 @@ The parser generates an independent random file token and writes only `<server-t
 The temporary file and admission slot remain owned until every underlying worker has stopped, including after timeout or client disconnect. Queued work is cancelled; running workers receive cooperative cancellation. Body cancellation and a connection failure before SSE starts also finalize ownership. Abandoned `.part`/`.upload` files are cleaned after the configured retention window when upload cleanup runs; active files are excluded.
 
 Python threads cannot be forcibly killed safely. A worker inside non-interruptible aggregation can retain a slot beyond the response timeout until it exits. This prevents new uploads from bypassing capacity, but it does not promise a hard CPU deadline. Process isolation is required for a hard execution limit.
+
+Upload and status proxy requests reject upstream redirects. The configured parser destination must stay on private service networking; it is not taken from uploaded metadata.
 
 ## States
 
@@ -49,6 +55,8 @@ New results also contain `provenance`: parser version, metric schema version, an
 The web service accepts only known parser progress, state, quick-result, error and done events. It validates the final payload before database work: SHA-256 identifiers, ISO timestamps, nonnegative safe-integer combat totals, integral counts, finite rates, bounded arrays, unique encounter fingerprints and participant names. Fractional duration seconds are accepted; the existing integer seconds column is rounded while `durationMs` retains millisecond precision. Rates are stored from the parser without recomputing them from rounded seconds.
 
 Parser SSE events are limited to 64 MiB each and 128 MiB per response; status JSON is limited to 8 MiB. These are response-memory ceilings, separate from input-file limits. A report exceeding them is rejected without persistence. Progress and status use explicit public fields and fixed error messages; arbitrary upstream fields, error text and debug details are not forwarded.
+
+The status proxy separately admits at most eight active requests and 600 starts per minute per web process, retains its five-second upstream deadline and rejects redirects. A 429 response asks callers to retry after 60 seconds. Upload and status admission do not trust caller-controlled IP headers and are not fleet-wide quotas.
 
 An upload, its encounters, participants and session analytics are committed in one PostgreSQL serializable transaction. A failed write rolls back the whole report. File/fingerprint uniqueness conflicts and serialization conflicts retry the complete transaction at most twice after the first attempt. These retries apply only to database work; the web service never automatically re-uploads bytes. Concurrent duplicates resolve to one completed stored report. Optional milestone failures return a saved report with a warning.
 
@@ -84,7 +92,9 @@ The additive upload provenance columns are nullable: `parserVersion`, `metricSch
 
 The web request has a 270-second total parser deadline and a 300-second route budget. The parser phase limits are individual upper bounds, not a promise that their sum fits the caller deadline. Slow receive, validation or classification can therefore cause the web caller to cancel before the parser's later phase timeout. Disconnects cancel the upstream request; worker ownership and cleanup still finish in the parser. PostgreSQL persistence uses a 60-second transaction limit and 10-second acquisition limit per attempt. A successful parser response near the web deadline can leave insufficient time for persistence; no durable job queue or resumable guarantee is claimed.
 
-Accepted suffixes are `.txt`, `.log`, and `.zip`, case-insensitively. ZIP magic must match, and a ZIP must contain a recognizable `.txt` combat log. ZIP members must use stored (uncompressed) or deflate compression; other methods are rejected before decompression because their Python readers do not provide the same bounded-output guarantees. Re-save an unsupported ZIP using standard deflate compression or upload the text log directly. Validation also rejects unsafe paths (including directories), symlinks, encrypted members, duplicate member names, nested archives, excess entries/metadata, excess size, and excess per-member/total compression ratio. Archive paths are never extracted. Every production input pass enforces the line limit; it is deliberately much larger than ordinary combat-event lines while preventing a single malformed line from materializing the entire input. Validation and quick classification each use the quick pool with a timeout of the lesser of 60 seconds and the full-processing timeout.
+Accepted suffixes are `.txt`, `.log`, and `.zip`, case-insensitively. ZIP magic must match, and a ZIP must contain exactly one regular `.txt` or `.log` combat log plus optional safe empty folders. Multiple logs, unrelated files and nonempty directory entries are rejected. ZIP members must use stored (uncompressed) or deflate compression; other methods are rejected before decompression because their Python readers do not provide the same bounded-output guarantees. Re-save an unsupported ZIP using standard deflate compression or upload the text log directly. Validation also rejects unsafe paths (including directories), symlinks/special files, encrypted members, duplicate member names, nested archives, excess entries/metadata, excess size, and excess per-member/total compression ratio. Archive paths are never extracted.
+
+Admission validates the entire text as UTF-8 (optional BOM) or Windows-1252 before classification. Every nonblank record must be a recognized combat or supported metadata event with the required structure; binary controls, malformed/unknown records and excessive field complexity are rejected. Blank lines do not establish combat-log evidence. Valid syntax does not authenticate an event or prove a file malware-free. Every production input pass enforces the physical-line limit. Record/entity/cardinality and encounter-buffer limits reject pathological inputs with `LOG_COMPLEXITY_LIMIT`; limits are defined in `parser/archive_upload.py` and `parser/upload_limits.py`. They bound retained structures, not exact RSS: Python object overhead and aggregation are still subject to the process-isolation caveat above. Validation and quick classification each use the quick pool with a timeout of the lesser of 60 seconds and the full-processing timeout.
 
 ## Operational Signals
 
@@ -94,7 +104,7 @@ Structured parser logs correlate completion/rejection/timeout/error events using
 
 ## Legacy Routes
 
-`POST /parse`, `/parse-debug`, and `/parse-stream` exist only for local compatibility tests and return 404 by default. They require `ENABLE_LEGACY_PARSER_ROUTES=true` and enforce the same compressed byte ceiling. The public web upload has no fallback to them.
+`POST /parse`, `/parse-debug`, and `/parse-stream` exist only for local compatibility tests and return 404 by default through an ASGI guard before FastAPI can read or spool multipart bodies. They require `ENABLE_LEGACY_PARSER_ROUTES=true` and enforce the same compressed byte ceiling. The public web upload has no fallback to them.
 
 ## Benchmark
 

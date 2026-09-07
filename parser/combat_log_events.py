@@ -34,8 +34,8 @@ class ParsedLineResult:
     skip_reason: Optional[str] = None
 
 
-def csv_split(s: str) -> list[str]:
-    reader = _csv.reader(io.StringIO(s), skipinitialspace=True)
+def csv_split(s: str, *, strict: bool = False) -> list[str]:
+    reader = _csv.reader(io.StringIO(s), skipinitialspace=True, strict=strict)
     return [x.strip() for x in next(reader)]
 
 
@@ -47,7 +47,7 @@ def parse_ts(ts_str: str) -> float:
     return int(hh) * 3600 + int(mm) * 60 + int(ss) + int(ms) / 1000
 
 
-def parse_combat_log_line(raw_line: str) -> ParsedLineResult:
+def parse_combat_log_line(raw_line: str, *, strict: bool = False) -> ParsedLineResult:
     line = raw_line.strip()
     if not line:
         return ParsedLineResult(None, "blank")
@@ -65,7 +65,7 @@ def parse_combat_log_line(raw_line: str) -> ParsedLineResult:
         return ParsedLineResult(None, "invalid_timestamp")
     rest = line[space_idx + 2:]
     try:
-        parts = csv_split(rest)
+        parts = csv_split(rest, strict=strict)
     except Exception:
         return ParsedLineResult(None, "malformed_csv")
 

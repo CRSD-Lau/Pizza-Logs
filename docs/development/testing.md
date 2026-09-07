@@ -109,6 +109,8 @@ The separate monthly/manual reference-drift workflow runs `python -m parity chec
 
 ## Local Headless Acceptance
 
+`scripts/upload-security-e2e.mjs` runs first in `test:e2e`. It checks real server rejection of missing/stale agreement, hostile browser origins and encoded bodies. Browser-only controlled responses cover stale-policy and truncated-stream recovery without creating reports. It verifies unchecked/revoked/reset acknowledgement, current request headers, bug/private-security links and the policy page at mobile/desktop sizes. Artifacts carry Neil Mitchell attribution under `.test-artifacts/upload-security/`. Hostile archive and cardinality cases are exercised with synthetic parser tests locally; never send those payloads to production.
+
 Start the migrated and seeded local web/parser/database stack, for example using [Local Compose](setup.md#local-compose). Install Chromium once:
 
 ```bash

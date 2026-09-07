@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import { randomUUID } from "node:crypto";
+import { UPLOAD_POLICY_HEADER, UPLOAD_POLICY_VERSION } from "../lib/upload-policy.ts";
 
 export function localTestBase(value) {
   const base = new URL(value);
@@ -37,7 +38,7 @@ export async function uploadSyntheticLog(base, bytes, filename = "synthetic.txt"
   const response = await fetch(new URL(`/api/upload?${params}`, localTestBase(base)), {
     method: "POST", body: bytes, signal: AbortSignal.timeout(120000),
     redirect: "error",
-    headers: { "content-type": "application/octet-stream", "x-upload-id": randomUUID() },
+    headers: { "content-type": "application/octet-stream", "x-upload-id": randomUUID(), [UPLOAD_POLICY_HEADER]: UPLOAD_POLICY_VERSION },
   });
   assert.equal(response.status, 200);
   const events = (await response.text()).split("\n").filter(line => line.startsWith("data: ")).map(line => JSON.parse(line.slice(6)));

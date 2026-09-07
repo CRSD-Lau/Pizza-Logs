@@ -27,6 +27,11 @@ from combat_metrics import (
 )
 from difficulty_detector import DifficultyDetection, detect_difficulty
 from analytics import ABSORB_AURA_NAMES, infer_role, infer_spec, is_consumable_aura
+from archive_upload import ArchiveValidationError
+from upload_limits import (
+    BoundedEventList, MAX_SESSIONS, MAX_SESSION_UNIT_ENTRIES,
+    MAX_RECENT_DAMAGE_EVENTS, account_parsed_details, check_result_count,
+)
 
 # ── Constants ─────────────────────────────────────────────────────
 
@@ -479,18 +484,23 @@ class CombatLogParser:
         """
         lines = self._iter_lines(fh, total_lines, progress_cb, cancel_event)
         encounters: list[ParsedEncounter] = []
+        parsed_detail_bytes = 0
 
         def consume_segment(
             seg: list[tuple[str, list[str], float]],
             pet_owner: dict[str, tuple[str, str]],
         ) -> None:
-            enc = self._aggregate_segment(seg, pet_owner)
+            nonlocal parsed_detail_bytes
+            enc = self._aggregate_segment(seg, pet_owner, cancel_event=cancel_event)
             if enc:
+                parsed_detail_bytes = account_parsed_details(enc.participants, parsed_detail_bytes)
                 encounters.append(enc)
+                check_result_count(len(encounters))
 
         # Aggregate each closed attempt immediately. This bounds memory to the
         # largest encounter instead of retaining every parsed line in the log.
         self._segment_encounters(lines, segment_cb=consume_segment)
+        account_parsed_details(self.session_analytics, parsed_detail_bytes)
         self._assign_session_indices(encounters)
         if self.skipped_line_count:
             self.warnings.append(
@@ -812,7 +822,7 @@ class CombatLogParser:
                 segments.append(segment)
 
         # ── Path A: ENCOUNTER_START/END ──────────────────────────
-        current_segment: list[tuple[str, list[str], float]] = []
+        current_segment: list[tuple[str, list[str], float]] = BoundedEventList()
         in_encounter = False
         has_encounter_events = False
 
@@ -823,7 +833,7 @@ class CombatLogParser:
         heuristic_active = False
         last_boss_ts: float = 0.0
         lich_king_roleplay_ts: Optional[float] = None
-        heuristic_segment: list[tuple[str, list[str], float]] = []
+        heuristic_segment: list[tuple[str, list[str], float]] = BoundedEventList()
         # ── Full-session Custom Slice accumulator ────────────────
         # Counts every event from the first line to the last line in a raid
         # session. This is the data grain used by UwU's default report.
@@ -837,6 +847,7 @@ class CombatLogParser:
         _first_calendar_day: Optional[int] = None
         _last_abs_ts: float = -1.0
         _SESSION_BREAK = 3600.0
+        session_unit_entries = 0
 
         for ts_str, parts, ts in lines:
             event = parts[0]
@@ -856,8 +867,17 @@ class CombatLogParser:
             _last_abs_ts   = abs_ts
             session_accumulator = _session_accumulators.get(_full_session_idx)
             if session_accumulator is None:
+                if len(_session_accumulators) >= MAX_SESSIONS:
+                    raise ArchiveValidationError("LOG_COMPLEXITY_LIMIT", "The log contains too many sessions. Split it into separate raid logs.")
                 session_accumulator = SessionAccumulator()
                 _session_accumulators[_full_session_idx] = session_accumulator
+            incoming_names = {
+                parts[index] for index in (1, 4)
+                if len(parts) > index + 1 and parts[index] and parts[index + 1]
+            }
+            session_unit_entries += len(incoming_names.difference(session_accumulator.names))
+            if session_unit_entries > MAX_SESSION_UNIT_ENTRIES:
+                raise ArchiveValidationError("LOG_COMPLEXITY_LIMIT", "The log contains too many session unit entries. Split it into separate raid logs.")
             self._accumulate_session_event(session_accumulator, ts_str, parts, abs_ts,
                                            _calendar_year)
 
@@ -885,7 +905,7 @@ class CombatLogParser:
                     emit(current_segment)
                 has_encounter_events = True
                 in_encounter = True
-                current_segment = [(ts_str, parts, ts)]
+                current_segment = BoundedEventList([(ts_str, parts, ts)])
                 continue
 
             # ── ENCOUNTER_END ────────────────────────────────────
@@ -894,7 +914,7 @@ class CombatLogParser:
                 if current_segment:
                     current_segment.append((ts_str, parts, ts))
                     emit(current_segment)
-                current_segment = []
+                current_segment = BoundedEventList()
                 in_encounter = False
                 continue
 
@@ -921,13 +941,13 @@ class CombatLogParser:
                     # when the first line after the gap also names the boss.
                     if len(heuristic_segment) >= MIN_ENCOUNTER_EVENTS:
                         emit(heuristic_segment)
-                    heuristic_segment = []
+                    heuristic_segment = BoundedEventList()
                     heuristic_active = False
                     lich_king_roleplay_ts = None
                     if is_boss and (event in DMG_EVENTS or event in HEAL_EVENTS or event == UNIT_DIED_EVENT):
                         heuristic_active = True
                         last_boss_ts = abs_ts
-                        heuristic_segment = [(ts_str, parts, ts)]
+                        heuristic_segment = BoundedEventList([(ts_str, parts, ts)])
                 elif is_boss:
                     # Extend active window
                     last_boss_ts = abs_ts
@@ -941,7 +961,7 @@ class CombatLogParser:
                 if is_boss and (event in DMG_EVENTS or event in HEAL_EVENTS or event == UNIT_DIED_EVENT):
                     heuristic_active = True
                     last_boss_ts = abs_ts
-                    heuristic_segment = [(ts_str, parts, ts)]
+                    heuristic_segment = BoundedEventList([(ts_str, parts, ts)])
 
         # Flush trailing segment
         if has_encounter_events:
@@ -981,6 +1001,7 @@ class CombatLogParser:
         segment: list[tuple[str, list[str], float]],
         pet_owner: Optional[dict[str, tuple[str, str]]] = None,
         debug: bool = False,
+        cancel_event=None,
     ) -> "Optional[ParsedEncounter] | tuple[Optional[ParsedEncounter], Optional[DebugInfo]]":
         """Turn a list of raw log lines into a ParsedEncounter."""
         if not segment:
@@ -1116,6 +1137,7 @@ class CombatLogParser:
             str, dict[str, tuple[float, str, str]]
         ] = {}
         discipline_guids: set[str] = set()
+        death_context_entries = 0
 
         boss_name_lower = boss_name.lower() if boss_name else ""
         boss_alias_set  = {a.lower() for a in boss_def.aliases} if boss_def else set()
@@ -1163,7 +1185,9 @@ class CombatLogParser:
                 if owner:
                     pet_owner[candidate_guid] = owner
 
-        for ts_str, parts, ts in segment:
+        for event_index, (ts_str, parts, ts) in enumerate(segment):
+            if cancel_event is not None and event_index % 1024 == 0 and cancel_event.is_set():
+                raise TimeoutError("Parser aggregation was cancelled")
             event = parts[0]
             if event in (ENCOUNTER_START, ENCOUNTER_END):
                 continue
@@ -1252,6 +1276,9 @@ class CombatLogParser:
                     if _is_player(dead_guid) and dead_name:
                         dead_actor = _get_actor(actors, dead_name, dead_guid)
                         dead_actor.deaths += 1
+                        death_context_entries += 1 + len(dead_actor.recent_damage)
+                        if death_context_entries > 100_000:
+                            raise ArchiveValidationError("LOG_COMPLEXITY_LIMIT", "One encounter contains too much death-context data.")
                         dead_actor.death_events.append(DeathEventStats(
                             ts=ts,
                             recent_damage=list(dead_actor.recent_damage),
@@ -1368,6 +1395,8 @@ class CombatLogParser:
                     if _elapsed_seconds(event.ts, ts) <= 15
                 ]
                 if actual_damage > 0:
+                    if len(damaged_actor.recent_damage) >= MAX_RECENT_DAMAGE_EVENTS:
+                        raise ArchiveValidationError("LOG_COMPLEXITY_LIMIT", "One player has too many incoming hits within 15 seconds.")
                     damaged_actor.recent_damage.append(IncomingDamage(
                         ts=ts,
                         source_name=src_name or "Unknown",
@@ -1761,6 +1790,8 @@ def _is_player(guid: str) -> bool:
 
 def _get_actor(actors: dict[str, ActorStats], name: str, guid: str) -> ActorStats:
     if name not in actors:
+        if len(actors) >= 1_000:
+            raise ArchiveValidationError("LOG_COMPLEXITY_LIMIT", "One encounter contains too many actors.")
         actors[name] = ActorStats(name=name, guids={guid})
     else:
         actors[name].guids.add(guid)

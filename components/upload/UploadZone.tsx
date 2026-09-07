@@ -6,6 +6,7 @@ import { useDropzone } from "react-dropzone";
 import { Button } from "@/components/ui/Button";
 import type { UploadResponse } from "@/lib/schema";
 import { MAX_UPLOAD_BYTES } from "@/lib/upload-security";
+import { BUG_REPORT_URL, SECURITY_REPORT_URL, UPLOAD_POLICY_HEADER, UPLOAD_POLICY_VERSION } from "@/lib/upload-policy";
 import { cn, formatCountLabel, formatInteger, formatPercent, formatRate, formatSeconds } from "@/lib/utils";
 import { requestUploadNotifications, sendUploadNotification } from "./notifications";
 
@@ -39,6 +40,7 @@ export function UploadZone({ onComplete }: UploadZoneProps) {
   const [realmName, setRealmName] = useState("Lordaeron");
   const realmHost = "warmane";
   const [guildName, setGuildName] = useState("");
+  const [acceptedPolicy, setAcceptedPolicy] = useState(false);
   const [notificationPermission, setNotificationPermission] = useState<NotificationPermission | null>(null);
   const [notificationUnavailable, setNotificationUnavailable] = useState(false);
 
@@ -47,6 +49,7 @@ export function UploadZone({ onComplete }: UploadZoneProps) {
   }, []);
 
   const processFile = useCallback(async (file: File) => {
+    if (!acceptedPolicy || !characterName.trim()) return;
     if (file.size > MAX_UPLOAD_BYTES) {
       setState({
         stage: "error",
@@ -101,9 +104,20 @@ export function UploadZone({ onComplete }: UploadZoneProps) {
         headers: {
           "content-type": "application/octet-stream",
           "x-upload-id": uploadId,
+          [UPLOAD_POLICY_HEADER]: UPLOAD_POLICY_VERSION,
         },
         body: file,
       });
+      if (!res.ok) {
+        const messages: Record<number, string> = {
+          400: "The upload request is invalid. Check the file and upload rules, then try again.",
+          403: "This upload could not be verified. Reload Pizza Logs and try again.",
+          413: "File exceeds the 100 MiB upload limit.",
+          428: "The upload rules have changed. Reload this page and review them before uploading.",
+          429: "Upload capacity is busy. Wait a minute before trying again.",
+        };
+        throw new Error(messages[res.status] ?? "The upload service is unavailable. Please try again shortly.");
+      }
       if (!res.body) throw new Error("No response body");
 
       const reader = res.body.getReader();
@@ -175,6 +189,7 @@ export function UploadZone({ onComplete }: UploadZoneProps) {
           }
         }
       }
+      if (!succeeded) throw new Error("The connection ended before upload completion. Check raids before retrying; your report may have been saved.");
     } catch (err) {
       if (succeeded) return;
       clearInterval(ticker);
@@ -185,9 +200,9 @@ export function UploadZone({ onComplete }: UploadZoneProps) {
       clearInterval(ticker);
       window.removeEventListener("beforeunload", onBeforeUnload);
     }
-  }, [characterName, guildName, onComplete, realmName]);
+  }, [acceptedPolicy, characterName, guildName, onComplete, realmName]);
 
-  const isLocked = !characterName.trim();
+  const isLocked = !characterName.trim() || !acceptedPolicy;
 
   const { getRootProps, getInputProps, isDragActive, open } = useDropzone({
     onDrop: (files) => {
@@ -200,6 +215,8 @@ export function UploadZone({ onComplete }: UploadZoneProps) {
       "application/octet-stream": [".zip"],
     },
     multiple: false,
+    maxSize: MAX_UPLOAD_BYTES,
+    onDropRejected: () => setState({ stage: "error", progress: 0, message: "", elapsed: 0, stalled: false, error: "Choose one TXT, LOG or ZIP combat log, at most 100 MiB." }),
     disabled: state.stage === "uploading" || isLocked,
   });
 
@@ -210,7 +227,10 @@ export function UploadZone({ onComplete }: UploadZoneProps) {
     onClick: (event: React.MouseEvent) => event.preventDefault(),
   };
 
-  const reset = () => setState({ stage: "idle", progress: 0, message: "", elapsed: 0, stalled: false });
+  const reset = () => {
+    setAcceptedPolicy(false);
+    setState({ stage: "idle", progress: 0, message: "", elapsed: 0, stalled: false });
+  };
 
   return (
     <div className="space-y-4">
@@ -223,6 +243,7 @@ export function UploadZone({ onComplete }: UploadZoneProps) {
             <input
               id="upload-character"
               required
+              maxLength={32}
               value={characterName}
               onChange={(event) => setCharacterName(event.target.value)}
               placeholder="Your character name"
@@ -249,6 +270,16 @@ export function UploadZone({ onComplete }: UploadZoneProps) {
       )}
 
       {state.stage === "idle" && (
+        <div className="rounded-sm border border-gold-dim bg-bg-panel px-3 py-2 text-sm text-text-secondary">
+          <p id="upload-policy-help">Genuine combat logs only. No malware, scripts or unrelated files. <Link href="/upload-policy" target="_blank" rel="noopener noreferrer" className="text-gold underline">Read upload rules</Link>.</p>
+          <label className="flex min-h-11 cursor-pointer items-center gap-3 py-1" htmlFor="upload-policy-accept">
+            <input id="upload-policy-accept" type="checkbox" required checked={acceptedPolicy} onChange={event => setAcceptedPolicy(event.target.checked)} aria-describedby="upload-policy-help" className="h-5 w-5 shrink-0 accent-gold" />
+            <span>I have permission to share this log, agree to the upload rules and understand that character names and raid results will be public.</span>
+          </label>
+        </div>
+      )}
+
+      {state.stage === "idle" && (
         <div
           {...(isLocked ? lockedProps : getRootProps())}
           className={cn(
@@ -267,24 +298,24 @@ export function UploadZone({ onComplete }: UploadZoneProps) {
             <p className="heading-cinzel text-base text-heading mb-2 sm:text-lg">
               {!characterName.trim()
                 ? "Enter your character name above to upload"
+                : !acceptedPolicy ? "Accept the upload rules above to continue"
                 : isDragActive ? "Release to upload" : "Drop your WoWCombatLog.txt"}
             </p>
-            <Button variant="solid" size="md" onClick={(event) => { event.stopPropagation(); open(); }} disabled={!characterName.trim()}>
+            <Button variant="solid" size="md" onClick={(event) => { event.stopPropagation(); open(); }} disabled={isLocked}>
               Choose File
             </Button>
-            <p className="text-xs text-text-secondary mt-3">TXT, LOG, or ZIP · up to 100 MiB compressed</p>
+            <p className="text-xs text-text-secondary mt-3">TXT, LOG, or ZIP with one log · up to 100 MiB</p>
           </div>
         </div>
       )}
 
       {state.stage === "idle" && <>
-        <p className="text-sm text-text-secondary">Your character names and raid report will be public.</p>
         <details className="border-y border-gold-dim">
           <summary className="flex min-h-11 cursor-pointer items-center text-sm font-semibold text-text-secondary">Upload options and file help</summary>
           <div className="space-y-4 pb-4">
             <div className="grid gap-1.5">
               <label htmlFor="upload-guild" className="text-sm text-text-secondary">Guild (optional)</label>
-              <input id="upload-guild" value={guildName} onChange={event => setGuildName(event.target.value)}
+              <input id="upload-guild" maxLength={64} value={guildName} onChange={event => setGuildName(event.target.value)}
                 placeholder="PizzaWarriors" className="min-h-11 w-full rounded-sm border border-gold-dim bg-bg-card px-3 py-2 text-sm text-text-primary outline-hidden transition-colors focus:border-gold" />
             </div>
             <p className="text-sm text-text-secondary">Start logging in WoW with <code>/combatlog</code>. After your raid, choose <code>Logs/WoWCombatLog.txt</code> from your game folder.</p>
@@ -345,6 +376,7 @@ export function UploadZone({ onComplete }: UploadZoneProps) {
           <p className="heading-cinzel text-base text-danger-light mb-2">Upload Failed</p>
           <p className="text-sm text-text-secondary mb-6">{state.error}</p>
           <Button variant="ghost" size="sm" onClick={reset}>Try Again</Button>
+          <p className="mt-4 text-sm text-text-secondary">Still having trouble? <a href={BUG_REPORT_URL} className="text-gold underline">Report a bug</a>. Send security concerns <a href={SECURITY_REPORT_URL} className="text-gold underline">privately</a>.</p>
         </div>
       )}
     </div>

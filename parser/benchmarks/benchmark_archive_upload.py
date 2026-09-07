@@ -129,7 +129,7 @@ class RssSampler:
 class FileStreamingRequest:
     def __init__(self, path: Path):
         self.path = path
-        self.headers = {"content-length": str(path.stat().st_size)}
+        self.headers = {"content-length": str(path.stat().st_size), "content-type": "application/octet-stream"}
 
     async def stream(self):
         with self.path.open("rb") as fh:

@@ -27,6 +27,7 @@ from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field
 
 from archive_upload import (
+    ALLOWED_SUFFIXES,
     MAX_COMPRESSED_BYTES,
     ArchiveSelection,
     ArchiveValidationError,
@@ -71,6 +72,23 @@ UPLOAD_STATE_LIMIT = max(UPLOAD_CONCURRENCY, int(os.getenv("UPLOAD_STATE_LIMIT",
 FULL_PROCESSING_WORKERS = max(1, int(os.getenv("FULL_PROCESSING_WORKERS", "2")))
 QUICK_CLASSIFICATION_WORKERS = max(1, int(os.getenv("QUICK_CLASSIFICATION_WORKERS", "2")))
 LEGACY_PARSER_ROUTES_ENABLED = os.getenv("ENABLE_LEGACY_PARSER_ROUTES", "").lower() in {"1", "true", "yes"}
+
+
+class LegacyRouteGuard:
+    """Reject disabled multipart routes before FastAPI reads/spools their body."""
+
+    def __init__(self, app):
+        self.app = app
+
+    async def __call__(self, scope, receive, send):
+        if (scope["type"] == "http" and not LEGACY_PARSER_ROUTES_ENABLED
+                and scope.get("path", "").rstrip("/") in {"/parse", "/parse-debug", "/parse-stream"}):
+            await JSONResponse({"detail": "Not found"}, status_code=404)(scope, receive, send)
+            return
+        await self.app(scope, receive, send)
+
+
+app.add_middleware(LegacyRouteGuard)
 
 _upload_slots = asyncio.Semaphore(UPLOAD_CONCURRENCY)
 _full_executor = concurrent.futures.ThreadPoolExecutor(
@@ -580,6 +598,16 @@ async def upload_archive_stream(
     """
     if not _valid_upload_id(upload_id):
         raise HTTPException(400, "upload_id must be a lowercase UUIDv4")
+    if request.headers.get("content-type", "").split(";", 1)[0].strip().lower() != "application/octet-stream":
+        raise HTTPException(415, "Uploads require application/octet-stream.")
+    if request.headers.get("content-encoding", "identity").lower() != "identity":
+        raise HTTPException(415, "Encoded request bodies are not supported.")
+    if (not x_filename or len(x_filename) > 255
+            or any(ord(char) < 32 or ord(char) == 127 or char in "/\\" for char in x_filename)
+            or Path(x_filename).suffix.lower() not in ALLOWED_SUFFIXES):
+        raise HTTPException(400, "A plain .txt, .log, or .zip filename is required.")
+    if x_year_hint != 0 and not 2001 <= x_year_hint <= datetime.now(timezone.utc).year + 1:
+        raise HTTPException(400, "Invalid combat-log year.")
     try:
         await asyncio.wait_for(_upload_slots.acquire(), timeout=0.01)
     except TimeoutError as exc:
@@ -588,8 +616,11 @@ async def upload_archive_stream(
     try:
         _cleanup_abandoned_uploads()
         content_length = request.headers.get("content-length")
-        if content_length:
+        declared_bytes = None
+        if content_length is not None:
             try:
+                if not content_length.isascii() or not content_length.isdecimal():
+                    raise ValueError("invalid length")
                 declared_bytes = int(content_length)
                 if declared_bytes < 0:
                     raise ValueError("negative length")
@@ -629,6 +660,8 @@ async def upload_archive_stream(
                     _set_upload_state(upload_id, "uploading", receivedBytes=received_bytes)
                 tmp.flush()
                 os.fsync(tmp.fileno())
+        if declared_bytes is not None and received_bytes != declared_bytes:
+            raise HTTPException(400, "Received upload size does not match Content-Length.")
         final_byte_at = time.perf_counter()
         os.replace(part_path, final_path)
     except TimeoutError as exc:

@@ -33,12 +33,16 @@ It does not provide public end-user accounts or store plaintext login passwords.
 ### Upload and parser boundary
 
 - Public uploads accept only `.txt`, `.log`, and `.zip` names and require an application-generated UUIDv4.
+- The current upload-policy acknowledgement is required server-side before body reading, parser requests or database work. Browser uploads require the trusted configured origin; acknowledgement does not authenticate the uploader or stop a determined bot.
+- The web bounds actual streamed bytes and checks agreement with the declared size and parser receipt. It admits at most four active uploads and 12 starts per minute per process without trusting client-provided IP headers.
 - The web and parser paths enforce a 100 MiB compressed upload ceiling.
 - ZIP validation rejects unsafe paths, symlinks, encryption, nested archives, excess members, excessive expansion, and suspicious compression ratios.
+- ZIPs contain exactly one regular text combat log and safe empty folders. Full-file validation rejects binary/control data, unrecognized records and excessive record/field/entity complexity before classification; encounter buffers are also bounded.
 - Archive members stream directly from the ZIP; they are never extracted as a directory tree.
 - Parser request, receive, and processing times are bounded, and full parsing uses bounded worker/semaphore capacity.
 - Parser responses are schema-validated before database persistence.
 - Raw parser exceptions and internal paths are logged server-side and replaced with fixed public messages.
+- Public encounter responses omit original upload filenames; public report values retain React escaping and parameterized database persistence. Upstream upload/status redirects are rejected.
 - Arbitrary filesystem parsing has been removed. Legacy multipart/debug/stream routes are disabled unless `ENABLE_LEGACY_PARSER_ROUTES` is explicitly enabled.
 
 ### Admin boundary
@@ -77,6 +81,7 @@ The maintained threat model is in [docs/security/threat-model.md](docs/security/
 ## Known Residual Risks
 
 - Public upload capacity is bounded per process, but there is no distributed rate limiter across multiple replicas.
+- An anonymous attacker can still submit well-formed fabricated logs or consume the bounded capacity and deny other users service. A policy checkbox is not authentication, antivirus, CAPTCHA or legal proof of consent. There is no antivirus engine or hard per-job process/memory sandbox; thread cancellation is cooperative and Python object overhead can exceed input bytes. See the [upload security review](docs/security/upload-security-review.md) for evidence and deployment limits.
 - Public raid reports intentionally expose in-game character names and performance data.
 - Warmane and CDN availability/behavior are outside this project's control; cached snapshots provide availability fallback.
 - The sandboxed desktop character model loads Warmane CDN code in an isolated `srcdoc` frame. It has no same-origin permission, referrer, parent DOM access, or Pizza Logs credentials.

@@ -3,6 +3,7 @@ import { randomUUID } from "node:crypto";
 import fs from "node:fs/promises";
 import path from "node:path";
 import { chromium } from "playwright";
+import { UPLOAD_POLICY_HEADER, UPLOAD_POLICY_VERSION } from "../lib/upload-policy.ts";
 
 // Synthetic uploads only, against the same disposable loopback stack as test:e2e.
 const base = new URL(process.env.PIZZA_TEST_BASE_URL ?? "http://127.0.0.1:3000");
@@ -33,7 +34,7 @@ lines.push('5/21 00:02:31.000  ENCOUNTER_END,1084,"Lord Marrowgar",4,25,1');
 const input = Buffer.from(lines.join("\n") + "\n");
 const query = new URLSearchParams({ filename: "synthetic-display-consistency.txt", fileSize: String(input.length), uploaderName: "Audit", guildName: "Synthetic Display" });
 const response = await fetch(new URL(`/api/upload?${query}`, base), {
-  method: "POST", body: input, headers: { "content-type": "application/octet-stream", "x-upload-id": randomUUID() }, signal: AbortSignal.timeout(120000),
+  method: "POST", body: input, headers: { "content-type": "application/octet-stream", "x-upload-id": randomUUID(), [UPLOAD_POLICY_HEADER]: UPLOAD_POLICY_VERSION }, signal: AbortSignal.timeout(120000),
 });
 assert.equal(response.status, 200);
 const events = (await response.text()).split("\n").filter(line => line.startsWith("data: ")).map(line => JSON.parse(line.slice(6)));

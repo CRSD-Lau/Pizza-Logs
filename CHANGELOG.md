@@ -6,6 +6,17 @@ This project follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) an
 
 ## [Unreleased]
 
+### Security
+
+- Require current upload-rule acknowledgement before processing and reject cross-site browser uploads. Bound actual streamed bytes and size agreement, concurrent web requests and upload starts; retain safe public errors and reject parser redirects.
+- Validate the full combat-log contents, reject ZIPs containing unrelated files or multiple logs, and bound parser record, identity and encounter-buffer complexity. Reject disabled legacy routes before multipart body spooling.
+- Remove original uploaded filenames from public encounter APIs while retaining administrator metadata and report statistics.
+
+### Added
+
+- Add an unchecked per-upload agreement, upload rules/public-data notice, and site-wide bug-report guidance linked to the repository, with separate private security reporting and honest service/security limitations.
+- Document the upload security audit, confirmed fixes, regression coverage and remaining anonymous-abuse, antivirus and worker-isolation limits.
+
 ### Changed
 
 - Apply the approved Molten Charcoal palette across public and admin pages, reports, charts, loading states and the optional intro: warm charcoal surfaces, ember-orange accents and cream text, preserving WoW class, spell-school and status colors.

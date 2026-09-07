@@ -139,7 +139,10 @@ try {
   assert.equal(response.status, 200, "Synthetic fixture discovery API");
   const encounters = await response.json();
   const phyre = encounters.find(encounter => encounter.participants.some(participant => participant.player.name === "Phyre"));
-  const policy = encounters.find(encounter => encounter.upload.filename === "synthetic-short-pulls.txt" && encounter.outcome === "KILL");
+  // Uploaded filenames are private. Identify the frozen fixture by public actors.
+  const policy = encounters.find(encounter => encounter.outcome === "KILL"
+    && ["SyntheticFirst", "SyntheticSecond", "SyntheticThird"].every(name =>
+      encounter.participants.some(participant => participant.player.name === name)));
   assert.ok(phyre && policy, "Run test:e2e first: frozen Phyre and current-week short-pull fixtures are required");
   const byId = new Map(encounters.map(encounter => [encounter.id, encounter]));
   await visit(`/uploads/${phyre.uploadId}/sessions/${phyre.sessionIndex}`);
@@ -293,7 +296,7 @@ try {
     await page.waitForURL(url => url.pathname === bossPath);
     assert.equal(await page.getByLabel("Difficulty", { exact: true }).inputValue(), policy.difficulty);
 
-    const short = encounters.filter(encounter => encounter.upload.filename === "synthetic-short-pulls.txt" && encounter.outcome === "WIPE")
+    const short = encounters.filter(encounter => encounter.uploadId === policy.uploadId && encounter.outcome === "WIPE")
       .sort((left, right) => left.durationMs - right.durationMs)[0];
     assert.ok(short, "Short-pull fixture must exist");
     for (const included of [false, true]) {

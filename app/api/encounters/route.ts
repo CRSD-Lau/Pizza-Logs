@@ -20,7 +20,8 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
     skip,
     include: {
       boss: { select: { name: true, slug: true, raid: true, raidSlug: true } },
-      upload: { select: { filename: true, realm: { select: { name: true } } } },
+      // Original filenames are operational metadata and can contain private labels.
+      upload: { select: { realm: { select: { name: true } } } },
       participants: {
         orderBy: { dps: "desc" },
         take: 5,

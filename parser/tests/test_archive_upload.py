@@ -49,13 +49,14 @@ def test_uppercase_txt_member_is_accepted_and_streamed(tmp_path: Path):
         assert "ENCOUNTER_START" in fh.read()
 
 
-def test_validator_selects_a_usable_log_instead_of_only_the_largest_txt(tmp_path: Path):
+def test_archive_rejects_multiple_text_files_instead_of_silently_selecting_one(tmp_path: Path):
     path = _zip(tmp_path / "multiple.zip", {
         "large-readme.txt": "".join(f"not a combat log {i:05d} value {i * 7919}\n" for i in range(5000)),
         "WoWCombatLog.txt": VALID_LOG,
     })
-    selection = validate_upload(path, path.name)
-    assert selection.member_name == "WoWCombatLog.txt"
+    with pytest.raises(ArchiveValidationError) as result:
+        validate_upload(path, path.name)
+    assert result.value.code == "MULTIPLE_COMBAT_LOGS"
 
 
 @pytest.mark.parametrize(
@@ -63,7 +64,7 @@ def test_validator_selects_a_usable_log_instead_of_only_the_largest_txt(tmp_path
     [
         ("bad.zip", {"../escape.txt": VALID_LOG}, "UNSAFE_MEMBER_PATH"),
         ("bad.zip", {"nested.zip": b"PK\x03\x04"}, "NESTED_ARCHIVE"),
-        ("bad.zip", {"readme.md": "no log"}, "NO_USABLE_COMBAT_LOG"),
+        ("bad.zip", {"readme.md": "no log"}, "UNSUPPORTED_ARCHIVE_MEMBER"),
     ],
 )
 def test_archive_security_rejections(tmp_path: Path, filename: str, members: dict[str, str | bytes], code: str):
@@ -137,7 +138,7 @@ class _StreamingRequest:
     def __init__(self, body: bytes, chunk_size: int = 4096):
         self.body = body
         self.chunk_size = chunk_size
-        self.headers = {"content-length": str(len(body))}
+        self.headers = {"content-length": str(len(body)), "content-type": "application/octet-stream"}
 
     async def stream(self):
         for offset in range(0, len(self.body), self.chunk_size):
@@ -350,10 +351,8 @@ def test_line_limit_applies_after_valid_prefix_and_to_all_readers(tmp_path: Path
         _zip(path, {"combat.txt": body})
     else:
         path.write_text(body, encoding="utf-8")
-    selection = validate_upload(path, path.name)
-    with open_combat_log(path, selection) as reader:
-        with pytest.raises(ArchiveValidationError) as result:
-            list(reader)
+    with pytest.raises(ArchiveValidationError) as result:
+        validate_upload(path, path.name)
     assert result.value.code == "LINE_LENGTH_LIMIT"
 
 
@@ -393,7 +392,7 @@ async def test_receive_cancellation_releases_admission_and_removes_partial_file(
     received = asyncio.Event()
 
     class InterruptedRequest:
-        headers = {}
+        headers = {"content-type": "application/octet-stream"}
 
         async def stream(self):
             yield b"partial"
