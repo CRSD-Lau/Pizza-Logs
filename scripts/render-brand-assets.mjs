@@ -7,7 +7,20 @@ import { chromium } from "playwright";
 import sharp from "sharp";
 
 const author = "Neil Mitchell";
-const background = "#0a0c10";
+const background = "#100d0b";
+const palette = {
+  name: "Molten Charcoal",
+  background,
+  panel: "#1d1815",
+  border: "#49352a",
+  text: "#fff3e8",
+  muted: "#bba99b",
+  accent: "#ffa363",
+  flame: "#ff812f",
+  heading: "#ffe0bf",
+  halo: "#382017",
+};
+const cacheVersion = "molten-1";
 const sourcePath = "assets/brand/pizza-warriors-source.png";
 const source = await readFile(sourcePath);
 const sourceUrl = `data:image/png;base64,${source.toString("base64")}`;
@@ -35,7 +48,11 @@ async function icon(size, scale = 1, blended = true) {
 try {
   await writeImage("public/brand/guild-crest-v1.png", await icon(512, 1, false), 512, 512);
   await writeImage("public/brand/icon-192.png", await icon(192, 0.92), 192, 192);
-  await writeImage("public/brand/icon-512.png", await icon(512, 0.92), 512, 512);
+  const solidCrest = await writeImage("public/brand/icon-512.png", await icon(512, 0.92), 512, 512);
+  // A versioned public path also works in server-rendering tests without image loaders.
+  const introCrestPath = `public/brand/intro-crest-${cacheVersion}.png`;
+  await writeFile(introCrestPath, solidCrest);
+  outputs.push({ file: introCrestPath, width: 512, height: 512, bytes: solidCrest.length, sha256: createHash("sha256").update(solidCrest).digest("hex") });
   await writeImage("public/brand/icon-maskable-512.png", await icon(512, 0.76), 512, 512);
   await writeImage("public/brand/apple-touch-icon.png", await icon(180, 0.84), 180, 180);
 
@@ -67,13 +84,13 @@ try {
   await page.setViewportSize({ width: 1280, height: 640 });
   await page.setContent(`<!doctype html><html><head><meta name="author" content="${author}"><style>
     @font-face{font-family:Cinzel;src:url(data:font/woff2;base64,${cinzel})} @font-face{font-family:Rajdhani;src:url(data:font/woff2;base64,${rajdhani})}
-    *{box-sizing:border-box}body{margin:0;width:1280px;height:640px;background:${background};color:#e8dfc8;overflow:hidden;position:relative;font-family:Rajdhani,sans-serif}
-    .frame{position:absolute;inset:30px;border:1px solid #c8a84b30}.rule{position:absolute;left:76px;right:76px;bottom:124px;height:1px;background:linear-gradient(90deg,#c8a84b00,#c8a84b80,#c8a84b00)}
+    *{box-sizing:border-box}body{margin:0;width:1280px;height:640px;background:radial-gradient(ellipse at 22% 45%,${palette.halo}80,transparent 52%),${background};color:${palette.text};overflow:hidden;position:relative;font-family:Rajdhani,sans-serif}
+    .frame{position:absolute;inset:30px;border:1px solid ${palette.border}}.rule{position:absolute;left:76px;right:76px;bottom:124px;height:1px;background:linear-gradient(90deg,${palette.flame}00,${palette.flame}80,${palette.flame}00)}
     .crest{position:absolute;left:74px;top:106px;width:350px;height:350px;mix-blend-mode:lighten}
-    .copy{position:absolute;left:484px;top:147px;right:64px}.eyebrow{font-size:23px;letter-spacing:5px;color:#b3a68c;margin:0 0 24px}.name{font:700 78px/1.14 Cinzel,serif;letter-spacing:-3px;color:#f0d080;white-space:nowrap;margin:0 0 18px}.name span{color:#e8dfc8}.tag{font-size:30px;letter-spacing:4px;color:#c8a84b;margin:0}.description{font-size:25px;color:#b3a68c;margin:28px 0 0;letter-spacing:.3px}.bottom{position:absolute;left:0;right:0;bottom:64px;text-align:center;letter-spacing:4px;color:#b3a68c;font-size:20px}.bottom b{color:#c8a84b;margin:0 20px;font-weight:400}
+    .copy{position:absolute;left:484px;top:147px;right:64px}.eyebrow{font-size:23px;letter-spacing:5px;color:${palette.muted};margin:0 0 24px}.name{font:700 78px/1.14 Cinzel,serif;letter-spacing:-3px;color:${palette.heading};white-space:nowrap;margin:0 0 18px}.name span{color:${palette.flame}}.tag{font-size:30px;letter-spacing:4px;color:${palette.accent};margin:0}.description{font-size:25px;color:${palette.muted};margin:28px 0 0;letter-spacing:.3px}.bottom{position:absolute;left:0;right:0;bottom:64px;text-align:center;letter-spacing:4px;color:${palette.muted};font-size:20px}.bottom b{color:${palette.flame};margin:0 20px;font-weight:400}
     </style></head><body><div class="frame"></div><img class="crest" alt="Pizza Warriors crest" src="${sourceUrl}"><div class="copy"><p class="eyebrow">PIZZA WARRIORS</p><h1 class="name">Pizza <span>Logs</span></h1><p class="tag">WOTLK RAID ANALYTICS</p><p class="description">Every pull. Every player. Every raid.</p></div><div class="rule"></div><div class="bottom">RAID REPORTS <b>·</b> PLAYER HISTORY <b>·</b> GUILD RECORDS</div></body></html>`);
   await page.evaluate(async () => { await document.fonts.ready; await Promise.all([...document.images].map(img => img.decode())); });
   await writeImage("public/social-preview.jpg", await page.screenshot(), 1280, 640, "jpeg");
-  await writeFile("assets/brand/manifest.json", JSON.stringify({ author, lastModifiedBy: author, source: sourcePath, sourceSha256: createHash("sha256").update(source).digest("hex"), background, method: "Browser-rendered existing artwork, CSS lighten background blend, native-size exports; no generated replacement logo.", outputs }, null, 2) + "\n");
+  await writeFile("assets/brand/manifest.json", JSON.stringify({ author, creator: author, lastModifiedBy: author, source: sourcePath, sourceSha256: createHash("sha256").update(source).digest("hex"), background, palette, cacheVersion, method: "Browser-rendered existing artwork, CSS lighten background blend, native-size exports; no generated replacement logo.", outputs }, null, 2) + "\n");
   console.log(JSON.stringify(outputs.map(({ file, bytes }) => ({ file, bytes })), null, 2));
 } finally { await browser.close(); }

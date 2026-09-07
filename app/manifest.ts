@@ -9,23 +9,23 @@ export default function manifest(): MetadataRoute.Manifest {
     scope: "/",
     start_url: "/",
     display: "standalone",
-    background_color: "#0a0c10",
-    theme_color: "#0a0c10",
+    background_color: "#100d0b",
+    theme_color: "#100d0b",
     icons: [
       {
-        src: "/brand/icon-192.png?v=guild-1",
+        src: "/brand/icon-192.png?v=molten-1",
         sizes: "192x192",
         type: "image/png",
         purpose: "any",
       },
       {
-        src: "/brand/icon-512.png?v=guild-1",
+        src: "/brand/icon-512.png?v=molten-1",
         sizes: "512x512",
         type: "image/png",
         purpose: "any",
       },
       {
-        src: "/brand/icon-maskable-512.png?v=guild-1",
+        src: "/brand/icon-maskable-512.png?v=molten-1",
         sizes: "512x512",
         type: "image/png",
         purpose: "maskable",

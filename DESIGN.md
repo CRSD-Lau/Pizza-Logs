@@ -4,7 +4,18 @@ Author: Neil Mitchell
 
 Last modified by: Neil Mitchell
 
-Pizza Logs uses a dark raid-log workspace with a restrained gold accent. The interface should feel like an analytical tool first and a Warcraft artifact second.
+Pizza Logs uses the approved **Molten Charcoal** palette: warm dark surfaces, ember-orange accents and cream text, drawn from the original Pizza Warriors crest. The interface should feel like an analytical tool first and a Warcraft artifact second.
+
+| Role | Color |
+|---|---|
+| Page / panel / card | `#100D0B` / `#1D1815` / `#27201B` |
+| Class-colored meter / hover surface | `#17110E` / `#251E19` |
+| Primary / secondary text | `#FFF3E8` / `#BBA99B` |
+| Heading / accent | `#FFE0BF` / `#FFA363` |
+| Primary button / button text | `#FF812F` / `#1A100A` |
+| Divider / warm halo | `#49352A` / `#382017` |
+
+The existing `gold`, `gold-light`, and `gold-dim` utility names remain compatibility aliases for the warm accent family. New roles use `flame`, `heading`, `accent`, `line`, `button-text`, and `halo`. Class-colored meters use `bg-meter` so names retain AA contrast over their tinted fills. Keep WoW class, spell-school, item-quality and outcome colors distinct from the brand palette. See the [branding guide](docs/branding.md) for exact artwork and metadata exports.
 
 ## Typography and contrast
 
@@ -27,7 +38,7 @@ Pizza Logs uses a dark raid-log workspace with a restrained gold accent. The int
 - Supporting information belongs on the page surface with dividers.
 - Use `StatGroup` for related metrics: equal cells within one quiet surface, with consistent dividers and no forced double-width highlights. Choose a balanced count at mobile and desktop widths; move contextual counts outside the metric grid when needed.
 - Emphasis is optional and uses value color, never a different card border, glow, or width. Pair amounts with their labelled rates; keep fight duration, outcomes, and scope close to the heading or summary context. Retain every measurement and unavailable explanation.
-- `gold-dim` is the translucent border/divider token, defined once in the Tailwind theme. Use solid gold for meaningful emphasis and active/focus states.
+- `gold-dim` is the shared quiet border/divider token, defined once in the Tailwind theme. Use solid ember accents for meaningful emphasis and active/focus states.
 - Leaderboard rows align rank, name and value. Metadata and the report action share the next row, with all links retaining their interaction box. Avoid repeating a boss name when the containing section already establishes that scope.
 - Long directories and cross-boss reports must paginate or use accessible disclosure.
 

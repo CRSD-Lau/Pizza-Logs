@@ -90,7 +90,7 @@ export function DamageMeter({ participants, metric = "dps" }: DamageMeterProps) 
                 type="button"
                 className={cn(
                   getRevealClassName(),
-                  "meter-row grid w-full grid-cols-2 items-center gap-x-3 gap-y-2 bg-bg-card px-3 py-3 text-left lg:grid-cols-[minmax(0,2fr)_repeat(4,minmax(0,1fr))] lg:gap-2 lg:py-2.5",
+                  "meter-row grid w-full grid-cols-2 items-center gap-x-3 gap-y-2 bg-bg-meter px-3 py-3 text-left lg:grid-cols-[minmax(0,2fr)_repeat(4,minmax(0,1fr))] lg:gap-2 lg:py-2.5",
                   isActive && "active"
                 )}
                 style={getRevealStyle(idx)}

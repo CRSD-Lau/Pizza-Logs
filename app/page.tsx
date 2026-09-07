@@ -11,6 +11,7 @@ import { isDatabaseConnectionError } from "@/lib/database-errors";
 import { buildPageMetadata } from "@/lib/page-metadata";
 import { parseIncludeShortPulls } from "@/lib/attempt-policy";
 import { countedAttemptWhere } from "@/lib/attempt-policy.server";
+import { GuildCrest } from "@/components/brand/GuildCrest";
 
 export const metadata = buildPageMetadata({
   title: "Pizza Logs | WotLK Raid Analytics",
@@ -46,11 +47,17 @@ export default async function HomePage({ searchParams }: {
   return (
     <PageShell>
       <PageHeader
+        eyebrow="Pizza Warriors · Warmane"
         title="Upload a raid log"
         description={
           <p>See boss kills, damage and healing from your Warmane combat log.</p>
         }
-        actions={<Link href="/raids" className="inline-flex min-h-11 items-center rounded-sm text-sm font-semibold text-gold hover:text-gold-light">Browse raids &rarr;</Link>}
+        actions={
+          <div className="flex items-center gap-5">
+            <Link href="/raids" className="inline-flex min-h-11 items-center rounded-sm text-sm font-semibold text-gold hover:text-gold-light">Browse raids &rarr;</Link>
+            <GuildCrest size={96} className="hidden sm:block" />
+          </div>
+        }
       />
 
       {!stats.databaseAvailable && (

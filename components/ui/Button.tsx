@@ -20,8 +20,8 @@ export const buttonVariants = cva(
           "hover:bg-danger/10",
         ],
         solid: [
-          "bg-gold text-bg-deep border border-gold",
-          "hover:bg-gold-light",
+          "bg-flame text-button-text border border-flame",
+          "hover:bg-accent",
         ],
       },
       size: {

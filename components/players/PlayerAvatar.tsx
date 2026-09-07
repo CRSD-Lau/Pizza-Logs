@@ -257,7 +257,7 @@ function GearPreviewPanel({
                 ))}
               </div>
 
-              <div className="relative flex min-h-80 flex-col items-center justify-center overflow-hidden rounded-sm border border-gold-dim/70 bg-[radial-gradient(circle_at_center,rgba(196,157,52,0.16),rgba(8,11,16,0.92)_62%)] shadow-inner shadow-black/80">
+              <div className="relative flex min-h-80 flex-col items-center justify-center overflow-hidden rounded-sm border border-gold-dim/70 bg-[radial-gradient(circle_at_center,var(--color-halo),var(--color-bg-deep)_62%)] shadow-inner shadow-black/80">
                 <div className="absolute inset-3 rounded-full border border-gold-dim/25" aria-hidden="true" />
                 <div className="absolute inset-7 rounded-full border border-gold-dim/15" aria-hidden="true" />
                 {preview.gear.appearance ? (

@@ -6,6 +6,11 @@ This project follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) an
 
 ## [Unreleased]
 
+### Changed
+
+- Apply the approved Molten Charcoal palette across public and admin pages, reports, charts, loading states and the optional intro: warm charcoal surfaces, ember-orange accents and cream text, preserving WoW class, spell-school and status colors.
+- Refresh the README banner, shared-link artwork, browser and install icons, notification icons and page metadata with matching branding and versioned image references. Keep the original Pizza Warriors crest and existing site/report URLs.
+
 ## [1.0.0] - 2026-09-06
 
 The first stable product release defines the current canonical Warmane/WotLK analysis scope. See the [1.0.0 release contract](docs/releases/1.0.0.md) for compatibility commitments, operating boundaries and release validation requirements. The existing 0.1.1 snapshot remains part of the release history.

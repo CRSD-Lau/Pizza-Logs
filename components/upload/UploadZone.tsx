@@ -257,19 +257,19 @@ export function UploadZone({ onComplete }: UploadZoneProps) {
               ? "cursor-not-allowed border-gold/20 bg-gold/[0.01]"
               : isDragActive
                 ? "cursor-pointer border-gold bg-gold/[0.06] shadow-gold-glow"
-                : "cursor-pointer border-gold/40 bg-gold/[0.02] hover:border-gold hover:bg-gold/[0.04]"
+                : "cursor-pointer border-gold/40 bg-bg-panel hover:border-gold hover:bg-bg-card"
           )}
         >
           {!isLocked && <input {...getInputProps()} />}
-          <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_60%_40%_at_50%_50%,rgba(180,140,60,0.05)_0%,transparent_70%)]" />
+          <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_60%_40%_at_50%_50%,var(--color-halo)_0%,transparent_70%)] opacity-60" />
           <div className="relative">
             <UploadIcon className="mx-auto mb-3 hidden text-gold/60 sm:block" />
-            <p className="heading-cinzel text-base text-gold-light mb-2 sm:text-lg">
+            <p className="heading-cinzel text-base text-heading mb-2 sm:text-lg">
               {!characterName.trim()
                 ? "Enter your character name above to upload"
                 : isDragActive ? "Release to upload" : "Drop your WoWCombatLog.txt"}
             </p>
-            <Button variant="gold" size="md" onClick={(event) => { event.stopPropagation(); open(); }} disabled={!characterName.trim()}>
+            <Button variant="solid" size="md" onClick={(event) => { event.stopPropagation(); open(); }} disabled={!characterName.trim()}>
               Choose File
             </Button>
             <p className="text-xs text-text-secondary mt-3">TXT, LOG, or ZIP · up to 100 MiB compressed</p>

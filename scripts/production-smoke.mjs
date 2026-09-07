@@ -15,7 +15,7 @@ const checks = [
   {
     path: "/",
     status: 200,
-    contains: ["Pizza Logs", "social-preview.jpg", "rel=\"canonical\"", "manifest.webmanifest"],
+    contains: ["Pizza Logs", "social-preview.jpg?v=molten-1", "rel=\"canonical\"", "manifest.webmanifest?v=molten-1"],
     headers: securityHeaders,
     absentHeaders: ["x-powered-by"],
   },
@@ -28,12 +28,13 @@ const checks = [
   { path: "/api/admin/import-items", status: 404 },
   { path: "/robots.txt", status: 200, contains: ["Disallow: /admin", "Sitemap:"] },
   { path: "/sitemap.xml", status: 200, contains: [canonicalUrl, "/leaderboards"] },
-  { path: "/manifest.webmanifest", status: 200, contains: ["Pizza Logs", "#0a0c10", "icon-192.png", "icon-512.png", "icon-maskable-512.png"] },
+  { path: "/manifest.webmanifest", status: 200, contains: ["Pizza Logs", "#100d0b", "molten-1", "icon-192.png", "icon-512.png", "icon-maskable-512.png"] },
   { path: "/social-preview.jpg", status: 200, contentType: "image/jpeg", binary: true, minBytes: 10_000 },
-  { path: "/brand/icon-192.png?v=guild-1", status: 200, contentType: "image/png", binary: true, minBytes: 1_000 },
-  { path: "/brand/icon-512.png?v=guild-1", status: 200, contentType: "image/png", binary: true, minBytes: 1_000 },
-  { path: "/brand/icon-maskable-512.png?v=guild-1", status: 200, contentType: "image/png", binary: true, minBytes: 1_000 },
-  { path: "/brand/apple-touch-icon.png?v=guild-1", status: 200, contentType: "image/png", binary: true, minBytes: 1_000 },
+  { path: "/brand/icon-192.png?v=molten-1", status: 200, contentType: "image/png", binary: true, minBytes: 1_000 },
+  { path: "/brand/icon-512.png?v=molten-1", status: 200, contentType: "image/png", binary: true, minBytes: 1_000 },
+  { path: "/brand/icon-maskable-512.png?v=molten-1", status: 200, contentType: "image/png", binary: true, minBytes: 1_000 },
+  { path: "/brand/apple-touch-icon.png?v=molten-1", status: 200, contentType: "image/png", binary: true, minBytes: 1_000 },
+  { path: "/brand/intro-crest-molten-1.png", status: 200, contentType: "image/png", binary: true, minBytes: 1_000 },
 ];
 
 let failed = false;
