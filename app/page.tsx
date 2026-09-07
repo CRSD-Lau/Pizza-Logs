@@ -55,7 +55,7 @@ export default async function HomePage({ searchParams }: {
         actions={
           <div className="flex items-center gap-5">
             <Link href="/raids" className="inline-flex min-h-11 items-center rounded-sm text-sm font-semibold text-gold hover:text-gold-light">Browse raids &rarr;</Link>
-            <GuildCrest size={96} className="hidden sm:block" />
+            <GuildCrest size={96} surface="solid" className="hidden sm:block" />
           </div>
         }
       />

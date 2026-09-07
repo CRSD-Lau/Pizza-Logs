@@ -219,8 +219,10 @@ Restore only through the reviewed recovery procedure if actual data corruption i
 
 ## Visual scope
 
-Dark surfaces, gold accents, typography, logo, navigation and report composition remain.
-Changes address measured contrast and label defects. Class colors remain on accents/fills;
+The reviewed baseline retained dark surfaces, gold accents, typography, logo,
+navigation and report composition. Current colors and artwork follow the
+[Molten Charcoal branding guide](branding.md). The audit changes addressed measured
+contrast and label defects. Class colors remain on accents/fills;
 meaningful text uses readable semantic foreground tokens. Weekly and all-time banners
 now describe their actual period. Browser artifacts compare seeded routes at 360, 390,
 768, 1024, 1440 and 1920 pixels. External browser assets are blocked; an isolated local
