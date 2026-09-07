@@ -18,9 +18,10 @@ assert.match(uploadZone, /quick-result/, "quick classification must be visible b
 assert.doesNotMatch(uploadZone, /new FormData\(/, "new upload path must not rebuild multipart bodies");
 
 assert.match(uploadRoute, /\/uploads\/\$\{encodeURIComponent\(clientUploadId\)\}\/stream/);
-assert.match(uploadRoute, /body:\s+req\.body/, "Next.js must forward the request stream directly");
+assert.match(uploadRoute, /boundedUploadBody\(req\.body/, "Next.js must bound the request stream without buffering it");
+assert.match(uploadRoute, /body:\s+uploadBody\.body/, "Next.js must forward the bounded request stream");
 assert.doesNotMatch(uploadRoute, /\/parse-stream/, "public uploads must not fall back to the legacy parser path");
-assert.match(uploadRoute, /parseResult\.receivedBytes \?\? declaredFileSize/, "stored size should use parser-observed bytes");
+assert.match(uploadRoute, /uploadBody\.assertComplete\(parseResult\.receivedBytes\)/, "stored size must agree with actual streamed bytes");
 assert.match(uploadRoute, /X-Upload-ID/, "upload response must expose the upload ID");
 assert.match(
   uploadPersistence,

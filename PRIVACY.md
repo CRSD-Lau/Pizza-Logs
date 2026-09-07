@@ -2,7 +2,7 @@
 
 Author: Neil Mitchell
 Last Modified By: Neil Mitchell
-Last updated: 2026-09-05
+Last updated: 2026-09-06
 
 Pizza Logs is a community raid-analysis service for PizzaWarriors. Public visitors do not have accounts. One private administrator account protects maintenance access; there is no advertising SDK or payment flow.
 
@@ -24,6 +24,8 @@ Private administration stores the designated administrator's email and name, a p
 Data is used to detect duplicate uploads, parse and display raid reports, calculate records and weekly summaries, provide player/gear views, and operate or troubleshoot the service.
 
 Raw upload bytes are written temporarily by the parser during processing, then removed after completion or cleanup. The database keeps the parsed report and upload metadata; it does not keep a downloadable copy of the raw combat log.
+
+Each upload requires acknowledgement of the current upload rules and public visibility notice. The server checks the submitted policy version before processing. This is a request-level acknowledgement, not a verified identity or a separately retained consent record. Upload admission counters are held in process memory; this upload throttle does not store IP addresses or add tracking cookies. Original upload filenames remain in administrator metadata and are omitted from public encounter APIs.
 
 ## Public Visibility
 

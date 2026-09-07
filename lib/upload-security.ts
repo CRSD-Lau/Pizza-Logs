@@ -21,6 +21,12 @@ const SAFE_PARSER_ERRORS: Readonly<Record<string, string>> = {
   ARCHIVE_METADATA_LIMIT: "The ZIP directory metadata exceeds the supported limit.",
   DUPLICATE_MEMBER: "The archive contains duplicate file names.",
   UNSUPPORTED_COMPRESSION: "ZIP members must use stored or deflate compression.",
+  UNSUPPORTED_ARCHIVE_MEMBER: "The ZIP must contain only one .txt or .log combat log and folders.",
+  MULTIPLE_COMBAT_LOGS: "Upload one combat log at a time.",
+  INVALID_TEXT_ENCODING: "The combat log uses an unsupported text encoding.",
+  INVALID_TEXT_CONTENT: "The upload contains binary data or unsupported control characters.",
+  INVALID_LOG_CONTENT: "The upload contains malformed or unrecognized combat-log records. Finish recording and upload the unmodified log.",
+  LOG_COMPLEXITY_LIMIT: "The combat log exceeds the supported processing limits. Upload a shorter log.",
   UPLOAD_CANCELLED: "The upload was cancelled. Please try again.",
 };
 
@@ -56,6 +62,25 @@ export function sanitizeUploadFilename(value: string | null): string | null {
 
 export function isUploadId(value: string | null): value is string {
   return value !== null && UPLOAD_ID_PATTERN.test(value);
+}
+
+/** Browsers must use the configured site; explicit-policy CLI uploads remain supported. */
+export function hasTrustedUploadOrigin(headers: Headers): boolean {
+  const fetchSite = headers.get("sec-fetch-site");
+  if (fetchSite && !["same-origin", "none"].includes(fetchSite)) return false;
+  const origin = headers.get("origin");
+  if (origin === null) return true;
+  if (origin === "null") return false;
+  try {
+    const configured = process.env.ADMIN_AUTH_URL;
+    if (configured) return origin === new URL(configured).origin;
+    const url = new URL(origin);
+    return process.env.NODE_ENV !== "production" && origin === url.origin
+      && ["http:", "https:"].includes(url.protocol)
+      && ["localhost", "127.0.0.1", "[::1]"].includes(url.hostname);
+  } catch {
+    return false;
+  }
 }
 
 export function parserHttpErrorMessage(status: number): string {

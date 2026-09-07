@@ -76,7 +76,7 @@ async def test_upload_shares_default_or_historical_year_between_quick_and_full(
 
     class Request:
         def __init__(self):
-            self.headers = {'content-length': str(len(payload))}
+            self.headers = {'content-length': str(len(payload)), 'content-type': 'application/octet-stream'}
 
         async def stream(self):
             yield payload

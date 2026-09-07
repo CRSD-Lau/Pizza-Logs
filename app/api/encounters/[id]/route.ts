@@ -13,7 +13,7 @@ export async function GET(
       boss: true,
       upload: {
         select: {
-          filename: true,
+          // Keep original filenames and other upload metadata in the admin area.
           guild:    { select: { name: true } },
           realm:    { select: { name: true, host: true } },
         },

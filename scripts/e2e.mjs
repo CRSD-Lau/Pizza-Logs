@@ -457,7 +457,8 @@ try {
   assert.notEqual(await page.evaluate(() => document.activeElement?.tagName), "BODY");
   await page.goto(base.href);
   await waitForPageContent(page);
-  await page.getByLabel("Character", { exact: false }).fill("Synthetic Auditor");
+  await page.getByRole("textbox", { name: "Character (required)", exact: true }).fill("Synthetic Auditor");
+  await page.getByRole("checkbox", { name: /I have permission to share this log/ }).check();
   await context.route("**/api/upload?**", async route => {
     await new Promise(resolve => setTimeout(resolve, 400));
     await route.continue();
@@ -475,7 +476,8 @@ try {
   observations.push({ check: "native file chooser, announced progress and duplicate report navigation", status: "pass" });
   await page.goto(base.href);
   await waitForPageContent(page);
-  await page.getByLabel("Character", { exact: false }).fill("Synthetic Auditor");
+  await page.getByRole("textbox", { name: "Character (required)", exact: true }).fill("Synthetic Auditor");
+  await page.getByRole("checkbox", { name: /I have permission to share this log/ }).check();
   const invalidChooser = page.waitForEvent("filechooser");
   await page.getByRole("button", { name: "Choose File", exact: true }).click();
   await (await invalidChooser).setFiles({ name: "invalid.txt", mimeType: "text/plain", buffer: Buffer.from("This is deliberately not a combat log.") });

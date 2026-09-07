@@ -1,6 +1,8 @@
 # Threat Model
 
-Last reviewed: 2026-09-04
+Author: Neil Mitchell
+Last Modified By: Neil Mitchell
+Last reviewed: 2026-09-06
 
 ## Scope and Assets
 
@@ -22,13 +24,15 @@ flowchart LR
 
 | Threat | Control | Remaining risk |
 | --- | --- | --- |
-| Oversized upload or slow body | Web metadata/content-length checks, parser streaming byte counter, receive timeout | Distributed rate limiting is not implemented |
+| Oversized upload or slow body | Independent web/parser byte counters, exact size agreement, receive timeout, four active web requests and 12 starts per minute per process | Distributed rate limiting is not implemented; a bot can consume the bounded capacity |
+| Junk, malware disguised as logs or unwanted archive payloads | Single regular log per ZIP, empty safe folders only, full-file recognized event validation, binary/control rejection and complexity limits | No antivirus engine; crafted plausible logs cannot be authenticated; no zero-malware guarantee |
+| Unacknowledged/cross-site upload | Current policy header checked before body/parser/database; browser Origin matches configured trusted site and cross-site Fetch Metadata is rejected | CLI clients can acknowledge directly; no identity verification or durable consent record |
 | ZIP bomb/path traversal | Size, ratio, entry/metadata, path, encryption, symlink, duplicate-name and nested-archive rejection; no extraction; bounded physical-line reader | Input size and admission are bounded; thread execution has cooperative cancellation rather than a hard CPU deadline |
 | Cancellation or timed-out work exhausts admission/storage | Receive cancellation finalizes ownership; pending tasks are cancelled; admission/files remain owned until actual workers stop; active files excluded from abandoned cleanup | Stuck aggregation retains capacity until worker/process termination; hard isolation needs worker processes |
 | Upload ID collision/state theft | Strict lowercase UUIDv4; 409 on retained-ID reuse; bounded ephemeral state with terminal eviction | Anyone who learns a live UUID can read its non-secret progress state; restarts/eviction lose progress |
 | Parser filesystem access | Arbitrary path route removed; only verified upload directory files are opened | Deployment filesystem permissions remain defense in depth |
 | Internal error disclosure and forged log entries | Fixed public error codes/messages; modern parser logs include validated correlation IDs and exception types without raw exception text; JSON encoding and explicit CR/LF escaping at the log sink retain one line per event | Operational logs remain sensitive; local opt-in legacy routes retain diagnostic traces |
-| Raw upload/database enumeration | No public upload-row listing; canonical report routes expose only intended reports | Public reports expose game identities by design |
+| Raw upload/database enumeration | No public upload-row listing or file download; original filenames omitted from public encounter APIs | Public reports expose game identities by design; progress UUIDs act as bearer identifiers |
 | Admin bypass | Operator-provisioned identity, mandatory TOTP, server-recorded per-session MFA, live database authorization on pages/actions/APIs, no legacy secret paths | Protect the server key and operator recovery access; deployed enrollment must be verified |
 | Secret leakage in URL/client | Admin query-string import removed; no browser storage; server-only variables | Maintainer handling and screenshots remain human risks |
 | Cross-site scripting/content injection | React escaping, schema/input constraints, CSP, Slack escaping | CSP allows inline script/style for Next.js and isolated model compatibility |
@@ -59,6 +63,8 @@ Expected public use includes uploading valid combat logs and browsing reports. T
 5. Public error payloads do not contain stack traces, filesystem paths, database text, or upstream secrets.
 6. `main` changes flow through required checks; Actions are commit-pinned.
 7. Missing parser evidence is unknown/unattributed rather than guessed.
+
+The dated [upload security review](upload-security-review.md) records verified defects, remediation, scope and residual resource risks. Disclaimers and acknowledgement support user understanding; they do not replace technical controls.
 
 ## Review Triggers
 

@@ -12,6 +12,7 @@ import Link from "next/link";
 import { Nav } from "@/components/layout/Nav";
 import { PIZZA_LOGS_ORIGIN } from "@/lib/site";
 import { SOCIAL_IMAGE } from "@/lib/page-metadata";
+import { BUG_REPORT_URL, SECURITY_REPORT_URL } from "@/lib/upload-policy";
 
 export const viewport: Viewport = {
   themeColor: "#100d0b",
@@ -73,7 +74,10 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             <nav aria-label="Footer" className="mt-2 flex flex-wrap justify-center gap-x-6">
               <Link href="/" className="inline-flex min-h-11 items-center text-sm text-gold hover:text-gold-light">Upload a log</Link>
               <Link href="/raids" className="inline-flex min-h-11 items-center text-sm text-gold hover:text-gold-light">Browse raids</Link>
+              <Link href="/upload-policy" className="inline-flex min-h-11 items-center text-sm text-gold hover:text-gold-light">Upload rules and privacy</Link>
+              <a href={BUG_REPORT_URL} className="inline-flex min-h-11 items-center text-sm text-gold hover:text-gold-light">Report a bug</a>
             </nav>
+            <p className="mx-auto mt-2 max-w-2xl text-sm text-text-secondary">Bugs and incorrect results can occur. Report an issue on GitHub for Neil to review. Include reproduction steps and a public report link; keep private logs out of issues. <a href={SECURITY_REPORT_URL} className="text-gold underline">Report security concerns privately</a>.</p>
           </footer>
         </div>
       </body>

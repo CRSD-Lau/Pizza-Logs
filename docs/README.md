@@ -39,6 +39,7 @@ This directory contains maintained, versioned project documentation. GitHub issu
 - [Parser runtime maintenance](operations/parser-runtime.md)
 - [Security policy](../SECURITY.md)
 - [Threat model](security/threat-model.md)
+- [Upload security review](security/upload-security-review.md)
 - [Privacy notice](../PRIVACY.md)
 - [Dependency license inventory](../LICENSE.LIST)
 - [Asset provenance and rights](security/asset-provenance.md)

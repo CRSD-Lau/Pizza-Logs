@@ -9,6 +9,7 @@ from typing import TextIO
 
 from bosses import ALL_BOSS_NAMES, lookup_boss, lookup_boss_by_id
 from combat_log_events import parse_combat_log_line
+from upload_limits import BoundedEventList, check_result_count
 from difficulty_detector import (
     DIFFICULTY_SPELLS,
     FREYA_ELDER_MARKERS,
@@ -76,7 +77,7 @@ def iter_encounter_segments(
     fh: TextIO, cancel_event=None, *, file_year: int = 2024,
 ) -> Iterator[list[tuple[str, list[str], float]]]:
     """Yield one bounded encounter at a time from a combat-log text stream."""
-    current: list[tuple[str, list[str], float]] = []
+    current: list[tuple[str, list[str], float]] = BoundedEventList()
     has_markers = False
     in_marker_encounter = False
     heuristic_active = False
@@ -123,14 +124,14 @@ def iter_encounter_segments(
             has_markers = True
             in_marker_encounter = True
             heuristic_active = False
-            current = [item]
+            current = BoundedEventList([item])
             continue
         if event == ENCOUNTER_END:
             has_markers = True
             if in_marker_encounter:
                 current.append(item)
                 yield current
-            current = []
+            current = BoundedEventList()
             in_marker_encounter = False
             continue
         if has_markers:
@@ -143,12 +144,12 @@ def iter_encounter_segments(
             if absolute_seconds - last_boss_ts > ENCOUNTER_GAP_SECONDS:
                 if current:
                     yield current
-                current = []
+                current = BoundedEventList()
                 heuristic_active = False
                 if event in ACTIVE_EVENTS and boss_event:
                     heuristic_active = True
                     last_boss_ts = absolute_seconds
-                    current = [item]
+                    current = BoundedEventList([item])
             elif boss_event:
                 last_boss_ts = absolute_seconds
                 current.append(item)
@@ -157,7 +158,7 @@ def iter_encounter_segments(
         elif event in ACTIVE_EVENTS and boss_event:
             heuristic_active = True
             last_boss_ts = absolute_seconds
-            current = [item]
+            current = BoundedEventList([item])
 
     if current:
         yield current
@@ -217,7 +218,7 @@ def quick_classify(fh: TextIO, cancel_event=None, *, file_year: int = 2024) -> l
                 break
         if marker_line is not None:
             results: list[dict[str, object]] = []
-            segment: list[tuple[str, list[str], float]] = []
+            segment: list[tuple[str, list[str], float]] = BoundedEventList()
 
             def add_line(raw_line: str) -> None:
                 parsed = parse_combat_log_line(raw_line)
@@ -233,20 +234,23 @@ def quick_classify(fh: TextIO, cancel_event=None, *, file_year: int = 2024) -> l
                         result = _classify_segment(segment)
                         if result:
                             results.append(result)
-                    segment = []
+                            check_result_count(len(results))
+                    segment = BoundedEventList()
                     add_line(raw_line)
                 elif "  ENCOUNTER_END," in raw_line:
                     add_line(raw_line)
                     result = _classify_segment(segment)
                     if result:
                         results.append(result)
-                    segment = []
+                        check_result_count(len(results))
+                    segment = BoundedEventList()
                 elif segment and _RELEVANT_ID_RE.search(raw_line):
                     add_line(raw_line)
             if segment:
                 result = _classify_segment(segment)
                 if result:
                     results.append(result)
+                    check_result_count(len(results))
             return results
         fh.seek(start_position)
     except TimeoutError:
@@ -264,4 +268,5 @@ def quick_classify(fh: TextIO, cancel_event=None, *, file_year: int = 2024) -> l
         result = _classify_segment(segment)
         if result:
             results.append(result)
+            check_result_count(len(results))
     return results

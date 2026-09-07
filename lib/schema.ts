@@ -19,11 +19,13 @@ export const ParserProvenanceSchema = z.object({
   parsedAt: timestamp,
 });
 
+const uploadLabel = (max: number) => z.string().regex(/^[^\p{Cc}\p{Cf}<>]+$/u).trim().min(1).max(max);
+
 export const UploadRequestSchema = z.object({
-  uploaderName: z.string().min(1).max(32),
-  guildName:    z.string().min(1).max(64).optional(),
-  realmName:    z.string().min(1).max(64).default("Lordaeron"),
-  realmHost:    z.string().min(1).max(64).default("warmane"),
+  uploaderName: uploadLabel(32),
+  guildName:    uploadLabel(64).optional(),
+  realmName:    uploadLabel(64).default("Lordaeron"),
+  realmHost:    uploadLabel(64).default("warmane"),
   expansion:    z.enum(["wotlk", "cata", "mop", "retail"]).default("wotlk"),
 });
 export type UploadRequest = z.infer<typeof UploadRequestSchema>;

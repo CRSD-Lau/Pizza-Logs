@@ -37,7 +37,7 @@ try {
   const modal = page.getByRole("dialog", { name: "Pizza Logs guild intro", includeHidden: true });
   assert.equal(await modal.isVisible(), false, "A first visit is never covered by the cinematic");
   assert.equal(mediaRequests.length, 0, "A first visit downloads no intro video or poster");
-  const character = page.getByLabel("Character", { exact: false });
+  const character = page.getByRole("textbox", { name: "Character (required)", exact: true });
   const choose = page.getByRole("button", { name: "Choose File", exact: true });
   const fieldBox = await character.boundingBox();
   const fileBox = await choose.boundingBox();
@@ -72,6 +72,14 @@ try {
   observations.push({ check: "explicit intro, reduced motion, native focus containment, Escape/close and focus restoration" });
 
   await character.fill("Synthetic UX");
+  assert.equal(await choose.isDisabled(), true, "A character name alone does not accept the upload rules");
+  const agreement = page.getByRole("checkbox", { name: /I have permission to share this log/ });
+  assert.equal(await agreement.isChecked(), false, "Upload acceptance starts unchecked");
+  await agreement.check();
+  assert.equal(await choose.isEnabled(), true);
+  await agreement.uncheck();
+  assert.equal(await choose.isDisabled(), true, "Withdrawing acceptance blocks file selection");
+  await agreement.check();
   const source = await fs.readFile(new URL("../parser/tests/fixtures/icc-25n-synthetic/combatlog.txt", import.meta.url), "utf8");
   const suffix = Array.from({ length: 6 }, () => String.fromCharCode(97 + randomInt(26))).join("");
   const hours = String(Math.floor(Math.random() * 24)).padStart(2, "0");
@@ -91,6 +99,8 @@ try {
   assert.equal(await page.evaluate(() => window.uploadNotifications.length), 0);
   await page.screenshot({ path: path.join(out, "375-fresh-upload-report-action.png"), fullPage: true });
   await page.getByRole("button", { name: "Upload Another", exact: true }).click();
+  assert.equal(await agreement.isChecked(), false, "Each new upload requires fresh acknowledgement");
+  await agreement.check();
   await page.getByText("Upload options and file help", { exact: true }).click();
   await page.getByRole("button", { name: "Notify me when finished", exact: true }).click();
   await page.getByText("Browser notifications are enabled for upload results.", { exact: true }).waitFor();
