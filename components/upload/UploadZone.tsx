@@ -233,9 +233,9 @@ export function UploadZone({ onComplete }: UploadZoneProps) {
   };
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-2 sm:space-y-4">
       {state.stage === "idle" && (
-        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-[minmax(0,1.2fr)_minmax(0,1fr)_minmax(0,1.2fr)]">
+        <div className="grid gap-2 sm:grid-cols-2 sm:gap-3 lg:grid-cols-[minmax(0,1.2fr)_minmax(0,1fr)_minmax(0,1.2fr)]">
           <div className="grid gap-1.5">
             <label htmlFor="upload-character" className="text-xs text-text-secondary uppercase tracking-wide">
               Character <span className="text-text-secondary">(required)</span>
@@ -296,7 +296,7 @@ export function UploadZone({ onComplete }: UploadZoneProps) {
         <div
           {...(isLocked ? lockedProps : getRootProps())}
           className={cn(
-            "relative overflow-hidden rounded-sm border border-dashed px-4 py-5 text-center transition-[background-color,border-color,box-shadow] duration-200 sm:px-10 sm:py-8",
+            "relative overflow-hidden rounded-sm border border-dashed px-4 py-4 text-center transition-[background-color,border-color,box-shadow] duration-200 sm:px-10 sm:py-8",
             isLocked
               ? "cursor-not-allowed border-gold/20 bg-gold/[0.01]"
               : isDragActive
