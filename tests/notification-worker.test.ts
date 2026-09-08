@@ -123,7 +123,7 @@ test("email rendering escapes untrusted upload labels and labels traffic and cos
     encountersFound: 3, warningCount: 0, publicReportSlug: "guild-123", firstSessionSlug: "2026-09-08",
   }, unavailable, config);
   assert.match(upload.text, /live usage estimate: unavailable/);
-  assert.doesNotMatch(upload.html, /<script>/);
+  assert.doesNotMatch(upload.html, /<script/i);
   assert.match(upload.html, /&lt;script&gt;/);
   assert.equal(upload.subject, "Pizza Logs upload: Guild & Co Bcc: nope");
 
