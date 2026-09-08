@@ -14,6 +14,8 @@ This project follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) an
 
 ### Added
 
+- Publish onsite privacy and terms pages with direct footer links and sitemap entries. Clarify required uploader names, public report retention, and direct browser requests to Google and game CDNs; keep one authoritative privacy notice.
+
 - Add a full Armory character sheet to main player profiles: grouped stats, professions, dual-spec talent trees and glyphs, achievement/category browsers, lifetime statistics, reputation, collections and arena history. Cache sections independently with source timestamps and stale fallbacks; preserve raid analytics and lazy gear previews.
 
 - Add an unchecked per-upload agreement, upload rules/public-data notice, and site-wide bug-report guidance linked to the repository, with separate private security reporting and honest service/security limitations.
@@ -22,6 +24,8 @@ This project follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) an
 
 ### Changed
 
+- Preload the existing local branding fonts with matched fallback metrics and reserve viewport-relative space during page loading to reduce font reflow and footer movement as content streams in.
+- Hide decorative accordion chevrons from assistive technology; the button's expanded state continues to describe whether the section is open.
 - Raise the uploaded TXT, LOG and ZIP limit from 100 MiB to 1 GiB, retaining the 1 GiB expanded-log ceiling and existing archive, complexity, concurrency and timeout safeguards. Recommend ZIP for faster transfer and document that large uploads can still exceed processing limits.
 - Default player summaries and histories to metrics relevant to recorded roles/specs, with Show all metrics for secondary output and full detail for mixed or uncertain roles. Add Damage, Healing and All raid-table views and role-based chart defaults with explicit DPS, HPS, APS, Healing + absorbs /s and DTPS choices; preserve zero values, source links and URL preferences.
 - Apply the approved Molten Charcoal palette across public and admin pages, reports, charts, loading states and the optional intro: warm charcoal surfaces, ember-orange accents and cream text, preserving WoW class, spell-school and status colors.

@@ -21,10 +21,14 @@ assert.doesNotMatch(
   /next\/font\/google/,
   "production builds must not depend on downloading Google Fonts",
 );
-assert.match(rootLayoutSource, /@fontsource\/cinzel\/latin-400\.css/);
-assert.match(rootLayoutSource, /@fontsource\/cinzel\/latin-700\.css/);
-assert.match(rootLayoutSource, /@fontsource\/rajdhani\/latin-300\.css/);
-assert.match(rootLayoutSource, /@fontsource\/rajdhani\/latin-700\.css/);
+assert.match(rootLayoutSource, /next\/font\/local/);
+for (const [family, weights] of [["cinzel", [400, 600, 700]], ["rajdhani", [300, 400, 500, 600, 700]]] as const) {
+  for (const weight of weights) {
+    const fontPath = `node_modules/@fontsource/${family}/files/${family}-latin-${weight}-normal.woff2`;
+    assert.ok(rootLayoutSource.includes(fontPath), `Keep the installed ${family} ${weight} font`);
+    assert.ok(fs.existsSync(path.join(root, fontPath)), "Font assets must exist without a build-time download");
+  }
+}
 
 const actionsSource = fs.readFileSync(path.join(root, "app/admin/actions.ts"), "utf8");
 assert.match(actionsSource, /await headers\(\)/, "admin actions must use Next 16's async headers API");

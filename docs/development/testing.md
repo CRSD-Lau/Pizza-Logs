@@ -23,6 +23,18 @@ For visual acceptance, inspect initial loading and navigation at mobile and desk
 widths, including reduced motion; keep the existing redirect and missing-page
 status checks enabled.
 
+`npm run test:launch` checks public policies, initial layout stability, WCAG axe
+rules, overflow, skip-link focus, mobile navigation, upload acknowledgement and
+the intro dialog at 375px and 1440px. It requires an existing report (synthetic on
+the local acceptance stack), makes only GET/HEAD browser requests and also checks
+that policies work without JavaScript. Set `PIZZA_TEST_BASE_URL` for loopback or
+`PIZZA_LOGS_BASE_URL` for a read-only production check. Evidence is written to
+`.test-artifacts/launch-readiness` (override with `PIZZA_LAUNCH_ARTIFACTS`). Initial
+CLS uses session windows and excludes recent-input shifts; the lab target is
+0.1 or less. Repeat cold contexts after typography/loading changes. These checks
+are not field Core Web Vitals or a substitute for reviewing axe's incomplete
+contrast results and rendered interaction states.
+
 Run one TypeScript test with:
 
 ```bash

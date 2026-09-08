@@ -77,6 +77,7 @@ export function AccordionSection({
           )}
         </div>
         <span
+          aria-hidden="true"
           className={cn(
             "shrink-0 text-text-dim transition-transform duration-200 group-hover:text-gold",
             open ? "rotate-0" : "-rotate-90"

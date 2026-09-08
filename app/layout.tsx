@@ -1,18 +1,36 @@
 import type { Metadata, Viewport } from "next";
-import "@fontsource/cinzel/latin-400.css";
-import "@fontsource/cinzel/latin-600.css";
-import "@fontsource/cinzel/latin-700.css";
-import "@fontsource/rajdhani/latin-300.css";
-import "@fontsource/rajdhani/latin-400.css";
-import "@fontsource/rajdhani/latin-500.css";
-import "@fontsource/rajdhani/latin-600.css";
-import "@fontsource/rajdhani/latin-700.css";
+import localFont from "next/font/local";
 import "./globals.css";
 import Link from "next/link";
 import { Nav } from "@/components/layout/Nav";
 import { PIZZA_LOGS_ORIGIN } from "@/lib/site";
 import { SOCIAL_IMAGE } from "@/lib/page-metadata";
 import { BUG_REPORT_URL, SECURITY_REPORT_URL } from "@/lib/upload-policy";
+
+// Keep the installed branding fonts local, preload them, and match fallback
+// metrics so streamed content does not reflow when the font files arrive.
+const cinzel = localFont({
+  src: [
+    { path: "../node_modules/@fontsource/cinzel/files/cinzel-latin-400-normal.woff2", weight: "400" },
+    { path: "../node_modules/@fontsource/cinzel/files/cinzel-latin-600-normal.woff2", weight: "600" },
+    { path: "../node_modules/@fontsource/cinzel/files/cinzel-latin-700-normal.woff2", weight: "700" },
+  ],
+  variable: "--font-cinzel",
+  display: "swap",
+  adjustFontFallback: "Times New Roman",
+});
+const rajdhani = localFont({
+  src: [
+    { path: "../node_modules/@fontsource/rajdhani/files/rajdhani-latin-300-normal.woff2", weight: "300" },
+    { path: "../node_modules/@fontsource/rajdhani/files/rajdhani-latin-400-normal.woff2", weight: "400" },
+    { path: "../node_modules/@fontsource/rajdhani/files/rajdhani-latin-500-normal.woff2", weight: "500" },
+    { path: "../node_modules/@fontsource/rajdhani/files/rajdhani-latin-600-normal.woff2", weight: "600" },
+    { path: "../node_modules/@fontsource/rajdhani/files/rajdhani-latin-700-normal.woff2", weight: "700" },
+  ],
+  variable: "--font-rajdhani",
+  display: "swap",
+  adjustFontFallback: "Arial",
+});
 
 export const viewport: Viewport = {
   themeColor: "#100d0b",
@@ -58,7 +76,7 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en">
+    <html lang="en" className={`${cinzel.variable} ${rajdhani.variable}`}>
       <body className="min-h-screen bg-bg-deep text-text-primary antialiased">
         <a href="#main-content" className="skip-link">Skip to content</a>
         <div className="page-glow flex min-h-dvh flex-col">
@@ -74,7 +92,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             <nav aria-label="Footer" className="mt-2 flex flex-wrap justify-center gap-x-6">
               <Link href="/" className="inline-flex min-h-11 items-center text-sm text-gold hover:text-gold-light">Upload a log</Link>
               <Link href="/raids" className="inline-flex min-h-11 items-center text-sm text-gold hover:text-gold-light">Browse raids</Link>
-              <Link href="/upload-policy" className="inline-flex min-h-11 items-center text-sm text-gold hover:text-gold-light">Upload rules and privacy</Link>
+              <Link href="/upload-policy" className="inline-flex min-h-11 items-center text-sm text-gold hover:text-gold-light">Upload rules</Link>
+              <Link href="/privacy" className="inline-flex min-h-11 items-center text-sm text-gold hover:text-gold-light">Privacy</Link>
+              <Link href="/terms" className="inline-flex min-h-11 items-center text-sm text-gold hover:text-gold-light">Terms</Link>
               <a href={BUG_REPORT_URL} className="inline-flex min-h-11 items-center text-sm text-gold hover:text-gold-light">Report a bug</a>
             </nav>
             <p className="mx-auto mt-2 max-w-2xl text-sm text-text-secondary">Bugs and incorrect results can occur. Report an issue on GitHub for Neil to review. Include reproduction steps and a public report link; keep private logs out of issues. <a href={SECURITY_REPORT_URL} className="text-gold underline">Report security concerns privately</a>.</p>
