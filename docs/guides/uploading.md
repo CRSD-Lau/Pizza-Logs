@@ -7,7 +7,7 @@ Enable advanced combat logging in the WoW client and start logging with `/combat
 ## Upload
 
 1. Open the Pizza Logs home page.
-2. Enter your character name and select the Warmane realm. Guild attribution and completion notifications are optional under **Upload options and file help**.
+2. Enter your character name, select the Warmane realm and optionally identify the guild or raid group represented by the log. This label appears with the resulting raid report. Completion notifications remain optional under **Upload options and file help**.
 3. Read **Upload rules** and tick the unchecked acknowledgement confirming permission to share the log, acceptance of the rules and public report visibility. Each new upload requires this acknowledgement.
 4. Select `WoWCombatLog.txt`, another `.txt`/`.log` combat log, or a `.zip` containing exactly one log.
 5. Keep the tab open while the upload, content validation, quick classification, full parse, and save stages complete.

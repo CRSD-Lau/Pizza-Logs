@@ -233,9 +233,9 @@ export function UploadZone({ onComplete }: UploadZoneProps) {
   };
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-2 sm:space-y-4">
       {state.stage === "idle" && (
-        <div className="grid grid-cols-[minmax(0,1.2fr)_minmax(0,1fr)] gap-3">
+        <div className="grid gap-2 sm:grid-cols-2 sm:gap-3 lg:grid-cols-[minmax(0,1.2fr)_minmax(0,1fr)_minmax(0,1.2fr)]">
           <div className="grid gap-1.5">
             <label htmlFor="upload-character" className="text-xs text-text-secondary uppercase tracking-wide">
               Character <span className="text-text-secondary">(required)</span>
@@ -266,6 +266,19 @@ export function UploadZone({ onComplete }: UploadZoneProps) {
             </select>
           </div>
 
+          <div className="grid gap-1.5 sm:col-span-2 lg:col-span-1">
+            <label htmlFor="upload-guild" className="text-xs text-text-secondary uppercase tracking-wide">
+              Guild or group <span className="text-text-secondary">(optional)</span>
+            </label>
+            <input
+              id="upload-guild"
+              maxLength={64}
+              value={guildName}
+              onChange={(event) => setGuildName(event.target.value)}
+              placeholder="Your guild or raid group"
+              className="min-h-11 w-full rounded-sm border border-gold-dim bg-bg-card px-3 py-2 text-sm text-text-primary outline-hidden transition-colors focus:border-gold"
+            />
+          </div>
         </div>
       )}
 
@@ -283,7 +296,7 @@ export function UploadZone({ onComplete }: UploadZoneProps) {
         <div
           {...(isLocked ? lockedProps : getRootProps())}
           className={cn(
-            "relative overflow-hidden rounded-sm border border-dashed px-4 py-5 text-center transition-[background-color,border-color,box-shadow] duration-200 sm:px-10 sm:py-8",
+            "relative overflow-hidden rounded-sm border border-dashed px-4 py-4 text-center transition-[background-color,border-color,box-shadow] duration-200 sm:px-10 sm:py-8",
             isLocked
               ? "cursor-not-allowed border-gold/20 bg-gold/[0.01]"
               : isDragActive
@@ -314,11 +327,6 @@ export function UploadZone({ onComplete }: UploadZoneProps) {
         <details className="border-y border-gold-dim">
           <summary className="flex min-h-11 cursor-pointer items-center text-sm font-semibold text-text-secondary">Upload options and file help</summary>
           <div className="space-y-4 pb-4">
-            <div className="grid gap-1.5">
-              <label htmlFor="upload-guild" className="text-sm text-text-secondary">Guild (optional)</label>
-              <input id="upload-guild" maxLength={64} value={guildName} onChange={event => setGuildName(event.target.value)}
-                placeholder="PizzaWarriors" className="min-h-11 w-full rounded-sm border border-gold-dim bg-bg-card px-3 py-2 text-sm text-text-primary outline-hidden transition-colors focus:border-gold" />
-            </div>
             <p className="text-sm text-text-secondary">Start logging in WoW with <code>/combatlog</code>. After your raid, choose <code>Logs/WoWCombatLog.txt</code> from your game folder.</p>
             {notificationPermission === "default" && <Button type="button" variant="ghost" size="sm" onClick={async () => {
               const permission = await requestUploadNotifications();

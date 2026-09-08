@@ -26,6 +26,7 @@ This project follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) an
 
 ### Changed
 
+- Restore the optional guild or raid-group field to the visible upload details so reports from different communities can be identified before selecting a combat log.
 - Correct Railway notification cost estimates by converting projected resource quantities with published Railway rates instead of displaying raw usage units as dollars. Replace collapsed notification text with a responsive card-and-table email layout for daily digests and upload alerts.
 - Preload the existing local branding fonts with matched fallback metrics and reserve viewport-relative space during page loading to reduce font reflow and footer movement as content streams in.
 - Hide decorative accordion chevrons from assistive technology; the button's expanded state continues to describe whether the section is open.
