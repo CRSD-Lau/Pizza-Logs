@@ -59,6 +59,12 @@ async function main() {
   }) as unknown as typeof setTimeout;
   try {
     const uploadForm = renderToStaticMarkup(React.createElement(UploadZone));
+    const guildField = uploadForm.indexOf('id="upload-guild"');
+    const uploadOptions = uploadForm.indexOf("<details");
+    assert.ok(guildField >= 0, "The optional guild or group field is rendered");
+    assert.ok(guildField < uploadOptions, "Guild or group attribution is visible without opening upload options");
+    assert.match(uploadForm, /Guild or group/);
+    assert.match(uploadForm, /placeholder="Your guild or raid group"/);
     assert.match(uploadForm, /type="checkbox"/);
     assert.match(uploadForm, /I have permission to share this log/);
     assert.match(uploadForm, /up to (?:<!-- -->)?1 GiB/);
