@@ -50,6 +50,10 @@ test("PostgreSQL ingestion is atomic, idempotent, and preserves exact provenance
       assert.equal(stored.compatibilityProfile, "canonical-v1");
       assert.equal(stored.referenceSha, null);
       assert.equal(stored.parserParsedAt?.toISOString(), "2026-09-04T12:00:00.000Z");
+      const notifications = await db.notificationJob.findMany({ where: { dedupeKey: `upload:${stored.id}` } });
+      assert.equal(notifications.length, 1, "a completed file and its duplicate retry create one logical notification");
+      assert.equal(notifications[0].kind, "UPLOAD_COMPLETED");
+      assert.equal((notifications[0].payload as { uploadId: string }).uploadId, stored.id);
     });
 
     await t.test("overlapping files cannot create duplicate or partial encounters", async () => {
@@ -97,12 +101,14 @@ test("PostgreSQL ingestion is atomic, idempotent, and preserves exact provenance
       // insertion. This tests PostgreSQL rollback, not a mocked Prisma call.
       await sql.query(`ALTER TABLE "${schema}"."participants" ADD CONSTRAINT "test_reject_deaths" CHECK ("deaths" <> 12345)`);
       const payload = input("rollback");
+      const jobsBefore = await db.notificationJob.count();
       payload.parsed.encounters[0].participants[0].name = "RollbackOnly";
       payload.parsed.encounters[0].participants[0].deaths = 12345;
       await assert.rejects(persistParsedUpload(db, payload));
       assert.equal(await db.upload.findUnique({ where: { fileHash: payload.parsed.fileHash } }), null);
       assert.equal(await db.encounter.findUnique({ where: { fingerprint: payload.parsed.encounters[0].fingerprint } }), null);
       assert.equal(await db.player.count({ where: { name: "RollbackOnly" } }), 0);
+      assert.equal(await db.notificationJob.count(), jobsBefore, "a rolled-back upload cannot leave a notification job");
       payload.parsed.encounters[0].participants[0].deaths = 0;
       assert.equal((await persistParsedUpload(db, payload)).result.status, "DONE");
     });

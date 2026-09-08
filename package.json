@@ -15,6 +15,7 @@
     "docs:check": "node scripts/check-doc-links.mjs",
     "locks:check": "node scripts/check-python-locks.mjs",
     "smoke:production": "node scripts/production-smoke.mjs",
+    "notifications:run": "node scripts/notification-worker.mjs",
     "check:pr": "npm run lint && npm run type-check && npm run type-check:ecosystem && npm test && npm run docs:check && npm run locks:check && npm run build",
     "db:push": "prisma db push",
     "db:migrate": "prisma migrate dev",

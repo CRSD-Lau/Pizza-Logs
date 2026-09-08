@@ -18,6 +18,8 @@ flowchart LR
   Admin["Revocable session after MFA"] --> Web
   Upstream["Untrusted Warmane response"] --> Web
   CI["Pinned CI supply chain"] --> Deploy["Railway production"]
+  Web -->|"sanitized outbox row"| Worker["Notification worker"]
+  Worker --> Providers["Railway and Resend APIs"]
 ```
 
 ## Threats and Controls
@@ -39,6 +41,8 @@ flowchart LR
 | Clickjacking | CSP `frame-ancestors 'none'` and `X-Frame-Options: DENY` | None known |
 | Untrusted model-viewer code | Sandboxed no-same-origin `srcdoc`, no referrer, narrow iframe CSP | Upstream model availability/code can fail within the frame |
 | Compromised dependency/action | npm lock, Python hashes, audit/review, CodeQL, immutable Action SHAs, Dependabot | Package-manager ecosystem compromise is not eliminated |
+| Notification outage, duplicate send or credential leak | Transactional outbox, expiring leases, bounded retries, frozen payloads, provider idempotency and worker-only secrets | Email delivery is at-least-once; a provider retry after its idempotency window can very rarely duplicate mail; the billing-capable Railway token has material control-plane scope |
+| Traffic digest becomes user tracking | Aggregate Railway metrics only; no digest persistence of source IP or user agent; explicit non-visitor wording | Railway retains ordinary request logs under its own plan and policy |
 | Excessive container privilege | Web and parser images run as non-root users | Railway/control-plane privileges remain external |
 | Incorrect parser analytics | Fixtures, focused tests, baselines, conservative unknowns | Undocumented Warmane behavior can require new evidence |
 | Destructive migration | PR-only main, migration inspection, deploy gate, forward-correction runbook | Startup migration can block availability if incorrectly designed |
@@ -63,6 +67,7 @@ Expected public use includes uploading valid combat logs and browsing reports. T
 5. Public error payloads do not contain stack traces, filesystem paths, database text, or upstream secrets.
 6. `main` changes flow through required checks; Actions are commit-pinned.
 7. Missing parser evidence is unknown/unattributed rather than guessed.
+8. Notification failure cannot roll back, delay or alter a completed upload, and billing estimates are never presented as final invoices.
 
 The dated [upload security review](upload-security-review.md) records verified defects, remediation, scope and residual resource risks. Disclaimers and acknowledgement support user understanding; they do not replace technical controls.
 

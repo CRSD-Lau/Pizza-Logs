@@ -203,6 +203,40 @@ model Upload {
   @@map("uploads")
 }
 
+model NotificationJob {
+  id                String             @id @default(cuid())
+  kind              NotificationKind
+  dedupeKey         String             @unique
+  payload           Json
+  payloadVersion    Int                @default(1)
+  renderedEmail     Json?
+  state             NotificationState  @default(PENDING)
+  availableAt       DateTime           @default(now())
+  leaseExpiresAt    DateTime?
+  leaseToken        String?
+  attempts          Int                @default(0)
+  providerMessageId String?
+  lastErrorCode     String?
+  sentAt            DateTime?
+  createdAt         DateTime           @default(now())
+  updatedAt         DateTime           @updatedAt
+
+  @@index([state, availableAt])
+  @@map("notification_jobs")
+}
+
+enum NotificationKind {
+  UPLOAD_COMPLETED
+  DAILY_DIGEST
+}
+
+enum NotificationState {
+  PENDING
+  PROCESSING
+  SENT
+  FAILED
+}
+
 enum UploadStatus {
   PENDING
   PARSING
