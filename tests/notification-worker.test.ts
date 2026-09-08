@@ -43,26 +43,26 @@ test("Railway cost snapshot keeps project breakdown distinct from workspace bill
     assert.equal(new Headers(init?.headers).get("Authorization"), "Bearer railway-test-token");
     const request = JSON.parse(String(init?.body));
     assert.deepEqual(request.variables.measurements, [
-      "CPU_USAGE", "MEMORY_USAGE_GB", "NETWORK_TX_GB", "DISK_USAGE_GB", "EPHEMERAL_DISK_USAGE_GB", "BACKUP_USAGE_GB",
+      "CPU_USAGE", "MEMORY_USAGE_GB", "NETWORK_TX_GB", "DISK_USAGE_GB", "BACKUP_USAGE_GB",
     ]);
     return Response.json({ data: {
       project: [
-        { measurement: "CPU_USAGE", estimatedValue: 0.25 },
-        { measurement: "MEMORY_USAGE_GB", estimatedValue: 3.5 },
+        { measurement: "CPU_USAGE", estimatedValue: 540 },
+        { measurement: "MEMORY_USAGE_GB", estimatedValue: 4_320 },
       ],
       workspace: [
-        { measurement: "CPU_USAGE", estimatedValue: 0.5 },
-        { measurement: "MEMORY_USAGE_GB", estimatedValue: 6.5 },
-        { measurement: "MEMORY_USAGE_GB", estimatedValue: 1 },
+        { measurement: "CPU_USAGE", estimatedValue: 1_080 },
+        { measurement: "MEMORY_USAGE_GB", estimatedValue: 8_640 },
+        { measurement: "NETWORK_TX_GB", estimatedValue: 2 },
       ],
     } });
   };
   const snapshot = await fetchRailwayCostSnapshot(config, fetchMock as typeof fetch);
   assert.equal(snapshot.available, true);
   if (!snapshot.available) return;
-  assert.equal(snapshot.projectTotalUsd, 3.75);
-  assert.equal(snapshot.workspaceTotalUsd, 8);
-  assert.equal(snapshot.estimatedWorkspaceBillUsd, 8);
+  assert.equal(snapshot.projectTotalUsd, 1.25);
+  assert.equal(snapshot.workspaceTotalUsd, 2.6);
+  assert.equal(snapshot.estimatedWorkspaceBillUsd, 5);
 });
 
 test("Railway authorization failures become an explicit unavailable estimate", async () => {
@@ -132,6 +132,45 @@ test("email rendering escapes untrusted upload labels and labels traffic and cos
   }, unavailable, config);
   assert.match(digest.text, /not a unique-visitor count/);
   assert.match(digest.text, /No request IP addresses or user agents are stored/);
+  assert.match(digest.html, /Daily digest/);
+  assert.match(digest.html, /Railway cost unavailable/);
+  assert.match(digest.html, /<table/);
+});
+
+test("Railway usage quantities are converted to projected dollars using published rates", async () => {
+  const config = loadWorkerConfig(env);
+  const snapshot = await fetchRailwayCostSnapshot(config, async () => Response.json({ data: {
+    project: [
+      { measurement: "CPU_USAGE", estimatedValue: 567.89 },
+      { measurement: "MEMORY_USAGE_GB", estimatedValue: 6372.27 },
+      { measurement: "NETWORK_TX_GB", estimatedValue: 1.07 },
+      { measurement: "DISK_USAGE_GB", estimatedValue: 3570.42 },
+      { measurement: "BACKUP_USAGE_GB", estimatedValue: 0 },
+    ],
+    workspace: [
+      { measurement: "CPU_USAGE", estimatedValue: 567.89 },
+      { measurement: "MEMORY_USAGE_GB", estimatedValue: 6372.27 },
+      { measurement: "NETWORK_TX_GB", estimatedValue: 1.07 },
+      { measurement: "DISK_USAGE_GB", estimatedValue: 3570.42 },
+      { measurement: "BACKUP_USAGE_GB", estimatedValue: 0 },
+    ],
+  } }) as never);
+  assert.equal(snapshot.available, true);
+  if (!snapshot.available) return;
+  assert.ok(Math.abs((snapshot.projectTotalUsd ?? Number.NaN) - 1.803872) < 0.000001);
+  assert.equal(snapshot.estimatedWorkspaceBillUsd, 5);
+
+  const digest = renderDigestEmail({ date: "2026-09-07" }, {
+    available: true, requests: 8108,
+    statusFamilies: { success: 7698, redirect: 314, clientError: 96, serverError: 0, other: 0 },
+    latency: { p50: 6, p95: 419, p99: 1149 },
+  }, { uploads: 0, encounters: 0, terminalNotificationFailures: 0 }, snapshot, config);
+  assert.match(digest.text, /Pizza Logs projected resources: \$1\.80/);
+  assert.match(digest.text, /Expected workspace charge: \$5\.00/);
+  assert.match(digest.html, /Pizza Logs resources/);
+  assert.match(digest.html, />\$1\.80</);
+  assert.match(digest.html, />\$5\.00</);
+  assert.doesNotMatch(digest.html, /\$12383\.87/);
 });
 
 test("Resend receives a stable provider idempotency key", async () => {

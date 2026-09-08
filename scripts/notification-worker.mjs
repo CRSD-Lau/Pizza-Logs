@@ -7,17 +7,24 @@ const RAILWAY_GRAPHQL_URL = "https://backboard.railway.com/graphql/v2";
 const RESEND_EMAIL_URL = "https://api.resend.com/emails";
 const MAX_JOBS_PER_RUN = 20;
 const MAX_RUNTIME_MS = 240_000;
+const MINUTES_IN_BILLING_MONTH = 43_200;
 const BILLABLE_MEASUREMENTS = [
   "CPU_USAGE", "MEMORY_USAGE_GB", "NETWORK_TX_GB", "DISK_USAGE_GB",
-  "EPHEMERAL_DISK_USAGE_GB", "BACKUP_USAGE_GB",
+  "BACKUP_USAGE_GB",
 ];
 const MEASUREMENT_LABELS = {
   CPU_USAGE: "CPU",
   MEMORY_USAGE_GB: "Memory",
   NETWORK_TX_GB: "Network egress",
   DISK_USAGE_GB: "Volume storage",
-  EPHEMERAL_DISK_USAGE_GB: "Ephemeral disk",
   BACKUP_USAGE_GB: "Backups",
+};
+const MEASUREMENT_PRICES_USD = {
+  CPU_USAGE: 20 / MINUTES_IN_BILLING_MONTH,
+  MEMORY_USAGE_GB: 10 / MINUTES_IN_BILLING_MONTH,
+  NETWORK_TX_GB: 0.05,
+  DISK_USAGE_GB: 0.15 / MINUTES_IN_BILLING_MONTH,
+  BACKUP_USAGE_GB: 0.15 / MINUTES_IN_BILLING_MONTH,
 };
 
 export function quoteIdentifier(value) {
@@ -138,7 +145,7 @@ function usageLines(rows = []) {
   return BILLABLE_MEASUREMENTS.map(measurement => ({
     measurement,
     label: MEASUREMENT_LABELS[measurement],
-    usd: byMeasurement.get(measurement) ?? 0,
+    usd: (byMeasurement.get(measurement) ?? 0) * MEASUREMENT_PRICES_USD[measurement],
   }));
 }
 
@@ -301,20 +308,52 @@ function formatCost(cost) {
   }
   const lines = cost.project.map(row => `  ${row.label}: ${money(row.usd)}`);
   return [
-    "Railway live estimated month-to-date usage (not a final invoice)",
+    "Railway projected resource cost for this billing period",
     `Captured: ${cost.capturedAt}`,
     ...lines,
-    `  Pizza Logs project total: ${money(cost.projectTotalUsd)}`,
-    `  Workspace resource total: ${money(cost.workspaceTotalUsd)}`,
-    `  ${cost.planName} minimum/included usage: ${money(cost.planIncludedUsd)}`,
-    `  Estimated workspace bill floor: ${money(cost.estimatedWorkspaceBillUsd)}`,
-    "The final invoice may include adjustments or other workspace activity.",
+    `  Pizza Logs projected resources: ${money(cost.projectTotalUsd)}`,
+    `  Workspace projected resources: ${money(cost.workspaceTotalUsd)}`,
+    `  Expected workspace charge: ${money(cost.estimatedWorkspaceBillUsd)}`,
+    `${cost.planName} includes the first ${money(cost.planIncludedUsd)} of resource usage.`,
+    "Resource projection only; the final invoice may include credits, taxes, adjustments, or other workspace activity.",
   ].join("\n");
 }
 
-function htmlFromText(text) {
-  const escaped = text.replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;");
-  return `<div style="background:#111;color:#eee;padding:24px;font:15px/1.55 system-ui,sans-serif;white-space:pre-wrap"><div style="max-width:720px;margin:auto">${escaped}</div></div>`;
+function htmlEscape(value) {
+  return String(value ?? "").replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;").replaceAll('"', "&quot;");
+}
+
+function statCell(label, value) {
+  return `<td class="stat-cell" style="font-family:Arial,sans-serif;width:33.33%;padding:8px;vertical-align:top"><div style="background:#242426;border:1px solid #363638;border-radius:10px;padding:14px"><div style="color:#a8a8ad;font:12px/1.3 Arial,sans-serif;text-transform:uppercase;letter-spacing:.05em">${htmlEscape(label)}</div><div style="color:#fff;font:700 22px/1.3 Arial,sans-serif;margin-top:5px">${htmlEscape(value)}</div></div></td>`;
+}
+
+function detailRows(rows) {
+  return rows.map(([label, value]) => `<tr><td style="padding:8px 0;color:#aaaab0;font:14px/1.4 Arial,sans-serif;vertical-align:top">${htmlEscape(label)}</td><td style="padding:8px 0 8px 16px;color:#f4f4f5;font:600 14px/1.4 Arial,sans-serif;text-align:right;vertical-align:top">${htmlEscape(value)}</td></tr>`).join("");
+}
+
+function costHtml(cost) {
+  if (!cost.available) {
+    return `<div style="background:#242426;border:1px solid #3a3a3d;border-radius:12px;padding:16px"><div style="color:#fff;font-weight:700">Railway cost unavailable</div><div style="color:#b8b8bd;font-size:13px;line-height:1.5;margin-top:6px">Reason: ${htmlEscape(cost.code)}. Check the Railway dashboard for authoritative billing information.</div></div>`;
+  }
+  const rows = cost.project.map(row => [row.label, money(row.usd)]);
+  return `<div style="background:#242426;border:1px solid #3a3a3d;border-radius:12px;padding:16px"><table role="presentation" style="font-family:Arial,sans-serif;width:100%;border-collapse:collapse"><tr><td style="color:#fff;font:700 17px/1.4 Arial,sans-serif;padding-bottom:8px">Railway cost projection</td><td style="color:#8f8f95;font:12px/1.4 Arial,sans-serif;text-align:right;padding-bottom:8px">Current billing period</td></tr>${detailRows(rows)}<tr><td colspan="2" style="border-top:1px solid #3a3a3d;padding-top:12px"></td></tr>${detailRows([
+    ["Pizza Logs resources", money(cost.projectTotalUsd)],
+    ["All workspace resources", money(cost.workspaceTotalUsd)],
+    ["Expected workspace charge", money(cost.estimatedWorkspaceBillUsd)],
+  ])}</table><div style="background:#18251d;border:1px solid #2d5137;border-radius:9px;color:#cce8d3;font-size:13px;line-height:1.5;margin-top:10px;padding:11px 12px">${htmlEscape(cost.planName)} includes the first ${htmlEscape(money(cost.planIncludedUsd))} of resource usage.</div><div style="color:#8f8f95;font-size:11px;line-height:1.5;margin-top:10px">Projected resource cost, captured ${htmlEscape(cost.capturedAt)}. Final invoices may include credits, taxes, adjustments, agent usage, or other workspace activity.</div></div>`;
+}
+
+function emailHtml({ eyebrow, title, intro, stats = [], details = [], cost, action = null, note = null }) {
+  const statRows = [];
+  for (let index = 0; index < stats.length; index += 3) {
+    const cells = stats.slice(index, index + 3).map(([label, value]) => statCell(label, value));
+    while (cells.length < 3) cells.push('<td style="width:33.33%;padding:8px"></td>');
+    statRows.push(`<tr>${cells.join("")}</tr>`);
+  }
+  const actionHtml = action ? `<div style="margin:22px 0 4px"><a href="${htmlEscape(action.href)}" style="background:#ef4444;border-radius:9px;color:#fff;display:inline-block;font-size:14px;font-weight:700;padding:11px 17px;text-decoration:none">${htmlEscape(action.label)}</a></div>` : "";
+  const detailsHtml = details.length ? `<div style="background:#1e1e20;border:1px solid #333336;border-radius:12px;margin-top:20px;padding:12px 16px"><table role="presentation" style="width:100%;border-collapse:collapse">${detailRows(details)}</table></div>` : "";
+  const noteHtml = note ? `<div style="color:#a8a8ad;font-size:12px;line-height:1.55;margin-top:18px">${htmlEscape(note)}</div>` : "";
+  return `<!doctype html><html><head><meta name="viewport" content="width=device-width,initial-scale=1"><style>@media only screen and (max-width:600px){.email-pad{padding:20px!important}.stat-cell{display:block!important;width:auto!important}}</style></head><body style="background:#0e0e0f;font-family:Arial,sans-serif;margin:0;padding:0"><div style="background:#0e0e0f;padding:28px 12px"><table role="presentation" align="center" style="background:#171719;border:1px solid #303033;border-collapse:separate;border-radius:16px;font-family:Arial,sans-serif;max-width:680px;overflow:hidden;width:100%"><tr><td class="email-pad" style="border-top:4px solid #ef4444;font-family:Arial,sans-serif;padding:28px"><div style="color:#ef4444;font:700 12px/1.4 Arial,sans-serif;letter-spacing:.08em;text-transform:uppercase">${htmlEscape(eyebrow)}</div><h1 style="color:#fff;font:700 26px/1.25 Arial,sans-serif;margin:8px 0 8px">${htmlEscape(title)}</h1><p style="color:#b8b8bd;font:14px/1.55 Arial,sans-serif;margin:0">${htmlEscape(intro)}</p>${statRows.length ? `<table role="presentation" style="border-collapse:collapse;font-family:Arial,sans-serif;margin:18px -8px 0;width:calc(100% + 16px)">${statRows.join("")}</table>` : ""}${detailsHtml}${actionHtml}${noteHtml}<div style="margin-top:22px">${costHtml(cost)}</div><div style="border-top:1px solid #303033;color:#77777d;font:11px/1.5 Arial,sans-serif;margin-top:24px;padding-top:16px">Pizza Logs operational notification</div></td></tr></table></div></body></html>`;
 }
 
 function headerText(value) {
@@ -341,7 +380,26 @@ export function renderUploadEmail(payload, cost, config) {
     "",
     formatCost(cost),
   ].join("\n");
-  return { from: config.emailFrom, to: config.emailTo, subject: `Pizza Logs upload: ${headerText(payload.guildName || payload.realmName)}`, text, html: htmlFromText(text) };
+  const title = payload.guildName || payload.realmName;
+  const html = emailHtml({
+    eyebrow: "New upload",
+    title,
+    intro: "A combat log finished processing and is ready to review.",
+    stats: [
+      ["Sessions", String(payload.sessionCount)],
+      ["New encounters", String(payload.encountersInserted)],
+      ["Warnings", String(payload.warningCount)],
+    ],
+    details: [
+      ["Uploader", payload.uploaderName || "Not provided"],
+      ["Realm", payload.realmName],
+      ["File", `${payload.filename} (${(Number(payload.fileSize) / 1_048_576).toFixed(1)} MiB)`],
+      ["Completed", payload.completedAt],
+    ],
+    action: { href: reportUrl, label: "Open raid report" },
+    cost,
+  });
+  return { from: config.emailFrom, to: config.emailTo, subject: `Pizza Logs upload: ${headerText(title)}`, text, html };
 }
 
 export function renderDigestEmail(payload, traffic, counts, cost, config) {
@@ -366,7 +424,31 @@ export function renderDigestEmail(payload, traffic, counts, cost, config) {
     "",
     formatCost(cost),
   ].join("\n");
-  return { from: config.emailFrom, to: config.emailTo, subject: `Pizza Logs daily digest — ${payload.date}`, text, html: htmlFromText(text) };
+  const html = emailHtml({
+    eyebrow: "Daily digest",
+    title: payload.date,
+    intro: "Traffic and upload activity for the previous UTC day.",
+    stats: traffic.available ? [
+      ["Web requests", traffic.requests.toLocaleString("en-US")],
+      ["Successful", traffic.statusFamilies.success.toLocaleString("en-US")],
+      ["Server errors", traffic.statusFamilies.serverError.toLocaleString("en-US")],
+      ["New logs", counts.uploads.toLocaleString("en-US")],
+      ["Encounters", counts.encounters.toLocaleString("en-US")],
+      ["Notification failures", counts.terminalNotificationFailures.toLocaleString("en-US")],
+    ] : [
+      ["Traffic", "Unavailable"],
+      ["New logs", counts.uploads.toLocaleString("en-US")],
+      ["Encounters", counts.encounters.toLocaleString("en-US")],
+    ],
+    details: traffic.available ? [
+      ["Redirects (3xx)", traffic.statusFamilies.redirect.toLocaleString("en-US")],
+      ["Client errors (4xx)", traffic.statusFamilies.clientError.toLocaleString("en-US")],
+      ["Latency", traffic.latency ? `p50 ${traffic.latency.p50} ms · p95 ${traffic.latency.p95} ms · p99 ${traffic.latency.p99} ms` : "Unavailable"],
+    ] : [["Traffic status", traffic.code]],
+    note: "Traffic counts all Railway edge requests, including bots, assets, and health checks. It is not a unique-visitor count. No request IP addresses or user agents are stored.",
+    cost,
+  });
+  return { from: config.emailFrom, to: config.emailTo, subject: `Pizza Logs daily digest — ${payload.date}`, text, html };
 }
 
 async function freezeRenderedEmail(pool, config, job, renderedEmail) {
