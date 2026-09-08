@@ -171,11 +171,35 @@ async function persistTransaction(tx: Prisma.TransactionClient, input: UploadInp
     }
   }
 
+  const firstSessionSlug = buildRaidSessionRoutesWithAnalytics(newEncounters, parsed.sessionAnalytics)[0]?.slug;
+  await tx.notificationJob.create({
+    data: {
+      kind: "UPLOAD_COMPLETED",
+      dedupeKey: `upload:${upload.id}`,
+      payload: {
+        uploadId: upload.id,
+        publicReportSlug: upload.publicSlug,
+        firstSessionSlug: firstSessionSlug ?? null,
+        completedAt: new Date().toISOString(),
+        filename,
+        fileSize,
+        uploaderName: uploaderName ?? null,
+        guildName: guildName ?? null,
+        realmName,
+        encountersFound: parsed.encounters.length,
+        encountersInserted: newEncounters.length,
+        encountersDuplicate: parsed.encounters.filter(e => existingFingerprints.has(e.fingerprint)).length,
+        sessionCount: Object.keys(parsed.sessionAnalytics).length,
+        warningCount: warnings.length,
+      },
+    },
+  });
+
   return {
     milestoneChecks,
     result: {
       uploadId: upload.id, publicReportSlug: upload.publicSlug,
-      firstSessionSlug: buildRaidSessionRoutesWithAnalytics(newEncounters, parsed.sessionAnalytics)[0]?.slug,
+      firstSessionSlug,
       status: "DONE", encountersFound: parsed.encounters.length,
       encountersInserted: newEncounters.length,
       encountersDuplicate: parsed.encounters.filter(e => existingFingerprints.has(e.fingerprint)).length,

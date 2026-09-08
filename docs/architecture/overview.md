@@ -12,6 +12,9 @@ flowchart TB
   Parser["FastAPI parser service"]
   DB[("PostgreSQL")]
   Armory["Warmane Armory/CDN"]
+  Worker["Scheduled notification worker"]
+  Railway["Railway metrics and usage API"]
+  Email["Resend email API"]
 
   User -->|"reports, search, SSE upload"| Web
   Admin -->|"HttpOnly admin session"| Web
@@ -19,6 +22,10 @@ flowchart TB
   Web -->|"UUID raw-byte stream"| Parser
   Parser -->|"validated JSON and SSE"| Web
   Web -->|"bounded best-effort fetch"| Armory
+  Web -->|"transactional notification job"| DB
+  Worker -->|"leased outbox claims"| DB
+  Worker -->|"aggregate traffic and cost estimate"| Railway
+  Worker -->|"owner-only email"| Email
 ```
 
 ## Web Service
@@ -60,12 +67,15 @@ Player/roster -> ArmoryGearCache -> WowItem enrichment
 - `Encounter.fingerprint` prevents the same pull from being persisted twice while allowing back-to-back same-roster attempts.
 - `Upload.publicSlug` plus a persisted raid-session start date forms canonical public URLs.
 - Combat primitives and derived session analytics are stored separately so future presentation changes do not rewrite parser truth.
+- `NotificationJob.dedupeKey` creates one logical owner notification per new upload or UTC digest day. Per-claim lease tokens prevent stale workers from changing reclaimed jobs. Rendered email payloads are frozen before provider delivery so retries reuse the same provider idempotency key.
 
 Prisma schema and migrations are in `prisma/`. Production applies committed migrations during web startup.
 
 ## External Data
 
 Warmane roster, character, and gear fetches are server-side and best effort. Successful results are cached in PostgreSQL. A failed live request falls back to the last healthy snapshot rather than failing an otherwise valid page.
+
+The optional cron worker reads aggregate HTTP metrics and live estimated usage from Railway, then sends owner-only operational email through Resend. These dependencies never run in the upload request. Billing values are labelled estimates rather than invoices. The digest stores no request IP addresses or user agents.
 
 The desktop model viewer is an isolated `srcdoc` iframe with `sandbox="allow-scripts"`, no same-origin permission, no referrer, and its own restrictive CSP. The parent page does not pass credentials or database data to it.
 
@@ -75,6 +85,7 @@ The desktop model viewer is an isolated `srcdoc` iframe with `sandbox="allow-scr
 - **Parser output:** treated as untrusted until schema validation succeeds.
 - **Admin input:** authenticated but still validated; authentication is not input validation.
 - **Warmane responses:** untrusted upstream HTML/JSON parsed into bounded fields.
+- **Notification providers:** Railway and Resend responses are untrusted, bounded, server-only inputs. Their credentials exist only on the worker service.
 - **Database data:** may contain old rows created by earlier parser versions; UI code must handle missing optional analytics.
 - **CI dependencies:** GitHub Actions are commit-pinned; package resolution is lockfile/hash based.
 

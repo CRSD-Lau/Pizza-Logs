@@ -75,6 +75,7 @@ The maintained threat model is in [docs/security/threat-model.md](docs/security/
 - Use a long randomly generated production `ADMIN_SECRET` and rotate it after suspected exposure.
 - Do not set `ADMIN_COOKIE_SECURE=false` in Railway.
 - Keep `PARSER_SERVICE_URL` on Railway's internal service path where available.
+- Keep `RAILWAY_API_TOKEN`, `RESEND_API_KEY` and report recipient settings only on the separate notification worker. Use a dedicated billing-capable Railway token with the narrowest available scope and rotate it after suspected exposure.
 - Do not enable legacy parser routes in production.
 - Treat database backups and exports as sensitive even though report pages are public.
 

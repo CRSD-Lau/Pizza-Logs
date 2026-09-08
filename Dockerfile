@@ -53,6 +53,7 @@ COPY --from=prod-deps --chown=nextjs:nodejs /app/node_modules ./node_modules
 
 COPY start.sh ./start.sh
 COPY scripts/adopt-legacy-migrations.mjs ./scripts/adopt-legacy-migrations.mjs
+COPY --chown=nextjs:nodejs scripts/notification-worker.mjs ./scripts/notification-worker.mjs
 RUN chmod +x ./start.sh
 
 RUN mkdir -p /app/uploads && chown nextjs:nodejs /app/uploads

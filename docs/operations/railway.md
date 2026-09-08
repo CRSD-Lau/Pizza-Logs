@@ -2,10 +2,11 @@
 
 ## Services
 
-Production contains two application services plus PostgreSQL:
+Production contains three application services plus PostgreSQL when owner notifications are enabled:
 
 - **Web Service** - Next.js standalone image built from the root `Dockerfile`
 - **parser-py** - FastAPI image built from `parser/Dockerfile`
+- **Notification Worker** - the root image with start command `node scripts/notification-worker.mjs` and cron schedule `*/5 * * * *`
 - **PostgreSQL** - durable Prisma data store
 
 `main` is the only production source branch. Do not deploy unmerged feature branches as production.
@@ -21,6 +22,18 @@ Web:
 - Railway-provided deployment metadata used by admin diagnostics, when available
 
 Parser limits have safe defaults in code. Do not set `ENABLE_LEGACY_PARSER_ROUTES=true` in production. Do not set `ADMIN_COOKIE_SECURE=false` in production.
+
+Notification Worker only:
+
+- `DATABASE_URL`, referenced from PostgreSQL through private networking
+- `RESEND_API_KEY`, `REPORT_EMAIL_FROM`, `REPORT_EMAIL_TO` and `SITE_URL`
+- `RAILWAY_API_TOKEN`, using a dedicated billing-capable token with the narrowest available scope
+- `RAILWAY_PROJECT_ID`, `RAILWAY_WORKSPACE_ID`, `RAILWAY_ENVIRONMENT_ID` and `RAILWAY_WEB_SERVICE_ID`
+- `RAILWAY_PLAN_NAME=Hobby`, `RAILWAY_PLAN_INCLUDED_USD=5` and optionally `DIGEST_SEND_HOUR_UTC` (default `12`)
+
+The worker must use the Web image but override its start command; it must not run `start.sh` or migrations. It claims a bounded batch of durable jobs, stays below a four-minute runtime budget, sends through Resend, and exits. Railway schedules are UTC and may start a few minutes late. Upload mail normally arrives within one cron interval; backlog drains across later runs. The daily digest covers the preceding UTC calendar day and describes all Web edge requests, including bots, assets and health checks; it is not a unique-visitor report.
+
+Resend requires a verified sender domain for general production delivery. Use a dedicated sending subdomain where practical. The Railway API token must authorize `estimatedUsage`; ordinary CLI OAuth credentials can read service metrics but may receive `Not Authorized` for billing estimates. Missing or unauthorized estimates are labelled unavailable in the email and never fabricated.
 
 Secrets belong in Railway configuration, never Git, a PR body, issue, screenshot, browser storage, or client bundle.
 
@@ -50,6 +63,9 @@ Confirm:
 - security headers, canonical metadata, `robots.txt`, `sitemap.xml`, and `manifest.webmanifest` are present;
 - an upload works when the change touched upload/parser/data paths;
 - required migrations appear applied.
+- the Notification Worker exits successfully, a controlled test email is delivered once, and a newly stored synthetic upload remains successful when Railway or Resend is unavailable.
+
+Owner notification rollout additionally requires creating the cron service and setting its secrets in Railway. Agents must not change those production variables. Before enabling the cron, run `npm run notifications:run` only with a controlled recipient and non-production test credentials. Verify the Resend message ID and `notification_jobs` state without printing tokens or recipient details.
 
 Manual smoke command:
 
@@ -74,6 +90,8 @@ Document:
 - data rewrite or backfill behavior;
 - compatibility with the previous web version;
 - whether historic uploads must be re-uploaded because parsed rows are not automatically recomputed.
+
+The notification migration is additive: it creates two enums, `notification_jobs`, one unique key and one claim index. It does not rewrite uploads or parser analytics. The preceding Web version ignores the new table. Rolling application code back leaves harmless queued notification rows; use a forward correction rather than dropping delivery history during an incident.
 
 ## Rollback
 
