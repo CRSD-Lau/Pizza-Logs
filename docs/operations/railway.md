@@ -35,6 +35,8 @@ The worker must use the Web image but override its start command; it must not ru
 
 Resend requires a verified sender domain for general production delivery. Use a dedicated sending subdomain where practical. The Railway API token must authorize `estimatedUsage`; ordinary CLI OAuth credentials can read service metrics but may receive `Not Authorized` for billing estimates. Missing or unauthorized estimates are labelled unavailable in the email and never fabricated.
 
+Railway's `estimatedUsage` response contains projected resource quantities, not dollar values. Convert those quantities with Railway's published per-resource rates before displaying costs. The email separates projected resource cost from the Hobby minimum and labels the result as an estimate rather than an invoice.
+
 Secrets belong in Railway configuration, never Git, a PR body, issue, screenshot, browser storage, or client bundle.
 
 For the MFA rollout, follow [admin setup and recovery](admin-access.md). Auth tables are additive;
