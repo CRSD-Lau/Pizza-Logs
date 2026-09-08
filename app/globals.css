@@ -447,11 +447,6 @@
 }
 
 @layer base {
-  :root {
-    --font-cinzel:   'Cinzel', serif;
-    --font-rajdhani: 'Rajdhani', sans-serif;
-  }
-
   * {
     box-sizing: border-box;
   }

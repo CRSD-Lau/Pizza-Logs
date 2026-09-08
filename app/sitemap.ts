@@ -9,6 +9,9 @@ const PUBLIC_ROUTES = [
   { path: "/guild-roster", changeFrequency: "daily", priority: 0.8 },
   { path: "/weekly", changeFrequency: "daily", priority: 0.8 },
   { path: "/bosses", changeFrequency: "weekly", priority: 0.7 },
+  { path: "/upload-policy", changeFrequency: "monthly", priority: 0.3 },
+  { path: "/privacy", changeFrequency: "monthly", priority: 0.3 },
+  { path: "/terms", changeFrequency: "monthly", priority: 0.3 },
 ] as const;
 
 export default function sitemap(): MetadataRoute.Sitemap {

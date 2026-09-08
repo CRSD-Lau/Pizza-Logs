@@ -32,6 +32,7 @@ export default function UploadPolicyPage() {
         <PageSection title="Acceptance and security checks">
           <p>Before each upload, the checkbox confirms that you have permission to share the log, accept these upload rules and understand that the report is public. The server also requires the current policy version. This acknowledgement does not verify the uploader&apos;s identity or prove that a file is authentic.</p>
           <p className="mt-3">File-type, content, archive and resource checks reduce risk. They are not an antivirus scan or a guarantee that every malicious file or attack will be detected.</p>
+          <p className="mt-3">The <Link href="/terms" className="text-gold underline">site terms</Link> explain the service and its limitations. The <Link href="/privacy" className="text-gold underline">privacy notice</Link> explains data, cookies and third-party requests.</p>
         </PageSection>
         <Link href="/" className="inline-flex min-h-11 items-center text-gold underline">Return to upload</Link>
       </div>

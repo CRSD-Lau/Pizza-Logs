@@ -4,7 +4,7 @@ import { Skeleton } from "@/components/ui/Skeleton";
 
 export function PageLoading({ message = "Loading page..." }: { message?: string }) {
   return (
-    <PageShell>
+    <PageShell className="min-h-[calc(100svh-4rem)]">
       <div role="status" className="flex items-center gap-3 text-sm text-text-secondary">
         <GuildCrest surface="solid" />
         <p>{message}</p>
