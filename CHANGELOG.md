@@ -26,6 +26,8 @@ This project follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) an
 
 ### Changed
 
+- Exclude all wipes strictly under 60 seconds from default encounter lists and counts, regardless of deaths. Include short pulls restores them; kills, unknown outcomes and stored combat metrics remain unchanged.
+
 - Show each player once per weekly DPS/HPS ranking, using their best qualifying attempt before selecting the top ten, on the weekly page and API.
 
 - Restore the optional guild or raid-group field to the visible upload details so reports from different communities can be identified before selecting a combat log.

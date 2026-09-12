@@ -222,8 +222,9 @@ Reference boss attempts ordinarily require
 with explicit training-target exceptions. Selected lines are not all raw log rows.
 This is not a one-minute wipe filter and can omit a brief attempt with substantial
 casualties. Pizza's [short-pull count policy](guides/reading-reports.md#short-pulls-and-wipe-counts)
-preserves such death-bearing wipes and all stored attempts; it is a deliberate
-product distinction, not a claim of matching reference admission.
+excludes all sub-minute wipes from default counts regardless of casualties, while
+preserving all stored attempts. This duration rule is a deliberate product
+distinction, not a claim of matching reference admission.
 
 Additional permitted full-file ICC comparison retained original bytes and checked
 all overlapping boss windows, short-attempt admission and initial report groups

@@ -14,7 +14,7 @@ export function parseIncludeShortPulls(value: unknown): boolean {
 
 export function isShortPull(encounter: AttemptEvidence): boolean {
   if (encounter.outcome !== "WIPE") return false;
-  const { durationMs, durationSeconds, participants } = encounter;
+  const { durationMs, durationSeconds } = encounter;
   let milliseconds: number;
   if (durationMs != null && durationMs !== 0) {
     if (!Number.isFinite(durationMs) || durationMs < 0) return false;
@@ -24,11 +24,6 @@ export function isShortPull(encounter: AttemptEvidence): boolean {
     milliseconds = durationSeconds * 1000;
   }
   if (!(milliseconds > 0 && milliseconds < SHORT_PULL_LIMIT_MS)) return false;
-  // Missing participants are missing evidence, rather than proof of no deaths.
-  if (!Array.isArray(participants) || participants.length === 0) return false;
-  for (const participant of participants) {
-    if (participant?.deaths !== 0) return false;
-  }
   return true;
 }
 

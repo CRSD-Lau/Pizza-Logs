@@ -40,9 +40,9 @@ Useful `ENCOUNTER_START`/`ENCOUNTER_END` markers are consumed when present, but 
 - Gunship uses the fixture-protected Warmane crew-death success override.
 
 Public reporting applies a separate, reversible short-pull counting policy to
-stored encounters: a `WIPE` strictly under 60,000 ms with zero recorded participant
-deaths is excluded by default. Kills, death-bearing wipes and `UNKNOWN` outcomes
-remain included. Missing evidence is not assumed to be zero. The include-all view
+stored encounters: a `WIPE` strictly under 60,000 ms is excluded by default, regardless of recorded
+deaths. Kills and `UNKNOWN` outcomes remain included. Missing or invalid duration
+is not assumed to be a short pull. The include-all view
 restores the original attempts. This policy does not change parser segmentation,
 stored outcomes, fingerprints, encounter primitives or full-session analytics; see
 [reading reports](guides/reading-reports.md#short-pulls-and-wipe-counts).
