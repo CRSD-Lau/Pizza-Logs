@@ -35,6 +35,7 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
       dps: { gt: 0 },
     },
     orderBy: [{ dps: "desc" }, { id: "asc" }],
+    distinct: ["playerId"],
     take: 10,
     select: {
       dps: true,
@@ -57,6 +58,7 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
       hps: { gt: 100 },
     },
     orderBy: [{ hps: "desc" }, { id: "asc" }],
+    distinct: ["playerId"],
     take: 10,
     select: {
       hps: true,

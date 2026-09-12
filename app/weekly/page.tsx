@@ -44,6 +44,7 @@ async function getWeeklyData(includeShortPulls: boolean, difficulty: DifficultyF
     db.participant.findMany({
       where: { encounter: { startedAt: { gte: start, lt: end }, ...difficultyFilterWhere(difficulty) }, dps: { gt: 0 } },
       orderBy: { dps: "desc" },
+      distinct: ["playerId"],
       take: 10,
       include: {
         player: { select: { name: true, class: true } },
@@ -53,6 +54,7 @@ async function getWeeklyData(includeShortPulls: boolean, difficulty: DifficultyF
     db.participant.findMany({
       where: { encounter: { startedAt: { gte: start, lt: end }, ...difficultyFilterWhere(difficulty) }, hps: { gt: 100 } },
       orderBy: { hps: "desc" },
+      distinct: ["playerId"],
       take: 10,
       include: {
         player: { select: { name: true, class: true } },
@@ -168,7 +170,7 @@ async function WeeklyPageContent({ searchParams }: Props) {
         </StatGroup>
 
         <section>
-          <SectionHeader title="Top DPS Attempts This Week" sub="Highest single-attempt DPS across recorded pulls. A player can appear more than once." />
+          <SectionHeader title="Top DPS Attempts This Week" sub="Highest single-attempt DPS across recorded pulls. Each player appears once with their best attempt." />
           {data.topDps.length > 0 ? (
             <LeaderboardBar entries={data.topDps.map((e, i) => ({
               rank: i + 1,
@@ -187,7 +189,7 @@ async function WeeklyPageContent({ searchParams }: Props) {
         </section>
 
         <section>
-          <SectionHeader title="Top HPS Attempts This Week" sub="Highest single-attempt HPS across recorded pulls. A player can appear more than once." />
+          <SectionHeader title="Top HPS Attempts This Week" sub="Highest single-attempt HPS across recorded pulls. Each player appears once with their best attempt." />
           {data.topHps.length > 0 ? (
             <LeaderboardBar entries={data.topHps.map((e, i) => ({
               rank: i + 1,
