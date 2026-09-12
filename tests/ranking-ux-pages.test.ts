@@ -68,11 +68,29 @@ async function main() {
     const weekly = await renderPage(await WeeklyPage({ searchParams: Promise.resolve({ difficulty: "10N", includeShortPulls: "1" }) }));
     assert.match(weekly, /Top DPS Attempts This Week/);
     assert.match(weekly, /href="\/encounters\/normal-high\?/);
-    assert.match(weekly, /href="\/encounters\/normal-low\?/);
+    assert.doesNotMatch(weekly, /href="\/encounters\/normal-low\?/);
     assert.match(weekly, new RegExp(formatShortDateUtc(startedAt.toISOString())));
     assert.doesNotMatch(weekly, /Heroicplayer|Week view/);
-    assert.ok(calls.every(query => query.where.encounter.difficulty === "10N" && !query.where.encounter.outcome && !query.distinct), "Weekly rankings retain all attempts and repeated players within the selected mode");
+    assert.ok(calls.every(query => query.where.encounter.difficulty === "10N" && !query.where.encounter.outcome && query.distinct?.[0] === "playerId"), "Weekly rankings select each player's best attempt within the selected mode");
     assert.ok(calls.every(query => query.include.encounter.select.id && query.include.encounter.select.startedAt));
+
+    calls.length = 0;
+    const originalCount = participants.length;
+    participants.push(
+      ...Array.from({ length: 12 }, (_, i) => participant("Normalplayer", "10N", 8000 - i, `repeat-${i}`)),
+      ...Array.from({ length: 12 }, (_, i) => participant(`Unique${i}`, "10N", 4000 - i, `unique-${i}`)),
+    );
+    const crowded = await renderPage(await WeeklyPage({ searchParams: Promise.resolve({ difficulty: "10N" }) }));
+    for (const metric of ["DPS", "HPS"]) {
+      const list = crowded.match(new RegExp(`<ol aria-label="${metric} positions"[\\s\\S]*?</ol>`))?.[0];
+      assert.ok(list);
+      assert.equal((list.match(/<li /g) ?? []).length, 10, "Deduplicate before taking ten results");
+      assert.equal((list.match(/href="\/players\/Normalplayer"/g) ?? []).length, 1);
+      assert.match(list, /href="\/encounters\/repeat-0\?/);
+      assert.match(list, /Unique8/);
+      assert.doesNotMatch(list, /Unique9|Heroicplayer/);
+    }
+    participants.splice(originalCount);
 
     calls.length = 0;
     const { default: LeaderboardsPage } = require("../app/leaderboards/page") as typeof import("../app/leaderboards/page");

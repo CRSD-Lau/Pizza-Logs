@@ -31,6 +31,15 @@ Chart axes, tooltips and tables use the same compact metric format.
 The [frontend contract](../../DESIGN.md#numbers-units-time-and-lists)
 defines the same rules for public pages, previews and admin history.
 
+## Weekly Rankings
+
+The weekly DPS and HPS lists each show up to ten distinct players, using each
+player's highest qualifying attempt during the displayed UTC week. The difficulty
+filter applies before selecting each player's best result. Kills and wipes remain
+eligible; these are single-attempt rates across bosses, not weekly averages.
+Each row links to the selected attempt. The weekly API also returns one result
+per player in each ranking, within its requested realm.
+
 ## Boss Directory
 
 The Bosses page shows statistics for bosses with counted attempts in the selected
