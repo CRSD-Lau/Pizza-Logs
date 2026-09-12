@@ -97,7 +97,7 @@ encounters. Full-session trash spell and target breakdowns are not stored.
 ## Short Pulls and Wipe Counts
 
 By default, public wipe and pull counts exclude a recorded **WIPE lasting less than
-one minute with zero recorded participant deaths**. The short-pull notice appears
+one minute**, regardless of recorded deaths. The short-pull notice appears
 only on the individual raid session page when that session contains short pulls.
 Expand its **Details**, then choose **Include short pulls** to restore them to the
 session's encounter list and counts; their individual reports remain accessible
@@ -105,10 +105,10 @@ throughout. Player, boss, weekly, home and raid-directory pages do not repeat th
 notice. Their existing counting policy and shared short-pull query setting remain
 available.
 
-Confirmed kills, wipes with any recorded death, and unknown outcomes remain
-included, even below one minute. Exactly one minute is included. Precise recorded
+Confirmed kills and unknown outcomes remain included, even below one minute.
+Exactly one minute is included. Precise recorded
 milliseconds take priority, with valid legacy seconds used when milliseconds are
-unavailable. Missing or invalid duration/death evidence does not trigger exclusion.
+unavailable. Missing or invalid duration does not trigger exclusion.
 
 This is a reversible counting policy, not proof of why a pull ended. Preparation,
 accidental engagements and genuine short attempts can look alike, especially in a

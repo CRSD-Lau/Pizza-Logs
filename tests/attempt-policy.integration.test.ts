@@ -34,13 +34,13 @@ test("short-pull policy agrees across SQL, Prisma and count APIs while preservin
     { id: "legacy", outcome: "WIPE", durationMs: 0, durationSeconds: 3, deaths: [0, 0], short: true },
     { id: "below-boundary", outcome: "WIPE", durationMs: 59999, durationSeconds: 60, deaths: [0, 0], short: true },
     { id: "boundary", outcome: "WIPE", durationMs: 60000, durationSeconds: 59, deaths: [0, 0], short: false },
-    { id: "casualties", outcome: "WIPE", durationMs: 24500, durationSeconds: 24, deaths: [0, 3], short: false },
+    { id: "casualties", outcome: "WIPE", durationMs: 24500, durationSeconds: 24, deaths: [0, 3], short: true },
     { id: "brief-kill", outcome: "KILL", durationMs: 2700, durationSeconds: 3, deaths: [0, 0], short: false },
     { id: "brief-unknown", outcome: "UNKNOWN", durationMs: 2700, durationSeconds: 3, deaths: [0, 0], short: false },
-    { id: "missing-actors", outcome: "WIPE", durationMs: 3200, durationSeconds: 3, deaths: [], short: false },
+    { id: "missing-actors", outcome: "WIPE", durationMs: 3200, durationSeconds: 3, deaths: [], short: true },
     { id: "invalid-duration", outcome: "WIPE", durationMs: -1, durationSeconds: 3, deaths: [0, 0], short: false },
     { id: "zero-duration", outcome: "WIPE", durationMs: 0, durationSeconds: 0, deaths: [0, 0], short: false },
-    { id: "invalid-deaths", outcome: "WIPE", durationMs: 3200, durationSeconds: 3, deaths: [0, -1], short: false },
+    { id: "invalid-deaths", outcome: "WIPE", durationMs: 3200, durationSeconds: 3, deaths: [0, -1], short: true },
   ] as const;
   try {
     await database.boss.create({ data: { id: "boss", name: "Synthetic Boss", slug: "synthetic-boss", raid: "Synthetic", raidSlug: "synthetic" } });
@@ -96,18 +96,18 @@ test("short-pull policy agrees across SQL, Prisma and count APIs while preservin
       const bossRows = await (await bossesApi.GET(new NextRequest(`http://localhost/api/bosses${suffix}`))).json();
       assert.equal(bossRows[0].totalPulls, counts.totalPulls);
       assert.equal(bossRows[0].wipeCount, counts.wipes);
-      assert.equal(bossRows[0].shortPullCount, 3);
+      assert.equal(bossRows[0].shortPullCount, 6);
       assert.equal(bossRows[0].bestDps.dps, 999999);
       const week = await (await weeklyApi.GET(new NextRequest(`http://localhost/api/weekly${suffix}`))).json();
       assert.equal(week.totalKills, 1);
       assert.equal(week.totalWipes, counts.wipes);
-      assert.equal(week.shortPullCount, 3);
+      assert.equal(week.shortPullCount, 6);
       assert.equal(week.topDps[0].dps, 999999);
       const player = await (await playerApi.GET(new Request(`http://localhost/api/players/Synthetic0${suffix}`), { params: Promise.resolve({ name: "Synthetic0" }) })).json();
       assert.equal(player.stats.totalRecordedEncounters, cases.length - 1);
-      assert.equal(player.stats.totalEncounters, counts.totalPulls - 1);
-      assert.equal(player.stats.wipeCount, counts.wipes - 1);
-      assert.equal(player.stats.shortPullCount, 3);
+      assert.equal(player.stats.totalEncounters, counts.totalPulls - (includeShortPulls ? 1 : 0));
+      assert.equal(player.stats.wipeCount, counts.wipes - (includeShortPulls ? 1 : 0));
+      assert.equal(player.stats.shortPullCount, 5);
       assert.equal(player.recentParticipation.length, cases.length - 1);
       assert.equal(player.stats.totalDamage, before.flatMap(item => item.participants).filter(item => item.playerId === "player-0").reduce((sum, item) => sum + item.totalDamage, 0));
       const recorded = await (await encountersApi.GET(new NextRequest(`http://localhost/api/encounters${suffix}`))).json();

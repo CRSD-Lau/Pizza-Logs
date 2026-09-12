@@ -83,9 +83,11 @@ test("PostgreSQL report aggregates preserve filtering, totals, all-outcome maxim
           const row = aggregates.find(value => value.bossId === boss.id);
           const kills = boss.encounters.filter(value => value.outcome === "KILL");
           const best = boss.encounters.flatMap(value => value.participants).sort((a, b) => b.dps - a.dps)[0];
-          assert.equal(row?.totalPulls ?? 0, boss.encounters.length);
+          const counted = boss.encounters.filter(value => value.outcome !== "WIPE" || value.durationSeconds >= 60);
+          assert.equal(row?.totalPulls ?? 0, counted.length);
+          assert.equal(row?.shortPullCount ?? 0, boss.encounters.length - counted.length);
           assert.equal(row?.killCount ?? 0, kills.length);
-          assert.equal(row?.wipeCount ?? 0, boss.encounters.filter(value => value.outcome === "WIPE").length);
+          assert.equal(row?.wipeCount ?? 0, counted.filter(value => value.outcome === "WIPE").length);
           assert.equal(row?.fastestKill ?? null, kills.length ? Math.min(...kills.map(value => value.durationSeconds)) : null);
           assert.equal(row?.dps ?? null, best?.dps ?? null);
           assert.equal(row?.playerName ?? null, best?.player.name ?? null);
@@ -104,9 +106,11 @@ test("PostgreSQL report aggregates preserve filtering, totals, all-outcome maxim
       const aggregateKills = sortByICCOrder(newWeek.filter(row => row.outcome === "KILL")
         .map(row => ({ name: row.name, slug: row.slug, raid: row.raid, kills: row.count })), row => row.name);
       assert.deepEqual(aggregateKills, buildWeeklyBossKills(oldWeek.filter(row => row.outcome === "KILL")));
-      assert.equal(newWeek.reduce((total, row) => total + row.count, 0), 999, "Upper week bound stays exclusive");
+      assert.equal(oldWeek.length, 999, "Upper week bound stays exclusive");
+      const countedWeek = oldWeek.filter(row => row.outcome !== "WIPE" || row.durationSeconds >= 60);
+      assert.equal(newWeek.reduce((total, row) => total + row.count, 0), countedWeek.length);
       const realmWeek = await tx.$queryRaw<WeeklyAggregate[]>(weeklyAggregateQuery(start, end, "realm-a"));
-      assert.equal(realmWeek.reduce((total, row) => total + row.count, 0), 500);
+      assert.equal(realmWeek.reduce((total, row) => total + row.count, 0), countedWeek.filter(row => row.uploadId === "upload-a").length);
 
       // Best damage keeps all outcomes; a wipe can win, including deterministic ties.
       await tx.encounter.update({ where: { id: "encounter-0000" }, data: { outcome: "WIPE" } });

@@ -25,7 +25,7 @@ export function ShortPullNotice({ shortPulls, includeShortPulls, basePath, listO
         {" "}<span className="ml-2 text-gold">Details</span>
       </summary>
       <div className="pb-3 pl-4">
-        <p>Wipes under one minute with no recorded deaths are excluded from {listOnly ? "the encounter list" : "wipe and pull counts"} by default. Short successful kills still count. All original attempts remain available.</p>
+        <p>All wipes under one minute are excluded from {listOnly ? "the encounter list" : "wipe and pull counts"} by default. Short successful kills still count. All original attempts remain available.</p>
         {listOnly && <p className="mt-2">This control changes the encounter list and its counts. Summary totals above remain unchanged; All Boss Attempts always includes short pulls.</p>}
         <Link href={href} className="inline-flex min-h-11 items-center font-semibold text-gold hover:text-gold-light">
           {includeShortPulls ? "Exclude short pulls" : "Include short pulls"}
