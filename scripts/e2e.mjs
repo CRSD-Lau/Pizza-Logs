@@ -319,7 +319,7 @@ try {
     assert.deepEqual(await playerNames(allView, width), allPlayers.map(player => player.name));
     await assertAllPlayerValues(width);
     assert.equal(await allView.getByRole("link", { name: /SyntheticTrashOnly/ }).count(), 0, "Boss-attempt totals exclude the between-fight-only player");
-    assert.equal(await page.locator('a[href^="/encounters/"]').count(), 2, "Short pull is initially hidden from the list, while all metrics retain its 1,200 damage");
+    assert.equal(await page.locator('a[href^="/encounters/"]').count(), 1, "Both sub-minute wipes are initially hidden, including the death-bearing wipe; all metrics retain their damage");
     await assertSorting("All boss attempt player metrics", width, allAscending);
     const allMobToggle = page.getByRole("button", { name: /^Mob Damage - All Boss Attempts/ });
     if (await allMobToggle.getAttribute("aria-expanded") === "false") await allMobToggle.click();
@@ -353,9 +353,9 @@ try {
     await waitForPageContent(page);
     await assertScopeSelection("Successful Boss Fights");
     const defaultText = await page.locator("main").innerText();
-    assert.match(defaultText, /1 short pull excluded/);
+    assert.match(defaultText, /2 short pulls excluded/);
     await assertKillCards();
-    assert.equal(await page.locator('a[href^="/encounters/"]').count(), 2);
+    assert.equal(await page.locator('a[href^="/encounters/"]').count(), 1);
     const killView = playerView("Boss kill player metrics", width);
     assert.deepEqual(await playerNames(killView, width), killPlayers.map(player => player.name));
     await assertPlayerValues(killView, width, killPlayers.map(player => [
@@ -401,7 +401,7 @@ try {
     await waitForExactUrl(page, `${policyReport}?scope=kills&includeShortPulls=1&raidMetrics=all`);
     await waitForPageContent(page);
     const includedText = await page.locator("main").innerText();
-    assert.match(includedText, /1 short pull included/);
+    assert.match(includedText, /2 short pulls included/);
     await assertKillCards();
     const includedKillView = playerView("Boss kill player metrics", width);
     assert.deepEqual((await playerNames(includedKillView, width)).sort(), killPlayers.map(player => player.name).sort(), "Including short pulls cannot add wipe-only players to kill metrics");
@@ -436,7 +436,7 @@ try {
     await waitForExactUrl(page, `${policyReport}?scope=kills&raidMetrics=all`);
     await waitForPageContent(page);
     await assertKillCards();
-    assert.equal(await page.locator('a[href^="/encounters/"]').count(), 2);
+    assert.equal(await page.locator('a[href^="/encounters/"]').count(), 1);
   }
   const legacyPolicyReport = `/uploads/${policyUpload.uploadId}/sessions/${policyKill.sessionIndex}`;
   for (const suffix of ["", "?scope=kills", "?includeShortPulls=1", "?scope=kills&includeShortPulls=1"]) {
