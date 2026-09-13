@@ -3,6 +3,7 @@ import { PageSection } from "@/components/ui/PageLayout";
 import { getClassColor } from "@/lib/constants/classes";
 import { MIN_AVERAGE_FIGHTS, type AverageLeaderboardEntry } from "@/lib/average-leaderboards";
 import { cn, formatCountLabel, formatDps, formatInteger } from "@/lib/utils";
+import { buildPlayerProfilePath } from "@/lib/player-search";
 
 export function AverageLeaderboards({ dps, hps }: {
   dps: AverageLeaderboardEntry[];
@@ -24,7 +25,7 @@ export function AverageLeaderboards({ dps, hps }: {
                   <li key={entry.playerId} className="grid grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-x-3 rounded-sm bg-bg-card px-3 py-2">
                     <span className={cn("rank-badge", `rank-${index + 1}`)}><span className="sr-only">Position </span><span aria-hidden="true">#</span>{formatInteger(index + 1)}</span>
                     <div className="min-w-0">
-                      <Link href={`/players/${encodeURIComponent(entry.playerName)}`} className="flex min-h-11 items-center text-sm font-semibold hover:underline" style={{ color: getClassColor(entry.class ?? entry.playerName) }}>
+                      <Link href={buildPlayerProfilePath(entry.playerName, entry.realm ?? undefined, entry.realmId ?? undefined)} className="flex min-h-11 items-center text-sm font-semibold hover:underline" style={{ color: getClassColor(entry.class ?? entry.playerName) }}>
                         <span className="min-w-0 break-words">{entry.playerName}</span>
                       </Link>
                       <p className="break-words text-sm text-text-secondary">{[entry.class, entry.realm].filter(Boolean).join(" · ") || "Unknown class"}</p>

@@ -1,3 +1,5 @@
+import { realmFilterWhere } from "./realm-filter";
+
 export const PLAYER_SEARCH_DEFAULT_GUILD = "PizzaWarriors";
 export const PLAYER_SEARCH_DEFAULT_REALM = "Lordaeron";
 const DEFAULT_LIMIT = 12;
@@ -11,7 +13,7 @@ type StringFilter = {
 };
 
 type PlayerFindManyArgs = {
-  where?: { name?: StringFilter };
+  where?: { name?: StringFilter; realmId?: string };
   select?: unknown;
   orderBy?: unknown;
   take?: number;
@@ -32,7 +34,8 @@ type PlayerRow = {
   id: string;
   name: string;
   class: string | null;
-  realm: { name: string | null } | null;
+  realmId: string | null;
+  realm: { name: string | null; host: string } | null;
 };
 
 type RosterRow = {
@@ -59,6 +62,8 @@ export type PlayerSearchResult = {
   name: string;
   profilePath: string;
   realmName: string;
+  realmId?: string;
+  realmHost?: string;
   className: string | null;
   raceName: string | null;
   level: number | null;
@@ -79,8 +84,12 @@ export function sanitizePlayerSearchQuery(value: string | null | undefined): str
     .slice(0, MAX_QUERY_LENGTH);
 }
 
-export function buildPlayerProfilePath(name: string): string {
-  return `/players/${encodeURIComponent(name)}`;
+export function buildPlayerProfilePath(name: string, realmName?: string, realmId?: string): string {
+  const path = `/players/${encodeURIComponent(name)}`;
+  const params = new URLSearchParams();
+  if (realmName) params.set("realm", realmName);
+  if (realmId) params.set("realmId", realmId);
+  return params.size ? `${path}?${params}` : path;
 }
 
 export function getPlayerSearchKeyboardAction({
@@ -122,7 +131,7 @@ export function getPlayerSearchKeyboardAction({
 export async function searchPlayers(
   db: PlayerSearchDb,
   rawQuery: string,
-  options: { limit?: number } = {},
+  options: { limit?: number; realmId?: string; includeDefaultRoster?: boolean } = {},
 ): Promise<PlayerSearchResult[]> {
   const query = sanitizePlayerSearchQuery(rawQuery);
   if (!query) return [];
@@ -130,26 +139,27 @@ export async function searchPlayers(
   const normalizedQuery = query.toLowerCase();
   const limit = clampLimit(options.limit);
   const candidateLimit = Math.min(Math.max(limit * 3, 20), 60);
+  const playerRealmWhere = realmFilterWhere(options.realmId);
+  const rosterWhere = options.includeDefaultRoster === false ? null : {
+    guildName: PLAYER_SEARCH_DEFAULT_GUILD,
+    realm: PLAYER_SEARCH_DEFAULT_REALM,
+  };
 
   const [exactPlayers, matchingPlayers, exactRoster, matchingRoster] = await Promise.all([
     db.player.findMany({
-      where: { name: { equals: query, mode: "insensitive" } },
-      select: { id: true, name: true, class: true, realm: { select: { name: true } } },
+      where: { name: { equals: query, mode: "insensitive" }, ...playerRealmWhere },
+      select: { id: true, name: true, class: true, realmId: true, realm: { select: { name: true, host: true } } },
       orderBy: { name: "asc" },
       take: candidateLimit,
     }),
     db.player.findMany({
-      where: { name: { contains: query, mode: "insensitive" } },
-      select: { id: true, name: true, class: true, realm: { select: { name: true } } },
+      where: { name: { contains: query, mode: "insensitive" }, ...playerRealmWhere },
+      select: { id: true, name: true, class: true, realmId: true, realm: { select: { name: true, host: true } } },
       orderBy: { name: "asc" },
       take: candidateLimit,
     }),
-    db.guildRosterMember.findMany({
-      where: {
-        guildName: PLAYER_SEARCH_DEFAULT_GUILD,
-        realm: PLAYER_SEARCH_DEFAULT_REALM,
-        normalizedCharacterName: normalizedQuery,
-      },
+    rosterWhere ? db.guildRosterMember.findMany({
+      where: { ...rosterWhere, normalizedCharacterName: normalizedQuery },
       select: {
         id: true,
         characterName: true,
@@ -162,13 +172,9 @@ export async function searchPlayers(
       },
       orderBy: { characterName: "asc" },
       take: candidateLimit,
-    }),
-    db.guildRosterMember.findMany({
-      where: {
-        guildName: PLAYER_SEARCH_DEFAULT_GUILD,
-        realm: PLAYER_SEARCH_DEFAULT_REALM,
-        normalizedCharacterName: { contains: normalizedQuery },
-      },
+    }) : Promise.resolve([] as RosterRow[]),
+    rosterWhere ? db.guildRosterMember.findMany({
+      where: { ...rosterWhere, normalizedCharacterName: { contains: normalizedQuery } },
       select: {
         id: true,
         characterName: true,
@@ -181,7 +187,7 @@ export async function searchPlayers(
       },
       orderBy: { characterName: "asc" },
       take: candidateLimit,
-    }),
+    }) : Promise.resolve([] as RosterRow[]),
   ]);
 
   const merged = new Map<string, PlayerSearchResult>();
@@ -189,7 +195,7 @@ export async function searchPlayers(
     mergePlayerResult(merged, player);
   }
   for (const rosterMember of [...exactRoster, ...matchingRoster]) {
-    mergeRosterResult(merged, rosterMember);
+    mergeRosterResult(merged, rosterMember, options.realmId);
   }
 
   return Array.from(merged.values())
@@ -200,13 +206,17 @@ export async function searchPlayers(
 
 function mergePlayerResult(results: Map<string, PlayerSearchResult>, player: PlayerRow): void {
   const realmName = player.realm?.name ?? PLAYER_SEARCH_DEFAULT_REALM;
-  const key = resultKey(player.name, realmName);
+  const realmHost = player.realm?.host;
+  const key = resultKey(player.name, realmName, realmHost);
   const existing = results.get(key);
+  const realmId = player.realmId ?? existing?.realmId;
 
   results.set(key, {
     name: existing?.name ?? player.name,
-    profilePath: buildPlayerProfilePath(existing?.name ?? player.name),
+    profilePath: buildPlayerProfilePath(existing?.name ?? player.name, realmName, realmId),
     realmName,
+    ...(realmId ? { realmId } : {}),
+    ...(realmHost ? { realmHost } : {}),
     className: player.class ?? existing?.className ?? null,
     raceName: existing?.raceName ?? null,
     level: existing?.level ?? null,
@@ -215,15 +225,25 @@ function mergePlayerResult(results: Map<string, PlayerSearchResult>, player: Pla
   });
 }
 
-function mergeRosterResult(results: Map<string, PlayerSearchResult>, member: RosterRow): void {
+function mergeRosterResult(
+  results: Map<string, PlayerSearchResult>,
+  member: RosterRow,
+  selectedRealmId?: string,
+): void {
   const realmName = member.realm || PLAYER_SEARCH_DEFAULT_REALM;
-  const key = resultKey(member.characterName, realmName);
+  // Roster records identify the established PizzaWarriors Warmane realm by name only.
+  // Do not merge an equal realm name from another provider (or a legacy null realm).
+  const realmHost = "warmane";
+  const key = resultKey(member.characterName, realmName, realmHost);
   const existing = results.get(key);
+  const realmId = existing?.realmId ?? selectedRealmId;
 
   results.set(key, {
     name: existing?.name ?? member.characterName,
-    profilePath: buildPlayerProfilePath(existing?.name ?? member.characterName),
+    profilePath: buildPlayerProfilePath(existing?.name ?? member.characterName, realmName, realmId),
     realmName,
+    ...(realmId ? { realmId } : {}),
+    realmHost,
     className: existing?.className ?? member.className ?? null,
     raceName: member.raceName ?? existing?.raceName ?? null,
     level: member.level ?? existing?.level ?? null,
@@ -247,7 +267,9 @@ function comparePlayerSearchResults(
 
   const nameCompare = left.name.localeCompare(right.name);
   if (nameCompare !== 0) return nameCompare;
-  return left.realmName.localeCompare(right.realmName);
+  const realmCompare = left.realmName.localeCompare(right.realmName);
+  if (realmCompare !== 0) return realmCompare;
+  return (left.realmHost ?? "").localeCompare(right.realmHost ?? "");
 }
 
 function matchRank(name: string, normalizedQuery: string): number {
@@ -264,8 +286,8 @@ function sourceRank(source: PlayerSearchResult["source"]): number {
   return 2;
 }
 
-function resultKey(name: string, realmName: string): string {
-  return `${realmName.toLowerCase()}:${name.toLowerCase()}`;
+function resultKey(name: string, realmName: string, realmHost?: string): string {
+  return `${realmHost?.toLowerCase() ?? "legacy"}:${realmName.toLowerCase()}:${name.toLowerCase()}`;
 }
 
 function clampLimit(value: number | undefined): number {

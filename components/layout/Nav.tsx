@@ -1,13 +1,14 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
-import { useRef, useState } from "react";
+import { usePathname, useSearchParams } from "next/navigation";
+import { Suspense, useRef, useState } from "react";
 import { Menu, X } from "lucide-react";
 import { GuildCrest } from "@/components/brand/GuildCrest";
 import { PlayerSearch } from "@/components/players/PlayerSearch";
 import { LanguageSelect } from "@/components/layout/LanguageSelect";
 import { cn } from "@/lib/utils";
+import { isRealmBrowsePath, parseRealmFilter, realmBrowseHref } from "@/lib/realm-filter";
 
 const NAV_LINKS = [
   { href: "/",             label: "Upload"       },
@@ -21,6 +22,17 @@ const NAV_LINKS = [
 ] as const;
 
 export function Nav() {
+  return <Suspense fallback={<NavContent />}><RealmNavigation /></Suspense>;
+}
+
+function RealmNavigation() {
+  const query = useSearchParams();
+  const pathname = usePathname();
+  const realmId = isRealmBrowsePath(pathname) ? parseRealmFilter(query.get("realmId")) : undefined;
+  return <NavContent realmId={realmId} />;
+}
+
+function NavContent({ realmId }: { realmId?: string }) {
   const pathname = usePathname();
   const [mobileOpen, setMobileOpen] = useState(false);
   const menuButtonRef = useRef<HTMLButtonElement>(null);
@@ -52,7 +64,7 @@ export function Nav() {
               return (
                 <Link
                   key={href}
-                  href={href}
+                  href={isRealmBrowsePath(href) ? realmBrowseHref(href, realmId) : href}
                   aria-current={active ? "page" : undefined}
                   className={cn(
                     "inline-flex min-h-11 items-center whitespace-nowrap rounded-sm px-3 py-2 text-sm font-semibold uppercase tracking-wide transition-colors duration-150",
@@ -82,7 +94,7 @@ export function Nav() {
 
         <div className="flex items-center gap-3 pb-3">
           <div className="min-w-0 flex-1 xl:max-w-72">
-            <PlayerSearch onNavigate={() => setMobileOpen(false)} />
+            <PlayerSearch key={realmId ?? "all-realms"} realmId={realmId} onNavigate={() => setMobileOpen(false)} />
           </div>
           {!pathname.startsWith("/admin") && <LanguageSelect />}
         </div>
@@ -95,7 +107,7 @@ export function Nav() {
                 return (
                   <Link
                     key={href}
-                    href={href}
+                    href={isRealmBrowsePath(href) ? realmBrowseHref(href, realmId) : href}
                     aria-current={active ? "page" : undefined}
                     onClick={() => setMobileOpen(false)}
                     className={cn(

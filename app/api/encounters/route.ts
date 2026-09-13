@@ -1,18 +1,20 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { EncounterQuerySchema } from "@/lib/api-query";
+import { encounterRealmWhere } from "@/lib/realm-filter";
 
 export async function GET(req: NextRequest): Promise<NextResponse> {
   const { searchParams } = new URL(req.url);
   const query = EncounterQuerySchema.safeParse(Object.fromEntries(searchParams));
   if (!query.success) return NextResponse.json({ error: "Invalid encounter filters or pagination." }, { status: 400 });
-  const { boss: bossSlug, difficulty, outcome, player: playerName, take, skip } = query.data;
+  const { boss: bossSlug, difficulty, outcome, player: playerName, realmId, take, skip } = query.data;
 
   const encounters = await db.encounter.findMany({
     where: {
       ...(bossSlug   ? { boss: { slug: bossSlug } } : {}),
       ...(difficulty ? { difficulty } : {}),
       ...(outcome    ? { outcome } : {}),
+      ...encounterRealmWhere(realmId),
       ...(playerName ? { participants: { some: { player: { name: playerName } } } } : {}),
     },
     orderBy: [{ startedAt: "desc" }, { id: "asc" }],

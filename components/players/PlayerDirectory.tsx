@@ -11,6 +11,7 @@ import { PlayerAvatar } from "./PlayerAvatar";
 
 export type PlayerDirectoryEntry = {
   id: string;
+  realmId?: string | null;
   name: string;
   class: string | null;
   classSource?: "armory" | "roster" | "combat-log" | "unknown";
@@ -40,11 +41,13 @@ export function PlayerDirectoryRow({
   player,
   index = 0,
   includeShortPulls = false,
+  realmId,
   onIdentityChange,
 }: {
   player: PlayerDirectoryEntry;
   index?: number;
   includeShortPulls?: boolean;
+  realmId?: string;
   onIdentityChange?: () => void;
 }) {
   const serverClass = normalizePlayerClass(player.class);
@@ -60,6 +63,8 @@ export function PlayerDirectoryRow({
     ? "Armory class"
     : "Combat-log class";
   const profileParams = new URLSearchParams({ realm });
+  const profileRealmId = realmId ?? player.realmId;
+  if (profileRealmId) profileParams.set("realmId", profileRealmId);
   if (includeShortPulls) profileParams.set("includeShortPulls", "1");
   const profileHref = `/players/${encodeURIComponent(player.name)}?${profileParams}`;
   const armoryHref = `https://armory.warmane.com/character/${encodeURIComponent(player.name)}/${encodeURIComponent(realm)}/summary`;
@@ -147,9 +152,10 @@ function DirectoryRefresh({ revision }: { revision: number }) {
   return null;
 }
 
-export function PlayerDirectory({ players, includeShortPulls }: {
+export function PlayerDirectory({ players, includeShortPulls, realmId }: {
   players: PlayerDirectoryEntry[];
   includeShortPulls: boolean;
+  realmId?: string;
 }) {
   const [revision, setRevision] = useState(0);
   const refreshIdentity = useCallback(() => setRevision(value => value + 1), []);
@@ -163,6 +169,7 @@ export function PlayerDirectory({ players, includeShortPulls }: {
             player={player}
             index={index}
             includeShortPulls={includeShortPulls}
+            realmId={realmId}
             onIdentityChange={refreshIdentity}
           />
         ))}

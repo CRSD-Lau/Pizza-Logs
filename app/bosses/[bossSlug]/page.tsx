@@ -17,6 +17,8 @@ import { PageHeader } from "@/components/ui/PageLayout";
 import { SectionNav } from "@/components/ui/SectionNav";
 import { DifficultyFilter } from "@/components/reports/DifficultyFilter";
 import { difficultyFilterWhere, difficultyScopeLabel, parseDifficultyFilter, reportQueryString, type DifficultyFilterValue, type ReportSearchParams } from "@/lib/difficulty-filter";
+import { encounterRealmWhere, parseRealmFilter, realmScopeLabel } from "@/lib/realm-filter";
+import { getRealmOptions } from "@/lib/realm-filter.server";
 
 interface Props {
   params: Promise<{ bossSlug: string }>;
@@ -39,18 +41,18 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   });
 }
 
-async function getBoss(slug: string, difficulty: DifficultyFilterValue) {
+async function getBoss(slug: string, difficulty: DifficultyFilterValue, realmId?: string) {
   return db.boss.findUnique({
     where: { slug },
     include: {
       encounters: {
-        where: difficultyFilterWhere(difficulty),
+        where: { ...difficultyFilterWhere(difficulty), ...encounterRealmWhere(realmId) },
         orderBy: { startedAt: "desc" },
         include: {
           participants: {
             orderBy: { dps: "desc" },
             take: 1,
-            select: { dps: true, player: { select: { name: true, class: true } } },
+            select: { dps: true, player: { select: { name: true, class: true, realmId: true } } },
           },
         },
       },
@@ -58,9 +60,9 @@ async function getBoss(slug: string, difficulty: DifficultyFilterValue) {
   });
 }
 
-async function getBossData(boss: NonNullable<Awaited<ReturnType<typeof getBoss>>>, includeShortPulls: boolean, difficulty: DifficultyFilterValue) {
+async function getBossData(boss: NonNullable<Awaited<ReturnType<typeof getBoss>>>, includeShortPulls: boolean, difficulty: DifficultyFilterValue, realmId?: string) {
   const wipeEvidence = await db.encounter.findMany({
-    where: { bossId: boss.id, outcome: "WIPE", ...difficultyFilterWhere(difficulty) },
+    where: { bossId: boss.id, outcome: "WIPE", ...difficultyFilterWhere(difficulty), ...encounterRealmWhere(realmId) },
     select: { id: true, participants: { select: { deaths: true } } },
   });
   const deathsByEncounter = new Map(wipeEvidence.map(encounter => [encounter.id, encounter.participants]));
@@ -74,12 +76,12 @@ async function getBossData(boss: NonNullable<Awaited<ReturnType<typeof getBoss>>
 
   // All-time DPS leaderboard (kills only)
   const dpsLeaders = await db.participant.findMany({
-    where: { encounter: { bossId: boss.id, outcome: "KILL", ...difficultyFilterWhere(difficulty) }, dps: { gt: 0 } },
+    where: { encounter: { bossId: boss.id, outcome: "KILL", ...difficultyFilterWhere(difficulty), ...encounterRealmWhere(realmId) }, dps: { gt: 0 } },
     orderBy: { dps: "desc" },
     take: 25,
     distinct: ["playerId"],
     include: {
-      player: { select: { name: true, class: true } },
+      player: { select: { name: true, class: true, realmId: true } },
       encounter: {
         select: { id: true, difficulty: true, durationSeconds: true, startedAt: true,
           boss: { select: { name: true, slug: true } } },
@@ -89,12 +91,12 @@ async function getBossData(boss: NonNullable<Awaited<ReturnType<typeof getBoss>>
 
   // All-time HPS leaderboard
   const hpsLeaders = await db.participant.findMany({
-    where: { encounter: { bossId: boss.id, outcome: "KILL", ...difficultyFilterWhere(difficulty) }, hps: { gt: 100 } },
+    where: { encounter: { bossId: boss.id, outcome: "KILL", ...difficultyFilterWhere(difficulty), ...encounterRealmWhere(realmId) }, hps: { gt: 100 } },
     orderBy: { hps: "desc" },
     take: 25,
     distinct: ["playerId"],
     include: {
-      player: { select: { name: true, class: true } },
+      player: { select: { name: true, class: true, realmId: true } },
       encounter: {
         select: { id: true, difficulty: true, durationSeconds: true, startedAt: true,
           boss: { select: { name: true, slug: true } } },
@@ -110,26 +112,29 @@ export default async function BossPage({ params, searchParams }: Props) {
   const query = await searchParams;
   const includeShortPulls = parseIncludeShortPulls(query.includeShortPulls);
   const difficulty = parseDifficultyFilter(query.difficulty);
+  const realmId = parseRealmFilter(query.realmId);
   const querySuffix = reportQueryString(query, { difficulty: difficulty === "all" ? null : difficulty });
-  const boss = await getBoss(bossSlug, difficulty);
+  const [boss, realms] = await Promise.all([getBoss(bossSlug, difficulty, realmId), getRealmOptions()]);
   if (!boss) notFound();
 
   return (
     <Suspense fallback={<PageLoading message="Loading boss..." />}>
-      <BossContent boss={boss} bossSlug={bossSlug} includeShortPulls={includeShortPulls} difficulty={difficulty} querySuffix={querySuffix} query={query} />
+      <BossContent boss={boss} bossSlug={bossSlug} includeShortPulls={includeShortPulls} difficulty={difficulty} realmId={realmId} realms={realms} querySuffix={querySuffix} query={query} />
     </Suspense>
   );
 }
 
-async function BossContent({ boss, bossSlug, includeShortPulls, difficulty, querySuffix, query }: {
+async function BossContent({ boss, bossSlug, includeShortPulls, difficulty, realmId, realms, querySuffix, query }: {
   boss: NonNullable<Awaited<ReturnType<typeof getBoss>>>;
   bossSlug: string;
   includeShortPulls: boolean;
   difficulty: DifficultyFilterValue;
+  realmId?: string;
+  realms: Awaited<ReturnType<typeof getRealmOptions>>;
   querySuffix: string;
   query: ReportSearchParams;
 }) {
-  const { dpsLeaders, hpsLeaders, counts, visibleEncounters } = await getBossData(boss, includeShortPulls, difficulty);
+  const { dpsLeaders, hpsLeaders, counts, visibleEncounters } = await getBossData(boss, includeShortPulls, difficulty, realmId);
 
   const kills = boss.encounters.filter(e => e.outcome === "KILL");
   const fastestKill = kills.reduce<number | null>((fastest, encounter) => {
@@ -158,8 +163,8 @@ async function BossContent({ boss, bossSlug, includeShortPulls, difficulty, quer
       <PageHeader title={boss.name} description={<p>{boss.raid} · Fight history and kill rankings</p>} />
 
       <div className="space-y-3">
-        <DifficultyFilter action={`/bosses/${bossSlug}`} id="boss" difficulty={difficulty} searchParams={query} />
-        <p className="text-sm text-text-secondary">{difficultyScopeLabel(difficulty)}. Choose one difficulty to compare the same raid size and mode.</p>
+        <DifficultyFilter action={`/bosses/${bossSlug}`} id="boss" difficulty={difficulty} searchParams={query} realms={realms} realmId={realmId} />
+        <p className="text-sm text-text-secondary">{realmScopeLabel(realms, realmId)} · {difficultyScopeLabel(difficulty)}. Choose one difficulty to compare the same raid size and mode.</p>
       </div>
       <SectionNav label="Boss page sections" items={[
         { id: "boss-history", label: "Fight history" },
@@ -199,6 +204,7 @@ async function BossContent({ boss, bossSlug, includeShortPulls, difficulty, quer
             entries={dpsLeaders.map((p, i) => ({
               rank:        i + 1,
               playerName:  p.player.name,
+              realmId: p.player.realmId,
               class:       p.player.class,
               value:       p.dps,
               bossName:    p.encounter.boss.name,
@@ -223,6 +229,7 @@ async function BossContent({ boss, bossSlug, includeShortPulls, difficulty, quer
             entries={hpsLeaders.map((p, i) => ({
               rank:        i + 1,
               playerName:  p.player.name,
+              realmId: p.player.realmId,
               class:       p.player.class,
               value:       p.hps,
               bossName:    p.encounter.boss.name,

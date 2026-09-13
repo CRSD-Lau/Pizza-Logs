@@ -25,6 +25,7 @@ const mocks: Record<string, unknown> = {
   },
   "@/components/players/PlayerRaidComparisonSection": { PlayerRaidComparisonSection: () => null, PlayerRaidComparisonSkeleton: () => null },
   "@/lib/db": { db: {
+    realm: { findMany: async () => [] },
     player: { findFirst: async () => ({ name: "Synthetic", class: "Mage", realm: { name: "Lordaeron" }, milestones: [] }) },
     guildRosterMember: { findFirst: async () => null }, participant: { findMany: async () => attempts },
     boss: { findUnique: async () => boss, findMany: async () => [boss] },

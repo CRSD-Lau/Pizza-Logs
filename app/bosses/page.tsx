@@ -15,6 +15,8 @@ import { PageHeader, PageShell } from "@/components/ui/PageLayout";
 import { countAttempts, parseIncludeShortPulls } from "@/lib/attempt-policy";
 import { DifficultyFilter } from "@/components/reports/DifficultyFilter";
 import { difficultyFilterWhere, difficultyScopeLabel, parseDifficultyFilter, reportQueryString, type DifficultyFilterValue, type ReportSearchParams } from "@/lib/difficulty-filter";
+import { encounterRealmWhere, parseRealmFilter, realmScopeLabel } from "@/lib/realm-filter";
+import { getRealmOptions } from "@/lib/realm-filter.server";
 
 import { buildPageMetadata } from "@/lib/page-metadata";
 
@@ -28,12 +30,12 @@ export const dynamic = "force-dynamic";
 const BOSS_GRID_COLUMNS = "minmax(0,2fr) minmax(60px,max-content) minmax(60px,max-content) 64px minmax(150px,1fr) 108px";
 const EMPTY_VALUE = "-";
 
-async function getBossStats(includeShortPulls: boolean, difficulty: DifficultyFilterValue) {
+async function getBossStats(includeShortPulls: boolean, difficulty: DifficultyFilterValue, realmId?: string) {
   const bosses = await db.boss.findMany({
     orderBy: { sortOrder: "asc" },
     include: {
       encounters: {
-        where: difficultyFilterWhere(difficulty),
+        where: { ...difficultyFilterWhere(difficulty), ...encounterRealmWhere(realmId) },
         select: {
           id:              true,
           outcome:         true,
@@ -53,7 +55,7 @@ async function getBossStats(includeShortPulls: boolean, difficulty: DifficultyFi
   // The ranking query deliberately keeps just the top DPS actor. Classifying
   // an attempt requires death evidence from every participant instead.
   const wipeEvidence = await db.encounter.findMany({
-    where: { outcome: "WIPE", ...difficultyFilterWhere(difficulty) },
+    where: { outcome: "WIPE", ...difficultyFilterWhere(difficulty), ...encounterRealmWhere(realmId) },
     select: { id: true, participants: { select: { deaths: true } } },
   });
   const deathsByEncounter = new Map(wipeEvidence.map(encounter => [encounter.id, encounter.participants]));
@@ -106,12 +108,14 @@ async function BossesPageContent({ searchParams }: Props) {
   const query = await searchParams;
   const includeShortPulls = parseIncludeShortPulls(query.includeShortPulls);
   const difficulty = parseDifficultyFilter(query.difficulty);
+  const realmId = parseRealmFilter(query.realmId);
   const querySuffix = reportQueryString(query, { difficulty: difficulty === "all" ? null : difficulty });
   let databaseAvailable = true;
   let bosses: Awaited<ReturnType<typeof getBossStats>> = [];
+  let realms: Awaited<ReturnType<typeof getRealmOptions>> = [];
 
   try {
-    bosses = await getBossStats(includeShortPulls, difficulty);
+    [bosses, realms] = await Promise.all([getBossStats(includeShortPulls, difficulty, realmId), getRealmOptions()]);
   } catch (error) {
     if (!isDatabaseConnectionError(error)) throw error;
     databaseAvailable = false;
@@ -146,8 +150,8 @@ async function BossesPageContent({ searchParams }: Props) {
       {databaseAvailable && (
         <>
         <div className="space-y-3">
-          <DifficultyFilter action="/bosses" id="bosses" difficulty={difficulty} searchParams={query} />
-          <p className="text-sm text-text-secondary">{difficultyScopeLabel(difficulty)}. Top DPS uses successful attempts. Fastest kills use known recorded kill durations.</p>
+          <DifficultyFilter action="/bosses" id="bosses" difficulty={difficulty} searchParams={query} realms={realms} realmId={realmId} />
+          <p className="text-sm text-text-secondary">{realmScopeLabel(realms, realmId)} · {difficultyScopeLabel(difficulty)}. Top DPS uses successful attempts. Fastest kills use known recorded kill durations.</p>
         </div>
         </>
       )}

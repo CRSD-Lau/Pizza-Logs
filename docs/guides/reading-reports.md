@@ -202,7 +202,37 @@ including hidden lines. Its pagination only changes the table rows; every raid
 remains available on the chart. Gear, buffs, kill time and raid
 assignments can affect these rates; they do not measure skill in isolation.
 
-The player directory is alphabetical, with name and class filters. Guild roster search filters all members before pagination. Neither directory assigns an overall performance rank. Raid history has pagination by upload, keeping every session from an upload together and stating the visible window.
+The player directory is alphabetical, with realm, name and class filters. Guild roster search filters all members before pagination. Neither directory assigns an overall performance rank. Raid history has pagination by upload, keeping every session from an upload together and stating the visible window.
+
+### Realm filtering
+
+**Realm** is available on Raids, Players, Bosses (including individual bosses),
+Leaderboards and This Week. **All realms** is the default. Select a realm and
+apply the filters to scope lists, counts, weekly results, personal-best records
+and all-time averages. Realm labels include the host to distinguish servers
+with the same name. Changing realm starts pagination at the first page and keeps
+the other selected filters. Player class shortcuts and pagination keep the realm.
+
+The selection is stored as `realmId` in the URL, so refresh, browser back/forward
+and shared links preserve it. Main navigation between browsing sections carries
+the realm, and header player search searches that realm. Search results open the
+character's exact realm. The upload form retains its own explicit realm choice;
+the homepage activity totals and the PizzaWarriors guild roster retain their
+existing scopes.
+
+Filtering uses the stored upload realm for fights and their statistics and the
+stored player realm for the player directory. Records without a stored realm
+appear only in All realms; selecting Lordaeron does not assign those records to
+Lordaeron. A link to an unavailable realm keeps an **Unavailable realm** selection
+and empty results. Choose All realms or another realm to continue. Filtering
+does not rewrite reports, alter historical awards or require re-uploading logs.
+
+Public `/api/encounters`, `/api/leaderboard`, `/api/bosses`, `/api/weekly` and
+`/api/players/search` also accept `realmId`. Omit it or leave it blank for the
+existing combined scope. Filters run before ranking limits and pagination.
+Player profile links and `/api/players/[name]` accept the stored realm ID to
+distinguish same-name characters; an unavailable player/realm combination returns
+not found. Existing name-only links keep their previous behavior.
 
 Profile and encounter awards describe the rank **when achieved**, for the named boss, difficulty, metric and period. They are historical awards, not continuously recalculated current standings. Use the linked leaderboards for current comparisons.
 

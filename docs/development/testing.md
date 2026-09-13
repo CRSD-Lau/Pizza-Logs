@@ -182,6 +182,13 @@ HTTP redirect so upload bodies cannot be forwarded to a different destination.
 
 ## CI and Security Gates
 
+`scripts/realm-filter-e2e.mjs` runs in `test:e2e` against the isolated loopback
+web/database stack. It creates invocation-owned realms, same-name players,
+rankings and null-realm history, then removes only its own rows. It verifies
+realm isolation before limits, empty selections, filter and pagination URL
+preservation, scoped navigation/search and mobile/desktop layout. Screenshots
+and the attributed result report are saved under `.test-artifacts/realm-filter`.
+
 The players-directory acceptance script can also run against the isolated, migrated and seeded loopback web/database stack:
 
 ```bash

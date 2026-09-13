@@ -1,12 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { LeaderboardQuerySchema } from "@/lib/api-query";
+import { encounterRealmWhere } from "@/lib/realm-filter";
 
 export async function GET(req: NextRequest): Promise<NextResponse> {
   const { searchParams } = new URL(req.url);
   const query = LeaderboardQuerySchema.safeParse(Object.fromEntries(searchParams));
   if (!query.success) return NextResponse.json({ error: "Invalid leaderboard filters or pagination." }, { status: 400 });
-  const { boss: bossSlug, difficulty, metric, take } = query.data;
+  const { boss: bossSlug, difficulty, metric, realmId, take } = query.data;
 
   const field = metric === "hps" ? "hps" : "dps";
 
@@ -16,6 +17,7 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
       encounter: {
         ...(bossSlug   ? { boss: { slug: bossSlug } } : {}),
         ...(difficulty ? { difficulty } : {}),
+        ...encounterRealmWhere(realmId),
         outcome: "KILL",
       },
     },

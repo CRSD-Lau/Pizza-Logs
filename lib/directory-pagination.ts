@@ -40,12 +40,13 @@ export function directoryNameMatches(name: string, query: string): boolean {
 }
 
 export function buildDirectoryHref(path: string, options: {
-  query?: string; classFilter?: string; page?: number; includeShortPulls?: boolean;
+  query?: string; classFilter?: string; page?: number; includeShortPulls?: boolean; realmId?: string;
 } = {}): string {
   const params = new URLSearchParams();
   if (options.query) params.set("q", options.query);
   if (options.classFilter) params.set("class", options.classFilter);
   if (options.page && options.page > 1) params.set("page", String(options.page));
   if (options.includeShortPulls) params.set("includeShortPulls", "1");
+  if (options.realmId) params.set("realmId", options.realmId);
   return params.size ? `${path}?${params}` : path;
 }

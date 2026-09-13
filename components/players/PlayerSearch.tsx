@@ -10,11 +10,13 @@ import {
   type PlayerSearchResult,
 } from "@/lib/player-search";
 import { getClassColor } from "@/lib/constants/classes";
+import { realmBrowseHref } from "@/lib/realm-filter";
 import { cn } from "@/lib/utils";
 
 type PlayerSearchProps = {
   className?: string;
   onNavigate?: () => void;
+  realmId?: string;
 };
 
 type PlayerSearchResponse =
@@ -23,7 +25,7 @@ type PlayerSearchResponse =
 
 const DEBOUNCE_MS = 220;
 
-export function PlayerSearch({ className, onNavigate }: PlayerSearchProps) {
+export function PlayerSearch({ className, onNavigate, realmId }: PlayerSearchProps) {
   const router = useRouter();
   const resultListId = useId();
   const inputRef = useRef<HTMLInputElement>(null);
@@ -59,6 +61,8 @@ export function PlayerSearch({ className, onNavigate }: PlayerSearchProps) {
 
   useEffect(() => {
     const normalized = debouncedQuery.toLowerCase();
+    const scope = realmId?.trim() || "";
+    const cacheKey = `${scope}:${normalized}`;
     setActiveIndex(-1);
 
     if (!normalized) {
@@ -68,7 +72,7 @@ export function PlayerSearch({ className, onNavigate }: PlayerSearchProps) {
       return;
     }
 
-    const cached = cacheRef.current[normalized];
+    const cached = cacheRef.current[cacheKey];
     if (cached) {
       setResults(cached);
       setError(null);
@@ -80,7 +84,9 @@ export function PlayerSearch({ className, onNavigate }: PlayerSearchProps) {
     setLoading(true);
     setError(null);
 
-    fetch(`/api/players/search?q=${encodeURIComponent(debouncedQuery)}`, {
+    const params = new URLSearchParams({ q: debouncedQuery });
+    if (scope) params.set("realmId", scope);
+    fetch(`/api/players/search?${params}`, {
       signal: controller.signal,
       headers: { Accept: "application/json" },
     })
@@ -88,7 +94,7 @@ export function PlayerSearch({ className, onNavigate }: PlayerSearchProps) {
         const payload = await response.json() as PlayerSearchResponse;
         if (controller.signal.aborted) return;
         if (!response.ok || !payload.ok) throw new Error(payload.ok ? "Player search failed" : payload.error);
-        cacheRef.current[normalized] = payload.results;
+        cacheRef.current[cacheKey] = payload.results;
         setResults(payload.results);
       })
       .catch((fetchError: unknown) => {
@@ -101,7 +107,7 @@ export function PlayerSearch({ className, onNavigate }: PlayerSearchProps) {
       });
 
     return () => controller.abort();
-  }, [debouncedQuery]);
+  }, [debouncedQuery, realmId]);
 
   const showDropdown = open && sanitizePlayerSearchQuery(query).length > 0;
   const pendingQuery = sanitizePlayerSearchQuery(query) !== debouncedQuery;
@@ -243,7 +249,7 @@ export function PlayerSearch({ className, onNavigate }: PlayerSearchProps) {
 
             return (
               <button
-                key={`${result.realmName}:${result.name}`}
+                key={`${result.realmId ?? `${result.realmHost ?? "legacy"}:${result.realmName}`}:${result.name}`}
                 type="button"
                 id={`${resultListId}-option-${index}`}
                 tabIndex={-1}
@@ -274,7 +280,7 @@ export function PlayerSearch({ className, onNavigate }: PlayerSearchProps) {
           })}
           </div>}
           {!searching && visibleResults.length === 0 && (
-            <Link href="/players" className="inline-flex min-h-11 items-center px-3 text-sm font-semibold text-gold hover:text-gold-light">Browse all players</Link>
+            <Link href={realmBrowseHref("/players", realmId)} className="inline-flex min-h-11 items-center px-3 text-sm font-semibold text-gold hover:text-gold-light">Browse players</Link>
           )}
         </div>
       )}

@@ -2,11 +2,12 @@ import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { bossAggregateQuery, type BossAggregate } from "@/lib/report-aggregates";
 import { parseIncludeShortPulls } from "@/lib/attempt-policy";
+import { parseRealmFilter } from "@/lib/realm-filter";
 
 export async function GET(req: NextRequest): Promise<NextResponse> {
   const { searchParams } = new URL(req.url);
   const raidSlug  = searchParams.get("raid") ?? undefined;
-  const realmId   = searchParams.get("realmId") ?? undefined;
+  const realmId   = parseRealmFilter(searchParams.get("realmId"));
   const difficulty = searchParams.get("difficulty") ?? undefined;
   const includeShortPulls = parseIncludeShortPulls(searchParams.get("includeShortPulls"));
 

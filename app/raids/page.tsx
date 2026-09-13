@@ -13,18 +13,22 @@ import { countAttempts, parseIncludeShortPulls } from "@/lib/attempt-policy";
 import { buildPageMetadata } from "@/lib/page-metadata";
 import { buildDirectoryHref, getDirectoryPagination, parseDirectoryPage, type DirectoryQueryValue } from "@/lib/directory-pagination";
 import { formatCountLabel, formatDateUtc, formatDateTimeRangeUtc, formatInteger } from "@/lib/utils";
+import { parseRealmFilter, realmFilterWhere, type RealmOption } from "@/lib/realm-filter";
+import { getRealmOptions } from "@/lib/realm-filter.server";
+import { RealmFilter } from "@/components/reports/RealmFilter";
+import { reportQueryString } from "@/lib/difficulty-filter";
 
 export const metadata = buildPageMetadata({
   title: "Raids",
-  description: "Browse public PizzaWarriors raid reports by date, instance, and result.",
+  description: "Browse public raid reports by realm, date, instance, and result.",
   path: "/raids",
 });
 export const dynamic = "force-dynamic";
 
 const RAID_UPLOADS_PER_PAGE = 20;
 
-async function getRaidUploads(requestedPage: number) {
-  const where = { encounters: { some: {} } };
+async function getRaidUploads(requestedPage: number, realmId?: string) {
+  const where = { encounters: { some: {} }, ...realmFilterWhere(realmId) };
   const totalUploads = await db.upload.count({ where });
   const pagination = getDirectoryPagination(totalUploads, requestedPage, RAID_UPLOADS_PER_PAGE);
   const uploads = await db.upload.findMany({
@@ -56,7 +60,7 @@ async function getRaidUploads(requestedPage: number) {
 }
 
 interface Props {
-  searchParams: Promise<{ page?: DirectoryQueryValue; includeShortPulls?: DirectoryQueryValue }>;
+  searchParams: Promise<{ page?: DirectoryQueryValue; includeShortPulls?: DirectoryQueryValue; realmId?: DirectoryQueryValue }>;
 }
 
 export default function RaidsPage(props: Props) {
@@ -70,18 +74,20 @@ export default function RaidsPage(props: Props) {
 async function RaidsPageContent({ searchParams }: Props) {
   const params = await searchParams;
   const includeShortPulls = parseIncludeShortPulls(params.includeShortPulls);
-  const querySuffix = includeShortPulls ? "?includeShortPulls=1" : "";
+  const realmId = parseRealmFilter(params.realmId);
+  const querySuffix = reportQueryString({ includeShortPulls: includeShortPulls ? "1" : undefined, realmId });
+  let realms: RealmOption[] = [];
   let databaseAvailable = true;
   let data: Awaited<ReturnType<typeof getRaidUploads>> | null = null;
 
   try {
-    data = await getRaidUploads(parseDirectoryPage(params.page));
+    [data, realms] = await Promise.all([getRaidUploads(parseDirectoryPage(params.page), realmId), getRealmOptions()]);
   } catch (error) {
     if (!isDatabaseConnectionError(error)) throw error;
     databaseAvailable = false;
   }
   const uploads = data?.uploads ?? [];
-  const pageHref = (page: number) => buildDirectoryHref("/raids", { page, includeShortPulls });
+  const pageHref = (page: number) => buildDirectoryHref("/raids", { page, includeShortPulls, realmId });
 
   type SessionCard = {
     publicReportSlug: string;
@@ -158,6 +164,8 @@ async function RaidsPageContent({ searchParams }: Props) {
         </p>}
       />
 
+      {databaseAvailable && <RealmFilter action="/raids" id="raids" realms={realms} realmId={realmId} searchParams={params} />}
+
       {data && data.totalUploads > 0 && (
         <p className="text-sm text-text-secondary">
           Uploads {formatInteger(data.pagination.firstVisible)}–{formatInteger(data.pagination.lastVisible)} of {formatInteger(data.totalUploads)} · Newest uploads first.
@@ -171,8 +179,8 @@ async function RaidsPageContent({ searchParams }: Props) {
 
       {databaseAvailable && (sessions.length === 0 ? (
         <EmptyState
-          title="No raids yet"
-          description="Upload a combat log to get started."
+          title={realmId ? "No raids for this realm" : "No raids yet"}
+          description={realmId ? "Choose another realm or upload a combat log for this realm." : "Upload a combat log to get started."}
           action={<Link href="/" className="text-gold hover:text-gold-light text-sm">Upload a log &rarr;</Link>}
         />
       ) : (

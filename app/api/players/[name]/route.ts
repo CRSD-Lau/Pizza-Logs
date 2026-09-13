@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { parseIncludeShortPulls } from "@/lib/attempt-policy";
 import { countedAttemptWhere, shortPullWhere } from "@/lib/attempt-policy.server";
+import { PlayerSearchQuerySchema } from "@/lib/api-query";
 
 export async function GET(
   request: Request,
@@ -9,10 +10,15 @@ export async function GET(
 ): Promise<NextResponse> {
   const { name } = await params;
   const decodedName = name;
-  const includeShortPulls = parseIncludeShortPulls(new URL(request.url).searchParams.get("includeShortPulls"));
+  const searchParams = new URL(request.url).searchParams;
+  const realmFilter = PlayerSearchQuerySchema.safeParse({ realmId: searchParams.get("realmId") ?? undefined });
+  if (!realmFilter.success) {
+    return NextResponse.json({ error: "Invalid player realm." }, { status: 400 });
+  }
+  const includeShortPulls = parseIncludeShortPulls(searchParams.get("includeShortPulls"));
 
   const player = await db.player.findFirst({
-    where: { name: decodedName },
+    where: { name: decodedName, ...(realmFilter.data.realmId ? { realmId: realmFilter.data.realmId } : {}) },
     include: {
       milestones: {
         where: { supersededAt: null },

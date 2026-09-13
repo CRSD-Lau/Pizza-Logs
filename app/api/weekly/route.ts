@@ -4,10 +4,11 @@ import { getWeekBounds } from "@/lib/utils";
 import { sortByICCOrder } from "@/lib/constants/bosses";
 import { weeklyAggregateQuery, type WeeklyAggregate } from "@/lib/report-aggregates";
 import { parseIncludeShortPulls } from "@/lib/attempt-policy";
+import { parseRealmFilter } from "@/lib/realm-filter";
 
 export async function GET(req: NextRequest): Promise<NextResponse> {
   const { searchParams } = new URL(req.url);
-  const realmId = searchParams.get("realmId") ?? undefined;
+  const realmId = parseRealmFilter(searchParams.get("realmId"));
   const includeShortPulls = parseIncludeShortPulls(searchParams.get("includeShortPulls"));
 
   const { start, end } = getWeekBounds();

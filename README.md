@@ -23,6 +23,7 @@ The [1.0.0 release contract](docs/releases/1.0.0.md) defines the stable canonica
 - Reports raid sessions, boss attempts, target damage, healing, absorbs, deaths, auras, consumables, power gains, specs, roles, and pets.
 - Offers All Boss Attempts and Successful Boss Fights views with matching player totals, target damage and rates; full-session trash and downtime remain a separate view.
 - Tracks all-time records, weekly results, boss history, and player performance.
+- Filters raids, players, boss history, weekly results and leaderboards by realm, with shareable URLs and realm-aware player search.
 - Adds first-party Warmane roster and gear lookups with durable cached fallback.
 - Protects diagnostics, cleanup, import, and refresh controls behind server-side admin authentication.
 - Runs as separate Next.js and FastAPI services backed by PostgreSQL on Railway.

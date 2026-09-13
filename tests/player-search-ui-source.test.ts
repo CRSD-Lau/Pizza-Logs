@@ -14,6 +14,7 @@ assert.match(component, /addEventListener\("mousedown"/);
 assert.match(component, /debounce/i);
 assert.match(component, /cacheRef/);
 assert.match(component, /getPlayerSearchKeyboardAction/);
+assert.match(component, /realmBrowseHref\("\/players", realmId\)/);
 
 assert.match(nav, /import \{ PlayerSearch \}/);
 assert.match(nav, /min-w-0 flex-1 xl:max-w-72[\s\S]*<PlayerSearch/);
