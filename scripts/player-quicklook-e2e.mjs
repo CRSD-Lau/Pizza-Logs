@@ -257,9 +257,16 @@ export async function verifyPlayerQuickLooks({ browser, base, out, report, encou
     try {
       const page = await context.newPage();
       for (const [index, surface] of surfaces.entries()) {
+        // The Escape regression needs a viewport with too little space above
+        // or below the trigger for the gear panel. Do not rely on header height
+        // or the player directory's incidental document position to create it.
+        await page.setViewportSize({ width: 1440, height: surface.name === "player index" ? 700 : 1000 });
         await page.mouse.move(0, 0);
         const before = { ...requests };
         const avatar = await openSurface(page, base, surface);
+        if (surface.name === "player index") {
+          await avatar.evaluate(element => element.scrollIntoView({ block: "center", behavior: "instant" }));
+        }
         assert.equal(requests.gear, before.gear, `${surface.name}: rendering must not eagerly fetch gear`);
         assert.equal(requests.viewer, before.viewer, `${surface.name}: rendering must not start the viewer`);
         if (index === 0) {
