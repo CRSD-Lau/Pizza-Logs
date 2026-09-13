@@ -16,8 +16,8 @@ assert.match(component, /cacheRef/);
 assert.match(component, /getPlayerSearchKeyboardAction/);
 
 assert.match(nav, /import \{ PlayerSearch \}/);
-assert.match(nav, /hidden xl:block[\s\S]*<PlayerSearch/);
-assert.match(nav, /xl:hidden[\s\S]*<PlayerSearch/);
+assert.match(nav, /min-w-0 flex-1 xl:max-w-72[\s\S]*<PlayerSearch/);
+assert.equal((nav.match(/<PlayerSearch\b/g) ?? []).length, 1, "Share one search across desktop and mobile");
 assert.match(nav, /onNavigate=\{\(\) => setMobileOpen\(false\)\}/);
 
 console.log("player-search-ui-source tests passed");

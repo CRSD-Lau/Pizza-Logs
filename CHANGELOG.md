@@ -14,6 +14,8 @@ This project follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) an
 
 ### Added
 
+- Add the Wrath HD language selector beside player search on public pages, opening the current page and its filters in Google Translate in a new tab.
+
 - Add durable owner email notifications for each newly stored log and a once-daily UTC traffic/operations digest. A separate Railway cron worker retries delivery without delaying uploads and includes clearly labelled live Railway usage estimates when its worker-only billing token is authorized.
 
 - Publish onsite privacy and terms pages with direct footer links and sitemap entries. Clarify required uploader names, public report retention, and direct browser requests to Google and game CDNs; keep one authoritative privacy notice.
