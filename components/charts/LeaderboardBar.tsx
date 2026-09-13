@@ -4,10 +4,12 @@ import Link from "next/link";
 import { cn, formatDps, formatInteger, formatShortDateUtc } from "@/lib/utils";
 import { getClassColor } from "@/lib/constants/classes";
 import { getRevealClassName, getRevealStyle } from "@/lib/ui-animation";
+import { buildPlayerProfilePath } from "@/lib/player-search";
 
 interface LeaderboardEntry {
   rank: number;
   playerName: string;
+  realmId?: string | null;
   class?: string | null;
   value: number;
   bossName: string;
@@ -61,7 +63,7 @@ export function LeaderboardBar({ entries, metric, className, querySuffix = "", s
               </span>
 
               <Link
-                href={`/players/${encodeURIComponent(e.playerName)}`}
+                href={buildPlayerProfilePath(e.playerName, undefined, e.realmId ?? undefined)}
                 className="flex min-h-11 min-w-0 items-center text-sm font-semibold hover:underline"
                 style={{ color }}
               >

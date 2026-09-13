@@ -3,6 +3,7 @@ import { countedAttemptWhere } from "./attempt-policy.server";
 import { directoryNameMatches, getDirectoryPagination } from "./directory-pagination";
 import { normalizePlayerClass } from "./player-class";
 import { DEFAULT_PLAYER_REALM, playerIdentityKey, resolvePlayerIdentity, type PlayerIdentityObservation } from "./player-identity";
+import { encounterRealmWhere } from "./realm-filter";
 
 export const PLAYERS_PER_PAGE = 30;
 
@@ -54,11 +55,12 @@ export async function getStoredPlayerIdentity(name: string, realm: string, logCl
   return resolvePlayerIdentity({ name, realmName: realm, class: logClass }, await getStoredPlayerIdentityObservations(name, realm));
 }
 
-export async function getPlayersPageData(query: string, classFilter: string | undefined, requestedPage: number, includeShortPulls: boolean) {
+export async function getPlayersPageData(query: string, classFilter: string | undefined, requestedPage: number, includeShortPulls: boolean, realmId?: string) {
   const [storedPlayers, observations] = await Promise.all([
     db.player.findMany({
+      ...(realmId ? { where: { realmId } } : {}),
       orderBy: [{ name: "asc" }, { id: "asc" }],
-      select: { id: true, name: true, class: true, realm: { select: { name: true } } },
+      select: { id: true, name: true, class: true, realmId: true, realm: { select: { name: true } } },
     }),
     getStoredPlayerIdentityObservations(),
   ]);
@@ -72,7 +74,7 @@ export async function getPlayersPageData(query: string, classFilter: string | un
   const allPlayers = storedPlayers.map(player => {
     const realmName = player.realm?.name || DEFAULT_PLAYER_REALM;
     const identity = resolvePlayerIdentity({ ...player, realmName }, observationsByIdentity.get(playerIdentityKey(player.name, realmName)) ?? []);
-    return { id: player.id, name: player.name, class: identity.className, realm: { name: realmName },
+    return { id: player.id, name: player.name, class: identity.className, realmId: player.realmId, realm: { name: realmName },
       classSource: identity.classSource, raceName: identity.raceName, guildName: identity.guildName };
   });
   const canonicalFilter = normalizePlayerClass(classFilter);
@@ -82,7 +84,7 @@ export async function getPlayersPageData(query: string, classFilter: string | un
   const pagePlayers = filtered.slice(pagination.startIndex, pagination.startIndex + PLAYERS_PER_PAGE);
   const pullCounts = pagePlayers.length ? await db.player.findMany({
     where: { id: { in: pagePlayers.map(player => player.id) } },
-    select: { id: true, _count: { select: { participants: { where: { encounter: countedAttemptWhere({ includeShortPulls }) } } } } },
+    select: { id: true, _count: { select: { participants: { where: { encounter: { ...countedAttemptWhere({ includeShortPulls }), ...encounterRealmWhere(realmId) } } } } } },
   }) : [];
   const countsById = new Map(pullCounts.map(player => [player.id, player._count.participants]));
   return {

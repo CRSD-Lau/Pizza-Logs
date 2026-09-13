@@ -1,14 +1,18 @@
 import { DIFFICULTY_FILTERS, type DifficultyFilterValue, type ReportSearchParams } from "@/lib/difficulty-filter";
+import type { RealmOption } from "@/lib/realm-filter";
+import { RealmSelect } from "./RealmFilter";
 
-export function DifficultyFilter({ action, id, difficulty, searchParams, bosses, boss = "" }: {
+export function DifficultyFilter({ action, id, difficulty, searchParams, bosses, boss = "", realms, realmId }: {
   action: string;
   id: string;
   difficulty: DifficultyFilterValue;
   searchParams: ReportSearchParams;
   bosses?: Array<{ slug: string; name: string }>;
   boss?: string;
+  realms?: RealmOption[];
+  realmId?: string;
 }) {
-  const replacedFields = bosses ? ["difficulty", "boss"] : ["difficulty"];
+  const replacedFields = ["difficulty", "page", ...(bosses ? ["boss"] : []), ...(realms ? ["realmId"] : [])];
   return (
     <form action={action} method="get" className="grid grid-cols-[minmax(0,1fr)_auto] items-end gap-3 sm:flex sm:flex-wrap" aria-label="Comparison filters">
       {Object.entries(searchParams).filter(([key]) => !replacedFields.includes(key)).flatMap(([key, value]) => (
@@ -16,6 +20,7 @@ export function DifficultyFilter({ action, id, difficulty, searchParams, bosses,
           <input key={`${key}-${index}`} type="hidden" name={key} value={item} />
         ))
       ))}
+      {realms && <RealmSelect id={id} realms={realms} realmId={realmId} />}
       {bosses && (
         <div className="col-span-2 grid min-w-0 gap-1.5 sm:flex-none">
           <label htmlFor={`${id}-boss`} className="text-sm font-semibold text-text-secondary">Boss</label>

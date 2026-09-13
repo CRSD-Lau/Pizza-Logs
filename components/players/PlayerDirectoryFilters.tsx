@@ -4,23 +4,28 @@ import { WOW_CLASSES } from "@/lib/constants/classes";
 import { buildDirectoryHref } from "@/lib/directory-pagination";
 import { getPlayerClassMeta } from "@/lib/player-class";
 import { PlayerDirectoryClassIcon } from "./PlayerDirectory";
+import { RealmSelect } from "@/components/reports/RealmFilter";
+import type { RealmOption } from "@/lib/realm-filter";
 
 export const playerDirectoryActionClass = "inline-flex min-h-11 items-center justify-center gap-2 rounded-sm border border-gold-dim px-4 py-2 text-sm font-semibold text-text-secondary hover:border-gold hover:text-gold-light focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-gold";
 const fieldClass = "min-h-11 w-full rounded-sm border border-gold-dim bg-bg-card px-3 py-2 text-base text-text-primary focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-gold";
 
-export function PlayerDirectoryFilters({ query, classFilter, includeShortPulls }: {
+export function PlayerDirectoryFilters({ query, classFilter, includeShortPulls, realms, realmId }: {
   query: string;
   classFilter?: string;
   includeShortPulls: boolean;
+  realms?: RealmOption[];
+  realmId?: string;
 }) {
-  const resetHref = buildDirectoryHref("/players", { includeShortPulls });
+  const resetHref = buildDirectoryHref("/players", { includeShortPulls, realmId });
   const classHref = (selectedClass?: string) => buildDirectoryHref("/players", {
-    query, classFilter: selectedClass, includeShortPulls,
+    query, classFilter: selectedClass, includeShortPulls, realmId,
   });
 
   return (
     <section aria-label="Find players" className="space-y-4">
-      <form key={`${query}:${classFilter ?? ""}`} action="/players" method="get" role="search" aria-label="Filter player directory" className="grid grid-cols-2 items-end gap-3 sm:flex sm:flex-wrap">
+      <form key={`${query}:${classFilter ?? ""}:${realmId ?? ""}`} action="/players" method="get" role="search" aria-label="Filter player directory" className="grid grid-cols-2 items-end gap-3 sm:flex sm:flex-wrap">
+        {realms && <div className="col-span-2 min-w-0"><RealmSelect id="directory" realms={realms} realmId={realmId} /></div>}
         <div className="col-span-2 min-w-0 sm:min-w-60 sm:flex-1">
           <label htmlFor="directory-player-name" className="mb-2 block text-sm font-semibold text-text-secondary">Player name</label>
           <div className="relative">

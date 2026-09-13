@@ -13,6 +13,8 @@ import { PageHeader, PageShell } from "@/components/ui/PageLayout";
 import { AccordionSection } from "@/components/ui/AccordionSection";
 import { DifficultyFilter } from "@/components/reports/DifficultyFilter";
 import { difficultyFilterWhere, difficultyScopeLabel, parseDifficultyFilter, reportQueryString, type DifficultyFilterValue, type ReportSearchParams } from "@/lib/difficulty-filter";
+import { encounterRealmWhere, parseRealmFilter, realmScopeLabel } from "@/lib/realm-filter";
+import { getRealmOptions } from "@/lib/realm-filter.server";
 
 import { buildPageMetadata } from "@/lib/page-metadata";
 import { formatCountLabel } from "@/lib/utils";
@@ -24,7 +26,7 @@ export const metadata = buildPageMetadata({
 });
 export const dynamic = "force-dynamic";
 
-async function getLeaderboardBoards(difficulty: DifficultyFilterValue, requestedBoss: string | undefined) {
+async function getLeaderboardBoards(difficulty: DifficultyFilterValue, requestedBoss: string | undefined, realmId?: string) {
   const bossesWithAttempts = await db.boss.findMany({
     where:   { encounters: { some: {} } },
     orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
@@ -35,27 +37,27 @@ async function getLeaderboardBoards(difficulty: DifficultyFilterValue, requested
   const visibleBosses = selectedBoss ? orderedBosses.filter(boss => boss.slug === selectedBoss) : orderedBosses;
 
   const [averages, boards] = await Promise.all([
-    getAverageLeaderboards(db, difficulty, selectedBoss ? visibleBosses[0].id : undefined),
+    getAverageLeaderboards(db, difficulty, selectedBoss ? visibleBosses[0].id : undefined, realmId),
     Promise.all(
     visibleBosses.map(async boss => {
       const [dpsRows, hpsRows] = await Promise.all([
         db.participant.findMany({
-          where:    { encounter: { bossId: boss.id, outcome: "KILL", ...difficultyFilterWhere(difficulty) }, dps: { gt: 0 } },
+          where:    { encounter: { bossId: boss.id, outcome: "KILL", ...difficultyFilterWhere(difficulty), ...encounterRealmWhere(realmId) }, dps: { gt: 0 } },
           orderBy:  { dps: "desc" },
           take:     10,
           distinct: ["playerId"],
           include: {
-            player:    { select: { name: true, class: true } },
+            player:    { select: { name: true, class: true, realmId: true } },
             encounter: { select: { id: true, difficulty: true, startedAt: true } },
           },
         }),
         db.participant.findMany({
-          where:    { encounter: { bossId: boss.id, outcome: "KILL", ...difficultyFilterWhere(difficulty) }, hps: { gt: 100 } },
+          where:    { encounter: { bossId: boss.id, outcome: "KILL", ...difficultyFilterWhere(difficulty), ...encounterRealmWhere(realmId) }, hps: { gt: 100 } },
           orderBy:  { hps: "desc" },
           take:     10,
           distinct: ["playerId"],
           include: {
-            player:    { select: { name: true, class: true } },
+            player:    { select: { name: true, class: true, realmId: true } },
             encounter: { select: { id: true, difficulty: true, startedAt: true } },
           },
         }),
@@ -64,6 +66,7 @@ async function getLeaderboardBoards(difficulty: DifficultyFilterValue, requested
       const dpsEntries = dpsRows.map((r, i) => ({
         rank:        i + 1,
         playerName:  r.player.name,
+        realmId: r.player.realmId,
         class:       r.player.class,
         value:       r.dps,
         bossName:    boss.name,
@@ -76,6 +79,7 @@ async function getLeaderboardBoards(difficulty: DifficultyFilterValue, requested
       const hpsEntries = hpsRows.map((r, i) => ({
         rank:        i + 1,
         playerName:  r.player.name,
+        realmId: r.player.realmId,
         class:       r.player.class,
         value:       r.hps,
         bossName:    boss.name,
@@ -108,13 +112,15 @@ export default function LeaderboardsPage(props: Props) {
 async function LeaderboardsPageContent({ searchParams }: Props) {
   const query = await searchParams;
   const difficulty = parseDifficultyFilter(query.difficulty);
+  const realmId = parseRealmFilter(query.realmId);
   const requestedBoss = Array.isArray(query.boss) ? query.boss[0] : query.boss;
   const querySuffix = reportQueryString(query, { difficulty: difficulty === "all" ? null : difficulty, boss: null });
   let databaseAvailable = true;
   let data: Awaited<ReturnType<typeof getLeaderboardBoards>> = { averages: { dps: [], hps: [] }, boards: [], bosses: [], selectedBoss: "" };
+  let realms: Awaited<ReturnType<typeof getRealmOptions>> = [];
 
   try {
-    data = await getLeaderboardBoards(difficulty, requestedBoss);
+    [data, realms] = await Promise.all([getLeaderboardBoards(difficulty, requestedBoss, realmId), getRealmOptions()]);
   } catch (error) {
     if (!isDatabaseConnectionError(error)) throw error;
     databaseAvailable = false;
@@ -138,8 +144,8 @@ async function LeaderboardsPageContent({ searchParams }: Props) {
 
       {databaseAvailable && (
         <div className="space-y-3">
-          <DifficultyFilter action="/leaderboards" id="leaderboards" difficulty={difficulty} searchParams={query} bosses={bosses} boss={selectedBoss} />
-          <p className="text-sm text-text-secondary">{difficultyScopeLabel(difficulty)}. Choose one difficulty to compare the same raid size and mode.</p>
+          <DifficultyFilter action="/leaderboards" id="leaderboards" difficulty={difficulty} searchParams={query} bosses={bosses} boss={selectedBoss} realms={realms} realmId={realmId} />
+          <p className="text-sm text-text-secondary">{realmScopeLabel(realms, realmId)} · {difficultyScopeLabel(difficulty)}. Choose one difficulty to compare the same raid size and mode.</p>
         </div>
       )}
 

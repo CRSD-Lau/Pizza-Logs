@@ -14,6 +14,8 @@ import { buildPageMetadata } from "@/lib/page-metadata";
 import { parseIncludeShortPulls } from "@/lib/attempt-policy";
 import { buildDirectoryHref, parseDirectoryFilters, parseDirectoryPage, type DirectoryQueryValue } from "@/lib/directory-pagination";
 import { formatCountLabel, formatInteger } from "@/lib/utils";
+import { parseRealmFilter, realmScopeLabel, type RealmOption } from "@/lib/realm-filter";
+import { getRealmOptions } from "@/lib/realm-filter.server";
 
 export const metadata = buildPageMetadata({
   title: "Players",
@@ -23,7 +25,7 @@ export const metadata = buildPageMetadata({
 export const dynamic = "force-dynamic";
 
 interface Props {
-  searchParams: Promise<{ q?: DirectoryQueryValue; class?: DirectoryQueryValue; page?: DirectoryQueryValue; includeShortPulls?: DirectoryQueryValue }>;
+  searchParams: Promise<{ q?: DirectoryQueryValue; class?: DirectoryQueryValue; page?: DirectoryQueryValue; includeShortPulls?: DirectoryQueryValue; realmId?: DirectoryQueryValue }>;
 }
 
 export default function PlayersPage(props: Props) {
@@ -38,14 +40,19 @@ async function PlayersPageContent({ searchParams }: Props) {
   const params = await searchParams;
   const { query, classFilter } = parseDirectoryFilters(params);
   const includeShortPulls = parseIncludeShortPulls(params.includeShortPulls);
+  const realmId = parseRealmFilter(params.realmId);
+  let realms: RealmOption[] = [];
   let data: Awaited<ReturnType<typeof getPlayersPageData>> | null = null;
   try {
-    data = await getPlayersPageData(query, classFilter, parseDirectoryPage(params.page), includeShortPulls);
+    [data, realms] = await Promise.all([
+      getPlayersPageData(query, classFilter, parseDirectoryPage(params.page), includeShortPulls, realmId),
+      getRealmOptions(),
+    ]);
   } catch (error) {
     if (!isDatabaseConnectionError(error)) throw error;
   }
-  const pageHref = (page: number) => buildDirectoryHref("/players", { query, classFilter, page, includeShortPulls });
-  const resetHref = buildDirectoryHref("/players", { includeShortPulls });
+  const pageHref = (page: number) => buildDirectoryHref("/players", { query, classFilter, page, includeShortPulls, realmId });
+  const resetHref = buildDirectoryHref("/players", { includeShortPulls, realmId });
   const classCounts = new Map<string, number>();
   for (const player of data?.allPlayersForStats ?? []) {
     const className = getPlayerClassMeta(player.class).className ?? "Unknown";
@@ -65,7 +72,8 @@ async function PlayersPageContent({ searchParams }: Props) {
         <DatabaseUnavailable description="Player profiles are temporarily unavailable. Please try again shortly." />
       ) : (
         <>
-          <PlayerDirectoryFilters query={query} classFilter={classFilter} includeShortPulls={includeShortPulls} />
+          <PlayerDirectoryFilters query={query} classFilter={classFilter} includeShortPulls={includeShortPulls} realms={realms} realmId={realmId} />
+          <p className="text-sm text-text-secondary">{realmScopeLabel(realms, realmId)}</p>
           <section aria-labelledby="player-directory-results" className="space-y-4">
             <div className="flex flex-wrap items-end justify-between gap-2">
               <div>
@@ -79,12 +87,12 @@ async function PlayersPageContent({ searchParams }: Props) {
             {data.players.length === 0 ? (
               <EmptyState
                 title="No players found"
-                description={query || classFilter ? "Try another name or class, or clear the filters." : "Player profiles appear after a combat log is uploaded."}
+                description={query || classFilter || realmId ? "Try another realm, name or class." : "Player profiles appear after a combat log is uploaded."}
                 action={<Link href={query || classFilter ? resetHref : "/"} className={playerDirectoryActionClass}>{query || classFilter ? "Clear filters" : "Upload a log"}</Link>}
               />
             ) : (
               <>
-                <PlayerDirectory players={data.players} includeShortPulls={includeShortPulls} />
+                <PlayerDirectory players={data.players} includeShortPulls={includeShortPulls} realmId={realmId} />
                 <nav aria-label="Player directory pages" className="flex flex-wrap items-center justify-between gap-3 pt-1">
                   <p className="text-sm text-text-secondary">{formatInteger(data.pagination.firstVisible)}–{formatInteger(data.pagination.lastVisible)} of {formatCountLabel(data.totalCount, "player")} · Page {formatInteger(data.pagination.currentPage)} of {formatInteger(data.pagination.totalPages)}</p>
                   <div className="flex gap-2">

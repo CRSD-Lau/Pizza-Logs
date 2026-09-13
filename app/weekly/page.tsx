@@ -15,6 +15,8 @@ import { PageHeader } from "@/components/ui/PageLayout";
 import { countAttempts, parseIncludeShortPulls } from "@/lib/attempt-policy";
 import { DifficultyFilter } from "@/components/reports/DifficultyFilter";
 import { difficultyFilterWhere, difficultyScopeLabel, parseDifficultyFilter, reportQueryString, type DifficultyFilterValue, type ReportSearchParams } from "@/lib/difficulty-filter";
+import { encounterRealmWhere, parseRealmFilter, realmScopeLabel } from "@/lib/realm-filter";
+import { getRealmOptions } from "@/lib/realm-filter.server";
 
 import { buildPageMetadata } from "@/lib/page-metadata";
 
@@ -25,11 +27,11 @@ export const metadata = buildPageMetadata({
 });
 export const dynamic = "force-dynamic";
 
-async function getWeeklyData(includeShortPulls: boolean, difficulty: DifficultyFilterValue) {
+async function getWeeklyData(includeShortPulls: boolean, difficulty: DifficultyFilterValue, realmId?: string) {
   const { start, end } = getWeekBounds();
 
   const encounters = await db.encounter.findMany({
-    where: { startedAt: { gte: start, lt: end }, ...difficultyFilterWhere(difficulty) },
+    where: { startedAt: { gte: start, lt: end }, ...difficultyFilterWhere(difficulty), ...encounterRealmWhere(realmId) },
     include: {
       boss: { select: { name: true, slug: true, raid: true } },
       participants: { select: { deaths: true } },
@@ -42,22 +44,22 @@ async function getWeeklyData(includeShortPulls: boolean, difficulty: DifficultyF
 
   const [topDpsRows, topHpsRows] = await Promise.all([
     db.participant.findMany({
-      where: { encounter: { startedAt: { gte: start, lt: end }, ...difficultyFilterWhere(difficulty) }, dps: { gt: 0 } },
+      where: { encounter: { startedAt: { gte: start, lt: end }, ...difficultyFilterWhere(difficulty), ...encounterRealmWhere(realmId) }, dps: { gt: 0 } },
       orderBy: { dps: "desc" },
       distinct: ["playerId"],
       take: 10,
       include: {
-        player: { select: { name: true, class: true } },
+        player: { select: { name: true, class: true, realmId: true } },
         encounter: { select: { id: true, startedAt: true, difficulty: true, boss: { select: { name: true, slug: true } } } },
       },
     }),
     db.participant.findMany({
-      where: { encounter: { startedAt: { gte: start, lt: end }, ...difficultyFilterWhere(difficulty) }, hps: { gt: 100 } },
+      where: { encounter: { startedAt: { gte: start, lt: end }, ...difficultyFilterWhere(difficulty), ...encounterRealmWhere(realmId) }, hps: { gt: 100 } },
       orderBy: { hps: "desc" },
       distinct: ["playerId"],
       take: 10,
       include: {
-        player: { select: { name: true, class: true } },
+        player: { select: { name: true, class: true, realmId: true } },
         encounter: { select: { id: true, startedAt: true, difficulty: true, boss: { select: { name: true, slug: true } } } },
       },
     }),
@@ -74,6 +76,7 @@ async function getWeeklyData(includeShortPulls: boolean, difficulty: DifficultyF
     bossesCleared: bossKills.length,
     topDps: topDpsRows.map(p => ({
       playerName: p.player.name,
+      realmId: p.player.realmId,
       class: p.player.class,
       bossName: p.encounter.boss.name,
       bossSlug: p.encounter.boss.slug,
@@ -84,6 +87,7 @@ async function getWeeklyData(includeShortPulls: boolean, difficulty: DifficultyF
     })),
     topHps: topHpsRows.map(p => ({
       playerName: p.player.name,
+      realmId: p.player.realmId,
       class: p.player.class,
       bossName: p.encounter.boss.name,
       bossSlug: p.encounter.boss.slug,
@@ -112,12 +116,14 @@ async function WeeklyPageContent({ searchParams }: Props) {
   const query = await searchParams;
   const includeShortPulls = parseIncludeShortPulls(query.includeShortPulls);
   const difficulty = parseDifficultyFilter(query.difficulty);
+  const realmId = parseRealmFilter(query.realmId);
   const querySuffix = reportQueryString(query, { difficulty: difficulty === "all" ? null : difficulty });
   let databaseAvailable = true;
   let data: Awaited<ReturnType<typeof getWeeklyData>>;
+  let realms: Awaited<ReturnType<typeof getRealmOptions>> = [];
 
   try {
-    data = await getWeeklyData(includeShortPulls, difficulty);
+    [data, realms] = await Promise.all([getWeeklyData(includeShortPulls, difficulty, realmId), getRealmOptions()]);
   } catch (error) {
     if (!isDatabaseConnectionError(error)) throw error;
     databaseAvailable = false;
@@ -154,8 +160,8 @@ async function WeeklyPageContent({ searchParams }: Props) {
       {databaseAvailable && (
       <>
         <div className="space-y-3">
-          <DifficultyFilter action="/weekly" id="weekly" difficulty={difficulty} searchParams={query} />
-          <p className="text-sm text-text-secondary">{difficultyScopeLabel(difficulty)}. Rankings compare individual attempts across bosses.</p>
+          <DifficultyFilter action="/weekly" id="weekly" difficulty={difficulty} searchParams={query} realms={realms} realmId={realmId} />
+          <p className="text-sm text-text-secondary">{realmScopeLabel(realms, realmId)} · {difficultyScopeLabel(difficulty)}. Rankings compare individual attempts across bosses.</p>
         </div>
         <StatGroup columns={4}>
           <StatCard label="Boss Kills" value={formatInteger(data.totalKills)} highlight />
@@ -175,6 +181,7 @@ async function WeeklyPageContent({ searchParams }: Props) {
             <LeaderboardBar entries={data.topDps.map((e, i) => ({
               rank: i + 1,
               playerName: e.playerName,
+              realmId: e.realmId,
               class: e.class ?? undefined,
               value: e.dps,
               bossName: e.bossName,
@@ -194,6 +201,7 @@ async function WeeklyPageContent({ searchParams }: Props) {
             <LeaderboardBar entries={data.topHps.map((e, i) => ({
               rank: i + 1,
               playerName: e.playerName,
+              realmId: e.realmId,
               class: e.class ?? undefined,
               value: e.hps,
               bossName: e.bossName,

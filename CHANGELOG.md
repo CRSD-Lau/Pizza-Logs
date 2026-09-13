@@ -14,6 +14,8 @@ This project follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) an
 
 ### Added
 
+- Add realm filters to raids, players, bosses, weekly results and leaderboards, including all-time averages. Keep the selection in browsing links and pagination, scope player search, and open same-name characters on their correct realm.
+
 - Add a dated News & Updates section below the homepage upload form, with recent product highlights and a link to the full changelog.
 
 - Add the Wrath HD language selector beside player search on public pages, opening the current page and its filters in Google Translate in a new tab.

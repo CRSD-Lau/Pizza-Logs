@@ -60,11 +60,16 @@ assert.match(combatLog, /classicon_deathknight/);
 assert.match(combatLog, /Combat-log class/);
 
 const realmIsolated = renderToStaticMarkup(React.createElement(PlayerDirectoryRow, {
-  player: { ...basePlayer, realm: { name: "Icecrown" } },
+  player: { ...basePlayer, realmId: "icecrown-host-a", realm: { name: "Icecrown" } },
 }));
 assert.match(realmIsolated, /data-player-realm="Icecrown"/);
-assert.match(realmIsolated, /href="\/players\/Lausudo\?realm=Icecrown"/);
+assert.match(realmIsolated, /href="\/players\/Lausudo\?realm=Icecrown&amp;realmId=icecrown-host-a"/);
 assert.match(realmIsolated, /\/character\/Lausudo\/Icecrown\/summary/);
+
+const selectedRealm = renderToStaticMarkup(React.createElement(PlayerDirectoryRow, {
+  player: { ...basePlayer, realmId: "icecrown-host-a", realm: { name: "Icecrown" } }, realmId: "icecrown-host-b",
+}));
+assert.match(selectedRealm, /realmId=icecrown-host-b/, "The directory scope wins when rows are reused across a selected realm");
 
 // Server rendering must neither require a browser router nor request upstream gear.
 const originalFetch = globalThis.fetch;

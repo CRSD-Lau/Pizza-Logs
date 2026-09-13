@@ -27,12 +27,14 @@ import { buildPageMetadata } from "@/lib/page-metadata";
 import { countAttempts, isShortPull, parseIncludeShortPulls } from "@/lib/attempt-policy";
 import { SectionNav } from "@/components/ui/SectionNav";
 import { reportQueryString } from "@/lib/difficulty-filter";
+import { parseRealmFilter } from "@/lib/realm-filter";
 
 interface Props {
   params: Promise<{ playerName: string }>;
   searchParams: Promise<{
     includeShortPulls?: string | string[];
     realm?: string | string[];
+    realmId?: string | string[];
     comparisonRaid?: string | string[];
     comparisonDifficulty?: string | string[];
     comparisonMetric?: string | string[];
@@ -101,13 +103,20 @@ async function getPlayerPageContext({ params, searchParams }: Props) {
   const includeShortPulls = parseIncludeShortPulls(search.includeShortPulls);
   const rawRealm = Array.isArray(search.realm) ? search.realm[0] : search.realm;
   const requestedRealm = rawRealm?.trim();
-  if (requestedRealm && !/^[A-Za-z]{2,24}$/.test(requestedRealm)) notFound();
-  const querySuffix = includeShortPulls ? "?includeShortPulls=1" : "";
+  const realmId = parseRealmFilter(search.realmId);
+  if (!realmId && requestedRealm && !/^[A-Za-z]{2,24}$/.test(requestedRealm)) notFound();
+  const querySuffix = reportQueryString({
+    ...(includeShortPulls ? { includeShortPulls: "1" } : {}),
+    ...(realmId ? { realmId } : {}),
+  });
 
   const player = await db.player.findFirst({
     where: {
       name: { equals: name, mode: "insensitive" },
-      ...(requestedRealm ? {
+      ...(realmId ? {
+        realmId,
+        ...(requestedRealm ? { realm: { is: { name: { equals: requestedRealm, mode: "insensitive" } } } } : {}),
+      } : requestedRealm ? {
         OR: [
           { realm: { is: { name: { equals: requestedRealm, mode: "insensitive" } } } },
           ...(requestedRealm.toLowerCase() === DEFAULT_PLAYER_REALM.toLowerCase() ? [{ realmId: null }] : []),
@@ -126,6 +135,21 @@ async function getPlayerPageContext({ params, searchParams }: Props) {
       },
     },
   });
+
+  // A realm ID represents an exact comparison scope. The only roster-only
+  // exception is the configured Warmane guild realm, after resolving its ID.
+  // Stale IDs and every other host fail closed rather than broadening to a
+  // default or unrelated roster profile.
+  if (realmId && !player) {
+    const selectedRealm = await db.realm.findUnique({
+      where: { id: realmId },
+      select: { name: true, host: true },
+    });
+    const isDefaultWarmaneRealm = selectedRealm?.host.toLowerCase() === "warmane"
+      && selectedRealm.name.toLowerCase() === DEFAULT_GUILD_REALM.toLowerCase()
+      && (!requestedRealm || selectedRealm.name.toLowerCase() === requestedRealm.toLowerCase());
+    if (!isDefaultWarmaneRealm) notFound();
+  }
 
   const rosterMember = await db.guildRosterMember.findFirst({
     where: {
@@ -146,7 +170,7 @@ async function getPlayerPageContext({ params, searchParams }: Props) {
 
   const profile = resolvePlayerProfile({ player, rosterMember });
   if (!profile) notFound();
-  return { profile, player, includeShortPulls, querySuffix, search };
+  return { profile, player, includeShortPulls, realmId, querySuffix, search };
 }
 
 export default async function PlayerPage(props: Props) {
@@ -159,7 +183,7 @@ export default async function PlayerPage(props: Props) {
 }
 
 async function PlayerContent({ data }: { data: Awaited<ReturnType<typeof getPlayerPageContext>> }) {
-  const { player, includeShortPulls, querySuffix, search } = data;
+  const { player, includeShortPulls, realmId, querySuffix, search } = data;
   const profile = { ...data.profile };
   const identity = await getStoredPlayerIdentity(profile.name, profile.realmName, profile.className);
   profile.className = identity.className;
@@ -270,7 +294,7 @@ async function PlayerContent({ data }: { data: Awaited<ReturnType<typeof getPlay
                     </span>
                   </div>
                   <p className="text-text-secondary">Recorded <time dateTime={m.achievedAt.toISOString()}>{formatDateUtc(m.achievedAt)}</time></p>
-                  <Link href={`/bosses/${m.encounter.boss.slug}${reportQueryString({ difficulty: m.difficulty ?? "UNKNOWN", includeShortPulls: includeShortPulls ? "1" : undefined })}#boss-${m.metric === "HPS" ? "hps" : "dps"}`} className="mt-1 inline-flex min-h-11 items-center text-gold hover:text-gold-light">View current rankings →</Link>
+                  <Link href={`/bosses/${m.encounter.boss.slug}${reportQueryString({ difficulty: m.difficulty ?? "UNKNOWN", includeShortPulls: includeShortPulls ? "1" : undefined, realmId })}#boss-${m.metric === "HPS" ? "hps" : "dps"}`} className="mt-1 inline-flex min-h-11 items-center text-gold hover:text-gold-light">View current rankings →</Link>
                 </div>
               </div>
             ))}

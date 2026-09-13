@@ -22,13 +22,14 @@ const participants = [
   participant("Otherbossplayer", "10N", 3000, "other-boss", otherBoss),
 ];
 type Encounter = typeof participants[number]["encounter"];
-type Where = { difficulty?: string; bossId?: string; outcome?: string };
+type Where = { difficulty?: string; bossId?: string; outcome?: string; upload?: { realmId: string } };
 type ParticipantQuery = { where: { encounter: Where; dps?: { gt: number }; hps?: { gt: number } }; take: number; distinct?: string[]; orderBy: { dps?: string; hps?: string }; include: { encounter: { select: { id?: boolean; startedAt?: boolean } } } };
 const matches = (encounter: Encounter, where: Where = {}) => (!where.difficulty || encounter.difficulty === where.difficulty)
   && (!where.bossId || encounter.bossId === where.bossId) && (!where.outcome || encounter.outcome === where.outcome);
 const calls: ParticipantQuery[] = [];
 const encounters = (where: Where = {}) => participants.filter(p => matches(p.encounter, where)).map(p => ({ ...p.encounter, participants: [p] }));
 const db = {
+  realm: { findMany: async () => [] },
   boss: {
     findMany: async (query: { include?: { encounters: { where: Where } } }) => [boss, otherBoss].map(item => ({
       ...item, encounters: encounters({ ...query.include?.encounters.where, bossId: item.id }),
@@ -53,8 +54,10 @@ async function main() {
   const loader = Module as typeof Module & { _resolveFilename: (request: string, parent: NodeModule | undefined, isMain: boolean, options?: unknown) => string };
   const originalResolve = loader._resolveFilename;
   const dbPath = path.join(process.cwd(), "tests", "__mocks__", "ranking-ux-db.js");
+  const realmsPath = path.join(process.cwd(), "tests", "__mocks__", "ranking-ux-realms.js");
   loader._resolveFilename = function resolve(request, parent, isMain, options) {
     if (request === "@/lib/db") return dbPath;
+    if (request === "@/lib/realm-filter.server") return realmsPath;
     if (request.startsWith("@/")) {
       const base = path.join(process.cwd(), request.slice(2));
       const match = [base, `${base}.ts`, `${base}.tsx`].find(candidate => fs.existsSync(candidate));
@@ -63,6 +66,7 @@ async function main() {
     return originalResolve.call(this, request, parent, isMain, options);
   };
   require.cache[dbPath] = { id: dbPath, filename: dbPath, loaded: true, exports: { db } } as NodeModule;
+  require.cache[realmsPath] = { id: realmsPath, filename: realmsPath, loaded: true, exports: { getRealmOptions: async () => [] } } as NodeModule;
   try {
     const { default: WeeklyPage } = require("../app/weekly/page") as typeof import("../app/weekly/page");
     const weekly = await renderPage(await WeeklyPage({ searchParams: Promise.resolve({ difficulty: "10N", includeShortPulls: "1" }) }));
@@ -73,6 +77,10 @@ async function main() {
     assert.doesNotMatch(weekly, /Heroicplayer|Week view/);
     assert.ok(calls.every(query => query.where.encounter.difficulty === "10N" && !query.where.encounter.outcome && query.distinct?.[0] === "playerId"), "Weekly rankings select each player's best attempt within the selected mode");
     assert.ok(calls.every(query => query.include.encounter.select.id && query.include.encounter.select.startedAt));
+
+    calls.length = 0;
+    await renderPage(await WeeklyPage({ searchParams: Promise.resolve({ difficulty: "10N", realmId: "realm-a" }) }));
+    assert.ok(calls.every(query => query.where.encounter.upload?.realmId === "realm-a"), "Weekly top records scope encounters through their upload before ranking");
 
     calls.length = 0;
     const originalCount = participants.length;
@@ -102,6 +110,10 @@ async function main() {
     assert.match(leaders, /Top 3 Average HPS/);
     assert.match(leaders, /No qualifying players yet/);
     assert.ok(calls.every(query => query.where.encounter.bossId === boss.id && query.where.encounter.difficulty === "25H" && query.where.encounter.outcome === "KILL" && query.distinct?.[0] === "playerId" && query.take === 10));
+
+    calls.length = 0;
+    await renderPage(await LeaderboardsPage({ searchParams: Promise.resolve({ boss: boss.slug, realmId: "realm-a" }) }));
+    assert.ok(calls.every(query => query.where.encounter.upload?.realmId === "realm-a"), "All-time top records scope encounters through their upload before ranking");
     calls.length = 0;
     await renderPage(await LeaderboardsPage({ searchParams: Promise.resolve({}) }));
     assert.ok(calls.every(query => query.where.encounter.difficulty === undefined), "All difficulties keeps the original pooled ranking query");
@@ -135,6 +147,7 @@ async function main() {
   } finally {
     loader._resolveFilename = originalResolve;
     delete require.cache[dbPath];
+    delete require.cache[realmsPath];
   }
   console.log("ranking UX page tests passed");
 }

@@ -1,5 +1,6 @@
 import type { PrismaClient } from "@/generated/prisma/client";
 import { difficultyFilterWhere, type DifficultyFilterValue } from "@/lib/difficulty-filter";
+import { encounterRealmWhere } from "@/lib/realm-filter";
 
 export const MIN_AVERAGE_FIGHTS = 10;
 
@@ -8,6 +9,7 @@ export interface AverageLeaderboardEntry {
   playerName: string;
   class: string | null;
   realm: string | null;
+  realmId?: string | null;
   value: number;
   fights: number;
 }
@@ -18,11 +20,13 @@ export async function getAverageLeaderboards(
   database: Pick<PrismaClient, "participant" | "player">,
   difficulty: DifficultyFilterValue,
   bossId?: string,
+  realmId?: string,
 ): Promise<{ dps: AverageLeaderboardEntry[]; hps: AverageLeaderboardEntry[] }> {
   const common = {
     by: ["playerId"] as ["playerId"],
     where: { encounter: {
       ...difficultyFilterWhere(difficulty),
+      ...encounterRealmWhere(realmId),
       ...(bossId ? { bossId } : {}),
       OR: [
         { durationMs: { gt: 0 } },
@@ -48,14 +52,14 @@ export async function getAverageLeaderboards(
   const ids = [...new Set([...dps, ...hps].map(row => row.playerId))];
   const players = ids.length ? await database.player.findMany({
     where: { id: { in: ids } },
-    select: { id: true, name: true, class: true, realm: { select: { name: true } } },
+    select: { id: true, name: true, class: true, realmId: true, realm: { select: { name: true } } },
   }) : [];
   const byId = new Map(players.map(player => [player.id, player]));
   const entries = (rows: typeof dps, metric: "dps" | "hps") => rows.flatMap(row => {
     const player = byId.get(row.playerId);
     return player ? [{
       playerId: player.id, playerName: player.name, class: player.class,
-      realm: player.realm?.name ?? null, value: row._avg[metric]!, fights: row._count.id,
+      realm: player.realm?.name ?? null, realmId: player.realmId, value: row._avg[metric]!, fights: row._count.id,
     }] : [];
   });
   return { dps: entries(dps, "dps"), hps: entries(hps, "hps") };

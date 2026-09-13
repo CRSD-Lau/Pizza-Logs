@@ -26,8 +26,17 @@ const uploads = Array.from({ length: 61 }, (_, index) => ({
   encounters: Array.from({ length: index % 20 === 0 ? 3 : index % 20 === 19 ? 2 : 1 }, (_, sessionIndex) => encounter(sessionIndex)),
 }));
 let unavailable = false;
+let profilePlayerAvailable = true;
+let rosterOnlyAvailable = false;
+const profileQueries: unknown[] = [];
 const checkAvailable = () => { if (unavailable) throw new Error("Can't reach database server at localhost:5432"); };
 const db = {
+  realm: {
+    findMany: async () => { checkAvailable(); return []; },
+    findUnique: async ({ where }: { where: { id: string } }) => where.id === "lordaeron-warmane"
+      ? { name: "Lordaeron", host: "warmane" }
+      : null,
+  },
   $queryRaw: async () => { checkAvailable(); return []; },
   player: {
     count: async ({ where }: { where: PlayerWhere }) => { checkAvailable(); return filterPlayers(where).length; },
@@ -37,14 +46,19 @@ const db = {
       if (query.where?.id) return players.filter(player => query.where!.id!.in.includes(player.id));
       return filterPlayers(query.where);
     },
-    findFirst: async () => ({ ...players[0], milestones: [{ id: "award", rank: 1, metric: "HPS", value: 7000, difficulty: "25H", achievedAt: new Date("2026-08-15T14:00:00Z"), encounter: { boss } }] }),
+    findFirst: async (query: unknown) => {
+      profileQueries.push(query);
+      return profilePlayerAvailable ? { ...players[0], milestones: [{ id: "award", rank: 1, metric: "HPS", value: 7000, difficulty: "25H", achievedAt: new Date("2026-08-15T14:00:00Z"), encounter: { boss } }] } : null;
+    },
   },
   encounter: { count: async () => { checkAvailable(); return 1; } },
   upload: {
     count: async ({ where }: { where: unknown }) => { checkAvailable(); assert.deepEqual(where, { encounters: { some: {} } }); return uploads.length; },
     findMany: async (query: UploadQuery) => { uploadQueries.push(query); return uploads.slice(query.skip, query.skip + query.take); },
   },
-  guildRosterMember: { findFirst: async () => null },
+  guildRosterMember: { findFirst: async () => rosterOnlyAvailable ? {
+    characterName: "Player01", realm: "Lordaeron", guildName: "Synthetic Guild", className: "Rogue", raceName: "Human", level: 80, rankName: "Member",
+  } : null },
   participant: { findMany: async ({ take }: { take: number }) => {
     assert.equal(take, 50);
     return Array.from({ length: 50 }, (_, index) => ({ id: `participation-${index}`, dps: 1000, hps: 200, aps: 0, totalDamage: 80000, totalHealing: 16000, totalAbsorbs: 0, damageTaken: 0, deaths: 0, role: "DPS", spec: "Combat", encounter: encounter(0, index) }));
@@ -162,6 +176,28 @@ async function main() {
     assert.equal((profile.match(/href="\/encounters\/encounter-/g) ?? []).length, 50, "The recent encounter count and rendered rows must agree");
     assert.match(profile, /href="#recent-encounters"/);
     assert.match(profile, /href="\/players\/Player01\?includeShortPulls=1&amp;metrics=all"/, "Metric disclosure preserves the history's short-pull setting");
+
+    const scopedProfile = await renderPage(await PlayerPage({ params: Promise.resolve({ playerName: "Player01" }), searchParams: Promise.resolve({ realm: "Icecrown Realm", realmId: "icecrown-host-a" }) }));
+    assert.match(scopedProfile, /realmId=icecrown-host-a/);
+    assert.match(scopedProfile, /href="\/bosses\/lord-marrowgar\?difficulty=25H&amp;realmId=icecrown-host-a#boss-hps"/);
+    assert.deepEqual((profileQueries.at(-1) as { where: unknown }).where, {
+      name: { equals: "Player01", mode: "insensitive" },
+      realmId: "icecrown-host-a",
+      realm: { is: { name: { equals: "Icecrown Realm", mode: "insensitive" } } },
+    }, "A realm ID selects the exact stored realm and permits its stored display name");
+
+    profilePlayerAvailable = false;
+    await assert.rejects(
+      PlayerPage({ params: Promise.resolve({ playerName: "Player01" }), searchParams: Promise.resolve({ realm: "Lordaeron", realmId: "stale-realm" }) }),
+      /Unexpected notFound/,
+      "A stale or mismatched realm ID cannot fall back to the default or roster-only profile",
+    );
+
+    rosterOnlyAvailable = true;
+    const rosterOnlyProfile = await renderPage(await PlayerPage({ params: Promise.resolve({ playerName: "Player01" }), searchParams: Promise.resolve({ realm: "Lordaeron", realmId: "lordaeron-warmane" }) }));
+    assert.match(rosterOnlyProfile, /data-character-realm="Lordaeron"/, "A selected Warmane Lordaeron ID may resolve a legitimate guild-roster-only profile");
+    rosterOnlyAvailable = false;
+    profilePlayerAvailable = true;
 
     unavailable = true;
     for (const page of [PlayersPage, RaidsPage]) {
