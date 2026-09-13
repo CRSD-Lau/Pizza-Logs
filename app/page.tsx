@@ -14,6 +14,7 @@ import { buildPageMetadata } from "@/lib/page-metadata";
 import { parseIncludeShortPulls } from "@/lib/attempt-policy";
 import { countedAttemptWhere } from "@/lib/attempt-policy.server";
 import { GuildCrest } from "@/components/brand/GuildCrest";
+import { NewsUpdates } from "@/components/upload/NewsUpdates";
 
 export const metadata = buildPageMetadata({
   title: "Pizza Logs | WotLK Raid Analytics",
@@ -79,6 +80,8 @@ async function HomePageContent({ searchParams }: Props) {
       <section aria-label="Upload combat log">
         <UploadZoneWithRefresh />
       </section>
+
+      <NewsUpdates />
 
       <PageSection title="Raid activity" action={<FrozenLogbookIntro />}>
         <StatGroup columns={3}>
