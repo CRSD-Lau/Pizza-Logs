@@ -6,6 +6,7 @@ import { useRef, useState } from "react";
 import { Menu, X } from "lucide-react";
 import { GuildCrest } from "@/components/brand/GuildCrest";
 import { PlayerSearch } from "@/components/players/PlayerSearch";
+import { LanguageSelect } from "@/components/layout/LanguageSelect";
 import { cn } from "@/lib/utils";
 
 const NAV_LINKS = [
@@ -45,10 +46,6 @@ export function Nav() {
             </div>
           </Link>
 
-          <div className="hidden xl:block min-w-44 flex-1 max-w-72">
-            <PlayerSearch />
-          </div>
-
           <nav aria-label="Main navigation" className="hidden xl:flex shrink-0 items-center gap-1">
             {NAV_LINKS.map(({ href, label }) => {
               const active = href === "/" ? pathname === "/" : pathname.startsWith(href);
@@ -83,8 +80,11 @@ export function Nav() {
           </button>
         </div>
 
-        <div className="xl:hidden pb-3">
-          <PlayerSearch onNavigate={() => setMobileOpen(false)} />
+        <div className="flex items-center gap-3 pb-3">
+          <div className="min-w-0 flex-1 xl:max-w-72">
+            <PlayerSearch onNavigate={() => setMobileOpen(false)} />
+          </div>
+          {!pathname.startsWith("/admin") && <LanguageSelect />}
         </div>
 
         {mobileOpen && (

@@ -4,6 +4,15 @@ Author: Neil Mitchell
 
 Last modified by: Neil Mitchell
 
+## Page Language
+
+Choose a language beside player search to open the current public page in Google
+Translate in a new tab. The choices match the Wrath HD site: Korean, French,
+German, Simplified Chinese, Traditional Chinese, Spanish, Brazilian Portuguese,
+and Russian. English keeps the original page. Translation is provided by Google;
+the selector sends the current page URL, including report filters, only when used.
+It is unavailable on admin pages and does not change stored report data.
+
 ## Reading Numbers and Lists
 
 Damage, healing, absorbs, power amounts and rates use exactly two decimal places,

@@ -8,7 +8,7 @@ export const metadata = buildPageMetadata({ title: "Privacy notice", description
 export default function PrivacyPage() {
   return (
     <PageShell>
-      <PageHeader eyebrow="Using Pizza Logs" title="Privacy notice" description={<p>Updated September 8, 2026. Maintained by Neil Mitchell.</p>} />
+      <PageHeader eyebrow="Using Pizza Logs" title="Privacy notice" description={<p>Updated September 12, 2026. Maintained by Neil Mitchell.</p>} />
       <div className="max-w-3xl space-y-8 text-base text-text-secondary">
         <p>Pizza Logs is a community raid-analysis service for PizzaWarriors. Public visitors do not have accounts. One private administrator account protects maintenance access; there is no advertising SDK or payment flow.</p>
         <PageSection title="Data processed">
@@ -36,6 +36,7 @@ export default function PrivacyPage() {
             <li>When a 3D character model is displayed, its browser viewer loads jQuery from Google&apos;s <code>ajax.googleapis.com</code> and rendering scripts, models and textures from <code>cdn.warmane.com</code>. These are direct browser requests, separate from the server-side Armory queries.</li>
             <li>Direct browser requests disclose ordinary connection information, including your IP address and browser request headers, to the provider receiving them. Those providers control their own handling and retention. Pizza Logs does not send raw combat logs or administrator credentials to these image or model providers.</li>
             <li>GitHub hosts the source repository, issues, pull requests and private security reports. Following a GitHub link takes you to that service.</li>
+            <li>Choosing a language in the public navigation opens Google Translate in a new tab and sends Google the current page URL, including report filters, to translate its public content. No translation request is made until you choose a language. The selector is unavailable on admin pages.</li>
           </ul>
           <p className="mt-3">The site&apos;s interface fonts are served by Pizza Logs. Pizza Logs does not sell personal information and does not include a third-party advertising or behavioral analytics SDK.</p>
         </PageSection>
