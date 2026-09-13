@@ -399,7 +399,8 @@ try {
     try {
       const input = page.getByRole("combobox", { name: "Search players", exact: true }).filter({ visible: true });
       await input.fill("Many");
-      await page.getByRole("option").nth(11).waitFor({ state: "attached" });
+      const results = page.getByRole("listbox", { name: "Player search results", exact: true });
+      await results.getByRole("option").nth(11).waitFor({ state: "attached" });
       await input.press("ArrowUp");
       const optionIsVisible = async index => {
         const activeId = await input.getAttribute("aria-activedescendant");

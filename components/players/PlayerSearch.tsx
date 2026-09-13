@@ -118,10 +118,8 @@ export function PlayerSearch({ className, onNavigate }: PlayerSearchProps) {
     if (!showDropdown || !option || !dropdown) return;
     const row = option.getBoundingClientRect();
     const panel = dropdown.getBoundingClientRect();
-    const visibleTop = panel.top + dropdown.clientTop;
-    const visibleBottom = visibleTop + dropdown.clientHeight;
-    if (row.top < visibleTop) dropdown.scrollTop -= Math.ceil(visibleTop - row.top);
-    else if (row.bottom > visibleBottom) dropdown.scrollTop += Math.ceil(row.bottom - visibleBottom);
+    if (row.top < panel.top) dropdown.scrollTop -= panel.top - row.top;
+    else if (row.bottom > panel.bottom) dropdown.scrollTop += row.bottom - panel.bottom;
   }, [activeIndex, resultListId, showDropdown, visibleResults.length]);
 
   const navigateToResult = (result: PlayerSearchResult) => {
