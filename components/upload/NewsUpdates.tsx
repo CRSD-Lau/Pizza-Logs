@@ -3,6 +3,13 @@ import { PageSection } from "@/components/ui/PageLayout";
 // Keep newest first. Summarize shipped changes from CHANGELOG.md for uploaders.
 const entries = [
   {
+    date: "2026-09-13",
+    label: "Sep 13, 2026",
+    category: "Update",
+    title: "Explore reports by realm",
+    description: "Choose a realm on Raids, Players, Bosses, Leaderboards or This Week to see its reports and rankings. Your selection follows you between pages and in shared links. You can still view all realms, and existing uploads need no re-upload.",
+  },
+  {
     date: "2026-09-12",
     label: "Sep 12, 2026",
     category: "Update",
