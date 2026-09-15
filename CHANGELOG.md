@@ -6,6 +6,10 @@ This project follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) an
 
 ## [Unreleased]
 
+### Known issues
+
+- Warn that some Icecrown uploads may show zero player damage or healing because of a player GUID parsing bug. Investigation is waiting on a small combat-log sample to confirm the affected format; uploaders should retain their original logs for re-upload after a fix. Track progress in [issue #126](https://github.com/CRSD-Lau/Pizza-Logs/issues/126).
+
 ### Security
 
 - Require current upload-rule acknowledgement before processing and reject cross-site browser uploads. Bound actual streamed bytes and size agreement, concurrent web requests and upload starts; retain safe public errors and reject parser redirects.
