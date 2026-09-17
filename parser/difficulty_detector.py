@@ -10,6 +10,8 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Iterable, Sequence
 
+from player_identity import is_player_guid
+
 
 DETECTOR_VERSION = "pizza-difficulty-v2"
 VALID_MODES = ("10N", "10H", "25N", "25H")
@@ -163,19 +165,15 @@ def _spell_ids(segment: Iterable[tuple[str, list[str], float]]) -> set[int]:
     return found
 
 
-def _is_player_guid(guid: str) -> bool:
-    upper = guid.upper()
-    return upper.startswith("PLAYER-") or upper.startswith("0X06") or upper.startswith("0X0000000000")
-
-
 def _player_count(segment: Iterable[tuple[str, list[str], float]]) -> int:
     players: set[str] = set()
     for _, parts, _ in segment:
-        for idx in (1, 4):
-            if len(parts) > idx and _is_player_guid(parts[idx]):
-                players.add(parts[idx])
-    players.discard("0x0000000000000000")
-    players.discard("0X0000000000000000")
+        for guid_index, flags_index in ((1, 3), (4, 6)):
+            if (
+                len(parts) > flags_index
+                and is_player_guid(parts[guid_index], parts[flags_index])
+            ):
+                players.add(parts[guid_index].upper())
     return len(players)
 
 

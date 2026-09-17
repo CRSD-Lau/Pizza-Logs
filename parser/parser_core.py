@@ -26,6 +26,7 @@ from combat_metrics import (
     session_damage_amount,
 )
 from difficulty_detector import DifficultyDetection, detect_difficulty
+from player_identity import is_player_guid
 from analytics import ABSORB_AURA_NAMES, infer_role, infer_spec, is_consumable_aura
 from archive_upload import ArchiveValidationError
 from upload_limits import (
@@ -353,6 +354,7 @@ class SessionAccumulator:
     first_year: Optional[int] = None
     last_year: Optional[int] = None
     names: dict[str, str] = field(default_factory=dict)
+    player_guids: set[str] = field(default_factory=set)
     damage: dict[str, float] = field(default_factory=dict)
     healing: dict[str, float] = field(default_factory=dict)
     absorbs: dict[str, float] = field(default_factory=dict)
@@ -398,7 +400,7 @@ def _pet_flags(flags: str) -> bool:
 
 
 def _is_player_or_controlled_unit(guid: str, flags: str) -> bool:
-    if _is_player(guid):
+    if _is_player(guid, flags):
         return True
     if guid.upper().startswith("0XF15"):
         return False
@@ -424,7 +426,7 @@ def _owner_evidence_from_event(parts: list[str]) -> Optional[tuple[str, str, str
         spell_id in PET_OWNER_FORWARD_SPELL_IDS
         # Fel Synergy (54181) is evidenced only as the owner's direct pet heal.
         and (spell_id != 54181 or parts[0] == "SPELL_HEAL")
-        and _is_player(src_guid)
+        and _is_player(src_guid, parts[3])
         and _is_permanent_pet_guid(dst_guid)
         and _pet_flags(parts[6])
     ):
@@ -433,7 +435,7 @@ def _owner_evidence_from_event(parts: list[str]) -> Optional[tuple[str, str, str
         spell_id in PET_OWNER_REVERSE_SPELL_IDS
         and _is_permanent_pet_guid(src_guid)
         and _pet_flags(parts[3])
-        and _is_player(dst_guid)
+        and _is_player(dst_guid, parts[6])
     ):
         return src_guid, dst_guid, dst_name
     return None
@@ -502,6 +504,19 @@ class CombatLogParser:
         self._segment_encounters(lines, segment_cb=consume_segment)
         account_parsed_details(self.session_analytics, parsed_detail_bytes)
         self._assign_session_indices(encounters)
+        empty_substantial_encounters = [
+            encounter
+            for encounter in encounters
+            if encounter.duration_seconds >= 60
+            and not encounter.participants
+            and encounter.total_damage == 0
+            and encounter.total_healing == 0
+        ]
+        if empty_substantial_encounters:
+            self.warnings.append(
+                f"{len(empty_substantial_encounters)} raid encounter(s) contained no recognized player metrics. "
+                "The combat log may use an unsupported or malformed player identity format."
+            )
         if self.skipped_line_count:
             self.warnings.append(
                 f"Skipped {self.skipped_line_count} malformed combat-log lines."
@@ -573,6 +588,11 @@ class CombatLogParser:
         if dst_guid and dst_name:
             session.names[dst_guid] = dst_name
 
+        if _is_player(src_guid, src_flags):
+            session.player_guids.add(src_guid.upper())
+        if _is_player(dst_guid, dst_flags):
+            session.player_guids.add(dst_guid.upper())
+
         src_is_player_unit = _is_player_or_controlled_unit(src_guid, src_flags)
         dst_is_player_unit = _is_player_or_controlled_unit(dst_guid, dst_flags)
         spell_name = parts[8].strip('"').strip() if len(parts) > 8 else ""
@@ -594,7 +614,7 @@ class CombatLogParser:
                         removed[1],
                         removed[2],
                     )
-            if _is_player(src_guid) and spell_name in {
+            if _is_player(src_guid, src_flags) and spell_name in {
                 "Power Word: Shield", "Divine Aegis", "Penance",
             }:
                 session.discipline_guids.add(src_guid)
@@ -664,13 +684,16 @@ class CombatLogParser:
         def resolve_player(
             guid: str,
             names: dict[str, str],
+            known_player_guids: set[str],
         ) -> Optional[tuple[str, str]]:
-            if _is_player(guid):
+            if guid.upper() in known_player_guids or _is_player(guid):
                 return guid, names.get(guid, "Unknown")
             owner = pet_owner.get(guid)
             if owner is None and _is_permanent_pet_guid(guid):
                 owner = owners_by_unit_id.get(_pet_unit_id(guid))
-            if owner is None or not _is_player(owner[0]):
+            if owner is None or not (
+                owner[0].upper() in known_player_guids or _is_player(owner[0])
+            ):
                 return None
             return owner[0], owner[1]
 
@@ -682,7 +705,7 @@ class CombatLogParser:
             def merge_metric(values: dict[str, float], key: str) -> None:
                 nonlocal unresolved_absorbs
                 for guid, value in values.items():
-                    resolved = resolve_player(guid, raw.names)
+                    resolved = resolve_player(guid, raw.names, raw.player_guids)
                     if resolved is None:
                         if key == "totalAbsorbs":
                             unresolved_absorbs += value
@@ -886,7 +909,8 @@ class CombatLogParser:
                 owner_guid = parts[1]
                 owner_name = parts[2].strip('"').strip()
                 pet_guid   = parts[4]
-                if _is_player(owner_guid) and pet_guid:
+                owner_flags = parts[3] if len(parts) > 3 else None
+                if _is_player(owner_guid, owner_flags) and pet_guid:
                     pet_owner[pet_guid] = (owner_guid, owner_name)
                 continue
 
@@ -1139,6 +1163,17 @@ class CombatLogParser:
         discipline_guids: set[str] = set()
         death_context_entries = 0
 
+        flagged_player_guids = {
+            parts[guid_index].upper()
+            for _, parts, _ in segment
+            for guid_index, flags_index in ((1, 3), (4, 6))
+            if len(parts) > flags_index
+            and _is_player(parts[guid_index], parts[flags_index])
+        }
+
+        def is_player(guid: str) -> bool:
+            return guid.upper() in flagged_player_guids or _is_player(guid)
+
         boss_name_lower = boss_name.lower() if boss_name else ""
         boss_alias_set  = {a.lower() for a in boss_def.aliases} if boss_def else set()
 
@@ -1200,7 +1235,7 @@ class CombatLogParser:
                 spell_name = parts[8].strip('"').strip()
                 aura_key = (dst_guid, spell_name)
 
-                if _is_player(dst_guid) and dst_name and spell_name:
+                if is_player(dst_guid) and dst_name and spell_name:
                     target_actor = _get_actor(actors, dst_name, dst_guid)
                     aura_stats = target_actor.auras.setdefault(spell_name, AuraStats())
 
@@ -1229,7 +1264,7 @@ class CombatLogParser:
                                 removed_absorb[2],
                             )
 
-                    if _is_player(src_guid) and src_name:
+                    if is_player(src_guid) and src_name:
                         source_actor = _get_actor(actors, src_name, src_guid)
                         source_actor.observed_spells.add(spell_name)
                         if spell_name in {"Power Word: Shield", "Divine Aegis", "Penance"}:
@@ -1242,7 +1277,7 @@ class CombatLogParser:
                 if len(parts) < 12:
                     continue
                 dst_guid, dst_name = parts[4], parts[5].strip('"').strip()
-                if not (_is_player(dst_guid) and dst_name):
+                if not (is_player(dst_guid) and dst_name):
                     continue
                 spell_name = parts[8].strip('"').strip()
                 amount = _safe_float(parts[10])
@@ -1273,7 +1308,7 @@ class CombatLogParser:
                             "combat trigger" in dead_lower or "green dragon" in dead_lower))
                     ):
                         boss_died_ts = ts
-                    if _is_player(dead_guid) and dead_name:
+                    if is_player(dead_guid) and dead_name:
                         dead_actor = _get_actor(actors, dead_name, dead_guid)
                         dead_actor.deaths += 1
                         death_context_entries += 1 + len(dead_actor.recent_damage)
@@ -1326,7 +1361,7 @@ class CombatLogParser:
                 is_crit = fields.is_crit
                 if spell_name == "Penance":
                     discipline_guids.add(src_guid)
-                if is_crit and src_guid in discipline_guids and _is_player(dst_guid):
+                if is_crit and src_guid in discipline_guids and is_player(dst_guid):
                     active_absorb_auras.setdefault(dst_guid, {})["Divine Aegis"] = (
                         ts,
                         src_guid,
@@ -1351,7 +1386,7 @@ class CombatLogParser:
                 absorbed = fields.absorbed
                 is_crit = fields.is_crit
 
-            if not is_heal and absorbed > 0 and _is_player(dst_guid):
+            if not is_heal and absorbed > 0 and is_player(dst_guid):
                 total_absorbs += absorbed
                 shields = active_absorb_auras.get(dst_guid, {})
                 recent_shields = recently_removed_absorb_auras.get(dst_guid, {})
@@ -1368,7 +1403,7 @@ class CombatLogParser:
                 ]
                 if candidates:
                     _, shield_name, shield_src_guid, shield_src_name = max(candidates)
-                    if _is_player(shield_src_guid) and shield_src_name:
+                    if is_player(shield_src_guid) and shield_src_name:
                         absorber = _get_actor(actors, shield_src_name, shield_src_guid)
                         absorber.total_absorbs += absorbed
                         absorb_stats = absorber.absorbs.setdefault(shield_name, AbsorbStats())
@@ -1385,7 +1420,7 @@ class CombatLogParser:
             if amount <= 0:
                 continue
 
-            if not is_heal and _is_player(dst_guid) and dst_name:
+            if not is_heal and is_player(dst_guid) and dst_name:
                 actual_damage = reported_damage_taken_amount(fields)
                 damaged_actor = _get_actor(actors, dst_name, dst_guid)
                 damaged_actor.damage_taken += actual_damage
@@ -1408,7 +1443,7 @@ class CombatLogParser:
                 continue
 
             # Only count player sources as DPS/HPS
-            if not _is_player(src_guid):
+            if not is_player(src_guid):
                 # Remap pet/summon damage to owner if known
                 if pet_owner and src_guid in pet_owner:
                     owner_guid, owner_name = pet_owner[src_guid]
@@ -1420,7 +1455,7 @@ class CombatLogParser:
                     # Boss-mechanic heals (e.g. Blood-Queen vampiric bites):
                     # src is a non-player NPC but dst is a player. Count in
                     # encounter total_healing without attributing to any actor.
-                    if is_heal and _is_player(dst_guid) and amount > 0:
+                    if is_heal and is_player(dst_guid) and amount > 0:
                         boss_mechanic_healing += amount
                     continue
 
@@ -1429,7 +1464,7 @@ class CombatLogParser:
 
             # Skip player-to-player damage (Blood-Queen vampires, Pact of the
             # Darkfallen, Blood Mirror, etc.). These are not DPS against the boss.
-            if not is_heal and _is_player(dst_guid):
+            if not is_heal and is_player(dst_guid):
                 continue
 
             # Healing eligibility follows the source, already qualified above.
@@ -1696,7 +1731,7 @@ class CombatLogParser:
         """Estimate group size from unique player GUIDs."""
         players: set[str] = set()
         for _, parts, _ in segment:
-            if len(parts) > 1 and _is_player(parts[1]):
+            if len(parts) > 3 and _is_player(parts[1], parts[3]):
                 players.add(parts[1])
         n = len(players)
         if n <= 12:
@@ -1760,32 +1795,9 @@ def _safe_float(s: str) -> float:
         return 0.0
 
 
-def _is_player(guid: str) -> bool:
-    """Return True if GUID belongs to a player character."""
-    if not guid:
-        return False
-    g = guid.upper()
-    # Null / empty GUIDs
-    if g in ("0X0000000000000000", "0XNIL", "NIL"):
-        return False
-    # Retail/modern format: "Player-NNNN-XXXXXXXX"
-    if g.startswith("PLAYER-"):
-        return True
-    if not g.startswith("0X"):
-        return False
-    hex_part = g[2:]  # up to 16 hex chars
-    if len(hex_part) < 2:
-        return False
-    high_byte = hex_part[:2]  # first two hex chars = highest byte
-    # Warmane/private-server WotLK: player GUIDs start with 0x06
-    if high_byte == "06":
-        return True
-    # Standard WotLK: type nibble at hex_part[3]; Player = 4
-    if len(hex_part) >= 4:
-        nibble = hex_part[3]
-        if nibble in "0123456789ABCDEF":
-            return int(nibble, 16) == 4
-    return False
+def _is_player(guid: str, flags: Optional[str] = None) -> bool:
+    """Compatibility wrapper around the authoritative identity classifier."""
+    return is_player_guid(guid, flags)
 
 
 def _get_actor(actors: dict[str, ActorStats], name: str, guid: str) -> ActorStats:

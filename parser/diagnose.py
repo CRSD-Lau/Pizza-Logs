@@ -56,7 +56,8 @@ class DiagnosticParser(CombatLogParser):
             ev = parts[0]
             if ev == "SPELL_SUMMON" and len(parts) >= 5:
                 og, on_, pg = parts[1], parts[2].strip('"').strip(), parts[4]
-                if _is_player(og) and pg:
+                flags = parts[3] if len(parts) > 3 else None
+                if _is_player(og, flags) and pg:
                     pet_owner[pg] = (og, on_)
                 continue
             filtered.append((ts_str, parts, ts))
@@ -72,7 +73,8 @@ class DiagnosticParser(CombatLogParser):
             if len(parts) < 8:
                 continue
             sg, sn = parts[1], parts[2].strip('"').strip()
-            if _is_player(sg) or sg in pet_owner:
+            flags = parts[3] if len(parts) > 3 else None
+            if _is_player(sg, flags) or sg in pet_owner:
                 continue
             if sg in ("0x0000000000000000", "0XNIL", "NIL", ""):
                 continue
