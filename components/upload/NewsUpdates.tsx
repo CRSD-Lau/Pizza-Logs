@@ -6,6 +6,13 @@ const entries = [
     date: "2026-09-17",
     label: "Sep 17, 2026",
     category: "Update",
+    title: "Lich King attempts now stay together",
+    description: "Harvest Souls and Fury of Frostmourne phases now remain part of one coherent Lich King attempt, so reports show a single kill or wipe instead of extra UNKNOWN fragments. Affected reports need to be uploaded again.",
+  },
+  {
+    date: "2026-09-17",
+    label: "Sep 17, 2026",
+    category: "Update",
     title: "Icecrown combat logs now show player metrics",
     description: "Pizza Logs now recognizes players from compatible WotLK combat-log identity flags instead of relying on one realm-specific GUID prefix. Affected Icecrown reports need to be uploaded again to restore damage, healing and player details.",
   },
