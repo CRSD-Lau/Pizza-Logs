@@ -6,10 +6,6 @@ This project follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) an
 
 ## [Unreleased]
 
-### Known issues
-
-- Warn that some Icecrown uploads may show zero player damage or healing because of a player GUID parsing bug. Investigation is waiting on a small combat-log sample to confirm the affected format; uploaders should retain their original logs for re-upload after a fix. Track progress in [issue #126](https://github.com/CRSD-Lau/Pizza-Logs/issues/126).
-
 ### Security
 
 - Require current upload-rule acknowledgement before processing and reject cross-site browser uploads. Bound actual streamed bytes and size agreement, concurrent web requests and upload starts; retain safe public errors and reject parser redirects.
@@ -37,12 +33,18 @@ This project follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) an
 ### Changed
 
 - Exclude all wipes strictly under 60 seconds from default encounter lists and counts, regardless of deaths. Include short pulls restores them; kills, unknown outcomes and stored combat metrics remain unchanged.
+- Advance parser provenance to `1.1.2` for combat-flag player identity recognition. Existing reports retain their original parser provenance and are not recalculated automatically.
 
 - Show each player once per weekly DPS/HPS ranking, using their best qualifying attempt before selecting the top ten, on the weekly page and API.
 
 - Restore the optional guild or raid-group field to the visible upload details so reports from different communities can be identified before selecting a combat log.
 - Correct Railway notification cost estimates by converting projected resource quantities with published Railway rates instead of displaying raw usage units as dollars. Replace collapsed notification text with a responsive card-and-table email layout for daily digests and upload alerts.
 - Preload the existing local branding fonts with matched fallback metrics and reserve viewport-relative space during page loading to reduce font reflow and footer movement as content streams in.
+
+### Fixed
+
+- Recognize players from compatible WotLK combat-log identity flags instead of relying on a realm-specific GUID prefix. Icecrown `0x07` uploads now retain player names, damage, healing, absorbs and damage taken; previously affected reports require a new upload.
+- Warn when a substantial detected encounter contains no recognized player metrics, preventing unsupported identity formats from silently producing plausible-looking zero reports.
 - Hide decorative accordion chevrons from assistive technology; the button's expanded state continues to describe whether the section is open.
 - Raise the uploaded TXT, LOG and ZIP limit from 100 MiB to 1 GiB, retaining the 1 GiB expanded-log ceiling and existing archive, complexity, concurrency and timeout safeguards. Recommend ZIP for faster transfer and document that large uploads can still exceed processing limits.
 - Default player summaries and histories to metrics relevant to recorded roles/specs, with Show all metrics for secondary output and full detail for mixed or uncertain roles. Add Damage, Healing and All raid-table views and role-based chart defaults with explicit DPS, HPS, APS, Healing + absorbs /s and DTPS choices; preserve zero values, source links and URL preferences.

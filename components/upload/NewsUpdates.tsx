@@ -3,6 +3,13 @@ import { PageSection } from "@/components/ui/PageLayout";
 // Keep newest first. Summarize shipped changes from CHANGELOG.md for uploaders.
 const entries = [
   {
+    date: "2026-09-17",
+    label: "Sep 17, 2026",
+    category: "Update",
+    title: "Icecrown combat logs now show player metrics",
+    description: "Pizza Logs now recognizes players from compatible WotLK combat-log identity flags instead of relying on one realm-specific GUID prefix. Affected Icecrown reports need to be uploaded again to restore damage, healing and player details.",
+  },
+  {
     date: "2026-09-13",
     label: "Sep 13, 2026",
     category: "Update",
@@ -49,30 +56,6 @@ export function NewsUpdates() {
         </a>
       }
     >
-      <aside
-        aria-labelledby="icecrown-guid-warning-title"
-        className="mb-6 rounded-sm border border-warning/50 bg-warning/10 px-4 py-4"
-      >
-        <p className="text-xs font-semibold uppercase tracking-wide text-warning">Active warning</p>
-        <h3 id="icecrown-guid-warning-title" className="mt-1 text-base font-semibold text-heading">
-          Icecrown player metrics may show zero
-        </h3>
-        <p className="mt-1 max-w-3xl text-sm leading-relaxed text-text-secondary">
-          Some Icecrown uploads are affected by a player GUID parsing bug and may show zero damage or healing. I am
-          currently waiting for a small combat-log sample to investigate the affected format further. Please keep your
-          original log so it can be uploaded again after a fix. Follow progress in{" "}
-          <a
-            href="https://github.com/CRSD-Lau/Pizza-Logs/issues/126"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="font-semibold text-warning underline decoration-warning/50 underline-offset-2 hover:text-gold-light"
-          >
-            bug report #126<span className="sr-only"> (opens in a new tab)</span>
-          </a>
-          .
-        </p>
-      </aside>
-
       <ul className="divide-y divide-gold-dim">
         {entries.map((entry) => (
           <li key={entry.title} className="grid gap-2 py-5 first:pt-0 last:pb-0 sm:grid-cols-[9rem_1fr] sm:gap-6">
