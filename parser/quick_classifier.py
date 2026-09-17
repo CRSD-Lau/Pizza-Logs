@@ -29,6 +29,10 @@ ACTIVE_EVENTS = {
     "SPELL_HEAL", "SPELL_PERIODIC_HEAL", UNIT_DIED,
 }
 ENCOUNTER_GAP_SECONDS = 30.0
+LICH_KING_FURY_OF_FROSTMOURNE_ID = "72350"
+LICH_KING_ROLEPLAY_GRACE_SECONDS = 300.0
+LICH_KING_HARVEST_SOUL_ID = "73655"
+LICH_KING_HARVEST_GRACE_SECONDS = 10.0
 _RELEVANT_IDS = {
     spell_id
     for modes in DIFFICULTY_SPELLS.values()
@@ -60,6 +64,27 @@ def _is_boss_event(parts: list[str]) -> bool:
     return False
 
 
+def _is_lk_fury_event(parts: list[str]) -> bool:
+    if len(parts) < 9:
+        return False
+    return (
+        parts[2].strip('"').strip().lower() in {"the lich king", "lich king", "arthas"}
+        and (
+            parts[7].strip() == LICH_KING_FURY_OF_FROSTMOURNE_ID
+            or parts[8].strip('"').strip().lower() == "fury of frostmourne"
+        )
+    )
+
+
+def _is_lk_harvest_soul_event(parts: list[str]) -> bool:
+    if len(parts) < 9:
+        return False
+    return (
+        parts[7].strip() == LICH_KING_HARVEST_SOUL_ID
+        or parts[8].strip('"').strip().lower() == "harvest soul"
+    )
+
+
 def _infer_boss(segment: list[tuple[str, list[str], float]]) -> str | None:
     counts: dict[str, int] = {}
     for _, parts, _ in segment:
@@ -82,6 +107,8 @@ def iter_encounter_segments(
     in_marker_encounter = False
     heuristic_active = False
     last_boss_ts = 0.0
+    lich_king_roleplay_ts: float | None = None
+    lich_king_harvest_ts: float | None = None
     calendar_key: tuple[int, int] | None = None
     calendar_year = file_year
     calendar_ordinal = 0
@@ -141,11 +168,24 @@ def iter_encounter_segments(
 
         boss_event = _is_boss_event(parts)
         if heuristic_active:
-            if absolute_seconds - last_boss_ts > ENCOUNTER_GAP_SECONDS:
+            if _is_lk_fury_event(parts):
+                lich_king_roleplay_ts = absolute_seconds
+            if _is_lk_harvest_soul_event(parts):
+                lich_king_harvest_ts = absolute_seconds
+            inside_lk_scripted_pause = (
+                lich_king_roleplay_ts is not None
+                and absolute_seconds - lich_king_roleplay_ts <= LICH_KING_ROLEPLAY_GRACE_SECONDS
+            ) or (
+                lich_king_harvest_ts is not None
+                and absolute_seconds - lich_king_harvest_ts <= LICH_KING_HARVEST_GRACE_SECONDS
+            )
+            if absolute_seconds - last_boss_ts > ENCOUNTER_GAP_SECONDS and not inside_lk_scripted_pause:
                 if current:
                     yield current
                 current = BoundedEventList()
                 heuristic_active = False
+                lich_king_roleplay_ts = None
+                lich_king_harvest_ts = None
                 if event in ACTIVE_EVENTS and boss_event:
                     heuristic_active = True
                     last_boss_ts = absolute_seconds
