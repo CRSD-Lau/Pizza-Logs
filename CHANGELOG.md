@@ -33,7 +33,7 @@ This project follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) an
 ### Changed
 
 - Exclude all wipes strictly under 60 seconds from default encounter lists and counts, regardless of deaths. Include short pulls restores them; kills, unknown outcomes and stored combat metrics remain unchanged.
-- Advance parser provenance to `1.1.2` for combat-flag player identity recognition. Existing reports retain their original parser provenance and are not recalculated automatically.
+- Advance parser provenance to `1.1.3` for combat-flag player identity recognition and Lich King scripted-phase segmentation. Existing reports retain their original parser provenance and are not recalculated automatically.
 
 - Show each player once per weekly DPS/HPS ranking, using their best qualifying attempt before selecting the top ten, on the weekly page and API.
 
@@ -43,6 +43,7 @@ This project follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) an
 
 ### Fixed
 
+- Keep heroic Lich King Harvest Souls and Fury of Frostmourne phases in one coherent attempt. The combined pull now retains its original difficulty evidence and resolves to one kill or wipe instead of producing extra `UNKNOWN` fragments.
 - Recognize players from compatible WotLK combat-log identity flags instead of relying on a realm-specific GUID prefix. Icecrown `0x07` uploads now retain player names, damage, healing, absorbs and damage taken; previously affected reports require a new upload.
 - Warn when a substantial detected encounter contains no recognized player metrics, preventing unsupported identity formats from silently producing plausible-looking zero reports.
 - Hide decorative accordion chevrons from assistive technology; the button's expanded state continues to describe whether the section is open.

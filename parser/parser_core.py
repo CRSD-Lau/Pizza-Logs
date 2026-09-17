@@ -135,6 +135,13 @@ ENCOUNTER_GAP_SECONDS = 30
 LICH_KING_FURY_OF_FROSTMOURNE_ID = "72350"
 LICH_KING_ROLEPLAY_GRACE_SECONDS = 300
 
+# Heroic Harvest Souls temporarily removes the raid from the platform, so the
+# Lich King stops appearing in source/destination fields for more than the
+# generic encounter gap. The periodic aura keeps emitting until the raid is
+# restored, which is precise evidence that the same pull is still active.
+LICH_KING_HARVEST_SOUL_ID = "73655"
+LICH_KING_HARVEST_GRACE_SECONDS = 10
+
 # Minimum events to treat a fight segment as a real encounter
 MIN_ENCOUNTER_EVENTS = 10
 
@@ -856,6 +863,7 @@ class CombatLogParser:
         heuristic_active = False
         last_boss_ts: float = 0.0
         lich_king_roleplay_ts: Optional[float] = None
+        lich_king_harvest_ts: Optional[float] = None
         heuristic_segment: list[tuple[str, list[str], float]] = BoundedEventList()
         # ── Full-session Custom Slice accumulator ────────────────
         # Counts every event from the first line to the last line in a raid
@@ -956,11 +964,16 @@ class CombatLogParser:
             if heuristic_active:
                 if _is_lich_king_fury_event(parts):
                     lich_king_roleplay_ts = abs_ts
-                inside_lich_king_roleplay = (
+                if _is_lich_king_harvest_soul_event(parts):
+                    lich_king_harvest_ts = abs_ts
+                inside_lich_king_scripted_pause = (
                     lich_king_roleplay_ts is not None
                     and abs_ts - lich_king_roleplay_ts <= LICH_KING_ROLEPLAY_GRACE_SECONDS
+                ) or (
+                    lich_king_harvest_ts is not None
+                    and abs_ts - lich_king_harvest_ts <= LICH_KING_HARVEST_GRACE_SECONDS
                 )
-                if abs_ts - last_boss_ts > ENCOUNTER_GAP_SECONDS and not inside_lich_king_roleplay:
+                if abs_ts - last_boss_ts > ENCOUNTER_GAP_SECONDS and not inside_lich_king_scripted_pause:
                     # A long quiet gap always closes the previous attempt, even
                     # when the first line after the gap also names the boss.
                     if len(heuristic_segment) >= MIN_ENCOUNTER_EVENTS:
@@ -968,6 +981,7 @@ class CombatLogParser:
                     heuristic_segment = BoundedEventList()
                     heuristic_active = False
                     lich_king_roleplay_ts = None
+                    lich_king_harvest_ts = None
                     if is_boss and (event in DMG_EVENTS or event in HEAL_EVENTS or event == UNIT_DIED_EVENT):
                         heuristic_active = True
                         last_boss_ts = abs_ts
@@ -1857,4 +1871,16 @@ def _is_lich_king_fury_event(parts: list[str]) -> bool:
             spell_id == LICH_KING_FURY_OF_FROSTMOURNE_ID
             or spell_name == "fury of frostmourne"
         )
+    )
+
+
+def _is_lich_king_harvest_soul_event(parts: list[str]) -> bool:
+    """Return whether heroic Harvest Souls proves the LK pull is still active."""
+    if len(parts) < 9:
+        return False
+    spell_id = parts[7].strip()
+    spell_name = parts[8].strip('"').strip().lower()
+    return (
+        spell_id == LICH_KING_HARVEST_SOUL_ID
+        or spell_name == "harvest soul"
     )

@@ -16,6 +16,7 @@ from parser_core import (
     _decode_difficulty, _fingerprint, _is_player,
 )
 from bosses import lookup_boss
+from quick_classifier import quick_classify
 
 
 # ── Helpers ────────────────────────────────────────────────────────────────────
@@ -786,15 +787,80 @@ def test_lk_fury_roleplay_gap_remains_one_kill_segment():
     ]
     death = _log_line("4/19 13:03:40.000", _unit_died_parts("The Lich King"))
 
-    encounters = CombatLogParser(file_year=2026).parse_file(
-        io.StringIO("".join([*pre_roleplay, fury, *post_roleplay, death]))
-    )
+    log_text = "".join([*pre_roleplay, fury, *post_roleplay, death])
+    encounters = CombatLogParser(file_year=2026).parse_file(io.StringIO(log_text))
+    preview = quick_classify(io.StringIO(log_text), file_year=2026)
 
     assert len(encounters) == 1
     assert encounters[0].boss_name == "The Lich King"
     assert encounters[0].difficulty == "25N"
     assert encounters[0].outcome == "KILL"
     assert encounters[0].duration_seconds == pytest.approx(220.0)
+    assert len(preview) == 1
+    assert preview[0]["mode"] == "25N"
+
+
+def test_lk_harvest_soul_gap_remains_one_heroic_segment():
+    """Heroic Harvest Souls activity keeps the active LK pull together."""
+    opening = [
+        _log_line(
+            f"4/19 13:00:{second:02d}.000",
+            _spell_damage_parts(
+                PLAYER_GUID,
+                "Phyre",
+                NPC_GUID,
+                "The Lich King",
+                10_000,
+                spell_id=73781 if second == 0 else 133,
+            ),
+        )
+        for second in range(10)
+    ]
+    harvest = [
+        _log_line(
+            f"4/19 13:00:{second:02d}.000",
+            [
+                "SPELL_PERIODIC_DAMAGE",
+                "0x0000000000000000",
+                "nil",
+                "0x80000000",
+                PLAYER_GUID,
+                '"Phyre"',
+                "0x514",
+                "73655",
+                '"Harvest Soul"',
+                "0x20",
+                "1000",
+            ],
+        )
+        for second in range(20, 46)
+    ]
+    resumed = [
+        _log_line(
+            f"4/19 13:00:{second:02d}.000",
+            _spell_damage_parts(
+                PLAYER_GUID,
+                "Phyre",
+                NPC_GUID,
+                "The Lich King",
+                5_000,
+            ),
+        )
+        for second in range(47, 57)
+    ]
+    death = _log_line("4/19 13:00:57.000", _unit_died_parts("The Lich King"))
+
+    log_text = "".join([*opening, *harvest, *resumed, death])
+    encounters = CombatLogParser(file_year=2026).parse_file(io.StringIO(log_text))
+    preview = quick_classify(io.StringIO(log_text), file_year=2026)
+
+    assert len(encounters) == 1
+    assert encounters[0].boss_name == "The Lich King"
+    assert encounters[0].difficulty == "25H"
+    assert encounters[0].outcome == "KILL"
+    assert len(preview) == 1
+    assert preview[0]["bossName"] == "The Lich King"
+    assert preview[0]["mode"] == "25H"
 
 
 def test_fingerprint_distinguishes_same_roster_pulls_within_five_minutes():
