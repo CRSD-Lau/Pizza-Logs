@@ -3,7 +3,7 @@
 from datetime import datetime, timezone
 
 
-PARSER_VERSION = "1.1.1"
+PARSER_VERSION = "1.1.2"
 METRIC_SCHEMA_VERSION = 1
 ANALYTICS_PROFILE = "canonical-v1"
 

@@ -42,6 +42,16 @@ def make_encounter(boss_name: str, difficulty: str = "25N", session_index: int =
     )
 
 
+def _unit_flags(guid: str) -> str:
+    """Return internally consistent player, controlled-unit, or NPC flags."""
+    upper = guid.upper()
+    if _is_player(guid):
+        return "0x512"
+    if upper.startswith(("0XF14", "0XF15")):
+        return "0x1114"
+    return "0xa48"
+
+
 def _spell_damage_parts(src_guid: str, src_name: str,
                         dst_guid: str, dst_name: str,
                         amount: int, spell: str = "Fireball",
@@ -52,8 +62,8 @@ def _spell_damage_parts(src_guid: str, src_name: str,
     """Build a minimal SPELL_DAMAGE parts list (18 fields)."""
     return [
         event,
-        src_guid, f'"{src_name}"', "0x512",
-        dst_guid, f'"{dst_name}"', "0xa48",
+        src_guid, f'"{src_name}"', _unit_flags(src_guid),
+        dst_guid, f'"{dst_name}"', _unit_flags(dst_guid),
         str(spell_id), f'"{spell}"', "4",
         str(amount), str(overkill), "4", "0", "0", str(absorbed), "0", "0",
     ]
@@ -65,8 +75,8 @@ def _swing_damage_parts(src_guid: str, src_name: str,
     """Build a minimal SWING_DAMAGE parts list (14 fields)."""
     return [
         "SWING_DAMAGE",
-        src_guid, f'"{src_name}"', "0x512",
-        dst_guid, f'"{dst_name}"', "0xa48",
+        src_guid, f'"{src_name}"', _unit_flags(src_guid),
+        dst_guid, f'"{dst_name}"', _unit_flags(dst_guid),
         str(amount), str(overkill), "1", "0", "0", "0", "0",
     ]
 
@@ -222,6 +232,19 @@ def test_decode_difficulty_does_not_fallback_to_10n():
 
 def test_is_player_warmane_guid():
     assert _is_player("0x0600000000B8F53B") is True
+
+
+def test_is_player_icecrown_guid_from_combat_flags():
+    assert _is_player("0x0700000000B8F53B", "0x514") is True
+
+
+@pytest.mark.parametrize("flags", ["0xa48", "0x1114", "0x2114"])
+def test_icecrown_guid_with_non_player_type_flags_is_not_player(flags: str):
+    assert _is_player("0x0700000000B8F53B", flags) is False
+
+
+def test_is_player_standard_wotlk_guid_without_flags():
+    assert _is_player("0x0000000000000001") is True
 
 def test_is_player_retail_format():
     assert _is_player("Player-1234-AB123456") is True
@@ -1032,6 +1055,38 @@ def test_presummoned_pet_attributed_via_mend_pet():
     assert phyre["totalDamage"] == pytest.approx(100_000, rel=0.01)
 
 
+def test_icecrown_player_flags_preserve_pet_damage_attribution():
+    """Flag-proven Icecrown owners retain damage from their permanent pets."""
+    parser = CombatLogParser()
+    owner_guid = "0x0700000000000001"
+    ts = 46800.0
+    segment = [
+        ("4/19 13:00:00.000",
+         [ENCOUNTER_START, "1234", '"Lord Marrowgar"', "6", "25"], ts),
+        ("4/19 13:00:10.000",
+         _mend_pet_parts(owner_guid, "Icehunter", PET_GUID, "Icepet"),
+         ts + 10),
+        ("4/19 13:01:00.000",
+         _pet_spell_damage_parts(PET_GUID, "Icepet", NPC_GUID, "Lord Marrowgar", 75_000),
+         ts + 60),
+        ("4/19 13:02:00.000",
+         _unit_died_parts("Lord Marrowgar"),
+         ts + 120),
+        ("4/19 13:03:21.000",
+         [ENCOUNTER_END, "1234", '"Lord Marrowgar"', "6", "25", "1"], ts + 201),
+    ]
+
+    encounter = parser._aggregate_segment(segment, {})
+
+    assert encounter is not None
+    owner = next(
+        (player for player in encounter.participants if player["name"] == "Icehunter"),
+        None,
+    )
+    assert owner is not None
+    assert owner["totalDamage"] == pytest.approx(75_000, rel=0.01)
+
+
 def test_presummoned_pet_attributed_when_damage_comes_before_mend_pet():
     """Even if the pet deals damage BEFORE Mend Pet fires, the pre-pass
     over the whole segment must still attribute the damage correctly."""
@@ -1187,8 +1242,8 @@ def _make_full_log(*lines: str) -> str:
 def _pdmg(ts: str, src: str, dst: str, dst_name: str, amount: int,
           overkill: int = 0) -> str:
     """Format a SPELL_DAMAGE log line for parse_file."""
-    return (f'{ts}  SPELL_DAMAGE,{src},"Phyre",0x512,'
-            f'{dst},"{dst_name}",0xa48,133,"Frostbolt",4,'
+    return (f'{ts}  SPELL_DAMAGE,{src},"Phyre",{_unit_flags(src)},'
+            f'{dst},"{dst_name}",{_unit_flags(dst)},133,"Frostbolt",4,'
             f'{amount},{overkill},4,0,0,0,0,0\n')
 
 
@@ -1298,6 +1353,86 @@ def test_session_analytics_matches_uwu_whole_custom_slice():
     assert session["players"]["Phyre"]["totalDamage"] == pytest.approx(3_400)
     assert session["players"]["Shieldheals"]["heal"] == pytest.approx(1_000)
     assert session["players"]["Shieldtank"]["damageTaken"] == pytest.approx(1_200)
+
+
+def test_icecrown_player_flags_populate_encounter_and_session_metrics():
+    damage_guid = "0x0700000000000001"
+    healer_guid = "0x0700000000000002"
+    tank_guid = "0x0700000000000003"
+    boss_guid = "0xF130000000000001"
+    log = _make_full_log(
+        _enc_start("4/19 13:00:00.000"),
+        (
+            f'4/19 13:00:05.000  SPELL_AURA_APPLIED,{healer_guid},"Iceheals",0x514,'
+            f'{tank_guid},"Icetank",0x514,48066,"Power Word: Shield",2,"BUFF"\n'
+        ),
+        (
+            f'4/19 13:00:10.000  SPELL_DAMAGE,{damage_guid},"Icedamage",0x514,'
+            f'{boss_guid},"Lord Marrowgar",0xa48,133,"Frostbolt",4,1000,0,4,0,0,0,0,0\n'
+        ),
+        (
+            f'4/19 13:00:20.000  SPELL_HEAL,{healer_guid},"Iceheals",0x514,'
+            f'{tank_guid},"Icetank",0x514,48071,"Flash Heal",2,500,100,0,0\n'
+        ),
+        (
+            f'4/19 13:00:30.000  SPELL_DAMAGE,{boss_guid},"Lord Marrowgar",0xa48,'
+            f'{tank_guid},"Icetank",0x514,69076,"Bone Storm",1,700,0,1,0,0,100,0,0\n'
+        ),
+        (
+            f'4/19 13:01:10.000  UNIT_DIED,0x0000000000000000,nil,0x80000000,'
+            f'{boss_guid},"Lord Marrowgar",0xa48\n'
+        ),
+        _enc_end("4/19 13:01:10.100"),
+    )
+
+    parser = CombatLogParser(file_year=2026)
+    encounters = parser.parse_file(io.StringIO(log))
+
+    assert len(encounters) == 1
+    encounter = encounters[0]
+    assert encounter.total_damage == pytest.approx(1_000)
+    assert encounter.total_healing == pytest.approx(400)
+    assert encounter.total_absorbs == pytest.approx(100)
+    assert encounter.total_damage_taken == pytest.approx(700)
+    assert {player["name"] for player in encounter.participants} == {
+        "Icedamage", "Iceheals", "Icetank",
+    }
+
+    session = parser.session_analytics[0]
+    assert session["totalDamage"] == pytest.approx(1_000)
+    assert session["totalHealing"] == pytest.approx(400)
+    assert session["totalAbsorbs"] == pytest.approx(100)
+    assert session["totalDamageTaken"] == pytest.approx(700)
+    assert set(session["players"]) == {"Icedamage", "Iceheals", "Icetank"}
+    assert not parser.warnings
+
+
+def test_substantial_encounter_without_player_metrics_emits_warning():
+    unsupported_guid = "0x0700000000000001"
+    boss_guid = "0xF130000000000001"
+    log = _make_full_log(
+        _enc_start("4/19 13:00:00.000"),
+        (
+            f'4/19 13:00:10.000  SPELL_DAMAGE,{unsupported_guid},"Unknownformat",0x0,'
+            f'{boss_guid},"Lord Marrowgar",0xa48,133,"Frostbolt",4,1000,0,4,0,0,0,0,0\n'
+        ),
+        (
+            f'4/19 13:01:10.000  UNIT_DIED,0x0000000000000000,nil,0x80000000,'
+            f'{boss_guid},"Lord Marrowgar",0xa48\n'
+        ),
+        _enc_end("4/19 13:01:10.100"),
+    )
+
+    parser = CombatLogParser(file_year=2026)
+    encounters = parser.parse_file(io.StringIO(log))
+
+    assert len(encounters) == 1
+    assert encounters[0].participants == []
+    assert encounters[0].total_damage == 0
+    assert parser.warnings == [
+        "1 raid encounter(s) contained no recognized player metrics. "
+        "The combat log may use an unsupported or malformed player identity format."
+    ]
 
 
 def test_session_damage_includes_pre_encounter_trash():

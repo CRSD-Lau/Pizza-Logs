@@ -109,6 +109,62 @@ def test_supported_ulduar_missing_hard_marker_is_size_matched_normal(boss: str, 
     assert result.mode == f"{size}N"
 
 
+def test_icecrown_player_flags_drive_size_detection_without_guid_prefix_allowlist():
+    players = [
+        (
+            "1/1 00:00:01.000",
+            [
+                "SPELL_DAMAGE",
+                f"0x070000000000{index:04X}",
+                f"Player{index}",
+                "0x514",
+                "0xF130000000000001",
+                "Assembly of Iron",
+                "0xa48",
+                str(1_000_000 + index),
+                "Marker",
+                "1",
+                "1",
+            ],
+            1.0,
+        )
+        for index in range(1, 12)
+    ]
+
+    result = detect_difficulty("Assembly of Iron", players)
+
+    assert result.mode == "25N"
+    assert "player_guids:11=>25" in result.evidence
+
+
+def test_icecrown_destination_flags_also_drive_size_detection():
+    players = [
+        (
+            "1/1 00:00:01.000",
+            [
+                "SPELL_DAMAGE",
+                "0xF130000000000001",
+                "Assembly of Iron",
+                "0xa48",
+                f"0x070000000000{index:04X}",
+                f"Player{index}",
+                "0x514",
+                str(1_000_000 + index),
+                "Marker",
+                "1",
+                "1",
+            ],
+            1.0,
+        )
+        for index in range(1, 12)
+    ]
+
+    result = detect_difficulty("Assembly of Iron", players)
+
+    assert result.mode == "25N"
+    assert "player_guids:11=>25" in result.evidence
+
+
 @pytest.mark.parametrize("size", [10, 25])
 def test_freya_requires_all_three_elder_markers(size: int):
     required = sorted(FREYA_ELDER_MARKERS[size])

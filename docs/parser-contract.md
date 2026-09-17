@@ -26,6 +26,13 @@ Player GUIDs include:
 - retail-style `Player-` values;
 - compatible WotLK player-flag GUIDs.
 
+When combat-log object type flags are present, the `TYPE_PLAYER` bit is the
+authoritative identity signal. Realm-specific GUID prefixes are compatibility
+fallbacks only for older records whose type flags are absent or zero; a GUID
+with explicit NPC, pet, guardian or vehicle type flags is not treated as a
+player. Substantial encounters with no recognized player metrics emit a parser
+warning instead of silently presenting a plausible zero report.
+
 Vehicle sources such as Gunship cannon GUIDs are not credited as player pets.
 
 ## Encounter Segmentation
