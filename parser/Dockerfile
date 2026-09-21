@@ -1,6 +1,6 @@
 # Keep the supported Alpine branch and reviewed image digest explicit. Dependabot
 # checks /parser weekly; a base refresh must pass the test target and image scan.
-FROM python:3.14-alpine3.24@sha256:c6ead215bfd31f1e433d968853b7a769989117115b728874824e6c0a27cb96fc AS dependencies
+FROM python:3.14-alpine3.24@sha256:016508ba505da24f7139765bc4bb669df4e88eb2f12eeadd571bf2f88d7533df AS dependencies
 
 LABEL org.opencontainers.image.authors="Neil Mitchell"
 
