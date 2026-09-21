@@ -3,6 +3,10 @@
 Author: Neil Mitchell
 Last Modified By: Neil Mitchell
 
+Dependency refresh verified 2026-09-21: dotenv 18.0.1 retains BSD-2-Clause,
+Uvicorn 0.53.0 retains BSD-3-Clause, and Ruff 0.16.8 retains MIT. No direct
+dependencies or license obligations were added or removed in this refresh.
+
 Cheerio 1.2.0 added and verified from its installed MIT license on 2026-09-07.
 This adds one MIT runtime dependency to the historical inventory below (43 direct
 packages total, 26 MIT). Its transitive packages remain covered by the lockfile
@@ -38,7 +42,7 @@ Scope: the 42 direct runtime and development dependencies declared in `package.j
 | `better-call` | 1.4.0 | MIT |
 | `class-variance-authority` | 0.7.1 | Apache-2.0 |
 | `clsx` | 2.1.1 | MIT |
-| `dotenv` | 17.4.2 | BSD-2-Clause |
+| `dotenv` | 18.0.1 | BSD-2-Clause |
 | `lucide-react` | 1.35.0 | ISC |
 | `next` | 16.3.3 | MIT |
 | `pg` | 8.23.0 | MIT |
@@ -76,7 +80,7 @@ Scope: the 42 direct runtime and development dependencies declared in `package.j
 | Package | Locked version | License |
 | --- | ---: | --- |
 | `fastapi` | 0.141.1 | MIT |
-| `uvicorn[standard]` | 0.52.4 | BSD-3-Clause |
+| `uvicorn[standard]` | 0.53.0 | BSD-3-Clause |
 | `python-multipart` | 0.0.32 | Apache-2.0 |
 | `pydantic` | 2.13.4 | MIT |
 
@@ -85,7 +89,7 @@ Scope: the 42 direct runtime and development dependencies declared in `package.j
 | Package | Locked version | License |
 | --- | ---: | --- |
 | `pytest` | 9.1.1 | MIT |
-| `ruff` | 0.16.5 | MIT |
+| `ruff` | 0.16.8 | MIT |
 | `bandit` | 1.9.4 | Apache-2.0 |
 | `pip-audit` | 2.10.1 | Apache-2.0 |
 | `pip-tools` | 7.6.1 | BSD-3-Clause |

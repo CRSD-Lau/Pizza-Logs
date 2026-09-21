@@ -3,6 +3,13 @@ import { PageSection } from "@/components/ui/PageLayout";
 // Keep newest first. Summarize shipped changes from CHANGELOG.md for uploaders.
 const entries = [
   {
+    date: "2026-09-21",
+    label: "Sep 21, 2026",
+    category: "Update",
+    title: "Routine site maintenance",
+    description: "Updated the software behind Pizza Logs and its automated checks. Existing reports remain available, and no re-upload is needed for this maintenance update.",
+  },
+  {
     date: "2026-09-17",
     label: "Sep 17, 2026",
     category: "Update",

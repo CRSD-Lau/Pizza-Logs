@@ -46,6 +46,10 @@ updates:
       time: "09:30"
       timezone: America/Halifax
     open-pull-requests-limit: 5
+    groups:
+      codeql:
+        patterns:
+          - "github/codeql-action/*"
 
   - package-ecosystem: docker
     directory: /

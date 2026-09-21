@@ -6,6 +6,10 @@ This project follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) an
 
 ## [Unreleased]
 
+### Maintenance - 2026-09-21
+
+- Update dotenv to 18.0.1, Uvicorn to 0.53.0, and Ruff to 0.16.8, with regenerated Python hash locks and verified environment-file precedence. Keep CodeQL initialization and analysis on the same 4.38.1 revision and group future CodeQL updates together.
+
 ### Security
 
 - Require current upload-rule acknowledgement before processing and reject cross-site browser uploads. Bound actual streamed bytes and size agreement, concurrent web requests and upload starts; retain safe public errors and reject parser redirects.
