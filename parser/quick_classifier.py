@@ -103,8 +103,9 @@ def iter_encounter_segments(
 ) -> Iterator[list[tuple[str, list[str], float]]]:
     """Yield one bounded encounter at a time from a combat-log text stream."""
     current: list[tuple[str, list[str], float]] = BoundedEventList()
-    has_markers = False
     in_marker_encounter = False
+    active_marker: tuple[int, str] | None = None
+    active_marker_start: tuple[str, list[str], float] | None = None
     heuristic_active = False
     last_boss_ts = 0.0
     lich_king_roleplay_ts: float | None = None
@@ -146,24 +147,44 @@ def iter_encounter_segments(
         event = parts[0]
 
         if event == ENCOUNTER_START:
-            if current:
+            if len(parts) < 5 or _int(parts[1]) <= 0 or not parts[2].strip('"').strip():
+                continue
+            marker = (_int(parts[1]), parts[2].strip('"').strip().lower())
+            if active_marker_start == item:
+                continue
+            boss_name = _infer_boss(current) if heuristic_active else None
+            completed = any(
+                row[0] == UNIT_DIED and len(row) > 5
+                and row[5].strip('"').strip().lower() in ALL_BOSS_NAMES
+                for _, row, _ in current
+            ) if heuristic_active else False
+            adopt = (heuristic_active and boss_name and boss_name.lower() == marker[1]
+                     and absolute_seconds - last_boss_ts <= ENCOUNTER_GAP_SECONDS and not completed)
+            if current and not adopt:
                 yield current
-            has_markers = True
+            if not adopt:
+                current = BoundedEventList()
             in_marker_encounter = True
+            active_marker = marker
+            active_marker_start = item
             heuristic_active = False
-            current = BoundedEventList([item])
+            lich_king_roleplay_ts = None
+            lich_king_harvest_ts = None
+            current.append(item)
             continue
         if event == ENCOUNTER_END:
-            has_markers = True
-            if in_marker_encounter:
-                current.append(item)
-                yield current
+            if (len(parts) < 6 or parts[5] not in ("0", "1")
+                    or active_marker != (_int(parts[1]), parts[2].strip('"').strip().lower())):
+                continue
+            current.append(item)
+            yield current
             current = BoundedEventList()
             in_marker_encounter = False
+            active_marker = None
+            active_marker_start = None
             continue
-        if has_markers:
-            if in_marker_encounter:
-                current.append(item)
+        if in_marker_encounter:
+            current.append(item)
             continue
 
         boss_event = _is_boss_event(parts)
@@ -257,6 +278,21 @@ def quick_classify(fh: TextIO, cancel_event=None, *, file_year: int = 2024) -> l
                 marker_line = raw_line
                 break
         if marker_line is not None:
+            # The optimized scan is safe only for complete marker coverage.
+            # A heuristic prefix, invalid boundary or activity outside a marked
+            # window restarts through the calendar-aware streaming segmenter.
+            for raw_line in prefix[:-1]:
+                parsed = parse_combat_log_line(raw_line)
+                if parsed.line and (parsed.line.parts[0] in (ENCOUNTER_START, ENCOUNTER_END)
+                                    or _is_boss_event(parsed.line.parts)):
+                    fh.seek(start_position)
+                    return _classify_stream(fh, cancel_event, file_year=file_year)
+            parsed_start = parse_combat_log_line(marker_line)
+            start_parts = parsed_start.line.parts if parsed_start.line else []
+            if len(start_parts) < 5 or _int(start_parts[1]) <= 0 or not start_parts[2]:
+                fh.seek(start_position)
+                return _classify_stream(fh, cancel_event, file_year=file_year)
+            active_marker = (_int(start_parts[1]), start_parts[2].lower())
             results: list[dict[str, object]] = []
             segment: list[tuple[str, list[str], float]] = BoundedEventList()
 
@@ -271,13 +307,23 @@ def quick_classify(fh: TextIO, cancel_event=None, *, file_year: int = 2024) -> l
                     raise TimeoutError("Quick classification was cancelled after the processing timeout")
                 if "  ENCOUNTER_START," in raw_line:
                     if segment:
-                        result = _classify_segment(segment)
-                        if result:
-                            results.append(result)
-                            check_result_count(len(results))
+                        fh.seek(start_position)
+                        return _classify_stream(fh, cancel_event, file_year=file_year)
+                    parsed = parse_combat_log_line(raw_line)
+                    parts = parsed.line.parts if parsed.line else []
+                    if len(parts) < 5 or _int(parts[1]) <= 0 or not parts[2]:
+                        fh.seek(start_position)
+                        return _classify_stream(fh, cancel_event, file_year=file_year)
+                    active_marker = (_int(parts[1]), parts[2].lower())
                     segment = BoundedEventList()
                     add_line(raw_line)
                 elif "  ENCOUNTER_END," in raw_line:
+                    parsed = parse_combat_log_line(raw_line)
+                    parts = parsed.line.parts if parsed.line else []
+                    if (not segment or len(parts) < 6 or parts[5] not in ("0", "1")
+                            or active_marker != (_int(parts[1]), parts[2].lower())):
+                        fh.seek(start_position)
+                        return _classify_stream(fh, cancel_event, file_year=file_year)
                     add_line(raw_line)
                     result = _classify_segment(segment)
                     if result:
@@ -286,6 +332,11 @@ def quick_classify(fh: TextIO, cancel_event=None, *, file_year: int = 2024) -> l
                     segment = BoundedEventList()
                 elif segment and _RELEVANT_ID_RE.search(raw_line):
                     add_line(raw_line)
+                elif not segment:
+                    parsed = parse_combat_log_line(raw_line)
+                    if parsed.line and _is_boss_event(parsed.line.parts):
+                        fh.seek(start_position)
+                        return _classify_stream(fh, cancel_event, file_year=file_year)
             if segment:
                 result = _classify_segment(segment)
                 if result:
@@ -303,6 +354,10 @@ def quick_classify(fh: TextIO, cancel_event=None, *, file_year: int = 2024) -> l
 
             fh = io.StringIO("".join(prefix) + fh.read())
 
+    return _classify_stream(fh, cancel_event, file_year=file_year)
+
+
+def _classify_stream(fh: TextIO, cancel_event=None, *, file_year: int) -> list[dict[str, object]]:
     results: list[dict[str, object]] = []
     for segment in iter_encounter_segments(fh, cancel_event, file_year=file_year):
         result = _classify_segment(segment)

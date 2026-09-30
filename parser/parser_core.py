@@ -854,7 +854,9 @@ class CombatLogParser:
         # ── Path A: ENCOUNTER_START/END ──────────────────────────
         current_segment: list[tuple[str, list[str], float]] = BoundedEventList()
         in_encounter = False
-        has_encounter_events = False
+        active_marker: Optional[tuple[int, str]] = None
+        active_marker_start: Optional[tuple[str, list[str], float]] = None
+        ignored_markers = 0
 
         # ── Path B: heuristic state ───────────────────────────────
         # We collect ALL events while a boss fight is active.
@@ -933,32 +935,60 @@ class CombatLogParser:
 
             # ── ENCOUNTER_START ──────────────────────────────────
             if event == ENCOUNTER_START:
+                if len(parts) < 5 or _safe_int(parts[1]) <= 0 or not parts[2].strip('"').strip():
+                    ignored_markers += 1
+                    continue
+                marker = (_safe_int(parts[1]), parts[2].strip('"').strip().lower())
+                if active_marker_start == (ts_str, parts, ts):
+                    # Duplicate delivery of the same start must not split a pull.
+                    continue
                 if current_segment:
                     emit(current_segment)
-                has_encounter_events = True
+                current_segment = BoundedEventList()
+                if heuristic_active:
+                    # A late start for the same ongoing pull adds metadata, not
+                    # another attempt. A quiet gap or a completed pull separates it.
+                    heuristic_boss = self._infer_boss(heuristic_segment)[0]
+                    same_boss = heuristic_boss and heuristic_boss.lower() == marker[1]
+                    completed = self._infer_outcome(heuristic_segment, heuristic_boss) == "KILL"
+                    if same_boss and abs_ts - last_boss_ts <= ENCOUNTER_GAP_SECONDS and not completed:
+                        current_segment = heuristic_segment
+                    elif len(heuristic_segment) >= MIN_ENCOUNTER_EVENTS:
+                        emit(heuristic_segment)
+                    heuristic_segment = BoundedEventList()
+                    heuristic_active = False
+                    lich_king_roleplay_ts = None
+                    lich_king_harvest_ts = None
                 in_encounter = True
-                current_segment = BoundedEventList([(ts_str, parts, ts)])
+                active_marker = marker
+                active_marker_start = (ts_str, parts, ts)
+                current_segment.append((ts_str, parts, ts))
                 continue
 
             # ── ENCOUNTER_END ────────────────────────────────────
             if event == ENCOUNTER_END:
-                has_encounter_events = True
-                if current_segment:
-                    current_segment.append((ts_str, parts, ts))
-                    emit(current_segment)
+                if (len(parts) < 6 or parts[5] not in ("0", "1")
+                        or active_marker != (_safe_int(parts[1]), parts[2].strip('"').strip().lower())):
+                    # Orphan, malformed and mismatched ends cannot classify or
+                    # close another pull, nor disable the heuristic fallback.
+                    ignored_markers += 1
+                    continue
+                current_segment.append((ts_str, parts, ts))
+                emit(current_segment)
                 current_segment = BoundedEventList()
                 in_encounter = False
+                active_marker = None
+                active_marker_start = None
                 continue
 
             # ── ENCOUNTER_START/END path: collect everything ──────
-            if has_encounter_events:
+            if in_encounter:
                 # Difficulty evidence includes aura/cast events, so retain every
                 # parsed combat event inside the already-bounded encounter.
-                if in_encounter:
-                    current_segment.append((ts_str, parts, ts))
+                current_segment.append((ts_str, parts, ts))
                 continue
 
-            # ── Heuristic path (no ENCOUNTER_START in file) ───────
+            # ── Heuristic path outside an active marked encounter ───────
             is_boss = self._is_boss_event(parts)
 
             if heuristic_active:
@@ -1002,12 +1032,15 @@ class CombatLogParser:
                     heuristic_segment = BoundedEventList([(ts_str, parts, ts)])
 
         # Flush trailing segment
-        if has_encounter_events:
-            if current_segment:
-                emit(current_segment)
-        else:
-            if heuristic_segment and len(heuristic_segment) >= MIN_ENCOUNTER_EVENTS:
-                emit(heuristic_segment)
+        if current_segment:
+            emit(current_segment)
+        if heuristic_segment and len(heuristic_segment) >= MIN_ENCOUNTER_EVENTS:
+            emit(heuristic_segment)
+
+        if ignored_markers:
+            self.warnings.append(
+                f"Ignored {ignored_markers} malformed or unmatched encounter marker(s)."
+            )
 
         self._finalize_session_analytics(_session_accumulators, pet_owner)
         return segments, pet_owner

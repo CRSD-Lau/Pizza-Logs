@@ -6,6 +6,12 @@ This project follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) an
 
 ## [Unreleased]
 
+### Fixed - 2026-09-30
+
+- Resume heuristic encounter detection after marked attempts in full parsing and upload previews, preserving later unmarked kills such as Halion after two marked wipes. Preserve pending pulls when marker coverage changes, adopt matching late starts without duplicate attempts, and ignore malformed or unmatched markers with aggregate warnings. Keep the optimized preview scan for fully marked logs. Parser provenance advances to 1.1.4. Existing reports are not reparsed; the unavailable source log for issue #131 means its historic recovery remains unverified.
+- Refresh only the transitive brace-expansion and fast-uri lock entries to patched versions so the required dependency audit passes before release.
+- Keep the weekly browser acceptance fixture in the active raid week when CI runs before Wednesday's 09:00 UTC reset.
+
 ### Maintenance - 2026-09-21
 
 - Update dotenv to 18.0.1, Uvicorn to 0.53.0, and Ruff to 0.16.8, with regenerated Python hash locks and verified environment-file precedence. Keep CodeQL initialization and analysis on the same 4.38.1 revision and group future CodeQL updates together.
