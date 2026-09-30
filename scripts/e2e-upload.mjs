@@ -2,6 +2,16 @@ import assert from "node:assert/strict";
 import { randomUUID } from "node:crypto";
 import { UPLOAD_POLICY_HEADER, UPLOAD_POLICY_VERSION } from "../lib/upload-policy.ts";
 
+export function weeklyFixtureDay(now = new Date()) {
+  const day = new Date(now);
+  // The synthetic pulls occur at 16:00. Before Wednesday's reset that time
+  // belongs to the next week, so use Tuesday for the current-week fixture.
+  if (day.getUTCDay() === 3 && day.getUTCHours() < 9) {
+    day.setUTCDate(day.getUTCDate() - 1);
+  }
+  return day;
+}
+
 export function localTestBase(value) {
   const base = new URL(value);
   assert.ok(

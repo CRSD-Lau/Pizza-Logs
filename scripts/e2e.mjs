@@ -7,7 +7,7 @@ import { createRequire } from "node:module";
 import { spawnSync } from "node:child_process";
 import { verifyPlayerQuickLooks } from "./player-quicklook-e2e.mjs";
 import { waitForPageContent } from "./browser-page-ready.mjs";
-import { localTestBase, syntheticCombatLog, uploadSyntheticLog } from "./e2e-upload.mjs";
+import { localTestBase, syntheticCombatLog, uploadSyntheticLog, weeklyFixtureDay } from "./e2e-upload.mjs";
 
 const require = createRequire(import.meta.url);
 const base = localTestBase(process.env.PIZZA_TEST_BASE_URL ?? "http://127.0.0.1:3000");
@@ -80,7 +80,7 @@ const report = `/raids/${first.publicReportSlug}/sessions/${first.firstSessionSl
 // Three synthetic attempts retain the short-pull policy coverage while making
 // kill, wipe and between-fight metrics distinguishable. No private log is used.
 const policyLines = [];
-const policyDay = new Date();
+const policyDay = weeklyFixtureDay();
 const policyDate = `${policyDay.getUTCMonth() + 1}/${policyDay.getUTCDate()}`;
 const unit = (id, name) => `0x06000000000000${id},"${name}",0x514`;
 const policyBoss = '0xF130008F98000001,"Lord Marrowgar",0xa48';

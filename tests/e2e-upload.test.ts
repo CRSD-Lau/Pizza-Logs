@@ -2,7 +2,24 @@ import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import { createServer } from "node:http";
 import { test } from "node:test";
-import { localTestBase, syntheticCombatLog, uploadSyntheticLog } from "../scripts/e2e-upload.mjs";
+import { localTestBase, syntheticCombatLog, uploadSyntheticLog, weeklyFixtureDay } from "../scripts/e2e-upload.mjs";
+import { getWeekBounds } from "../lib/utils";
+
+test("weekly E2E pulls stay inside the active week across the Wednesday reset", () => {
+  for (const timestamp of [
+    "2026-09-29T23:59:59Z", "2026-09-30T00:00:00Z",
+    "2026-09-30T08:59:59Z", "2026-09-30T09:00:00Z",
+    "2026-09-30T23:59:59Z", "2026-10-01T00:00:00Z",
+    "2026-01-07T08:59:59Z", "2026-04-01T08:59:59Z",
+  ]) {
+    const now = new Date(timestamp);
+    const fixture = weeklyFixtureDay(now);
+    fixture.setUTCHours(16, 4, 31, 0);
+    const { start, end } = getWeekBounds(now);
+    assert.ok(fixture >= start && fixture < end, `${timestamp}: ${fixture.toISOString()} outside active week`);
+    assert.equal(now.toISOString(), new Date(timestamp).toISOString(), "clock input remains unchanged");
+  }
+});
 
 test("generated E2E upload preserves the canonical synthetic combat fixture", async () => {
   const fixture = await readFile("parser/tests/fixtures/icc-25n-synthetic/combatlog.txt", "utf8");
