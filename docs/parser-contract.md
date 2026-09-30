@@ -39,6 +39,22 @@ Vehicle sources such as Gunship cannon GUIDs are not credited as player pets.
 
 Useful `ENCOUNTER_START`/`ENCOUNTER_END` markers are consumed when present, but Warmane frequently omits or misreports them. Heuristic segmentation therefore remains required.
 
+Marker coverage is per encounter: after a marked attempt ends, later unmarked
+pulls still use heuristic detection in both upload previews and full parsing.
+The optimized preview scan falls back to streaming segmentation when marker
+coverage is incomplete or inconsistent. A matching late start can supply metadata
+for an ongoing heuristic pull without duplicating it. Exact duplicate starts
+are ignored; malformed, orphan or mismatched marker records are ignored with
+an aggregate warning. Only an end matching the active start's ID and name may
+close and classify that marked attempt. An unfinished marked attempt remains
+available at the next valid start or EOF; missing completion evidence is not
+invented.
+
+Parser fixes apply to newly processed uploads. Existing stored reports are not
+automatically recomputed, and uploading identical bytes returns the existing
+completed upload. Historic recovery requires the source log and a separately
+reviewed repair or reprocessing operation.
+
 - Boss aliases/GUIDs identify relevant activity.
 - A pull begins from normalized boss engagement evidence.
 - The encounter window ends at the last boss-destination event, not a boss outgoing attack, stale marker, or unrelated post-fight trash.
