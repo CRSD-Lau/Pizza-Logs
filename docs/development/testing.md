@@ -135,7 +135,7 @@ python -m parity run --output-dir ../.test-artifacts/parity-strict
 
 Both commands write `parity.json`, `parity.md`, and `parity.junit.xml`; `verify` also writes `regression.junit.xml`. Keep the mismatch and blocked-surface evidence alongside successful regression results. See [UwU Analytics Parity](../uwu-analytics-parity.md) for the precise claims and provenance boundary.
 
-The separate monthly/manual reference-drift workflow runs `python -m parity check-reference --cache ../.test-artifacts/reference.json`. Exit codes distinguish current (`0`), stale (`2`), and unavailable (`3`). It does not refresh goldens or execute newly fetched reference code.
+No scheduled or live reference check is required. The inspected fork was intentionally deleted; its URL and commit remain historical provenance. Runtime, builds, tests, and CI use no live UwU repository or checkout. Optional codebase comparison and explicit recapture from a reviewed local snapshot remain documented in the [differential lab](../../parser/parity/README.md#intentional-reference-refresh).
 
 ## Local Headless Acceptance
 
@@ -226,7 +226,7 @@ coverage includes diagnostics, upload history/details and account security at
 375, 768 and 1440 pixels. New render tests cover missing and legacy durations,
 zero output, no-kill profiles, and navigation beyond 100 admin uploads.
 
-The main CI job supplies PostgreSQL 16 and Python 3.14, installs both lockfiles, migrates and seeds a fresh database, checks migration/schema agreement, runs the TypeScript and Python suites with integration prerequisites enabled, and runs the offline parity regression gate. It also runs lint, both TypeScript checks, docs/lock checks, npm audit, Ruff, Bandit, pip-audit, a Next.js production build, both Docker builds, and headless acceptance against those containers. Synthetic acceptance artifacts are retained for 90 days. The separate reference-drift workflow retains its evidence for 30 days.
+The main CI job supplies PostgreSQL 16 and Python 3.14, installs both lockfiles, migrates and seeds a fresh database, checks migration/schema agreement, runs the TypeScript and Python suites with integration prerequisites enabled, and runs the offline parity regression gate. It also runs lint, both TypeScript checks, docs/lock checks, npm audit, Ruff, Bandit, pip-audit, a Next.js production build, both Docker builds, and headless acceptance against those containers. Synthetic acceptance artifacts are retained for 90 days.
 
 Run the static/security checks from the repository root:
 

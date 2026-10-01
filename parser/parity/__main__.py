@@ -18,7 +18,6 @@ from version import ANALYTICS_PROFILE, METRIC_SCHEMA_VERSION, PARSER_VERSION
 from parity.compare import assess_case, difference_fingerprint
 from parity.fixtures import fixture_bytes
 from parity.pizza_adapter import parse_pizza
-from parity.reference import check_reference
 
 PACKAGE = Path(__file__).resolve().parent
 
@@ -135,16 +134,10 @@ def main() -> int:
     run.add_argument('--claimed-only', action='store_true')
     verify = commands.add_parser('verify', help='Verify exact claims and freeze reviewed mismatches; does not assert full parity.')
     verify.add_argument('--output-dir', type=Path, required=True)
-    drift = commands.add_parser('check-reference')
-    drift.add_argument('--cache', type=Path, required=True)
     export = commands.add_parser('export-inputs')
     export.add_argument('--output-dir', type=Path, required=True)
     args = cli.parse_args()
     manifest = json.loads((PACKAGE / 'manifest.json').read_text(encoding='utf-8'))
-    if args.command == 'check-reference':
-        result = check_reference(manifest['reference']['inspectedSha'], args.cache)
-        print(json.dumps(result, indent=2))
-        return {'current': 0, 'stale': 2, 'unavailable': 3}[result['status']]
     if args.command == 'export-inputs':
         args.output_dir.mkdir(parents=True, exist_ok=True)
         for case in manifest['cases']:

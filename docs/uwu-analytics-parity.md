@@ -16,6 +16,12 @@ UwU parity is **not demonstrated**.
 
 ## Reference and provenance
 
+The inspected fork has been intentionally deleted. Its links and commit IDs below
+record historical research, not a live dependency. Pizza Logs runtime, builds,
+tests, and CI do not fetch or require that repository. The offline regression lab
+uses committed synthetic observations; further codebase comparison is optional
+and takes an explicitly supplied, reviewed local snapshot.
+
 The inspected [UwU revision](https://github.com/CRSD-Lau/uwu-logs/tree/4c046d266b85ad833ab4d70addb0b6f1a16647e3)
 is `4c046d266b85ad833ab4d70addb0b6f1a16647e3` (commit subject `6.41.10`). Previous
 documentation referenced `f32f00e917ad6baba9012704dc9e41afe578426d`, 35 commits
@@ -240,9 +246,9 @@ so it cannot count as a differential pass. Old broad “Matched” labels are
 retired. A maintainer-designated safe copy of that exact source and a permitted
 reference observation are required. Historical database rows are not rewritten.
 
-## Drift and claim changes
+## Intentional claim changes
 
-`python -m parity check-reference --cache <temp-file>` uses ETags and reports
-current, stale, or unavailable repository state. It never runs in normal report
-rendering or silently updates the pin. A new revision requires source/license
-review, full capture, mismatch review, and explicit golden acceptance.
+Reference freshness is not monitored. A new comparison revision is an explicit
+research decision and requires source/license review, a supplied local snapshot,
+full capture, mismatch review, and explicit golden acceptance. See the
+[optional refresh procedure](../parser/parity/README.md#intentional-reference-refresh).

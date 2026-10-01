@@ -5,7 +5,11 @@ Modifier: Neil Mitchell
 
 This lab compares identical synthetic bytes against Pizza's actual parser and
 goldens captured from an independently installed, unmodified UwU revision. It
-does not run reference code or access the network during ordinary CI.
+does not run reference code or access the network during ordinary CI. Runtime,
+builds, tests, and CI do not require a live UwU repository or local checkout.
+The repository URL and commit in the manifest are historical provenance; the
+inspected fork has been intentionally deleted. There is no scheduled reference
+check or automatic baseline refresh.
 
 Current result: **14 exact cases, 12 mismatching cases, zero tolerated cases, and
 seven unproven surface categories**. Most exact cases test session primitives;
@@ -63,6 +67,11 @@ The old five-pull acceptance JSON has no paired source and is not counted.
 
 ## Intentional reference refresh
 
+Codebase comparison is optional research. To recapture observations, explicitly
+supply an authorized, reviewed local source snapshot outside Pizza Logs. No
+command downloads a reference repository. Existing goldens remain usable without
+that snapshot; do not recreate the deleted fork to run tests or CI.
+
 The pinned README explicitly describes self hosting. The reference ran
 privately for that intended purpose; no source redistribution license was
 identified. Keep its unmodified snapshot, environment, data, and synthetic
@@ -107,8 +116,10 @@ goldens.
 
 For a complete regeneration of the **existing pin** on Windows, start in the
 Pizza Logs repository root with Pizza's development Python environment active.
-Install Python 3.11.9 separately first. This creates a fresh temporary workspace
-and reference environment; it does not use or change an existing UwU checkout.
+Install Python 3.11.9 separately first and set the source snapshot path below.
+The adapter verifies that snapshot against the recorded source inventory before
+importing it. This creates a fresh temporary workspace and reference environment
+for capture data and candidate goldens.
 The package list reproduces the recorded capture environment; it is not a
 hash-locked dependency file.
 
@@ -117,18 +128,12 @@ $pizzaRepo = (Get-Location).Path
 $pizzaPython = (Get-Command python).Source
 $manifest = Get-Content parser/parity/manifest.json -Raw | ConvertFrom-Json
 $referenceSha = $manifest.reference.inspectedSha
+$reference = (Resolve-Path 'C:\path\to\reviewed-uwu-snapshot').Path
 if ((py -3.11 -c 'import platform; print(platform.python_version())') -ne $manifest.reference.runtime.python) {
     throw 'Install the exact reference Python version recorded in manifest.json.'
 }
 $lab = Join-Path ([System.IO.Path]::GetTempPath()) ('pizza-parity-' + [guid]::NewGuid().ToString('N'))
 New-Item -ItemType Directory -Path $lab | Out-Null
-$archive = Join-Path $lab 'reference.zip'
-$sourceDir = Join-Path $lab 'source'
-Invoke-WebRequest "https://api.github.com/repos/CRSD-Lau/uwu-logs/zipball/$referenceSha" -OutFile $archive
-Expand-Archive -LiteralPath $archive -DestinationPath $sourceDir
-$referenceRoots = @(Get-ChildItem -LiteralPath $sourceDir -Directory)
-if ($referenceRoots.Count -ne 1) { throw 'Expected one root in the pinned source archive.' }
-$reference = $referenceRoots[0].FullName
 $referenceEnv = Join-Path $lab 'reference-venv'
 py -3.11 -m venv $referenceEnv
 $referencePython = Join-Path $referenceEnv 'Scripts/python.exe'
@@ -173,17 +178,6 @@ python -m pytest tests/test_differential_parity.py -q
 python -m parity verify --output-dir /tmp/pizza-parity-refreshed
 python -m parity run --output-dir /tmp/pizza-parity-refreshed-full
 ```
-
-## Conservative drift check
-
-```bash
-python -m parity check-reference --cache /tmp/pizza-reference-cache.json
-```
-
-This explicit command makes one bounded HTTPS request to GitHub, reusing an
-ETag when available. Exit **0** means the repository pin is current, **2** means
-stale, and **3** means unavailable. A current repository pin does not prove live
-deployment parity. Never make normal PR tests or report rendering depend on it.
 
 ## Reviewed difference dispositions
 

@@ -2,9 +2,6 @@
 
 import hashlib
 import json
-from io import BytesIO
-from typing import ClassVar
-from urllib.error import HTTPError
 from xml.etree.ElementTree import parse
 
 import pytest
@@ -12,7 +9,6 @@ from parity.__main__ import PACKAGE, run_suite, verify_regressions, write_report
 from parity.compare import assess_case, compare, difference_fingerprint
 from parity.fixtures import case_ids, fixture_bytes
 from parity.pizza_adapter import parse_pizza
-from parity.reference import URL, check_reference
 
 MANIFEST = json.loads((PACKAGE / 'manifest.json').read_text(encoding='utf-8'))
 
@@ -124,37 +120,6 @@ def test_damage_detail_compares_spell_and_target_amounts_not_only_equal_headline
     assert result['status'] == 'mismatch'
     assert len(result['differences']) == 4
     assert all('.damageBreakdown.' in row['path'] for row in result['differences'])
-
-
-class Response(BytesIO):
-    headers: ClassVar[dict[str, str]] = {'ETag': '"fixture-etag"'}
-
-
-def test_reference_check_uses_etag_and_detects_new_revision(tmp_path):
-    cache = tmp_path / 'reference.json'
-    pinned, observed = 'a' * 40, 'b' * 40
-
-    def changed(request, timeout):
-        assert request.full_url == URL
-        assert timeout == 10
-        return Response(json.dumps({'sha': observed}).encode())
-
-    result = check_reference(pinned, cache, opener=changed)
-    assert result['status'] == 'stale'
-
-    def unchanged(request, timeout):
-        assert request.get_header('If-none-match') == '"fixture-etag"'
-        raise HTTPError(URL, 304, 'Not Modified', {}, None)
-
-    assert check_reference(pinned, cache, opener=unchanged)['status'] == 'stale'
-    assert check_reference(observed, cache, opener=unchanged)['status'] == 'current'
-
-
-def test_reference_outage_never_claims_current(tmp_path):
-    def unavailable(request, timeout):
-        raise HTTPError(URL, 503, 'Unavailable', {}, None)
-
-    assert check_reference('a' * 40, tmp_path / 'cache.json', opener=unavailable)['status'] == 'unavailable'
 
 
 def test_unknown_synthetic_fixture_cannot_read_arbitrary_files():
