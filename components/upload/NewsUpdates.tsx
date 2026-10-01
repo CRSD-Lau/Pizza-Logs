@@ -3,6 +3,13 @@ import { PageSection } from "@/components/ui/PageLayout";
 // Keep newest first. Summarize shipped changes from CHANGELOG.md for uploaders.
 const entries = [
   {
+    date: "2026-09-30",
+    label: "Sep 30, 2026",
+    category: "Update",
+    title: "Mixed combat logs now retain later kills",
+    description: "Later encounters could be skipped after encounter markers appeared in a combat log. Mixed logs now preserve wipes and correctly detect later kills, including Halion. The fix applies to newly parsed logs; existing reports are unchanged.",
+  },
+  {
     date: "2026-09-21",
     label: "Sep 21, 2026",
     category: "Update",
