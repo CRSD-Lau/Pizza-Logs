@@ -6,6 +6,10 @@ This project follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) an
 
 ## [Unreleased]
 
+### Maintenance - 2026-10-01
+
+- Remove the scheduled UwU reference-drift workflow and its live GitHub checker after the inspected fork was intentionally deleted. Preserve offline regression fixtures, historical attribution, and optional codebase comparison using an explicitly supplied local snapshot. Runtime, builds, tests, and CI do not require a live UwU repository.
+
 ### Fixed - 2026-09-30
 
 - Resume heuristic encounter detection after marked attempts in full parsing and upload previews, preserving later unmarked kills such as Halion after two marked wipes. Preserve pending pulls when marker coverage changes, adopt matching late starts without duplicate attempts, and ignore malformed or unmatched markers with aggregate warnings. Keep the optimized preview scan for fully marked logs. Parser provenance advances to 1.1.4. Existing reports are not reparsed; the unavailable source log for issue #131 means its historic recovery remains unverified.
