@@ -45,6 +45,9 @@ async function main() {
       permanentRedirect: () => { throw new Error("Unexpected redirect in numeric fixture"); },
     },
     "@/lib/db": { db },
+    "@/lib/player-directory": {
+      getStoredPlayerIdentityObservations: async () => [],
+    },
     "@/lib/raid-session-routing.server": {
       getRaidSessionRouteByIndex: async () => route,
       getRaidSessionRoutes: async () => [route],

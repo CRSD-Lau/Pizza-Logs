@@ -3,6 +3,13 @@ import { PageSection } from "@/components/ui/PageLayout";
 // Keep newest first. Summarize shipped changes from CHANGELOG.md for uploaders.
 const entries = [
   {
+    date: "2026-10-03",
+    label: "Oct 3, 2026",
+    category: "Update",
+    title: "Consistent classes on raid player reports",
+    description: "Raid player reports now use the same verified class information as player profiles. Class labels, icons, colours and comparisons follow that class even when a combat log inferred it incorrectly. Existing reports with verified profile data update automatically; no re-upload is needed.",
+  },
+  {
     date: "2026-09-30",
     label: "Sep 30, 2026",
     category: "Update",
