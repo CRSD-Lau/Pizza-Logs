@@ -6,6 +6,10 @@ This project follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) an
 
 ## [Unreleased]
 
+### Fixed - 2026-10-03
+
+- Resolve raid player report classes from validated Armory and roster observations for the report's realm, matching the main player profile. Keep the heading, class icon, name colour and class comparison group consistent when the combat log inferred the wrong class. Existing reports receive the display correction without re-uploading or changing recorded metrics.
+
 ### Maintenance - 2026-10-01
 
 - Remove the scheduled UwU reference-drift workflow and its live GitHub checker after the inspected fork was intentionally deleted. Preserve offline regression fixtures, historical attribution, and optional codebase comparison using an explicitly supplied local snapshot. Runtime, builds, tests, and CI do not require a live UwU repository.

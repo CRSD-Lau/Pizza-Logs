@@ -14,7 +14,9 @@ type StoredObservation = PlayerIdentityObservation & {
 };
 
 /** Only identity fields leave PostgreSQL; equipment and appearance payloads are never loaded here. */
-export async function getStoredPlayerIdentityObservations(name?: string, realm?: string): Promise<PlayerIdentityObservation[]> {
+export async function getStoredPlayerIdentityObservations(name?: string, realm?: string, names?: readonly string[]): Promise<PlayerIdentityObservation[]> {
+  const scopedNames = names ? [...new Set(names.map(value => value.trim().toLowerCase()).filter(Boolean))] : null;
+  if (scopedNames?.length === 0) return [];
   const rows = await db.$queryRaw<StoredObservation[]>`
     SELECT c."characterName", c.realm, c.gear->>'characterName' AS "payloadName",
       c.gear->>'realm' AS "payloadRealm", c.gear->>'className' AS "className",
@@ -25,7 +27,8 @@ export async function getStoredPlayerIdentityObservations(name?: string, realm?:
     WHERE lower(trim(c."characterKey")) = lower(trim(c."characterName"))
       AND (${name ?? null}::text IS NULL OR lower(trim(c."characterName")) = lower(trim(${name ?? null}::text)))
       AND (${realm ?? null}::text IS NULL OR lower(trim(c.realm)) = lower(trim(${realm ?? null}::text)))
-      AND (${name ?? null}::text IS NOT NULL OR EXISTS (SELECT 1 FROM players p LEFT JOIN realms r ON r.id = p."realmId"
+      AND (${scopedNames}::text[] IS NULL OR lower(trim(c."characterName")) = ANY(${scopedNames}::text[]))
+      AND (${name ?? null}::text IS NOT NULL OR ${scopedNames}::text[] IS NOT NULL OR EXISTS (SELECT 1 FROM players p LEFT JOIN realms r ON r.id = p."realmId"
         WHERE lower(trim(p.name)) = lower(trim(c."characterName"))
           AND lower(COALESCE(NULLIF(trim(r.name), ''), 'Lordaeron')) = lower(trim(c.realm))))
     UNION ALL
@@ -37,7 +40,8 @@ export async function getStoredPlayerIdentityObservations(name?: string, realm?:
     WHERE lower(trim(m.normalized_character_name)) = lower(trim(m.character_name))
       AND (${name ?? null}::text IS NULL OR lower(trim(m.character_name)) = lower(trim(${name ?? null}::text)))
       AND (${realm ?? null}::text IS NULL OR lower(trim(m.realm)) = lower(trim(${realm ?? null}::text)))
-      AND (${name ?? null}::text IS NOT NULL OR EXISTS (SELECT 1 FROM players p LEFT JOIN realms r ON r.id = p."realmId"
+      AND (${scopedNames}::text[] IS NULL OR lower(trim(m.character_name)) = ANY(${scopedNames}::text[]))
+      AND (${name ?? null}::text IS NOT NULL OR ${scopedNames}::text[] IS NOT NULL OR EXISTS (SELECT 1 FROM players p LEFT JOIN realms r ON r.id = p."realmId"
         WHERE lower(trim(p.name)) = lower(trim(m.character_name))
           AND lower(COALESCE(NULLIF(trim(r.name), ''), 'Lordaeron')) = lower(trim(m.realm))))
   `;

@@ -10,6 +10,7 @@ async function main() {
   const players = Array.from({ length: 35 }, (_, index) => ({ id: `p${index}`, name: `Player${String(index + 1).padStart(2, "0")}`, class: "Mage", realm: { name: "Lordaeron" } }));
   let pageIds: string[] = [];
   let countInclude: unknown;
+  const rawQueries: Array<{ query: string; values: unknown[] }> = [];
   const evidence = (index: number, className: string, date: string) => ({
     characterName: players[index].name, payloadName: players[index].name, realm: "Lordaeron", payloadRealm: "Lordaeron", className,
     classObservedAt: null, observedAt: new Date(date), source: "armory", sourceUrl: `https://armory.warmane.com/character/${players[index].name}/Lordaeron/summary`, raceName: null, guildName: null,
@@ -17,8 +18,9 @@ async function main() {
   const observations = [evidence(0, "Paladin", "2026-09-01"), { ...evidence(0, "Druid", "2026-09-02"), source: "roster" },
     { ...evidence(1, "Warrior", "2026-09-03"), payloadRealm: "Icecrown" }];
   const db = {
-    $queryRaw: async (sql: TemplateStringsArray) => {
+    $queryRaw: async (sql: TemplateStringsArray, ...values: unknown[]) => {
       const query = sql.join("?");
+      rawQueries.push({ query, values });
       assert.match(query, /gear->>'className'/);
       assert.doesNotMatch(query, /SELECT\s+(?:\w+\.)?gear\s*[,\n]/i, "Full equipment JSON must remain in PostgreSQL");
       return observations;
@@ -38,7 +40,7 @@ async function main() {
   require.cache[dbMockPath] = { id: dbMockPath, filename: dbMockPath, loaded: true, exports: { db } } as NodeModule;
   globalThis.fetch = async () => { throw new Error("Directory render must never request Warmane"); };
   try {
-    const { getPlayersPageData, getStoredPlayerIdentity } = require("../lib/player-directory") as typeof import("../lib/player-directory");
+    const { getPlayersPageData, getStoredPlayerIdentity, getStoredPlayerIdentityObservations } = require("../lib/player-directory") as typeof import("../lib/player-directory");
     const mages = await getPlayersPageData("player", "Mage", 2, false);
     assert.equal(mages.totalCount, 34);
     assert.equal(mages.pagination.firstVisible, 31);
@@ -58,6 +60,19 @@ async function main() {
     const missing = await getPlayersPageData("missing", undefined, 1, false);
     assert.equal(missing.totalCount, 0); assert.equal(missing.players.length, 0);
     assert.equal((await getStoredPlayerIdentity("Player01", "Lordaeron", "Mage")).className, "Druid");
+
+    const beforeEmptyScope = rawQueries.length;
+    assert.deepEqual(await getStoredPlayerIdentityObservations(undefined, "Lordaeron", []), []);
+    assert.equal(rawQueries.length, beforeEmptyScope, "An empty participant scope returns without querying all stored identities");
+
+    await getStoredPlayerIdentityObservations(undefined, "Lordaeron", [" Player01 ", "PLAYER01", "Player02", " "]);
+    const bounded = rawQueries.at(-1)!;
+    assert.match(bounded.query, /lower\(trim\(c\."characterName"\)\) = ANY\(\?::text\[\]\)/);
+    assert.match(bounded.query, /lower\(trim\(m\.character_name\)\) = ANY\(\?::text\[\]\)/);
+    const arrayBindings = bounded.values.filter((value): value is string[] => Array.isArray(value));
+    assert.ok(arrayBindings.length >= 2, "Both observation sources bind the participant scope");
+    assert.ok(arrayBindings.every(value => JSON.stringify(value) === JSON.stringify(["player01", "player02"])),
+      "Participant names are trimmed, normalized, deduplicated, and passed as SQL array bindings");
   } finally {
     moduleLoader._resolveFilename = originalResolve; globalThis.fetch = originalFetch; delete require.cache[dbMockPath];
   }

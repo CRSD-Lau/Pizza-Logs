@@ -12,8 +12,10 @@ import { SessionPlayerChartControls } from "@/components/players/SessionPlayerCh
 import { SessionLineChart } from "@/components/charts/SessionLineChart";
 import type { ChartPoint, PlayerLine } from "@/components/charts/SessionLineChart";
 import { StatCard, StatGroup } from "@/components/ui/StatCard";
-import { getClassColor } from "@/lib/constants/classes";
+import { getPlayerClassMeta } from "@/lib/player-class";
 import { getClassIconUrl } from "@/lib/class-icons";
+import { getStoredPlayerIdentityObservations } from "@/lib/player-directory";
+import { resolvePlayerIdentity } from "@/lib/player-identity";
 import {
   formatRaidDateLabel,
   formatRaidSessionTitle,
@@ -104,9 +106,6 @@ async function getSessionPlayerPageContext({ params, searchParams }: Props) {
     .find(p => p.player.name === name);
   if (!firstParticipation) notFound();
 
-  const playerClass = firstParticipation.player.class ?? null;
-  const classColor = getClassColor(playerClass ?? name);
-
   const myStats = orderedEncounters
     .map((enc) => {
       const p = enc.participants.find(part => part.player.name === name);
@@ -136,7 +135,7 @@ async function getSessionPlayerPageContext({ params, searchParams }: Props) {
 
   if (myStats.length === 0) notFound();
 
-  return { name, includeShortPulls, showAll, chartChoice, querySuffix, raidQuerySuffix, sessionRoute, uploadId, sessionPath, encounters, orderedEncounters, myStats, playerClass, classColor };
+  return { name, includeShortPulls, showAll, chartChoice, querySuffix, raidQuerySuffix, sessionRoute, uploadId, sessionPath, encounters, orderedEncounters, myStats };
 }
 
 export default async function SessionPlayerPage(props: Props) {
@@ -149,7 +148,7 @@ export default async function SessionPlayerPage(props: Props) {
 }
 
 async function SessionPlayerContent({ data }: { data: Awaited<ReturnType<typeof getSessionPlayerPageContext>> }) {
-  const { name, includeShortPulls, showAll, chartChoice, querySuffix, raidQuerySuffix, sessionRoute, uploadId, sessionPath, encounters, orderedEncounters, myStats, playerClass, classColor } = data;
+  const { name, includeShortPulls, showAll, chartChoice, querySuffix, raidQuerySuffix, sessionRoute, uploadId, sessionPath, encounters, orderedEncounters, myStats } = data;
   const upload = await db.upload.findUnique({
     where: { id: uploadId },
     select: {
@@ -158,17 +157,19 @@ async function SessionPlayerContent({ data }: { data: Awaited<ReturnType<typeof 
     },
   });
   const realmName = upload?.realm?.name ?? "Lordaeron";
-  const rosterMember = await db.guildRosterMember.findFirst({
-    where: {
-      normalizedCharacterName: name.toLowerCase(),
-      realm: realmName,
-    },
-    select: {
-      raceName: true,
-      guildName: true,
-      className: true,
-    },
-  });
+  const participantNames = [...new Set(encounters.flatMap(encounter => encounter.participants.map(({ player }) => player.name)))];
+  const observations = await getStoredPlayerIdentityObservations(undefined, realmName, participantNames);
+  const playerIdentities = new Map<string, ReturnType<typeof resolvePlayerIdentity>>();
+  for (const encounter of encounters) {
+    for (const { player } of encounter.participants) {
+      if (!playerIdentities.has(player.name)) {
+        playerIdentities.set(player.name, resolvePlayerIdentity({ ...player, realmName }, observations));
+      }
+    }
+  }
+  const identity = playerIdentities.get(name)!;
+  const playerClass = identity.className;
+  const classColor = getPlayerClassMeta(playerClass).textColor;
 
   const playerEncounters = orderedEncounters.filter(encounter => encounter.participants.some(p => p.player.name === name));
   const counts = countAttempts(playerEncounters, { includeShortPulls });
@@ -188,7 +189,7 @@ async function SessionPlayerContent({ data }: { data: Awaited<ReturnType<typeof 
   const classmateNames = new Set<string>();
   for (const enc of encounters) {
     for (const p of enc.participants) {
-      if (p.player.name !== name && p.player.class === playerClass && playerClass !== null) {
+      if (p.player.name !== name && playerIdentities.get(p.player.name)?.className === playerClass && playerClass !== null) {
         classmateNames.add(p.player.name);
       }
     }
@@ -227,11 +228,11 @@ async function SessionPlayerContent({ data }: { data: Awaited<ReturnType<typeof 
         <PlayerAvatar
           name={name}
           realmName={realmName}
-          characterClass={playerClass ?? rosterMember?.className}
-          raceName={rosterMember?.raceName}
-          guildName={rosterMember?.guildName ?? upload?.guild?.name}
+          characterClass={playerClass}
+          raceName={identity.raceName}
+          guildName={identity.guildName ?? upload?.guild?.name}
           color={classColor}
-          fallbackIconUrl={getClassIconUrl(playerClass ?? rosterMember?.className)}
+          fallbackIconUrl={getClassIconUrl(playerClass)}
           size="lg"
         />
         <div>
