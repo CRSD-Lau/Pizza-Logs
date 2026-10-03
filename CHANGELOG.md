@@ -9,6 +9,7 @@ This project follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) an
 ### Fixed - 2026-10-03
 
 - Resolve raid player report classes from validated Armory and roster observations for the report's realm, matching the main player profile. Keep the heading, class icon, name colour and class comparison group consistent when the combat log inferred the wrong class. Existing reports receive the display correction without re-uploading or changing recorded metrics.
+- Replace the pinned Next ESLint plugin's vulnerable glob dependency with a private directory adapter backed by tinyglobby. Preserve the plugin's root-directory lookup contract and keep dependency auditing enabled. The adapter is development-only and omitted from the production dependency tree.
 
 ### Maintenance - 2026-10-01
 

@@ -1,0 +1,11 @@
+{
+  "name": "@pizza-logs/next-eslint-glob",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Directory-only glob adapter for the pinned Next ESLint plugin",
+  "author": "Neil Mitchell",
+  "license": "MIT",
+  "main": "index.cjs",
+  "engines": { "node": "24.x" },
+  "dependencies": { "tinyglobby": "0.2.17" }
+}

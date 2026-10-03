@@ -57,6 +57,7 @@
     "zod": "^4.6.5"
   },
   "devDependencies": {
+    "fast-glob": "file:vendor/next-eslint-glob",
     "@tailwindcss/postcss": "^4.3.3",
     "@types/node": "^24.13.6",
     "@types/pg": "^8.23.1",
@@ -73,6 +74,9 @@
     "typescript": "^6.0.3"
   },
   "overrides": {
+    "@next/eslint-plugin-next@16.3.6": {
+      "fast-glob": "$fast-glob"
+    },
     "deepmerge-ts": "8.0.2",
     "@types/react": "19.3.0",
     "@types/react-dom": "19.3.0",

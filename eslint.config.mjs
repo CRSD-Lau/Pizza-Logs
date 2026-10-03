@@ -19,7 +19,15 @@ export default defineConfig([
       "@typescript-eslint/no-require-imports": "off",
     },
   },
+  {
+    files: ["vendor/next-eslint-glob/*.cjs"],
+    rules: {
+      // The pinned Next ESLint caller loads this adapter through CommonJS.
+      "@typescript-eslint/no-require-imports": "off",
+    },
+  },
   globalIgnores([
+    ".test-artifacts/**",
     ".next/**",
     "node_modules/**",
     "coverage/**",

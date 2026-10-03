@@ -3,6 +3,13 @@
 Author: Neil Mitchell
 Last Modified By: Neil Mitchell
 
+Development tooling patch verified 2026-10-03: `fast-glob` is a direct file
+dependency supplied by this repository's private `@pizza-logs/next-eslint-glob`
+adapter under the project MIT license. It is not an upstream fast-glob release.
+The adapter pins tinyglobby 0.2.17 (MIT, checked from its installed LICENSE),
+which replaces the vulnerable glob chain only for Next ESLint 16.3.6. No new
+third-party direct package or production license obligation is introduced.
+
 Dependency refresh verified 2026-09-21: dotenv 18.0.1 retains BSD-2-Clause,
 Uvicorn 0.53.0 retains BSD-3-Clause, and Ruff 0.16.8 retains MIT. No direct
 dependencies or license obligations were added or removed in this refresh.
