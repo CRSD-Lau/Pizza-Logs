@@ -511,6 +511,7 @@ class CombatLogParser:
         self._segment_encounters(lines, segment_cb=consume_segment)
         account_parsed_details(self.session_analytics, parsed_detail_bytes)
         self._assign_session_indices(encounters)
+        self._align_encounter_session_indices(encounters, self.session_analytics)
         empty_substantial_encounters = [
             encounter
             for encounter in encounters
@@ -565,6 +566,53 @@ class CombatLogParser:
                     session_idx += 1
             enc.session_index = session_idx
             prev_end_dt = end_dt
+
+    @staticmethod
+    def _align_encounter_session_indices(
+        encounters: list["ParsedEncounter"],
+        session_analytics: dict[int, dict],
+    ) -> None:
+        """Associate encounters with the full-log window that contains them.
+
+        Full-session analytics split on gaps between consecutive log events,
+        while the compatibility assignment above only sees boss encounters.
+        An encounter-free prefix or middle slice can therefore make their
+        independently generated indexes diverge. Parser-produced encounter
+        timestamps come from events in exactly one full-session window, so
+        containment is the canonical association. Unmatched encounters retain
+        the compatibility assignment rather than inventing a relationship.
+        """
+        windows: list[tuple[int, datetime, datetime]] = []
+        for session_index, analytics in session_analytics.items():
+            try:
+                started_at = datetime.fromisoformat(
+                    str(analytics["startedAt"]).replace("Z", "+00:00")
+                )
+                ended_at = datetime.fromisoformat(
+                    str(analytics["endedAt"]).replace("Z", "+00:00")
+                )
+            except (KeyError, TypeError, ValueError):
+                continue
+            if ended_at >= started_at:
+                windows.append((session_index, started_at, ended_at))
+
+        for encounter in encounters:
+            try:
+                encounter_start = datetime.fromisoformat(
+                    encounter.started_at.replace("Z", "+00:00")
+                )
+                encounter_end = datetime.fromisoformat(
+                    encounter.ended_at.replace("Z", "+00:00")
+                )
+            except (AttributeError, ValueError):
+                continue
+            matches = [
+                session_index
+                for session_index, session_start, session_end in windows
+                if session_start <= encounter_start and encounter_end <= session_end
+            ]
+            if len(matches) == 1:
+                encounter.session_index = matches[0]
 
     @staticmethod
     def _accumulate_session_event(

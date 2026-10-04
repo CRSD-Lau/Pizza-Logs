@@ -6,6 +6,10 @@ This project follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) an
 
 ## [Unreleased]
 
+### Fixed - 2026-10-04
+
+- Date raids from their own recorded event session when a combat log contains older nonraid activity. Parser 1.1.5 keeps encounters aligned with full-session analytics, including logs spanning several raid nights. Existing reports match their stored analytics by event times, correcting dates and full-session totals without re-uploading or changing database rows. Old dated report and player links redirect to the corrected date where unambiguous; missing or ambiguous analytics fall back to recorded fight dates.
+
 ### Fixed - 2026-10-03
 
 - Resolve raid player report classes from validated Armory and roster observations for the report's realm, matching the main player profile. Keep the heading, class icon, name colour and class comparison group consistent when the combat log inferred the wrong class. Existing reports receive the display correction without re-uploading or changing recorded metrics.

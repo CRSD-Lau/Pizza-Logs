@@ -3,6 +3,13 @@ import { PageSection } from "@/components/ui/PageLayout";
 // Keep newest first. Summarize shipped changes from CHANGELOG.md for uploaders.
 const entries = [
   {
+    date: "2026-10-04",
+    label: "Oct 4, 2026",
+    category: "Update",
+    title: "Raid dates follow the raid's actual log session",
+    description: "Older activity left in a combat log no longer gives a later raid the wrong date or full-session totals. Existing reports use the matching recorded session automatically, and old report links redirect to the corrected date. No re-upload is needed when the matching session data is already stored.",
+  },
+  {
     date: "2026-10-03",
     label: "Oct 3, 2026",
     category: "Update",

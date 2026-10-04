@@ -1,3 +1,5 @@
+import { findRaidSessionAnalyticsIndex } from "./raid-session-analytics";
+
 export interface RaidSessionStart {
   sessionIndex: number;
   startedAt: Date | string;
@@ -9,11 +11,14 @@ export interface RaidSessionRoute {
   dateSlug: string;
   slug: string;
   dateOrdinal: number;
+  legacySlug?: string;
+  analyticsIndex?: string;
 }
 
 export interface RaidSessionResolution {
   route: RaidSessionRoute;
   isLegacyIndex: boolean;
+  isLegacyDateSlug?: boolean;
 }
 
 const LEGACY_SESSION_INDEX = /^\d+$/;
@@ -59,6 +64,8 @@ export function buildRaidSessionRoutesWithAnalytics(
   sessionAnalytics: unknown,
 ): RaidSessionRoute[] {
   const combinedStarts = [...starts];
+  const legacyStarts = [...starts];
+  const analyticsIndexBySession = new Map<number, string>();
   const sessionIndexes = new Set(
     starts
       .filter(start => Number.isInteger(start.sessionIndex) && start.sessionIndex >= 0)
@@ -73,14 +80,36 @@ export function buildRaidSessionRoutesWithAnalytics(
       const startedAt = "startedAt" in analytics ? analytics.startedAt : undefined;
       if (typeof startedAt !== "string" && !(startedAt instanceof Date)) continue;
 
-      combinedStarts.push({
+      legacyStarts.push({
         sessionIndex,
         startedAt,
       });
     }
+
+    for (const sessionIndex of sessionIndexes) {
+      const analyticsMap = sessionAnalytics as Record<string, unknown>;
+      const analyticsIndex = findRaidSessionAnalyticsIndex(starts, analyticsMap, sessionIndex);
+      if (analyticsIndex === undefined) continue;
+      const analytics = analyticsMap[analyticsIndex];
+      if (!analytics || typeof analytics !== "object" || !("startedAt" in analytics)) continue;
+      const startedAt = analytics.startedAt;
+      if (typeof startedAt === "string" || startedAt instanceof Date) {
+        combinedStarts.push({ sessionIndex, startedAt });
+        analyticsIndexBySession.set(sessionIndex, analyticsIndex);
+      }
+    }
   }
 
-  return buildRaidSessionRoutes(combinedStarts);
+  const legacyByIndex = new Map(buildRaidSessionRoutes(legacyStarts).map(route => [route.sessionIndex, route.slug]));
+  return buildRaidSessionRoutes(combinedStarts).map(route => {
+    const legacySlug = legacyByIndex.get(route.sessionIndex);
+    const analyticsIndex = analyticsIndexBySession.get(route.sessionIndex);
+    return {
+      ...route,
+      ...(analyticsIndex !== undefined ? { analyticsIndex } : {}),
+      ...(legacySlug && legacySlug !== route.slug ? { legacySlug } : {}),
+    };
+  });
 }
 
 export function resolveRaidSessionParam(
@@ -94,7 +123,11 @@ export function resolveRaidSessionParam(
   }
 
   const route = routes.find(candidate => candidate.slug === param);
-  return route ? { route, isLegacyIndex: false } : null;
+  if (route) return { route, isLegacyIndex: false };
+  const legacyRoutes = routes.filter(candidate => candidate.legacySlug === param);
+  return legacyRoutes.length === 1
+    ? { route: legacyRoutes[0], isLegacyIndex: false, isLegacyDateSlug: true }
+    : null;
 }
 
 export function formatRaidDateLabel(date: Date | string): string {

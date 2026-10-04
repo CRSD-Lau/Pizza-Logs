@@ -20,6 +20,13 @@ year; other backwards dates or timestamps are counted as out-of-order input
 instead of inventing a day or year. Encounter and session ISO timestamps retain
 the inferred UTC year across that rollover.
 
+Encounter session indexes identify the full-log event window containing the
+encounter. Nonraid-only windows can leave gaps in those indexes; consumers must
+not renumber encounters independently of session analytics. Pre-pull activity,
+between-fight trash and post-fight events remain part of the same session until
+the gap between consecutive events exceeds 60 minutes. Parser 1.1.5 applies this
+shared identity to new uploads.
+
 Player GUIDs include:
 
 - Warmane values beginning `0x06`;
