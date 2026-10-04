@@ -264,6 +264,19 @@ Warmane gear is best effort. A stale badge means Pizza Logs is showing the last 
 
 ## Historical Reports
 
+Raid dates come from the raid's recorded log session, including its pre-pull
+activity, rather than the file creation or upload date. Dates use the site's UTC
+display convention; a raid crossing midnight keeps the date on which it began.
+Older nonraid activity left in the file does not set a later raid's date.
+
+For historical reports whose encounter and full-session indexes were mismatched,
+the site selects the unique stored event window containing the session's fights.
+This corrects dates and full-session totals without modifying stored rows or
+requiring a re-upload. If no unique matching window exists, the date falls back
+to the first recorded fight and unmatched full-session analytics are unavailable.
+Old dated report/player links redirect where unambiguous; current canonical
+links take priority in a collision.
+
 Reports are parsed snapshots. A later parser correction does not rewrite existing database rows. Re-upload the original source log after deployment to produce a report under the new contract.
 
 The exact analytical definitions and intentional differences are documented in [parser-contract.md](../parser-contract.md) and [uwu-analytics-parity.md](../uwu-analytics-parity.md).

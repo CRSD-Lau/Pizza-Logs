@@ -105,7 +105,7 @@ async function getSessionPageContext({ params, searchParams }: Props) {
   const sessionPath = getRaidSessionPath(publicSlug, sessionRoute);
   const querySuffix = buildRaidSummaryQuery(scope, includeShortPulls, metricView);
   const viewPath = `${sessionPath}${querySuffix}`;
-  if (resolution.isLegacyUploadId || resolution.isLegacyIndex) permanentRedirect(viewPath);
+  if (resolution.isLegacyUploadId || resolution.isLegacyIndex || resolution.isLegacyDateSlug) permanentRedirect(viewPath);
 
   const sessionIndex = sessionRoute.sessionIndex;
 
@@ -164,8 +164,14 @@ async function SessionContent({ data }: { data: Awaited<ReturnType<typeof getSes
   const { kills, wipes, unknown, shortPulls, totalPulls } = countAttempts(orderedEncounters, { includeShortPulls });
   const visibleEncounters = includeShortPulls ? orderedEncounters : orderedEncounters.filter(enc => !isShortPull(enc));
   const sessionAnalyticsMap = (upload.sessionAnalytics ?? {}) as unknown as Record<string, SessionAnalytics>;
-  const sessionAnalytics = sessionAnalyticsMap[String(sessionIndex)];
-  const legacySessionDamage = ((upload.sessionDamage ?? {}) as Record<string, number>)[String(sessionIndex)];
+  // Routing resolves this against all encounter groups, preventing two legacy
+  // groups from each displaying the same full-session totals.
+  const sessionAnalytics = sessionRoute.analyticsIndex === undefined
+    ? undefined
+    : sessionAnalyticsMap[sessionRoute.analyticsIndex];
+  const legacySessionDamage = Object.keys(sessionAnalyticsMap).length === 0
+    ? ((upload.sessionDamage ?? {}) as Record<string, number>)[String(sessionIndex)]
+    : undefined;
   const raidSummary = buildRaidSummary(orderedEncounters, scope);
   const recordedResults = countAttempts(raidSummary.encounters, { includeShortPulls: true });
   const summaryResults = isKills ? formatCountLabel(recordedResults.kills, "kill")
@@ -173,7 +179,7 @@ async function SessionContent({ data }: { data: Awaited<ReturnType<typeof getSes
       ...(recordedResults.unknown > 0 ? [formatCountLabel(recordedResults.unknown, "unknown outcome")] : [])].join(" / ");
   const listedResults = [formatCountLabel(kills, "kill"), formatCountLabel(wipes, "wipe"),
     ...(unknown > 0 ? [formatCountLabel(unknown, "unknown outcome")] : [])].join(" / ");
-  const startedAt = sessionAnalytics?.startedAt ?? encounters[0].startedAt;
+  const startedAt = sessionRoute.startedAt;
   const endedAt = sessionAnalytics?.endedAt ?? encounters[encounters.length - 1].endedAt;
   const sessionPlayers = Object.entries(sessionAnalytics?.players ?? {});
 
@@ -503,7 +509,7 @@ async function SessionContent({ data }: { data: Awaited<ReturnType<typeof getSes
           </div>
         ) : (
           <div className="space-y-3">
-            {Number.isFinite(legacySessionDamage) && legacySessionDamage >= 0 && (
+            {legacySessionDamage !== undefined && Number.isFinite(legacySessionDamage) && legacySessionDamage >= 0 && (
               <StatCard label="Total Damage" value={formatNumber(legacySessionDamage)} sub="stored full raid session total" />
             )}
             <p className="text-sm text-text-secondary">

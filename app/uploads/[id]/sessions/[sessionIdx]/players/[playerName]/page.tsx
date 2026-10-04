@@ -76,7 +76,7 @@ async function getSessionPlayerPageContext({ params, searchParams }: Props) {
 
   const { route: sessionRoute, uploadId, publicSlug } = resolution;
   const sessionPath = getRaidSessionPath(publicSlug, sessionRoute);
-  if (resolution.isLegacyUploadId || resolution.isLegacyIndex) {
+  if (resolution.isLegacyUploadId || resolution.isLegacyIndex || resolution.isLegacyDateSlug) {
     permanentRedirect(`${sessionPath}/players/${encodeURIComponent(name)}${pageQuerySuffix}`);
   }
 
