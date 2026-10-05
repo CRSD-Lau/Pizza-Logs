@@ -3,6 +3,11 @@
 Author: Neil Mitchell
 Last Modified By: Neil Mitchell
 
+Parser dependency refresh verified 2026-10-05: FastAPI 0.142.2 and Ruff 0.16.10
+retain MIT licenses, checked from the installed Python 3.14 package metadata.
+FastAPI adds the transitive opentelemetry-api 1.45.0 package (Apache-2.0);
+its installed license and notices remain part of the packaged dependency tree.
+
 Development tooling patch verified 2026-10-03: `fast-glob` is a direct file
 dependency supplied by this repository's private `@pizza-logs/next-eslint-glob`
 adapter under the project MIT license. It is not an upstream fast-glob release.
@@ -86,7 +91,7 @@ Scope: the 42 direct runtime and development dependencies declared in `package.j
 
 | Package | Locked version | License |
 | --- | ---: | --- |
-| `fastapi` | 0.141.1 | MIT |
+| `fastapi` | 0.142.2 | MIT |
 | `uvicorn[standard]` | 0.53.0 | BSD-3-Clause |
 | `python-multipart` | 0.0.32 | Apache-2.0 |
 | `pydantic` | 2.13.4 | MIT |
@@ -96,7 +101,7 @@ Scope: the 42 direct runtime and development dependencies declared in `package.j
 | Package | Locked version | License |
 | --- | ---: | --- |
 | `pytest` | 9.1.1 | MIT |
-| `ruff` | 0.16.8 | MIT |
+| `ruff` | 0.16.10 | MIT |
 | `bandit` | 1.9.4 | Apache-2.0 |
 | `pip-audit` | 2.10.1 | Apache-2.0 |
 | `pip-tools` | 7.6.1 | BSD-3-Clause |
