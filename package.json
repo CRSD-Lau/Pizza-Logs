@@ -74,7 +74,7 @@
     "typescript": "^6.0.3"
   },
   "overrides": {
-    "@next/eslint-plugin-next@16.3.6": {
+    "@next/eslint-plugin-next@16.3.8": {
       "fast-glob": "$fast-glob"
     },
     "deepmerge-ts": "8.0.2",
