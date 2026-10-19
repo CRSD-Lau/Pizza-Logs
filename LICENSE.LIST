@@ -3,6 +3,13 @@
 Author: Neil Mitchell
 Last Modified By: Neil Mitchell
 
+Dependency refresh verified 2026-10-19: Better Auth 1.7.10, Next.js and
+eslint-config-next 16.4.2, React and React DOM 19.3.1 retain MIT licenses;
+Playwright 1.64.1 retains Apache-2.0. Installed package metadata and license
+files confirm the existing license identifiers. No direct packages or license
+obligations were added or removed. The private glob adapter now applies to
+Next ESLint 16.4.2; its existing license and notice requirements are unchanged.
+
 Parser dependency refresh verified 2026-10-05: FastAPI 0.142.2 and Ruff 0.16.10
 retain MIT licenses, checked from the installed Python 3.14 package metadata.
 FastAPI adds the transitive opentelemetry-api 1.45.0 package (Apache-2.0);
@@ -50,17 +57,17 @@ Scope: the 42 direct runtime and development dependencies declared in `package.j
 | `@fontsource/rajdhani` | 5.3.0 | OFL-1.1 |
 | `@prisma/adapter-pg` | 7.10.0 | Apache-2.0 |
 | `@prisma/client` | 7.10.0 | Apache-2.0 |
-| `better-auth` | 1.7.2 | MIT |
+| `better-auth` | 1.7.10 | MIT |
 | `better-call` | 1.4.0 | MIT |
 | `class-variance-authority` | 0.7.1 | Apache-2.0 |
 | `clsx` | 2.1.1 | MIT |
 | `dotenv` | 18.0.1 | BSD-2-Clause |
 | `lucide-react` | 1.35.0 | ISC |
-| `next` | 16.3.3 | MIT |
+| `next` | 16.4.2 | MIT |
 | `pg` | 8.23.0 | MIT |
 | `prisma` | 7.10.0 | Apache-2.0 |
-| `react` | 19.2.8 | MIT |
-| `react-dom` | 19.2.8 | MIT |
+| `react` | 19.3.1 | MIT |
+| `react-dom` | 19.3.1 | MIT |
 | `react-dropzone` | 20.1.1 | MIT |
 | `recharts` | 3.10.1 | MIT |
 | `tailwind-merge` | 3.6.0 | MIT |
@@ -78,8 +85,8 @@ Scope: the 42 direct runtime and development dependencies declared in `package.j
 | `@typescript/native` | 7.0.2 | Apache-2.0 |
 | `axe-core` | 4.13.0 | MPL-2.0 |
 | `eslint` | 9.39.5 | MIT |
-| `eslint-config-next` | 16.3.3 | MIT |
-| `playwright` | 1.62.1 | Apache-2.0 |
+| `eslint-config-next` | 16.4.2 | MIT |
+| `playwright` | 1.64.1 | Apache-2.0 |
 | `postcss` | 8.5.26 | MIT |
 | `tailwindcss` | 4.3.3 | MIT |
 | `tsx` | 4.23.12 | MIT |

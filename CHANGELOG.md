@@ -6,6 +6,10 @@ This project follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) an
 
 ## [Unreleased]
 
+### Maintenance - 2026-10-19
+
+- Update Next.js and its ESLint configuration to 16.4.2, React and React DOM to 19.3.1, Better Auth to 1.7.10, and Playwright to 1.64.1. Keep the existing Next ESLint directory adapter active for the new plugin version so the vulnerable glob dependency chain is not reintroduced.
+
 ### Fixed - 2026-10-04
 
 - Date raids from their own recorded event session when a combat log contains older nonraid activity. Parser 1.1.5 keeps encounters aligned with full-session analytics, including logs spanning several raid nights. Existing reports match their stored analytics by event times, correcting dates and full-session totals without re-uploading or changing database rows. Old dated report and player links redirect to the corrected date where unambiguous; missing or ambiguous analytics fall back to recorded fight dates.
