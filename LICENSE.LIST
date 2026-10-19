@@ -10,8 +10,10 @@ files confirm the existing license identifiers. No direct packages or license
 obligations were added or removed. The private glob adapter now applies to
 Next ESLint 16.4.2; its existing license and notice requirements are unchanged.
 
-Parser dependency refresh verified 2026-10-05: FastAPI 0.142.2 and Ruff 0.16.10
-retain MIT licenses, checked from the installed Python 3.14 package metadata.
+Parser dependency refresh verified 2026-10-19: FastAPI 0.143.2, Pydantic
+2.14.1, and Ruff 0.17.1 retain MIT licenses; Uvicorn 0.54.0 and pip-tools
+7.6.2 retain BSD-3-Clause. These were checked from installed Python 3.14
+package metadata and the regenerated hash locks.
 FastAPI adds the transitive opentelemetry-api 1.45.0 package (Apache-2.0);
 its installed license and notices remain part of the packaged dependency tree.
 
@@ -98,20 +100,20 @@ Scope: the 42 direct runtime and development dependencies declared in `package.j
 
 | Package | Locked version | License |
 | --- | ---: | --- |
-| `fastapi` | 0.142.2 | MIT |
-| `uvicorn[standard]` | 0.53.0 | BSD-3-Clause |
+| `fastapi` | 0.143.2 | MIT |
+| `uvicorn[standard]` | 0.54.0 | BSD-3-Clause |
 | `python-multipart` | 0.0.32 | Apache-2.0 |
-| `pydantic` | 2.13.4 | MIT |
+| `pydantic` | 2.14.1 | MIT |
 
 ## Python Development
 
 | Package | Locked version | License |
 | --- | ---: | --- |
 | `pytest` | 9.1.1 | MIT |
-| `ruff` | 0.16.10 | MIT |
+| `ruff` | 0.17.1 | MIT |
 | `bandit` | 1.9.4 | Apache-2.0 |
 | `pip-audit` | 2.10.1 | Apache-2.0 |
-| `pip-tools` | 7.6.1 | BSD-3-Clause |
+| `pip-tools` | 7.6.2 | BSD-3-Clause |
 
 `pip-audit` has no precise license metadata field in the installed distribution; its packaged `licenses/LICENSE` identifies Apache License 2.0. `pip-tools` reports `BSD`; its packaged `licenses/LICENSE` identifies BSD 3-Clause. Extra dependencies selected by `uvicorn[standard]` belong to the transitive graph, not additional direct rows.
 
