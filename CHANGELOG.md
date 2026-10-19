@@ -8,6 +8,7 @@ This project follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) an
 
 ### Maintenance - 2026-10-19
 
+- Update parser FastAPI to 0.143.2, Pydantic to 2.14.1, and Ruff to 0.17.1 with regenerated Python hash locks.
 - Update Next.js and its ESLint configuration to 16.4.2, React and React DOM to 19.3.1, Better Auth to 1.7.10, and Playwright to 1.64.1. Keep the existing Next ESLint directory adapter active for the new plugin version so the vulnerable glob dependency chain is not reintroduced.
 
 ### Fixed - 2026-10-04
