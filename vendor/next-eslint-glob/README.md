@@ -6,7 +6,7 @@ last_modified_by: Neil Mitchell
 # Next ESLint directory adapter
 
 This private development package replaces only the `fast-glob` dependency of
-`@next/eslint-plugin-next@16.3.6`. The root development dependency named
+`@next/eslint-plugin-next@16.4.2`. The root development dependency named
 `fast-glob` points to this local package, whose own name remains
 `@pizza-logs/next-eslint-glob`; npm's `$fast-glob` override reuses that same
 dependency for the exact plugin version. It supports that plugin's
