@@ -99,7 +99,7 @@ screenshots and results under `.test-artifacts/player-raid-comparison`.
 
 ## Parser Gate
 
-With the Python 3.14 virtual environment active:
+With the Python 3.15 virtual environment active:
 
 ```bash
 python -m pip install --require-hashes -r parser/requirements-dev.lock
@@ -109,11 +109,11 @@ python -m pytest tests/ -v
 
 Useful focused suites include `tests/test_fixtures.py`, `tests/test_parser_core.py`, `tests/test_parser_service.py`, and `tests/test_archive_upload.py`. Parser behavior changes require a focused pytest or fixture. Full-suite success is still required before shipping.
 
-After editing a Python input manifest, regenerate both platform-aware hash locks from the repository root with Python 3.14 and the pinned `pip-tools`:
+After editing a Python input manifest, regenerate both platform-aware hash locks from the repository root with `uv`'s universal resolver. This retains the Linux-only `uvloop` pin required by Uvicorn while remaining installable on Windows:
 
 ```bash
-python -m piptools compile --generate-hashes --strip-extras --output-file=parser/requirements.lock parser/requirements.txt
-python -m piptools compile --generate-hashes --strip-extras --allow-unsafe --output-file=parser/requirements-dev.lock parser/requirements-dev.txt
+uv pip compile --universal --generate-hashes --output-file=parser/requirements.lock parser/requirements.txt
+uv pip compile --universal --generate-hashes --output-file=parser/requirements-dev.lock parser/requirements-dev.txt
 npm run locks:check
 ```
 
@@ -226,7 +226,7 @@ coverage includes diagnostics, upload history/details and account security at
 375, 768 and 1440 pixels. New render tests cover missing and legacy durations,
 zero output, no-kill profiles, and navigation beyond 100 admin uploads.
 
-The main CI job supplies PostgreSQL 16 and Python 3.14, installs both lockfiles, migrates and seeds a fresh database, checks migration/schema agreement, runs the TypeScript and Python suites with integration prerequisites enabled, and runs the offline parity regression gate. It also runs lint, both TypeScript checks, docs/lock checks, npm audit, Ruff, Bandit, pip-audit, a Next.js production build, both Docker builds, and headless acceptance against those containers. Synthetic acceptance artifacts are retained for 90 days.
+The main CI job supplies PostgreSQL 16 and Python 3.15, installs both lockfiles, migrates and seeds a fresh database, checks migration/schema agreement, runs the TypeScript and Python suites with integration prerequisites enabled, and runs the offline parity regression gate. It also runs lint, both TypeScript checks, docs/lock checks, npm audit, Ruff, Bandit, pip-audit, a Next.js production build, both Docker builds, and headless acceptance against those containers. Synthetic acceptance artifacts are retained for 90 days.
 
 Run the static/security checks from the repository root:
 

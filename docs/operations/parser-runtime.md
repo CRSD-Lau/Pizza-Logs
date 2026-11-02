@@ -6,12 +6,13 @@ Last modified by: Neil Mitchell
 
 ## Runtime contract
 
-The parser uses the Docker Official Python 3.14 Alpine 3.24 image, pinned by
+The parser uses the Docker Official Python 3.15 Alpine 3.24 image, pinned by
 manifest digest in [`parser/Dockerfile`](../../parser/Dockerfile). The final
 `runtime` target runs as UID/GID 10001 and retains the existing hash-locked
 application dependencies. It does not contain pip, setuptools, wheel or pytest.
-No parser formulas, archive limits, cancellation rules or dependency versions
-were changed for the base-image migration.
+No parser formulas, archive limits or cancellation rules were changed for the
+base-image migration. The hash locks were regenerated to select current
+Python-3.15-compatible transitive dependencies.
 
 Alpine uses musl instead of Debian's glibc. The Python image maintainers document
 this [compatibility distinction](https://hub.docker.com/_/python). Production

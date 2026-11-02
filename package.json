@@ -39,14 +39,14 @@
     "@fontsource/rajdhani": "5.3.0",
     "@prisma/adapter-pg": "^7.10.0",
     "@prisma/client": "^7.10.0",
-    "better-auth": "1.7.13",
+    "better-auth": "1.7.15",
     "better-call": "1.4.4",
     "cheerio": "1.2.0",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "dotenv": "^18.0.9",
-    "lucide-react": "^1.61.0",
-    "next": "16.4.3",
+    "lucide-react": "1.66.0",
+    "next": "16.4.4",
     "pg": "^8.23.1",
     "prisma": "^7.10.0",
     "react": "19.3.1",
@@ -58,7 +58,6 @@
     "zod": "^4.6.5"
   },
   "devDependencies": {
-    "fast-glob": "file:vendor/next-eslint-glob",
     "@tailwindcss/postcss": "^4.3.3",
     "@types/node": "^24.19.2",
     "@types/pg": "^8.23.1",
@@ -67,15 +66,17 @@
     "@typescript/native": "npm:typescript@^7.0.2",
     "axe-core": "4.14.0",
     "eslint": "^9.39.5",
-    "eslint-config-next": "16.4.3",
+    "eslint-config-next": "16.4.4",
+    "fast-glob": "file:vendor/next-eslint-glob",
+    "minimatch-v11": "npm:minimatch@11.0.4",
     "playwright": "1.64.1",
-    "postcss": "^8.5.31",
+    "postcss": "^8.5.32",
     "tailwindcss": "^4.3.3",
     "tsx": "^4.23.15",
     "typescript": "^6.0.3"
   },
   "overrides": {
-    "@next/eslint-plugin-next@16.4.3": {
+    "@next/eslint-plugin-next": {
       "fast-glob": "$fast-glob"
     },
     "deepmerge-ts": "8.0.2",
@@ -83,6 +84,7 @@
     "@types/react-dom": "19.3.0",
     "prisma": {
       "mysql2": "3.24.3"
-    }
+    },
+    "minimatch": "file:vendor/minimatch-cjs-compat"
   }
 }

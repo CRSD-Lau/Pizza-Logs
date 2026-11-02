@@ -18,7 +18,7 @@ async function markdownFiles(directory) {
   const files = [];
 
   for (const entry of entries) {
-    if (entry.isDirectory() && ignoredDirectories.has(entry.name)) continue;
+    if (entry.isDirectory() && (ignoredDirectories.has(entry.name) || /^\.venv(?:[-_].*)?$/.test(entry.name))) continue;
     const absolute = path.join(directory, entry.name);
     if (entry.isDirectory()) files.push(...await markdownFiles(absolute));
     else if (entry.isFile() && entry.name.toLowerCase().endsWith(".md")) files.push(absolute);

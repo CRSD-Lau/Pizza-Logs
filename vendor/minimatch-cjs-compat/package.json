@@ -1,0 +1,12 @@
+{
+  "name": "minimatch",
+  "version": "11.0.4",
+  "private": true,
+  "description": "CJS-callable compatibility bridge for minimatch 11",
+  "author": "Neil Mitchell",
+  "license": "MIT",
+  "main": "index.cjs",
+  "dependencies": {
+    "minimatch-v11": "npm:minimatch@11.0.4"
+  }
+}
