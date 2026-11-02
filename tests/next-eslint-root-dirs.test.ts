@@ -21,6 +21,19 @@ const pluginSource = fs.readFileSync(pluginUtility, "utf8");
 const { getRootDirs } = require(pluginUtility) as {
   getRootDirs: (context: RootDirContext) => string[];
 };
+const pluginDirectory = path.dirname(path.dirname(pluginUtility));
+const adapterPath = path.resolve(process.cwd(), "vendor", "next-eslint-glob", "index.cjs");
+const installedAdapterPath = require.resolve("fast-glob", { paths: [pluginDirectory] });
+const minimatch = require("minimatch") as ((value: string, pattern: string) => boolean) & {
+  Minimatch: new (pattern: string) => { match(value: string): boolean };
+  minimatch: unknown;
+};
+
+assert.equal(installedAdapterPath, adapterPath, "the installed Next plugin resolves the reviewed glob adapter");
+assert.equal(typeof minimatch, "function", "legacy CommonJS callers retain minimatch's callable export");
+assert.equal(minimatch("adapter.js", "*.js"), true, "the bridge delegates the legacy matcher call");
+assert.equal(typeof minimatch.Minimatch, "function", "the bridge retains the named Minimatch constructor");
+assert.equal(minimatch.minimatch, minimatch, "the bridge retains minimatch's named matcher export");
 
 assert.equal(
   pluginSource.match(/_fastglob\.globSync/g)?.length,

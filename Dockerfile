@@ -6,6 +6,7 @@ FROM base AS deps
 WORKDIR /app
 COPY package.json package-lock.json* ./
 COPY vendor/next-eslint-glob ./vendor/next-eslint-glob
+COPY vendor/minimatch-cjs-compat ./vendor/minimatch-cjs-compat
 RUN npm ci --legacy-peer-deps
 
 # ── production dependencies (Prisma CLI runs migrations at startup) ──
@@ -13,6 +14,7 @@ FROM base AS prod-deps
 WORKDIR /app
 COPY package.json package-lock.json* ./
 COPY vendor/next-eslint-glob ./vendor/next-eslint-glob
+COPY vendor/minimatch-cjs-compat ./vendor/minimatch-cjs-compat
 RUN npm ci --omit=dev --legacy-peer-deps --ignore-scripts
 # Download the pinned migration engine at build time. A production restart must
 # not depend on binaries.prisma.sh or require writable package installation.
@@ -23,6 +25,7 @@ FROM base AS builder
 WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
 COPY --from=deps /app/vendor/next-eslint-glob ./vendor/next-eslint-glob
+COPY --from=deps /app/vendor/minimatch-cjs-compat ./vendor/minimatch-cjs-compat
 COPY . .
 RUN npx prisma generate
 ENV NEXT_TELEMETRY_DISABLED=1

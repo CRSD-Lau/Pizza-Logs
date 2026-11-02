@@ -26,6 +26,13 @@ export default defineConfig([
       "@typescript-eslint/no-require-imports": "off",
     },
   },
+  {
+    files: ["vendor/minimatch-cjs-compat/*.cjs"],
+    rules: {
+      // This bridge deliberately exposes the legacy CommonJS callable export.
+      "@typescript-eslint/no-require-imports": "off",
+    },
+  },
   globalIgnores([
     ".test-artifacts/**",
     ".next/**",

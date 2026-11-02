@@ -3,18 +3,21 @@
 Author: Neil Mitchell
 Last Modified By: Neil Mitchell
 
-Dependency refresh verified 2026-10-19: Better Auth 1.7.10, Next.js and
-eslint-config-next 16.4.2, React and React DOM 19.3.1 retain MIT licenses;
-Playwright 1.64.1 retains Apache-2.0. Installed package metadata and license
-files confirm the existing license identifiers. No direct packages or license
-obligations were added or removed. The private glob adapter now applies to
-Next ESLint 16.4.2; its existing license and notice requirements are unchanged.
+Dependency refresh verified 2026-11-02: Better Auth 1.7.15, Next.js and
+eslint-config-next 16.4.4 retain MIT licenses; Lucide React 1.66.0 retains
+ISC; PostCSS 8.5.32 retains MIT; and Playwright 1.64.1 retains Apache-2.0.
+The local minimatch 11.0.4 CommonJS bridge is authored by Neil Mitchell under
+MIT and delegates to upstream minimatch 11.0.4 (BlueOak-1.0.0). Installed
+package metadata and license files confirm the existing direct-package license
+identifiers. The private glob adapter remains MIT-licensed and applies to Next
+ESLint 16.4.4.
 
-Parser dependency refresh verified 2026-10-19: FastAPI 0.143.2, Pydantic
-2.14.1, and Ruff 0.17.1 retain MIT licenses; Uvicorn 0.54.0 and pip-tools
-7.6.2 retain BSD-3-Clause. These were checked from installed Python 3.14
-package metadata and the regenerated hash locks.
-FastAPI adds the transitive opentelemetry-api 1.45.0 package (Apache-2.0);
+Parser dependency refresh verified 2026-11-02: FastAPI 0.162.0, Pydantic
+2.14.2, and Ruff 0.17.3 retain MIT licenses; Uvicorn 0.54.0 and pip-tools
+7.6.2 retain BSD-3-Clause. These were checked from Python 3.15-compatible
+hash locks. The development lock selects pip-api 0.0.35 (Apache-2.0) to retain
+compatibility with Python 3.15 for pip-audit.
+FastAPI adds the transitive opentelemetry-api 1.45.2 package (Apache-2.0);
 its installed license and notices remain part of the packaged dependency tree.
 
 Development tooling patch verified 2026-10-03: `fast-glob` is a direct file
@@ -34,7 +37,7 @@ packages total, 26 MIT). Its transitive packages remain covered by the lockfile
 and packaged dependency licenses.
 Verified: 2026-09-04; Better Auth and font/jQuery notice update: 2026-09-05
 
-Scope: the 42 direct runtime and development dependencies declared in `package.json`, `parser/requirements.txt`, and `parser/requirements-dev.txt`. Versions and license identifiers were read from installed npm packages and the Python 3.14 environment installed from the hash-locked development requirements, then checked against the lockfiles. Better Auth 1.7.2 was added on 2026-09-05 and checked against its installed package metadata, `LICENSE.md` and lockfile entry. Better Call 1.4.0 was promoted from the existing transitive dependency to a direct dependency on 2026-09-05; its installed MIT LICENSE was checked. This is a dependency metadata inventory, not a complete software bill of materials or clearance of project assets.
+Scope: the 42 direct runtime and development dependencies declared in `package.json`, `parser/requirements.txt`, and `parser/requirements-dev.txt`. Versions and license identifiers were read from installed npm packages and a Python 3.15-compatible environment installed from the hash-locked development requirements, then checked against the lockfiles. Better Auth 1.7.2 was added on 2026-09-05 and checked against its installed package metadata, `LICENSE.md` and lockfile entry. Better Call 1.4.0 was promoted from the existing transitive dependency to a direct dependency on 2026-09-05; its installed MIT LICENSE was checked. This is a dependency metadata inventory, not a complete software bill of materials or clearance of project assets.
 
 ## Summary
 
