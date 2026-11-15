@@ -17,6 +17,20 @@ from parser_core import (
 )
 from bosses import lookup_boss
 from quick_classifier import quick_classify
+from player_identity import is_player_guid
+
+
+def test_identity_cache_preserves_type_evidence_and_bounds_retention():
+    is_player_guid.cache_clear()
+    guid = "0x0600000000000001"
+    assert is_player_guid(guid, "0x514")
+    assert not is_player_guid(guid, "0xa48")
+    assert is_player_guid(guid, "0x514")
+    for value in range(9000):
+        is_player_guid(f"Player-{value}", "0x514")
+    assert is_player_guid.cache_info().currsize <= 8192
+    assert not is_player_guid(guid, "0xa48")
+    is_player_guid.cache_clear()
 
 
 # ── Helpers ────────────────────────────────────────────────────────────────────

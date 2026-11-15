@@ -16,7 +16,7 @@ from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from typing import Generator, Optional, TextIO
 
-from bosses import BossDef, lookup_boss, lookup_boss_by_id, ALL_BOSS_NAMES
+from bosses import BossDef, lookup_boss, lookup_boss_by_id, ALL_BOSS_NAMES, continues_halion_phase, is_halion_event
 from combat_log_events import parse_combat_log_line
 from combat_metrics import (
     encounter_damage_amount,
@@ -911,6 +911,7 @@ class CombatLogParser:
         # A fight starts when a boss-name event appears.
         # A fight ends when 30s pass with no boss-name event.
         heuristic_active = False
+        halion_active = False
         last_boss_ts: float = 0.0
         lich_king_roleplay_ts: Optional[float] = None
         lich_king_harvest_ts: Optional[float] = None
@@ -1051,7 +1052,10 @@ class CombatLogParser:
                     lich_king_harvest_ts is not None
                     and abs_ts - lich_king_harvest_ts <= LICH_KING_HARVEST_GRACE_SECONDS
                 )
-                if abs_ts - last_boss_ts > ENCOUNTER_GAP_SECONDS and not inside_lich_king_scripted_pause:
+                gap = abs_ts - last_boss_ts
+                inside_halion_pause = (halion_active and gap > ENCOUNTER_GAP_SECONDS
+                                      and continues_halion_phase(parts, gap, is_boss))
+                if gap > ENCOUNTER_GAP_SECONDS and not (inside_lich_king_scripted_pause or inside_halion_pause):
                     # A long quiet gap always closes the previous attempt, even
                     # when the first line after the gap also names the boss.
                     if len(heuristic_segment) >= MIN_ENCOUNTER_EVENTS:
@@ -1062,9 +1066,12 @@ class CombatLogParser:
                     lich_king_harvest_ts = None
                     if is_boss and (event in DMG_EVENTS or event in HEAL_EVENTS or event == UNIT_DIED_EVENT):
                         heuristic_active = True
+                        halion_active = is_halion_event(parts) and event != UNIT_DIED_EVENT
                         last_boss_ts = abs_ts
                         heuristic_segment = BoundedEventList([(ts_str, parts, ts)])
                 elif is_boss:
+                    if event == UNIT_DIED_EVENT:
+                        halion_active = False
                     # Extend active window
                     last_boss_ts = abs_ts
                     heuristic_segment.append((ts_str, parts, ts))
@@ -1076,6 +1083,7 @@ class CombatLogParser:
                 # all events are retained for boss-specific difficulty evidence.
                 if is_boss and (event in DMG_EVENTS or event in HEAL_EVENTS or event == UNIT_DIED_EVENT):
                     heuristic_active = True
+                    halion_active = is_halion_event(parts) and event != UNIT_DIED_EVENT
                     last_boss_ts = abs_ts
                     heuristic_segment = BoundedEventList([(ts_str, parts, ts)])
 

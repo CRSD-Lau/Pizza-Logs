@@ -202,7 +202,7 @@ async def test_body_length_mismatch_cleans_files_and_releases_admission(tmp_path
 
 
 @pytest.mark.anyio
-async def test_invalid_content_never_reaches_classification_or_full_parse(tmp_path, monkeypatch):
+async def test_invalid_content_never_publishes_preview_or_reaches_full_parse(tmp_path, monkeypatch):
     slots = asyncio.Semaphore(1)
     monkeypatch.setattr(main, "UPLOAD_TEMP_DIR", tmp_path)
     monkeypatch.setattr(main, "_upload_slots", slots)
@@ -210,7 +210,6 @@ async def test_invalid_content_never_reaches_classification_or_full_parse(tmp_pa
     def must_not_run(*_args):
         raise AssertionError("Invalid input must not reach aggregation")
 
-    monkeypatch.setattr(main, "_quick_classify_path", must_not_run)
     monkeypatch.setattr(main, "_full_parse_path", must_not_run)
     response = await main.upload_archive_stream(
         str(uuid.uuid4()), _StreamingRequest((VALID_LOG + "junk\n").encode()), "combat.txt", 2026,

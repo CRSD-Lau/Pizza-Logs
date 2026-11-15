@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from functools import lru_cache
 from typing import Optional
 
 
@@ -25,11 +26,14 @@ def _parse_flags(flags: Optional[str]) -> Optional[int]:
         return None
 
 
+@lru_cache(maxsize=8192)
 def is_player_guid(guid: str, flags: Optional[str] = None) -> bool:
     """Return whether combat-log identity evidence describes a player.
 
     Object type flags are authoritative when present. GUID patterns remain as
     compatibility fallbacks for older logs whose flags are missing or zero.
+    Cache repeated identities with flags in the key so conflicting type evidence
+    stays authoritative. Bound retention across uploads with distinct GUIDs.
     """
     normalized = (guid or "").strip().upper()
     if normalized in NULL_GUIDS:

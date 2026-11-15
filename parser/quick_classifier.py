@@ -3,12 +3,12 @@
 from __future__ import annotations
 
 import re
-from collections.abc import Iterator
+from collections.abc import Iterable, Iterator
 from datetime import date
 from typing import TextIO
 
-from bosses import ALL_BOSS_NAMES, lookup_boss, lookup_boss_by_id
-from combat_log_events import parse_combat_log_line
+from bosses import ALL_BOSS_NAMES, continues_halion_phase, is_halion_event, lookup_boss, lookup_boss_by_id
+from combat_log_events import CombatLogLine, parse_combat_log_line
 from upload_limits import BoundedEventList, check_result_count
 from difficulty_detector import (
     DIFFICULTY_SPELLS,
@@ -99,7 +99,8 @@ def _infer_boss(segment: list[tuple[str, list[str], float]]) -> str | None:
 
 
 def iter_encounter_segments(
-    fh: TextIO, cancel_event=None, *, file_year: int = 2024,
+    fh: TextIO | None, cancel_event=None, *, file_year: int = 2024,
+    records: Iterable[CombatLogLine] | None = None,
 ) -> Iterator[list[tuple[str, list[str], float]]]:
     """Yield one bounded encounter at a time from a combat-log text stream."""
     current: list[tuple[str, list[str], float]] = BoundedEventList()
@@ -107,6 +108,7 @@ def iter_encounter_segments(
     active_marker: tuple[int, str] | None = None
     active_marker_start: tuple[str, list[str], float] | None = None
     heuristic_active = False
+    halion_active = False
     last_boss_ts = 0.0
     lich_king_roleplay_ts: float | None = None
     lich_king_harvest_ts: float | None = None
@@ -116,13 +118,13 @@ def iter_encounter_segments(
     first_ordinal: int | None = None
     last_timestamp: tuple[int, float] | None = None
 
-    for line_number, raw_line in enumerate(fh, start=1):
+    if records is None:
+        records = (result.line for raw_line in fh
+                   if (result := parse_combat_log_line(raw_line)).line is not None)
+    for line_number, parsed_line in enumerate(records, start=1):
         if cancel_event is not None and line_number % 4096 == 0 and cancel_event.is_set():
             raise TimeoutError("Quick classification was cancelled after the processing timeout")
-        parsed = parse_combat_log_line(raw_line)
-        if parsed.line is None:
-            continue
-        key = (parsed.line.month, parsed.line.day)
+        key = (parsed_line.month, parsed_line.day)
         candidate_year = calendar_year
         candidate_ordinal = calendar_ordinal
         if key != calendar_key:
@@ -134,16 +136,16 @@ def iter_encounter_segments(
                 candidate_ordinal = date(candidate_year, *key).toordinal()
             except ValueError:
                 continue
-        absolute = (candidate_ordinal, parsed.line.ts)
+        absolute = (candidate_ordinal, parsed_line.ts)
         if last_timestamp is not None and absolute < last_timestamp:
             continue
         calendar_key, calendar_year, calendar_ordinal = key, candidate_year, candidate_ordinal
         last_timestamp = absolute
         if first_ordinal is None:
             first_ordinal = calendar_ordinal
-        absolute_seconds = (calendar_ordinal - first_ordinal) * 86400.0 + parsed.line.ts
-        item = (parsed.line.ts_str, parsed.line.parts, parsed.line.ts)
-        parts = parsed.line.parts
+        absolute_seconds = (calendar_ordinal - first_ordinal) * 86400.0 + parsed_line.ts
+        item = (parsed_line.ts_str, parsed_line.parts, parsed_line.ts)
+        parts = parsed_line.parts
         event = parts[0]
 
         if event == ENCOUNTER_START:
@@ -200,7 +202,10 @@ def iter_encounter_segments(
                 lich_king_harvest_ts is not None
                 and absolute_seconds - lich_king_harvest_ts <= LICH_KING_HARVEST_GRACE_SECONDS
             )
-            if absolute_seconds - last_boss_ts > ENCOUNTER_GAP_SECONDS and not inside_lk_scripted_pause:
+            gap = absolute_seconds - last_boss_ts
+            inside_halion_pause = (halion_active and gap > ENCOUNTER_GAP_SECONDS
+                                   and continues_halion_phase(parts, gap, boss_event))
+            if gap > ENCOUNTER_GAP_SECONDS and not (inside_lk_scripted_pause or inside_halion_pause):
                 if current:
                     yield current
                 current = BoundedEventList()
@@ -209,15 +214,19 @@ def iter_encounter_segments(
                 lich_king_harvest_ts = None
                 if event in ACTIVE_EVENTS and boss_event:
                     heuristic_active = True
+                    halion_active = is_halion_event(parts) and event != UNIT_DIED
                     last_boss_ts = absolute_seconds
                     current = BoundedEventList([item])
             elif boss_event:
+                if event == UNIT_DIED:
+                    halion_active = False
                 last_boss_ts = absolute_seconds
                 current.append(item)
             else:
                 current.append(item)
         elif event in ACTIVE_EVENTS and boss_event:
             heuristic_active = True
+            halion_active = is_halion_event(parts) and event != UNIT_DIED
             last_boss_ts = absolute_seconds
             current = BoundedEventList([item])
 
@@ -358,8 +367,14 @@ def quick_classify(fh: TextIO, cancel_event=None, *, file_year: int = 2024) -> l
 
 
 def _classify_stream(fh: TextIO, cancel_event=None, *, file_year: int) -> list[dict[str, object]]:
+    return classify_records(None, cancel_event, file_year=file_year, fh=fh)
+
+
+def classify_records(records: Iterable[CombatLogLine] | None, cancel_event=None, *,
+                     file_year: int, fh: TextIO | None = None) -> list[dict[str, object]]:
+    """Classify already validated records without another decode/tokenize pass."""
     results: list[dict[str, object]] = []
-    for segment in iter_encounter_segments(fh, cancel_event, file_year=file_year):
+    for segment in iter_encounter_segments(fh, cancel_event, file_year=file_year, records=records):
         result = _classify_segment(segment)
         if result:
             results.append(result)
