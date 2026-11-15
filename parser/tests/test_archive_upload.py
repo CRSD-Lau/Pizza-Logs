@@ -175,6 +175,41 @@ def test_quick_classification_is_per_attempt(tmp_path: Path):
     assert [item["mode"] for item in results] == ["10N", "25H"]
 
 
+def test_combined_validation_preview_tokenizes_each_record_once(tmp_path, monkeypatch):
+    path = _zip(tmp_path / "preview.zip", {"combat.txt": VALID_LOG})
+    original = archive_upload.parse_combat_log_line
+    calls = 0
+
+    def counted(line, **kwargs):
+        nonlocal calls
+        calls += 1
+        return original(line, **kwargs)
+
+    monkeypatch.setattr(archive_upload, "parse_combat_log_line", counted)
+    selection, preview = main._validate_and_classify_path(path, path.name, 2026, threading.Event())
+    assert calls == len(VALID_LOG.splitlines())
+    with open_combat_log(path, selection) as fh:
+        assert preview == quick_classify(fh, file_year=2026)
+
+
+def test_preview_consumer_cannot_skip_invalid_tail(tmp_path):
+    path = _zip(tmp_path / "tail.zip", {"combat.txt": VALID_LOG + "junk\n"})
+    with pytest.raises(ArchiveValidationError, match="Every nonblank"):
+        validate_upload(path, path.name, record_consumer=lambda records: next(records))
+
+
+def test_combined_preview_retries_cp1252_without_duplicate_attempts(tmp_path):
+    # Invalid UTF-8 appears after a complete first attempt, exercising retry
+    # after the classifier has already accumulated a provisional result.
+    log = VALID_LOG + VALID_LOG.replace("00:00:", "00:10:").replace("00:01:", "00:11:").replace("Player1", "Plâyér")
+    path = _zip(tmp_path / "encoding.zip", {"combat.txt": log.encode("cp1252")})
+    selection, preview = main._validate_and_classify_path(path, path.name, 2026, threading.Event())
+    assert selection.encoding == "cp1252"
+    assert len(preview) == 2
+    with open_combat_log(path, selection) as fh:
+        assert preview == quick_classify(fh, file_year=2026)
+
+
 def test_heuristic_boss_event_after_quiet_gap_starts_new_attempt():
     lines = []
     for base, spell_id in ((1, 69146), (100, 70825)):
@@ -508,7 +543,7 @@ async def test_timeout_retains_admission_and_files_until_worker_really_stops(tmp
     monkeypatch.setattr(main, "UPLOAD_TEMP_DIR", tmp_path)
     monkeypatch.setattr(main, "_upload_slots", slots)
     monkeypatch.setattr(main, "UPLOAD_PROCESSING_TIMEOUT_SECONDS", 0.03)
-    monkeypatch.setattr(main, "validate_upload" if phase == "validate" else "_full_parse_path", blocked_worker)
+    monkeypatch.setattr(main, "_validate_and_classify_path" if phase == "validate" else "_full_parse_path", blocked_worker)
     try:
         response = await main.upload_archive_stream(str(uuid.uuid4()), _StreamingRequest(VALID_LOG.encode()), "combat.txt", 2026)
         chunks = [event async for event in response.body_iterator]

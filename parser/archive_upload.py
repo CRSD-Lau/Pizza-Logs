@@ -11,12 +11,12 @@ import os
 import re
 import threading
 import zipfile
-from contextlib import contextmanager
+from contextlib import closing, contextmanager
 from dataclasses import dataclass, replace
 from pathlib import Path, PurePosixPath
-from typing import Iterator, TextIO
+from typing import Callable, Iterator, TextIO
 
-from combat_log_events import parse_combat_log_line
+from combat_log_events import CombatLogLine, parse_combat_log_line
 
 
 MIB = 1024 * 1024
@@ -173,7 +173,18 @@ def _ratio(uncompressed: int, compressed: int) -> float:
 
 
 def _assert_usable_combat_log(path: Path, selection: ArchiveSelection,
-                            cancel_event: threading.Event | None = None) -> None:
+                            cancel_event: threading.Event | None = None,
+                            record_consumer: Callable[[Iterator[CombatLogLine]], None] | None = None) -> None:
+    with closing(_iter_validated_records(path, selection, cancel_event)) as records:
+        if record_consumer is not None:
+            record_consumer(records)
+        # A consumer that stops early must never bypass validation of the remainder.
+        for _ in records:
+            pass
+
+
+def _iter_validated_records(path: Path, selection: ArchiveSelection,
+                            cancel_event: threading.Event | None = None) -> Iterator[CombatLogLine]:
     record_count = 0
     combat_lines = 0
     units: set[str] = set()
@@ -223,6 +234,7 @@ def _assert_usable_combat_log(path: Path, selection: ArchiveSelection,
                         recognized = len(parts) >= METADATA_EVENTS[event]
                 if not recognized:
                     raise ArchiveValidationError("INVALID_LOG_CONTENT", "Every nonblank line must be a supported WoW combat-log record. Upload an unmodified log after recording has stopped.")
+                yield parsed
     except TimeoutError:
         raise
     except (zipfile.BadZipFile, RuntimeError, OSError, NotImplementedError) as exc:
@@ -235,13 +247,14 @@ def _assert_usable_combat_log(path: Path, selection: ArchiveSelection,
 
 
 def _validate_text_encoding(path: Path, selection: ArchiveSelection,
-                            cancel_event: threading.Event | None) -> ArchiveSelection:
+                            cancel_event: threading.Event | None,
+                            record_consumer: Callable[[Iterator[CombatLogLine]], None] | None = None) -> ArchiveSelection:
     # Older Windows clients may write CP1252 character names. Decode the whole
     # file consistently, never silently replace invalid bytes in public names.
     for encoding in ("utf-8-sig", "cp1252"):
         candidate = replace(selection, encoding=encoding)
         try:
-            _assert_usable_combat_log(path, candidate, cancel_event)
+            _assert_usable_combat_log(path, candidate, cancel_event, record_consumer)
             return candidate
         except UnicodeDecodeError:
             continue
@@ -249,7 +262,8 @@ def _validate_text_encoding(path: Path, selection: ArchiveSelection,
 
 
 def validate_upload(path: Path, original_filename: str,
-                    cancel_event: threading.Event | None = None) -> ArchiveSelection:
+                    cancel_event: threading.Event | None = None,
+                    record_consumer: Callable[[Iterator[CombatLogLine]], None] | None = None) -> ArchiveSelection:
     """Validate allowlisted format, magic bytes and archive resource limits."""
     suffix = Path(original_filename).suffix.lower()
     if suffix not in ALLOWED_SUFFIXES:
@@ -354,7 +368,7 @@ def validate_upload(path: Path, original_filename: str,
             member_count=len(infos),
             compression_ratio=total_ratio,
         )
-        return _validate_text_encoding(path, selection, cancel_event)
+        return _validate_text_encoding(path, selection, cancel_event, record_consumer)
     else:
         if any(magic.startswith(prefix) for prefix in ZIP_MAGIC):
             raise ArchiveValidationError("MAGIC_MISMATCH", "ZIP data must use a .zip filename.")
@@ -369,7 +383,7 @@ def validate_upload(path: Path, original_filename: str,
             compression_ratio=1.0,
         )
 
-    return _validate_text_encoding(path, selection, cancel_event)
+    return _validate_text_encoding(path, selection, cancel_event, record_consumer)
 
 
 @contextmanager

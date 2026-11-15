@@ -6,6 +6,11 @@ This project follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) an
 
 ## [Unreleased]
 
+### Fixed - 2026-11-15
+
+- Reuse validated combat-log records for upload previews, removing a complete archive decompression and tokenization pass. Cache repeated GUID/type-flag identity checks with bounded retention. Bound the combined worker by the configured processing deadline instead of independent 60-second cutoffs, while retaining whole-file validation, cancellation and resource limits.
+- Keep Halion's hidden-realm phase in the same unmarked attempt when bounded Corporeality evidence connects it. Prevent false phase-one wipes and truncated kill durations while preserving separate fresh pulls and boss-death boundaries. Parser provenance advances to 1.1.6; stored reports are not automatically reparsed.
+
 ### Maintenance - 2026-10-19
 
 - Update parser FastAPI to 0.143.2, Pydantic to 2.14.1, and Ruff to 0.17.1 with regenerated Python hash locks.

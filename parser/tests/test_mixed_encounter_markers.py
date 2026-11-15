@@ -161,3 +161,38 @@ def test_fully_marked_preview_keeps_optimized_scan(monkeypatch):
     assert len(preview) == 1
     assert preview[0]["mode"] == "25H"
     assert calls < 20
+
+def corporeality(second):
+    return record(second, "SPELL_AURA_APPLIED", "0xF130009BB7000001", "Halion", "0xa48",
+                  "0xF130009BB7000001", "Halion", "0xa48", "74826", "Corporeality", "32", "BUFF")
+
+
+def test_halion_corporeality_bridges_hidden_realm_phase():
+    log = pull(0) + corporeality(130) + pull(132, kill=True)
+    parser, encounters = parse(log)
+    assert len(encounters) == 1
+    assert encounters[0].outcome == "KILL"
+    assert encounters[0].duration_seconds == 204
+    assert encounters[0].total_damage == 24000
+    assert parser.warnings == []
+
+
+def test_halion_new_pull_without_phase_evidence_stays_separate():
+    _, encounters = parse(pull(0) + pull(130, kill=True))
+    assert [e.outcome for e in encounters] == ["WIPE", "KILL"]
+
+
+def test_halion_phase_grace_is_bounded():
+    _, encounters = parse(pull(0) + corporeality(260) + pull(262, kill=True))
+    assert [e.outcome for e in encounters] == ["WIPE", "KILL"]
+
+
+def test_halion_death_prevents_phase_bridge_to_another_pull():
+    _, encounters = parse(pull(0, kill=True) + corporeality(130) + pull(132, kill=True))
+    assert [e.outcome for e in encounters] == ["KILL", "KILL"]
+
+
+def test_unrelated_corporeality_cannot_bridge_halion():
+    unrelated = corporeality(130).replace("Halion", "OtherUnit")
+    _, encounters = parse(pull(0) + unrelated + pull(132, kill=True))
+    assert [e.outcome for e in encounters] == ["WIPE", "KILL"]

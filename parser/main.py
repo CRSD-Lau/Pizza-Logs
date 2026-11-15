@@ -35,7 +35,7 @@ from archive_upload import (
     validate_upload,
 )
 from parser_core import CombatLogParser, ParsedEncounter
-from quick_classifier import quick_classify
+from quick_classifier import classify_records
 from upload_lifecycle import UploadLease, UploadStreamingResponse, active_upload_paths
 from version import PARSER_VERSION, make_parser_provenance
 
@@ -550,14 +550,17 @@ def _valid_upload_id(upload_id: str) -> bool:
     return parsed.version == 4 and str(parsed) == upload_id
 
 
-def _quick_classify_path(
-    path: Path,
-    selection: ArchiveSelection,
-    file_year: int,
-    cancel_event: threading.Event,
-) -> list[dict[str, object]]:
-    with open_combat_log(path, selection, cancel_event) as fh:
-        return quick_classify(fh, cancel_event, file_year=file_year)
+def _validate_and_classify_path(path: Path, filename: str, file_year: int,
+                              cancel_event: threading.Event) -> tuple[ArchiveSelection, list[dict[str, object]]]:
+    quick_result: list[dict[str, object]] = []
+
+    def consume(records):
+        # Replace, rather than append, on a Windows-1252 retry. Never publish
+        # partial UTF-8 results or a preview before the entire file is validated.
+        quick_result[:] = classify_records(records, cancel_event, file_year=file_year)
+
+    selection = validate_upload(path, filename, cancel_event, record_consumer=consume)
+    return selection, quick_result
 
 
 def _full_parse_path(
@@ -694,14 +697,13 @@ async def upload_archive_stream(
         quick_ms = 0.0
         full_ms = 0.0
         file_year = x_year_hint if x_year_hint > 2000 else datetime.now(timezone.utc).year
-        quick_cancel = lease.cancel_event
         full_cancel = lease.cancel_event
         try:
             yield _sse({"type": "state", "uploadId": upload_id, "state": "validating", "pct": 28, "msg": "Validating archive…"})
             validation_started = time.perf_counter()
-            selection = await lease.run(
-                _quick_executor, validate_upload, final_path, x_filename,
-                lease.cancel_event, timeout=min(UPLOAD_PROCESSING_TIMEOUT_SECONDS, 60),
+            selection, quick_result = await lease.run(
+                _quick_executor, _validate_and_classify_path, final_path, x_filename, file_year,
+                lease.cancel_event, timeout=UPLOAD_PROCESSING_TIMEOUT_SECONDS,
             )
             validation_ms = round((time.perf_counter() - validation_started) * 1000, 2)
 
@@ -713,16 +715,8 @@ async def upload_archive_stream(
             )
             yield _sse({"type": "state", "uploadId": upload_id, "state": "classifying", "pct": 36, "msg": "Classifying boss attempts…"})
 
-            quick_started = time.perf_counter()
-            try:
-                quick_result = await lease.run(
-                    _quick_executor, _quick_classify_path, final_path, selection, file_year, quick_cancel,
-                    timeout=min(UPLOAD_PROCESSING_TIMEOUT_SECONDS, 60),
-                )
-            except asyncio.TimeoutError:
-                quick_cancel.set()
-                raise
-            quick_ms = round((time.perf_counter() - quick_started) * 1000, 2)
+            # Classification consumed the validated records in the same worker.
+            # Its time is included in archiveValidationMs; no third file scan.
             final_byte_to_quick_ms = round((time.perf_counter() - final_byte_at) * 1000, 2)
             timings = {
                 "networkUploadMs": upload_ms,

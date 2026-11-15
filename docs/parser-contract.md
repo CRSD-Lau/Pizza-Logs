@@ -67,6 +67,7 @@ reviewed repair or reprocessing operation.
 - The encounter window ends at the last boss-destination event, not a boss outgoing attack, stale marker, or unrelated post-fight trash.
 - A kill ends at the boss `UNIT_DIED` timestamp.
 - Lich King scripted finale/roleplay remains part of the same successful attempt.
+- An unmarked Halion attempt can hold a hidden-realm visibility gap for at most 180 seconds. Resuming across the ordinary 30-second gap requires a self-cast Corporeality application/refresh from Halion; a fresh damage event, another boss, an expired gap or a prior boss death cannot bridge it. Preview and full segmentation use the same rule. Parser 1.1.6 applies this to new uploads; historical report rows are not recomputed.
 - Gunship uses the fixture-protected Warmane crew-death success override.
 
 Public reporting applies a separate, reversible short-pull counting policy to

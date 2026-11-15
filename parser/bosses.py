@@ -121,3 +121,25 @@ def lookup_boss(name: str) -> Optional[BossDef]:
 
 def lookup_boss_by_id(boss_id: int) -> Optional[BossDef]:
     return BOSS_BY_ID.get(boss_id)
+
+
+def is_halion_event(parts: list[str]) -> bool:
+    return any(len(parts) > index and parts[index].strip('"').strip().lower() == "halion"
+               for index in (2, 5))
+
+
+def continues_halion_phase(parts: list[str], gap: float, boss_event: bool) -> bool:
+    """Hold a bounded hidden-realm window; require Corporeality to resume.
+
+    A fresh damage event cannot bridge a quiet gap. That separates real wipes
+    from the phase-two visibility gap observed in Warmane logs. Boss death
+    disables this grace in both segmenters.
+    """
+    if gap > 180:
+        return False
+    if not boss_event:
+        return True
+    return (len(parts) > 8 and parts[0] in {"SPELL_AURA_APPLIED", "SPELL_AURA_REFRESH"}
+            and parts[2].strip('"').strip().lower() == "halion"
+            and parts[5].strip('"').strip().lower() == "halion"
+            and parts[8].strip('"').strip().lower() == "corporeality")
