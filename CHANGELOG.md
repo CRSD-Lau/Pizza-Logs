@@ -8,6 +8,7 @@ This project follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) an
 
 ### Fixed - 2026-11-15
 
+- Run independent upload milestone candidates through four shared worker slots instead of one serial transaction queue. Keep historical and weekly candidates for the same player/boss/mode/metric ordered, preserve response order, and drain active writes before returning a failure. This reduces post-save waiting without changing award rules or exhausting the ten-connection database pool.
 - Reuse validated combat-log records for upload previews, removing a complete archive decompression and tokenization pass. Cache repeated GUID/type-flag identity checks with bounded retention. Bound the combined worker by the configured processing deadline instead of independent 60-second cutoffs, while retaining whole-file validation, cancellation and resource limits.
 - Keep Halion's hidden-realm phase in the same unmarked attempt when bounded Corporeality evidence connects it. Prevent false phase-one wipes and truncated kill durations while preserving separate fresh pulls and boss-death boundaries. Parser provenance advances to 1.1.6; stored reports are not automatically reparsed.
 
