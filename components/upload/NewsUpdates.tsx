@@ -6,8 +6,8 @@ const entries = [
     date: "2026-11-15",
     label: "Nov 15, 2026",
     category: "Update",
-    title: "Smoother uploads and complete Halion attempts",
-    description: "Large logs now avoid a repeated processing pass, and independent milestone checks run together to reduce the wait after a report is saved. Halion's realm transition stays within the same attempt when the log contains the matching phase evidence. The Halion correction applies to newly processed logs; existing reports are unchanged.",
+    title: "Smoother uploads and Halion phase fixes",
+    description: "Improved processing for large logs and reduced the wait for milestone updates after reports are saved. Halion's realm transition stays within one attempt when supported by the log. Damage totals can still miss events from the other realm. The Halion correction applies to newly processed logs; existing reports are unchanged.",
   },
   {
     date: "2026-10-04",
