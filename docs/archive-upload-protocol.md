@@ -102,6 +102,8 @@ Validation and quick classification share one quick-pool worker and one input pa
 
 ## Operational Signals
 
+After report persistence, milestone candidates run through at most four shared worker slots per web process, across uploads. Historical and weekly candidates for the same player/boss/difficulty/metric stay sequential; response awards retain candidate order. Each transaction keeps serializable isolation, retrying a known serialization conflict up to five times with exponential backoff. This includes pg adapter conflicts surfaced directly at commit. A failure stops queued candidates and drains active transactions before returning the saved-report warning. Milestones still finish before the final upload response; they are not a durable background job. This cap leaves capacity in the ten-connection web pool for other work.
+
 `GET /health` reports event-loop liveness. `GET /ready` returns 503 when the temporary directory is unavailable, not writable, or lacks space for one maximum-size upload. Four concurrent uploads can hold up to 4 GiB of input files with the defaults; readiness checks space for only one, not the full concurrent allocation. This checks local storage only; it does not assert web/database health or guarantee a later allocation. Saturated upload admission returns 429 independently of readiness.
 
 Structured parser logs correlate completion/rejection/timeout/error events using the validated upload UUID. Completion includes byte count, encounter count and stage timings. Logs omit original filenames, raw log lines, player names, exception messages and filesystem paths. Operational counters remain process-local; fleet metrics and durable tracing require external collection.

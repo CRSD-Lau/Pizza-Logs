@@ -24,6 +24,27 @@ export interface AwardedMilestone {
   type: string;
 }
 
+// Share four slots across uploads, leaving capacity in the ten-connection pool
+// for report reads and upload persistence. Hand queued callers the released slot.
+const MILESTONE_WORKERS = 4;
+let activeMilestoneWorkers = 0;
+const milestoneWaiters: (() => void)[] = [];
+
+async function withMilestoneSlot<T>(work: () => Promise<T>): Promise<T> {
+  if (activeMilestoneWorkers >= MILESTONE_WORKERS) {
+    await new Promise<void>(resolve => milestoneWaiters.push(resolve));
+  } else {
+    activeMilestoneWorkers++;
+  }
+  try {
+    return await work();
+  } finally {
+    const next = milestoneWaiters.shift();
+    if (next) next();
+    else activeMilestoneWorkers--;
+  }
+}
+
 /** Award independent all-time and current-week achievements after persistence. */
 export async function computeMilestones(
   checks: MilestoneCheck[],
@@ -50,8 +71,7 @@ export async function computeMilestones(
   const unique = new Map([...candidates.values()].map(check => [
     [check.encounterId, check.playerId, check.metric].join("\0"), check,
   ]));
-  const awarded: AwardedMilestone[] = [];
-  for (const check of unique.values()) {
+  async function runCheck(check: MilestoneCheck): Promise<AwardedMilestone[]> {
     for (let attempt = 0; ; attempt++) {
       try {
         const result = await database.$transaction(async tx => {
@@ -90,16 +110,53 @@ export async function computeMilestones(
           }
           return result;
         }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable, timeout: 10_000 });
-        awarded.push(...result);
-        break;
+        return result;
       } catch (error) {
-        const retryable = error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2034";
-        if (!retryable || attempt >= 2) throw error;
-        await new Promise(resolve => setTimeout(resolve, 25 * (attempt + 1) + Math.random() * 25));
+        // Prisma's pg adapter can surface a serialization failure at COMMIT as
+        // DriverAdapterError instead of wrapping it in a P2034 request error.
+        const cause = error instanceof Error && error.name === "DriverAdapterError" ? error.cause : null;
+        const retryable = (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2034")
+          || (cause !== null && typeof cause === "object" && "kind" in cause && cause.kind === "TransactionWriteConflict");
+        if (!retryable || attempt >= 5) throw error;
+        await new Promise(resolve => setTimeout(resolve, 25 * (2 ** attempt) + Math.random() * 25));
       }
     }
   }
-  return awarded;
+  // Historical and weekly maxima for one award key must retain their original
+  // order. Only independent keys run concurrently; results keep input order too.
+  const groups = new Map<string, { check: MilestoneCheck; index: number }[]>();
+  for (const [index, check] of [...unique.values()].entries()) {
+    const key = [check.playerId, check.bossId, check.difficulty, check.metric].join("\0");
+    const group = groups.get(key) ?? [];
+    group.push({ check, index });
+    groups.set(key, group);
+  }
+  const batches = [...groups.values()];
+  const awarded: AwardedMilestone[][] = [];
+  const failures: unknown[] = [];
+  let nextBatch = 0;
+  const worker = async () => {
+    while (!failures.length) {
+      const batch = batches[nextBatch++];
+      if (!batch) return;
+      await withMilestoneSlot(async () => {
+        for (const { check, index } of batch) {
+          if (failures.length) return;
+          try {
+            awarded[index] = await runCheck(check);
+          } catch (error) {
+            failures.push(error);
+            return;
+          }
+        }
+      });
+    }
+  };
+  // Drain active work before reporting failure; do not leave award writes running
+  // after the caller has returned its saved-report warning.
+  await Promise.all(Array.from({ length: Math.min(MILESTONE_WORKERS, batches.length) }, worker));
+  if (failures.length) throw failures[0];
+  return awarded.flat();
 }
 
 async function storeAward(

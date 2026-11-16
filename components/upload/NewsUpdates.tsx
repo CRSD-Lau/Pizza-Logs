@@ -3,6 +3,13 @@ import { PageSection } from "@/components/ui/PageLayout";
 // Keep newest first. Summarize shipped changes from CHANGELOG.md for uploaders.
 const entries = [
   {
+    date: "2026-11-15",
+    label: "Nov 15, 2026",
+    category: "Update",
+    title: "Smoother uploads and Halion phase fixes",
+    description: "Improved processing for large logs and reduced the wait for milestone updates after reports are saved. Halion's realm transition stays within one attempt when supported by the log. Damage totals can still miss events from the other realm. The Halion correction applies to newly processed logs; existing reports are unchanged.",
+  },
+  {
     date: "2026-10-04",
     label: "Oct 4, 2026",
     category: "Update",
